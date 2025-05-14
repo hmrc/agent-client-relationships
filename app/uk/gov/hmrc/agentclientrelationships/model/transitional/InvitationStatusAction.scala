@@ -20,19 +20,26 @@ import play.api.Logging
 
 sealed trait InvitationStatusAction
 
-object InvitationStatusAction extends Logging {
-  case object Accept extends InvitationStatusAction
+object InvitationStatusAction
+extends Logging {
 
-  case object Cancel extends InvitationStatusAction
+  case object Accept
+  extends InvitationStatusAction
 
-  case object Reject extends InvitationStatusAction
+  case object Cancel
+  extends InvitationStatusAction
 
-  def apply(status: String): InvitationStatusAction = status.toLowerCase match {
-    case "accept" => Accept
-    case "cancel" => Cancel
-    case "reject" => Reject
-    case value =>
-      logger.warn(s"Action of [$value] is not a valid status change action")
-      throw new IllegalArgumentException
-  }
+  case object Reject
+  extends InvitationStatusAction
+
+  def apply(status: String): InvitationStatusAction =
+    status.toLowerCase match {
+      case "accept" => Accept
+      case "cancel" => Cancel
+      case "reject" => Reject
+      case value =>
+        logger.warn(s"Action of [$value] is not a valid status change action")
+        throw new IllegalArgumentException
+    }
+
 }

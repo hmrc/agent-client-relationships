@@ -16,11 +16,16 @@
 
 package uk.gov.hmrc.agentclientrelationships.repository
 
-import play.api.libs.json.{Format, Reads, Writes}
+import play.api.libs.json.Format
+import play.api.libs.json.Reads
+import play.api.libs.json.Writes
 
-object SyncStatus extends Enumeration {
+object SyncStatus
+extends Enumeration {
+
   type SyncStatus = Value
   val InProgress, IncompleteInputParams, Success, Failed = Value
 
   implicit val formats: Format[SyncStatus] = Format[SyncStatus](Reads.enumNameReads(SyncStatus), Writes.enumNameWrites)
+
 }

@@ -20,11 +20,17 @@ import play.api.http.HeaderNames
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.util.DateTimeHelper
 
-import java.time.{Clock, Instant}
+import java.time.Clock
+import java.time.Instant
 import javax.inject.Inject
 
-class HIPHeaders @Inject() (randomUUIDGenerator: RandomUUIDGenerator, appConfig: AppConfig, clock: Clock) {
-  private val correlationIdHeader: String = "correlationid"
+class HipHeaders @Inject() (
+  correlationIdGenerator: CorrelationIdGenerator,
+  appConfig: AppConfig,
+  clock: Clock
+) {
+
+  private val correlationIdHeader: String = "correlationId"
   private val xOriginatingSystemHeader: String = "X-Originating-System"
   private val xReceiptDateHeader: String = "X-Receipt-Date"
   private val xTransmittingSystemHeader: String = "X-Transmitting-System"
@@ -35,23 +41,22 @@ class HIPHeaders @Inject() (randomUUIDGenerator: RandomUUIDGenerator, appConfig:
   private val hip = "HIP"
   private val itsa = "ITSA"
 
-  def subscriptionHeaders(): Seq[(String, String)] =
-    Seq(
-      (HeaderNames.AUTHORIZATION, s"Basic ${appConfig.hipAuthToken}"),
-      (correlationIdHeader, randomUUIDGenerator.uuid),
-      (xOriginatingSystemHeader, mdtp),
-      (xReceiptDateHeader, DateTimeHelper.formatISOInstantSeconds(Instant.now(clock))),
-      (xTransmittingSystemHeader, hip)
-    )
+  def subscriptionHeaders(): Seq[(String, String)] = Seq(
+    (HeaderNames.AUTHORIZATION, s"Basic ${appConfig.hipAuthToken}"),
+    (correlationIdHeader, correlationIdGenerator.makeCorrelationId()),
+    (xOriginatingSystemHeader, mdtp),
+    (xReceiptDateHeader, DateTimeHelper.formatISOInstantSeconds(Instant.now(clock))),
+    (xTransmittingSystemHeader, hip)
+  )
 
-  def subscriptionBusinessDetailsHeaders(): Seq[(String, String)] =
-    Seq(
-      (HeaderNames.AUTHORIZATION, s"Basic ${appConfig.hipAuthToken}"),
-      (correlationIdHeader, randomUUIDGenerator.uuid),
-      (xOriginatingSystemHeader, mdtp),
-      (xReceiptDateHeader, DateTimeHelper.formatISOInstantSeconds(Instant.now(clock))),
-      (xTransmittingSystemHeader, hip),
-      (xMessageType, "TaxpayerDisplay"),
-      (xRegimeType, itsa)
-    )
+  def subscriptionBusinessDetailsHeaders(): Seq[(String, String)] = Seq(
+    (HeaderNames.AUTHORIZATION, s"Basic ${appConfig.hipAuthToken}"),
+    (correlationIdHeader, correlationIdGenerator.makeCorrelationId()),
+    (xOriginatingSystemHeader, mdtp),
+    (xReceiptDateHeader, DateTimeHelper.formatISOInstantSeconds(Instant.now(clock))),
+    (xTransmittingSystemHeader, hip),
+    (xMessageType, "TaxpayerDisplay"),
+    (xRegimeType, itsa)
+  )
+
 }

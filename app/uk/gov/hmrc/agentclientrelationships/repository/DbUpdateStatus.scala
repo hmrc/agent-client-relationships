@@ -20,8 +20,13 @@ sealed trait DbUpdateStatus
 
 object DbUpdateStatus {
   def convertDbUpdateStatus(updatedCount: Int): DbUpdateStatus =
-    if (updatedCount == 1) DbUpdateSucceeded else DbUpdateFailed
+    if (updatedCount == 1)
+      DbUpdateSucceeded
+    else
+      DbUpdateFailed
 }
 
-case object DbUpdateSucceeded extends DbUpdateStatus
-case object DbUpdateFailed extends DbUpdateStatus
+case object DbUpdateSucceeded
+extends DbUpdateStatus
+case object DbUpdateFailed
+extends DbUpdateStatus

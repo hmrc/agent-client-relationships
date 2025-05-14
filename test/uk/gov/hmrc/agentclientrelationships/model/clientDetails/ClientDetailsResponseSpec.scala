@@ -21,7 +21,8 @@ import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientStatus.Ins
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.KnownFactType.Email
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 
-class ClientDetailsResponseSpec extends UnitSpec {
+class ClientDetailsResponseSpec
+extends UnitSpec {
 
   "ClientDetailsResponse" should {
 
@@ -29,24 +30,23 @@ class ClientDetailsResponseSpec extends UnitSpec {
 
       "optional fields are present" in {
 
-        val model =
-          ClientDetailsResponse(
-            "Ilkay Gundo",
-            Some(Insolvent),
-            isOverseas = Some(true),
-            Seq("test@email.com"),
-            Some(Email),
-            hasPendingInvitation = true,
-            Some("HMRC-MTD-VAT")
-          )
+        val model = ClientDetailsResponse(
+          "Ilkay Gundo",
+          Some(Insolvent),
+          isOverseas = Some(true),
+          Seq("test@email.com"),
+          Some(Email),
+          hasPendingInvitation = true,
+          Some("HMRC-MTD-VAT")
+        )
 
         val expectedJson = Json.obj(
-          "name"                       -> "Ilkay Gundo",
-          "status"                     -> "Insolvent",
-          "isOverseas"                 -> true,
-          "knownFacts"                 -> Json.arr("test@email.com"),
-          "knownFactType"              -> "Email",
-          "hasPendingInvitation"       -> true,
+          "name" -> "Ilkay Gundo",
+          "status" -> "Insolvent",
+          "isOverseas" -> true,
+          "knownFacts" -> Json.arr("test@email.com"),
+          "knownFactType" -> "Email",
+          "hasPendingInvitation" -> true,
           "hasExistingRelationshipFor" -> "HMRC-MTD-VAT"
         )
 
@@ -54,12 +54,18 @@ class ClientDetailsResponseSpec extends UnitSpec {
       }
 
       "optional fields are not present" in {
-        val model = ClientDetailsResponse("Ilkay Gundo", None, isOverseas = Some(true), Seq(), None)
+        val model = ClientDetailsResponse(
+          "Ilkay Gundo",
+          None,
+          isOverseas = Some(true),
+          Seq(),
+          None
+        )
 
         val expectedJson = Json.obj(
-          "name"                 -> "Ilkay Gundo",
-          "isOverseas"           -> true,
-          "knownFacts"           -> Json.arr(),
+          "name" -> "Ilkay Gundo",
+          "isOverseas" -> true,
+          "knownFacts" -> Json.arr(),
           "hasPendingInvitation" -> false
         )
 

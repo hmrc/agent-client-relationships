@@ -16,21 +16,25 @@
 
 package uk.gov.hmrc.agentclientrelationships.util
 
-import java.time.{Instant, LocalDate, ZoneId}
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import java.util.Locale
 
 object DateTimeHelper {
-  def formatISOInstantSeconds(now: Instant): String =
-    DateTimeFormatter.ISO_INSTANT.format(now.truncatedTo(ChronoUnit.SECONDS))
 
-  private val dateFormatter: DateTimeFormatter =
-    DateTimeFormatter.ofPattern("d MMMM uuuu", Locale.UK)
+  def formatISOInstantSeconds(now: Instant): String = DateTimeFormatter.ISO_INSTANT
+    .format(now.truncatedTo(ChronoUnit.SECONDS))
 
-  def displayDate(localDate: LocalDate): String =
-    localDate.format(dateFormatter)
+  private val dateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("d MMMM uuuu", Locale.UK)
 
-  def displayDate(instant: Instant): String =
-    instant.atZone(ZoneId.of("Europe/London")).toLocalDate.format(dateFormatter)
+  def displayDate(localDate: LocalDate): String = localDate.format(dateFormatter)
+
+  def displayDate(instant: Instant): String = instant
+    .atZone(ZoneId.of("Europe/London"))
+    .toLocalDate
+    .format(dateFormatter)
+
 }

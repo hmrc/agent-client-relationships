@@ -16,17 +16,18 @@
 
 package uk.gov.hmrc.agentclientrelationships.model
 
-import play.api.libs.json.{Format, Json}
+import play.api.libs.json.Format
+import play.api.libs.json.Json
 import uk.gov.hmrc.agentmtdidentifiers.model.SuspensionDetails
 
 case class AgentRecord(suspensionDetails: Option[SuspensionDetails]) {
 
   def isSuspended: Boolean = suspensionDetails.exists(_.suspensionStatus)
 
-  def suspendedFor(regime: String): Boolean =
-    suspensionDetails
-      .flatMap(_.regimes)
-      .exists(regimes => regimes.contains(regime) || regimes.contains("ALL") || regimes.contains("AGSV"))
+  def suspendedFor(regime: String): Boolean = suspensionDetails
+    .flatMap(_.regimes)
+    .exists(regimes => regimes.contains(regime) || regimes.contains("ALL") || regimes.contains("AGSV"))
+
 }
 
 object AgentRecord {

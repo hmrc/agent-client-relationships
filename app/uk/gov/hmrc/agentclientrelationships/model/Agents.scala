@@ -15,18 +15,26 @@
  */
 
 package uk.gov.hmrc.agentclientrelationships.model
-import play.api.libs.json.{JsPath, Json, Reads}
+
+import play.api.libs.json.JsPath
+import play.api.libs.json.Json
+import play.api.libs.json.Reads
 import uk.gov.hmrc.domain.SaAgentReference
 
 case class Agents(agents: Seq[Agent])
 
-case class Agent(hasAgent: Boolean, agentId: Option[SaAgentReference], agentCeasedDate: Option[String])
+case class Agent(
+  hasAgent: Boolean,
+  agentId: Option[SaAgentReference],
+  agentCeasedDate: Option[String]
+)
 
 object Agents {
+
   implicit val agentReads: Reads[Agent] = Json.reads[Agent]
 
-  implicit val readClientRelationship: Reads[Agents] =
-    (JsPath \ "agents")
-      .readNullable[Seq[Agent]]
-      .map(optionalAgents => Agents(optionalAgents.getOrElse(Seq.empty)))
+  implicit val readClientRelationship: Reads[Agents] = (JsPath \ "agents")
+    .readNullable[Seq[Agent]]
+    .map(optionalAgents => Agents(optionalAgents.getOrElse(Seq.empty)))
+
 }

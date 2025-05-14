@@ -18,24 +18,37 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 
 import cats.data.EitherT
 import play.api.Logger
-import play.api.mvc.{Action, ControllerComponents, Request, Result}
+import play.api.mvc.Action
+import play.api.mvc.ControllerComponents
+import play.api.mvc.Request
+import play.api.mvc.RequestHeader
+import play.api.mvc.Result
 import uk.gov.hmrc.agentclientrelationships.audit.AuditService
-import uk.gov.hmrc.agentclientrelationships.auth.{AuthActions, CurrentUser}
+import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
+import uk.gov.hmrc.agentclientrelationships.auth.CurrentUser
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.AgentFiRelationshipConnector
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse._
-import uk.gov.hmrc.agentclientrelationships.model.invitation.{InvitationFailureResponse, RemoveAuthorisationRequest, ValidRequest}
-import uk.gov.hmrc.agentclientrelationships.services.{DeleteRelationshipsService, RemoveAuthorisationService, ValidationService}
+import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse
+import uk.gov.hmrc.agentclientrelationships.model.invitation.RemoveAuthorisationRequest
+import uk.gov.hmrc.agentclientrelationships.model.invitation.ValidRequest
+import uk.gov.hmrc.agentclientrelationships.services.DeleteRelationshipsService
+import uk.gov.hmrc.agentclientrelationships.services.RemoveAuthorisationService
+import uk.gov.hmrc.agentclientrelationships.services.ValidationService
 import uk.gov.hmrc.agentclientrelationships.support.{RelationshipNotFound => RelationshipNotFoundEx}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Service}
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentmtdidentifiers.model.Service
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.Nino
-import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
-import javax.inject.{Inject, Singleton}
-import scala.concurrent.{ExecutionContext, Future}
+import javax.inject.Inject
+import javax.inject.Singleton
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 import scala.util.control.NonFatal
 
 @Singleton
@@ -48,9 +61,9 @@ class RemoveAuthorisationController @Inject() (
   validationService: ValidationService,
   auditService: AuditService,
   cc: ControllerComponents
-)(implicit ec: ExecutionContext)
-    extends BackendController(cc)
-    with AuthActions {
+)(implicit val executionContext: ExecutionContext)
+extends BackendController(cc)
+with AuthActions {
 
   val supportedServices: Seq[Service] = appConfig.supportedServicesWithoutPir
 
@@ -58,32 +71,46 @@ class RemoveAuthorisationController @Inject() (
 
   def removeAuthorisation(arn: Arn): Action[RemoveAuthorisationRequest] =
     Action.async(parse.json[RemoveAuthorisationRequest]) { implicit request =>
-      val responseT = for {
-        validRequest <-
-          EitherT.fromEither[Future](
+      val responseT =
+        for {
+          validRequest <- EitherT.fromEither[Future](
             deauthorisationService.validateRequest(request.body.service, request.body.clientId)
           )
-        enrolmentKey <- EitherT(getEnrolmentKey(validRequest))
-        result <- EitherT.right[InvitationFailureResponse](
-                    authorisedUser(
-                      arn = Some(arn),
-                      clientId = enrolmentKey.oneTaxIdentifier(),
-                      strideRoles = strideRoles
-                    ) { implicit currentUser =>
-                      removeAuthorisationForValidRequest(arn, validRequest, enrolmentKey).map(
-                        _.fold(
-                          err => invitationErrorHandler(err, request.body.service, request.body.clientId),
-                          _ => NoContent
-                        )
-                      )
-                    }
-                  )
-      } yield result
+          enrolmentKey <- EitherT(getEnrolmentKey(validRequest))
+          result <- EitherT.right[InvitationFailureResponse](
+            authorisedUser(
+              arn = Some(arn),
+              clientId = enrolmentKey.oneTaxIdentifier(),
+              strideRoles = strideRoles
+            ) { implicit currentUser =>
+              removeAuthorisationForValidRequest(
+                arn,
+                validRequest,
+                enrolmentKey
+              ).map(
+                _.fold(
+                  err =>
+                    invitationErrorHandler(
+                      err,
+                      request.body.service,
+                      request.body.clientId
+                    ),
+                  _ => NoContent
+                )
+              )
+            }
+          )
+        } yield result
 
       responseT.value
         .map(
           _.fold(
-            err => invitationErrorHandler(err, request.body.service, request.body.clientId),
+            err =>
+              invitationErrorHandler(
+                err,
+                request.body.service,
+                request.body.clientId
+              ),
             result => result
           )
         )
@@ -95,31 +122,42 @@ class RemoveAuthorisationController @Inject() (
     validRequest: ValidRequest,
     enrolmentKey: EnrolmentKey
   )(implicit
-    hc: HeaderCarrier,
-    request: Request[Any],
+    request: RequestHeader,
     currentUser: CurrentUser
   ): Future[Either[InvitationFailureResponse, Boolean]] =
     (validRequest.service, enrolmentKey.oneTaxIdentifier()) match {
       case (Service.PersonalIncomeRecord, _) =>
         agentFiRelationshipConnector
-          .deleteRelationship(arn, validRequest.service.id, validRequest.suppliedClientId.value)
-          .map { result =>
+          .deleteRelationship(
+            arn,
+            validRequest.service.id,
+            validRequest.suppliedClientId.value
+          )
+          .map { result: Boolean =>
             if (result) {
               val userType = deleteService.determineUserTypeFromAG(currentUser.affinityGroup).getOrElse("HMRC")
-              deleteService.setRelationshipEnded(arn, enrolmentKey, userType)
+              deleteService.setRelationshipEnded(
+                arn,
+                enrolmentKey,
+                userType
+              )
               auditService.auditForPirTermination(arn, enrolmentKey)
               Right(true)
-            } else Left(RelationshipNotFound)
+            }
+            else
+              Left(RelationshipNotFound)
           }
-          .recover { case error: UpstreamErrorResponse =>
-            Left(RelationshipDeleteFailed(error.getMessage))
-          }
+          .recover { case error: UpstreamErrorResponse => Left(RelationshipDeleteFailed(error.getMessage)) }
       case (Service.MtdIt | Service.MtdItSupp, Nino(_)) => // Alt ITSA
-        (for {
-          deauthResult <-
-            EitherT(
+        (
+          for {
+            deauthResult <- EitherT(
               deauthorisationService
-                .deauthPartialAuth(arn, validRequest.suppliedClientId, validRequest.service)
+                .deauthPartialAuth(
+                  arn,
+                  validRequest.suppliedClientId,
+                  validRequest.service
+                )
                 .map { result =>
                   if (result) {
                     auditService.sendTerminatePartialAuthAuditEvent(
@@ -128,11 +166,12 @@ class RemoveAuthorisationController @Inject() (
                       enrolmentKey.oneIdentifier().value
                     )
                     Right(result)
-                  } else Left(RelationshipDeleteFailed("Remove PartialAuth failed."))
+                  }
+                  else
+                    Left(RelationshipDeleteFailed("Remove PartialAuth failed."))
                 }
             )
-          _ <-
-            EitherT.right[InvitationFailureResponse](
+            _ <- EitherT.right[InvitationFailureResponse](
               deauthorisationService
                 .deauthAltItsaInvitation(
                   arn,
@@ -142,51 +181,54 @@ class RemoveAuthorisationController @Inject() (
                 )
                 .map(_ => true)
             )
-        } yield deauthResult).value
-      case _ =>
-        deleteRelationship(arn, enrolmentKey) // Handles invitation deauth on its own
+          } yield deauthResult
+        ).value
+      case _ => deleteRelationship(arn, enrolmentKey) // Handles invitation deauth on its own
     }
   // scalastyle:on method.length
 
-  private def getEnrolmentKey(validRequest: ValidRequest)(implicit
-    hc: HeaderCarrier,
-    ec: ExecutionContext
-  ): Future[Either[InvitationFailureResponse, EnrolmentKey]] = {
-    val resultT = for {
-      suppliedEnrolmentKey <-
-        EitherT(
+  private def getEnrolmentKey(
+    validRequest: ValidRequest
+  )(implicit request: RequestHeader): Future[Either[InvitationFailureResponse, EnrolmentKey]] = {
+    val resultT =
+      for {
+        suppliedEnrolmentKey <- EitherT(
           validationService.validateForEnrolmentKey(
             validRequest.service.id,
             validRequest.suppliedClientId.enrolmentId,
             validRequest.suppliedClientId.value
           )
         ).leftMap(_ => InvalidClientId)
-      enrolmentKey <-
-        EitherT(
-          deauthorisationService
-            .replaceEnrolmentKeyForItsa(validRequest.suppliedClientId, suppliedEnrolmentKey, validRequest.service)
+        enrolmentKey <- EitherT(
+          deauthorisationService.replaceEnrolmentKeyForItsa(
+            validRequest.suppliedClientId,
+            suppliedEnrolmentKey,
+            validRequest.service
+          )
         )
 
-    } yield enrolmentKey
+      } yield enrolmentKey
     resultT.value
   }
 
-  private def deleteRelationship(arn: Arn, enrolmentKey: EnrolmentKey)(implicit
-    hc: HeaderCarrier,
-    request: Request[Any],
+  private def deleteRelationship(
+    arn: Arn,
+    enrolmentKey: EnrolmentKey
+  )(implicit
+    request: RequestHeader,
     currentUser: CurrentUser
-  ): Future[Either[InvitationFailureResponse, Boolean]] =
-    deleteService
-      .deleteRelationship(arn, enrolmentKey, currentUser.affinityGroup)
-      .map(_ => Right(true))
-      .recover {
-        case RelationshipNotFoundEx(_) =>
-          Left(RelationshipNotFound)
-        case upS: UpstreamErrorResponse =>
-          Left(RelationshipDeleteFailed(upS.getMessage))
-        case NonFatal(ex) =>
-          Left(RelationshipDeleteFailed(ex.getMessage))
-      }
+  ): Future[Either[InvitationFailureResponse, Boolean]] = deleteService
+    .deleteRelationship(
+      arn,
+      enrolmentKey,
+      currentUser.affinityGroup
+    )
+    .map(_ => Right(true))
+    .recover {
+      case RelationshipNotFoundEx(_) => Left(RelationshipNotFound)
+      case upS: UpstreamErrorResponse => Left(RelationshipDeleteFailed(upS.getMessage))
+      case NonFatal(ex) => Left(RelationshipDeleteFailed(ex.getMessage))
+    }
 
   private def invitationErrorHandler(
     invitationFailureResponse: InvitationFailureResponse,
@@ -200,8 +242,7 @@ class RemoveAuthorisationController @Inject() (
         UnsupportedService.getResult(msg)
 
       case InvalidClientId =>
-        val msg =
-          s"""Invalid clientId "$clientId", for service type "$service""""
+        val msg = s"""Invalid clientId "$clientId", for service type "$service""""
         Logger(getClass).warn(msg)
         InvalidClientId.getResult(msg)
 
@@ -217,8 +258,7 @@ class RemoveAuthorisationController @Inject() (
         Logger(getClass).warn(s"Could not delete relationship: $msg")
         relationshipDeleteFailed.getResult("")
 
-      case RelationshipNotFound =>
-        RelationshipNotFound.getResult("")
+      case RelationshipNotFound => RelationshipNotFound.getResult("")
 
       case _ => BadRequest
     }

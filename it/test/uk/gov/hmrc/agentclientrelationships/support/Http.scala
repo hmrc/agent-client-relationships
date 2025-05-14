@@ -16,68 +16,95 @@
 
 package uk.gov.hmrc.agentclientrelationships.support
 
-import play.api.http.{HeaderNames, MimeTypes}
-import play.api.libs.ws.{EmptyBody, WSClient, WSRequest, WSResponse}
+import play.api.http.HeaderNames
+import play.api.http.MimeTypes
+import play.api.libs.ws.EmptyBody
+import play.api.libs.ws.WSClient
+import play.api.libs.ws.WSRequest
+import play.api.libs.ws.WSResponse
 import uk.gov.hmrc.http.HttpResponse
 import uk.gov.hmrc.play.http.ws.WSHttpResponse
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
+import scala.concurrent.Await
+import scala.concurrent.Future
 import scala.language.postfixOps
 object Http {
 
   private val authHeader = "Authorization" -> "Bearer 123"
 
-  def get(url: String)(implicit ws: WSClient): HttpResponse = perform(url) { request =>
-    request.get()
-  }
+  def get(url: String)(implicit ws: WSClient): HttpResponse =
+    perform(url) { request =>
+      request.get()
+    }
 
-  def post(url: String, body: String, headers: Seq[(String, String)] = Seq.empty)(implicit ws: WSClient): HttpResponse =
+  def post(
+    url: String,
+    body: String,
+    headers: Seq[(String, String)] = Seq.empty
+  )(implicit ws: WSClient): HttpResponse =
     perform(url) { request =>
       request.addHttpHeaders(headers: _*).post(body)
     }
 
-  def postEmpty(url: String)(implicit ws: WSClient): HttpResponse = perform(url) { request =>
-    request.post(EmptyBody)
-  }
+  def postEmpty(url: String)(implicit ws: WSClient): HttpResponse =
+    perform(url) { request =>
+      request.post(EmptyBody)
+    }
 
-  def put(url: String, body: String, headers: Seq[(String, String)] = Seq.empty)(implicit ws: WSClient): HttpResponse =
+  def put(
+    url: String,
+    body: String,
+    headers: Seq[(String, String)] = Seq.empty
+  )(implicit ws: WSClient): HttpResponse =
     perform(url) { request =>
       request.addHttpHeaders(headers: _*).put(body)
     }
 
-  def putEmpty(url: String)(implicit ws: WSClient): HttpResponse = perform(url) { request =>
-    request.put(EmptyBody)
-  }
+  def putEmpty(url: String)(implicit ws: WSClient): HttpResponse =
+    perform(url) { request =>
+      request.put(EmptyBody)
+    }
 
-  def delete(url: String)(implicit ws: WSClient): HttpResponse = perform(url) { request =>
-    request.delete()
-  }
+  def delete(url: String)(implicit ws: WSClient): HttpResponse =
+    perform(url) { request =>
+      request.delete()
+    }
 
-  private def perform(url: String)(fun: WSRequest => Future[WSResponse])(implicit ws: WSClient): HttpResponse =
-    await(fun(ws.url(url).withHttpHeaders(authHeader).withRequestTimeout(20000 milliseconds)).map(WSHttpResponse.apply))
+  private def perform(url: String)(fun: WSRequest => Future[WSResponse])(implicit ws: WSClient): HttpResponse = await(
+    fun(ws.url(url).withHttpHeaders(authHeader).withRequestTimeout(20000 milliseconds)).map(WSHttpResponse.apply)
+  )
 
   private def await[A](future: Future[A]) = Await.result(future, Duration(10, SECONDS))
 
 }
 
-class Resource(path: String, port: Int) {
+class Resource(
+  path: String,
+  port: Int
+) {
 
   private def url() = s"http://localhost:$port$path"
 
   def get()(implicit ws: WSClient): HttpResponse = Http.get(url())
 
-  def postAsJson(body: String)(implicit ws: WSClient): HttpResponse =
-    Http.post(url(), body, Seq(HeaderNames.CONTENT_TYPE -> MimeTypes.JSON))
+  def postAsJson(body: String)(implicit ws: WSClient): HttpResponse = Http
+    .post(
+      url(),
+      body,
+      Seq(HeaderNames.CONTENT_TYPE -> MimeTypes.JSON)
+    )
 
-  def postEmpty()(implicit ws: WSClient): HttpResponse =
-    Http.postEmpty(url())
+  def postEmpty()(implicit ws: WSClient): HttpResponse = Http.postEmpty(url())
 
-  def putEmpty()(implicit ws: WSClient): HttpResponse =
-    Http.putEmpty(url())
+  def putEmpty()(implicit ws: WSClient): HttpResponse = Http.putEmpty(url())
 
-  def putAsJson(body: String)(implicit ws: WSClient): HttpResponse =
-    Http.put(url(), body, Seq(HeaderNames.CONTENT_TYPE -> MimeTypes.JSON))
+  def putAsJson(body: String)(implicit ws: WSClient): HttpResponse = Http
+    .put(
+      url(),
+      body,
+      Seq(HeaderNames.CONTENT_TYPE -> MimeTypes.JSON)
+    )
 
 }

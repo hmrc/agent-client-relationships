@@ -16,10 +16,26 @@
 
 package uk.gov.hmrc.agentclientrelationships.connectors.helpers
 
-import java.util.UUID
-import javax.inject.Singleton
+import play.api.http.HeaderNames
+import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 
-@Singleton
-class RandomUUIDGenerator() {
-  def uuid: String = UUID.randomUUID().toString
+import javax.inject.Inject
+
+class IfHeaders @Inject() (
+  randomUuidGenerator: CorrelationIdGenerator,
+  appConfig: AppConfig
+) {
+
+  private val Environment = "Environment"
+  private val CorrelationId = "CorrelationId"
+
+  private val mdtp = "MDTP"
+  private val hip = "HIP"
+
+  def makeHeaders(authToken: String): Seq[(String, String)] = Seq(
+    Environment -> appConfig.ifEnvironment,
+    CorrelationId -> randomUuidGenerator.makeCorrelationId(),
+    HeaderNames.AUTHORIZATION -> s"Bearer $authToken"
+  )
+
 }

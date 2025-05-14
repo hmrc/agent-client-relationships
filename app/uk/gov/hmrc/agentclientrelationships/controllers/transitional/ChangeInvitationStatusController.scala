@@ -19,46 +19,73 @@ package uk.gov.hmrc.agentclientrelationships.controllers.transitional
 import cats.data.EitherT
 import play.api.Logger
 import play.api.libs.json.JsValue
-import play.api.mvc.{Action, ControllerComponents, Result}
+import play.api.mvc.Action
+import play.api.mvc.ControllerComponents
+import play.api.mvc.Result
 import uk.gov.hmrc.agentclientrelationships.model._
-import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.{InvalidClientId, InvitationNotFound, UnsupportedService, UnsupportedStatusChange, UpdateStatusFailed}
+import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.InvalidClientId
+import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.InvitationNotFound
+import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.UnsupportedService
+import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.UnsupportedStatusChange
+import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.UpdateStatusFailed
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse
 import uk.gov.hmrc.agentclientrelationships.model.transitional.ChangeInvitationStatusRequest
 import uk.gov.hmrc.agentclientrelationships.services.transitional.ChangeInvitationStatusService
 import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier.ClientId
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Service}
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentmtdidentifiers.model.Service
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
-import javax.inject.{Inject, Singleton}
-import scala.concurrent.{ExecutionContext, Future}
+import javax.inject.Inject
+import javax.inject.Singleton
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 @Singleton
 class ChangeInvitationStatusController @Inject() (
   changeInvitationStatusService: ChangeInvitationStatusService,
   cc: ControllerComponents
 )(implicit ec: ExecutionContext)
-    extends BackendController(cc) {
+extends BackendController(cc) {
 
-  def changeInvitationStatus(arn: Arn, serviceStr: String, clientIdStr: String): Action[JsValue] =
+  def changeInvitationStatus(
+    arn: Arn,
+    serviceStr: String,
+    clientIdStr: String
+  ): Action[JsValue] =
     Action.async(parse.json) { implicit request =>
       request.body
         .validate[ChangeInvitationStatusRequest]
         .fold(
           errs => Future.successful(BadRequest(s"Invalid payload: $errs")),
           changeRequest => {
-            val responseT = for {
+            val responseT =
+              for {
 
-              service <- EitherT.fromEither[Future](changeInvitationStatusService.validateService(serviceStr))
-              suppliedClientId <-
-                EitherT.fromEither[Future](changeInvitationStatusService.validateClientId(service, clientIdStr))
+                service <- EitherT.fromEither[Future](changeInvitationStatusService.validateService(serviceStr))
+                suppliedClientId <- EitherT.fromEither[Future](
+                  changeInvitationStatusService.validateClientId(service, clientIdStr)
+                )
 
-              result <- EitherT(navigateToStatusAction(arn, service, suppliedClientId, changeRequest))
-            } yield result
+                result <- EitherT(
+                  navigateToStatusAction(
+                    arn,
+                    service,
+                    suppliedClientId,
+                    changeRequest
+                  )
+                )
+              } yield result
 
             responseT.value
               .map(
                 _.fold(
-                  err => invitationErrorHandler(err, serviceStr, clientIdStr),
+                  err =>
+                    invitationErrorHandler(
+                      err,
+                      serviceStr,
+                      clientIdStr
+                    ),
                   _ => NoContent
                 )
               )
@@ -95,19 +122,15 @@ class ChangeInvitationStatusController @Inject() (
         UnsupportedService.getResult(msg)
 
       case InvalidClientId =>
-        val msg =
-          s"""Invalid clientId "$clientId", for service type "$service""""
+        val msg = s"""Invalid clientId "$clientId", for service type "$service""""
         Logger(getClass).warn(msg)
         InvalidClientId.getResult(msg)
 
-      case UnsupportedStatusChange =>
-        UnsupportedStatusChange.getResult("")
+      case UnsupportedStatusChange => UnsupportedStatusChange.getResult("")
 
-      case InvitationNotFound =>
-        InvitationNotFound.getResult("")
+      case InvitationNotFound => InvitationNotFound.getResult("")
 
-      case updateStatusFailed @ UpdateStatusFailed(_) =>
-        updateStatusFailed.getResult("")
+      case updateStatusFailed @ UpdateStatusFailed(_) => updateStatusFailed.getResult("")
 
       case _ => BadRequest
     }

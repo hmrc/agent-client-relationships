@@ -16,43 +16,57 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
-import play.api.test.Helpers.{await, defaultAwaitTimeout}
+import play.api.test.Helpers.await
+import play.api.test.Helpers.defaultAwaitTimeout
 import uk.gov.hmrc.agentclientrelationships.mocks._
-import uk.gov.hmrc.agentclientrelationships.model.clientDetails.{ActiveMainAgent, ClientDetailsStrideResponse}
-import uk.gov.hmrc.agentclientrelationships.model.invitationLink.{AgencyDetails, AgentDetailsDesResponse}
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ActiveMainAgent
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsStrideResponse
+import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgencyDetails
+import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentDetailsDesResponse
 import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentclientrelationships.model.stride.RelationshipSource.AfrRelationshipRepo
-import uk.gov.hmrc.agentclientrelationships.model.stride.{ClientRelationship, InvitationWithAgentName}
-import uk.gov.hmrc.agentclientrelationships.support.{ResettingMockitoSugar, UnitSpec}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, CbcId, CgtRef, MtdItId, PlrId, PptRef, Vrn}
+import uk.gov.hmrc.agentclientrelationships.model.stride.ClientRelationship
+import uk.gov.hmrc.agentclientrelationships.model.stride.InvitationWithAgentName
+import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
+import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentmtdidentifiers.model.CbcId
+import uk.gov.hmrc.agentmtdidentifiers.model.CgtRef
+import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
+import uk.gov.hmrc.agentmtdidentifiers.model.PlrId
+import uk.gov.hmrc.agentmtdidentifiers.model.PptRef
+import uk.gov.hmrc.agentmtdidentifiers.model.Vrn
 import uk.gov.hmrc.agentmtdidentifiers.model.Service._
 import uk.gov.hmrc.domain.Nino
-import uk.gov.hmrc.http.HeaderCarrier
+import play.api.mvc.RequestHeader
+import play.api.test.FakeRequest
 
-import java.time.{Instant, LocalDate}
-import scala.concurrent.{ExecutionContext, Future}
+import java.time.Instant
+import java.time.LocalDate
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 class StrideClientDetailsServiceSpec
-    extends UnitSpec
-    with ResettingMockitoSugar
-    with MockAgentFiRelationshipConnector
-    with MockAgentAssuranceConnector
-    with MockClientDetailsService
-    with MockFindRelationshipsService
-    with MockPartialAuthRepository
-    with MockInvitationsRepository
-    with MockValidationService {
+extends UnitSpec
+with ResettingMockitoSugar
+with MockAgentFiRelationshipConnector
+with MockAgentAssuranceConnector
+with MockClientDetailsService
+with MockFindRelationshipsService
+with MockPartialAuthRepository
+with MockInvitationsRepository
+with MockValidationService {
 
   object TestService
-      extends StrideClientDetailsService(
-        invitationsRepository = mockInvitationsRepository,
-        partialAuthRepository = mockPartialAuthRepository,
-        agentFiRelationshipConnector = mockAgentFiRelationshipConnector,
-        clientDetailsService = mockClientDetailsService,
-        agentAssuranceConnector = mockAgentAssuranceConnector,
-        findRelationshipsService = mockFindRelationshipService,
-        validationService = mockValidationService
-      )
+  extends StrideClientDetailsService(
+    invitationsRepository = mockInvitationsRepository,
+    partialAuthRepository = mockPartialAuthRepository,
+    agentFiRelationshipConnector = mockAgentFiRelationshipConnector,
+    clientDetailsService = mockClientDetailsService,
+    agentAssuranceConnector = mockAgentAssuranceConnector,
+    findRelationshipsService = mockFindRelationshipService,
+    validationService = mockValidationService
+  )
 
   val testArn: Arn = Arn("ARN1234567890")
   val testArn2: Arn = Arn("ARN1234567891")
@@ -73,30 +87,39 @@ class StrideClientDetailsServiceSpec
   val itsaEnrolment: EnrolmentKey = EnrolmentKey(MtdIt, testMtdItId)
   val itsaSuppEnrolment: EnrolmentKey = EnrolmentKey(MtdItSupp, testMtdItId)
 
-  val testAgentDetailsDesResponse: AgentDetailsDesResponse =
-    AgentDetailsDesResponse(agencyDetails = AgencyDetails("ABC Ltd", ""), suspensionDetails = None)
+  val testAgentDetailsDesResponse: AgentDetailsDesResponse = AgentDetailsDesResponse(
+    agencyDetails = AgencyDetails("ABC Ltd", ""),
+    suspensionDetails = None
+  )
 
-  val itsaInvitation: Invitation = Invitation
-    .createNew(
-      testArn.value,
-      MtdIt,
-      testNino,
-      testNino,
-      testName,
-      testAgentName,
-      testAgentEmail,
-      LocalDate.now(),
-      Some("personal")
-    )
+  val itsaInvitation: Invitation = Invitation.createNew(
+    testArn.value,
+    MtdIt,
+    testNino,
+    testNino,
+    testName,
+    testAgentName,
+    testAgentEmail,
+    LocalDate.now(),
+    Some("personal")
+  )
 
-  val itsaInvitationWithAgentName: InvitationWithAgentName =
-    InvitationWithAgentName.fromInvitationAndAgentRecord(itsaInvitation, testAgentDetailsDesResponse)
+  val itsaInvitationWithAgentName: InvitationWithAgentName = InvitationWithAgentName.fromInvitationAndAgentRecord(
+    itsaInvitation,
+    testAgentDetailsDesResponse
+  )
 
-  val testPartialauthRelationship: PartialAuthRelationship =
-    PartialAuthRelationship(Instant.now, testArn2.value, HMRCMTDIT, testNino.value, active = true, Instant.now)
+  val testPartialauthRelationship: PartialAuthRelationship = PartialAuthRelationship(
+    Instant.now,
+    testArn2.value,
+    HMRCMTDIT,
+    testNino.value,
+    active = true,
+    Instant.now
+  )
 
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
-  implicit val hc: HeaderCarrier = HeaderCarrier()
+  implicit val request: RequestHeader = FakeRequest()
 
   "getClientDetailsWithCheck" when {
     "pending invitations exist for HMRC-MTD-IT" should {
@@ -108,20 +131,29 @@ class StrideClientDetailsServiceSpec
 
         val testEk = EnrolmentKey(s"HMRC-MTD-IT~NINO~${testNino.value}")
 
-        await(TestService.getClientDetailsWithChecks(testEk)) shouldBe Some(
-          ClientDetailsStrideResponse(
-            "testClientName",
-            List(itsaInvitationWithAgentName),
-            Some(ActiveMainAgent("ABC Ltd", "ARN1234567891", "HMRC-MTD-IT"))
+        await(TestService.getClientDetailsWithChecks(testEk)) shouldBe
+          Some(
+            ClientDetailsStrideResponse(
+              "testClientName",
+              List(itsaInvitationWithAgentName),
+              Some(
+                ActiveMainAgent(
+                  "ABC Ltd",
+                  "ARN1234567891",
+                  "HMRC-MTD-IT"
+                )
+              )
+            )
           )
-        )
       }
     }
     "pending invitations exist for HMRC-MTD-IT-SUPP" should {
       "return Some(ClientDetailsStrideResponse)" in {
         val itsaSuppPendingInvitation = itsaInvitation.copy(service = MtdItSupp.id)
-        val itsaSuppPendingInvitationWithAgentName =
-          InvitationWithAgentName.fromInvitationAndAgentRecord(itsaSuppPendingInvitation, testAgentDetailsDesResponse)
+        val itsaSuppPendingInvitationWithAgentName = InvitationWithAgentName.fromInvitationAndAgentRecord(
+          itsaSuppPendingInvitation,
+          testAgentDetailsDesResponse
+        )
         mockFindAllPendingForClient(testNino.value, Seq(HMRCMTDIT, HMRCMTDITSUPP))(Seq(itsaSuppPendingInvitation))
         mockGetAgentRecordWithChecks(testArn)(testAgentDetailsDesResponse)
         mockFindMainAgent(testNino.value)(
@@ -131,20 +163,29 @@ class StrideClientDetailsServiceSpec
 
         val testEk = EnrolmentKey(s"HMRC-MTD-IT~NINO~${testNino.value}")
 
-        await(TestService.getClientDetailsWithChecks(testEk)) shouldBe Some(
-          ClientDetailsStrideResponse(
-            "testClientName",
-            List(itsaSuppPendingInvitationWithAgentName),
-            Some(ActiveMainAgent("ABC Ltd", testArn.value, "HMRC-MTD-IT"))
+        await(TestService.getClientDetailsWithChecks(testEk)) shouldBe
+          Some(
+            ClientDetailsStrideResponse(
+              "testClientName",
+              List(itsaSuppPendingInvitationWithAgentName),
+              Some(
+                ActiveMainAgent(
+                  "ABC Ltd",
+                  testArn.value,
+                  "HMRC-MTD-IT"
+                )
+              )
+            )
           )
-        )
       }
     }
     "pending invitations exist for PERSONAL-INCOME-RECORD" should {
       "return Some(ClientDetailsStrideResponse)" in {
         val irvPendingInvitation = itsaInvitation.copy(service = PersonalIncomeRecord.id)
-        val irvPendingInvitationWithAgentName =
-          InvitationWithAgentName.fromInvitationAndAgentRecord(irvPendingInvitation, testAgentDetailsDesResponse)
+        val irvPendingInvitationWithAgentName = InvitationWithAgentName.fromInvitationAndAgentRecord(
+          irvPendingInvitation,
+          testAgentDetailsDesResponse
+        )
         mockFindAllPendingForClient(testNino.value, Seq(PersonalIncomeRecord.id))(Seq(irvPendingInvitation))
         mockGetAgentRecordWithChecks(testArn)(testAgentDetailsDesResponse)
         mockFindRelationshipForClient(testNino.value)(
@@ -164,133 +205,226 @@ class StrideClientDetailsServiceSpec
 
         val testEk = EnrolmentKey(s"PERSONAL-INCOME-RECORD~NINO~${testNino.value}")
 
-        await(TestService.getClientDetailsWithChecks(testEk)) shouldBe Some(
-          ClientDetailsStrideResponse(
-            "testClientName",
-            List(irvPendingInvitationWithAgentName),
-            Some(ActiveMainAgent("ABC Ltd", testArn2.value, "PERSONAL-INCOME-RECORD"))
+        await(TestService.getClientDetailsWithChecks(testEk)) shouldBe
+          Some(
+            ClientDetailsStrideResponse(
+              "testClientName",
+              List(irvPendingInvitationWithAgentName),
+              Some(
+                ActiveMainAgent(
+                  "ABC Ltd",
+                  testArn2.value,
+                  "PERSONAL-INCOME-RECORD"
+                )
+              )
+            )
           )
-        )
       }
     }
 
     "pending invitations exist for HMRC-MTD-VAT" should {
       "return Some(ClientDetailsStrideResponse)" in {
         val vatPendingInvitation = itsaInvitation.copy(service = HMRCMTDVAT)
-        val vatPendingInvitationWithAgentName =
-          InvitationWithAgentName.fromInvitationAndAgentRecord(vatPendingInvitation, testAgentDetailsDesResponse)
+        val vatPendingInvitationWithAgentName = InvitationWithAgentName.fromInvitationAndAgentRecord(
+          vatPendingInvitation,
+          testAgentDetailsDesResponse
+        )
         mockFindAllPendingForClient(testVrn.value, Seq(HMRCMTDVAT))(Seq(vatPendingInvitation))
         mockGetAgentRecordWithChecks(testArn)(testAgentDetailsDesResponse)
         mockGetActiveRelationshipsForClient(testVrn, Vat)(
-          Future.successful(Some(ActiveRelationship(testArn2, None, None)))
+          Future.successful(
+            Some(
+              ActiveRelationship(
+                testArn2,
+                None,
+                None
+              )
+            )
+          )
         )
         mockGetAgentRecordWithChecks(testArn2)(testAgentDetailsDesResponse)
 
         val testEk = EnrolmentKey(s"$HMRCMTDVAT~VRN~${testVrn.value}")
 
-        await(TestService.getClientDetailsWithChecks(testEk)) shouldBe Some(
-          ClientDetailsStrideResponse(
-            "testClientName",
-            List(vatPendingInvitationWithAgentName),
-            Some(ActiveMainAgent("ABC Ltd", testArn2.value, "HMRC-MTD-VAT"))
+        await(TestService.getClientDetailsWithChecks(testEk)) shouldBe
+          Some(
+            ClientDetailsStrideResponse(
+              "testClientName",
+              List(vatPendingInvitationWithAgentName),
+              Some(
+                ActiveMainAgent(
+                  "ABC Ltd",
+                  testArn2.value,
+                  "HMRC-MTD-VAT"
+                )
+              )
+            )
           )
-        )
       }
     }
     "pending invitations exist for HMRC-CGT-PD" should {
       "return Some(ClientDetailsStrideResponse)" in {
         val cgtPendingInvitation = itsaInvitation.copy(service = HMRCCGTPD)
-        val cgtPendingInvitationWithAgentName =
-          InvitationWithAgentName.fromInvitationAndAgentRecord(cgtPendingInvitation, testAgentDetailsDesResponse)
+        val cgtPendingInvitationWithAgentName = InvitationWithAgentName.fromInvitationAndAgentRecord(
+          cgtPendingInvitation,
+          testAgentDetailsDesResponse
+        )
         mockFindAllPendingForClient(testCgtPdRef.value, Seq(HMRCCGTPD))(Seq(cgtPendingInvitation))
         mockGetAgentRecordWithChecks(testArn)(testAgentDetailsDesResponse)
         mockGetActiveRelationshipsForClient(testCgtPdRef, CapitalGains)(
-          Future.successful(Some(ActiveRelationship(testArn2, None, None)))
+          Future.successful(
+            Some(
+              ActiveRelationship(
+                testArn2,
+                None,
+                None
+              )
+            )
+          )
         )
         mockGetAgentRecordWithChecks(testArn2)(testAgentDetailsDesResponse)
 
         val testEk = EnrolmentKey(s"$HMRCCGTPD~CGTPDRef~${testCgtPdRef.value}")
 
-        await(TestService.getClientDetailsWithChecks(testEk)) shouldBe Some(
-          ClientDetailsStrideResponse(
-            "testClientName",
-            List(cgtPendingInvitationWithAgentName),
-            Some(ActiveMainAgent("ABC Ltd", testArn2.value, HMRCCGTPD))
+        await(TestService.getClientDetailsWithChecks(testEk)) shouldBe
+          Some(
+            ClientDetailsStrideResponse(
+              "testClientName",
+              List(cgtPendingInvitationWithAgentName),
+              Some(
+                ActiveMainAgent(
+                  "ABC Ltd",
+                  testArn2.value,
+                  HMRCCGTPD
+                )
+              )
+            )
           )
-        )
       }
     }
 
     "pending invitations exist for HMRC-CBC-ORG" should {
       "return Some(ClientDetailsStrideResponse)" in {
         val cbcPendingInvitation = itsaInvitation.copy(service = HMRCCBCORG)
-        val cbcPendingInvitationWithAgentName =
-          InvitationWithAgentName.fromInvitationAndAgentRecord(cbcPendingInvitation, testAgentDetailsDesResponse)
+        val cbcPendingInvitationWithAgentName = InvitationWithAgentName.fromInvitationAndAgentRecord(
+          cbcPendingInvitation,
+          testAgentDetailsDesResponse
+        )
         mockFindAllPendingForClient(testCbcId.value, Seq(HMRCCBCORG))(Seq(cbcPendingInvitation))
         mockGetAgentRecordWithChecks(testArn)(testAgentDetailsDesResponse)
         mockGetActiveRelationshipsForClient(testCbcId, Cbc)(
-          Future.successful(Some(ActiveRelationship(testArn2, None, None)))
+          Future.successful(
+            Some(
+              ActiveRelationship(
+                testArn2,
+                None,
+                None
+              )
+            )
+          )
         )
         mockGetAgentRecordWithChecks(testArn2)(testAgentDetailsDesResponse)
 
         val testEk = EnrolmentKey(s"$HMRCCBCORG~cbcId~${testCbcId.value}")
 
-        await(TestService.getClientDetailsWithChecks(testEk)) shouldBe Some(
-          ClientDetailsStrideResponse(
-            "testClientName",
-            List(cbcPendingInvitationWithAgentName),
-            Some(ActiveMainAgent("ABC Ltd", testArn2.value, HMRCCBCORG))
+        await(TestService.getClientDetailsWithChecks(testEk)) shouldBe
+          Some(
+            ClientDetailsStrideResponse(
+              "testClientName",
+              List(cbcPendingInvitationWithAgentName),
+              Some(
+                ActiveMainAgent(
+                  "ABC Ltd",
+                  testArn2.value,
+                  HMRCCBCORG
+                )
+              )
+            )
           )
-        )
       }
     }
 
     "pending invitations exist for HMRC-PILLAR2-ORG" should {
       "return Some(ClientDetailsStrideResponse)" in {
         val pillar2PendingInvitation = itsaInvitation.copy(service = HMRCPILLAR2ORG)
-        val pillar2PendingInvitationWithAgentName =
-          InvitationWithAgentName.fromInvitationAndAgentRecord(pillar2PendingInvitation, testAgentDetailsDesResponse)
+        val pillar2PendingInvitationWithAgentName = InvitationWithAgentName.fromInvitationAndAgentRecord(
+          pillar2PendingInvitation,
+          testAgentDetailsDesResponse
+        )
         mockFindAllPendingForClient(testPillar2Ref.value, Seq(HMRCPILLAR2ORG))(Seq(pillar2PendingInvitation))
         mockGetAgentRecordWithChecks(testArn)(testAgentDetailsDesResponse)
         mockGetActiveRelationshipsForClient(testPillar2Ref, Pillar2)(
-          Future.successful(Some(ActiveRelationship(testArn2, None, None)))
+          Future.successful(
+            Some(
+              ActiveRelationship(
+                testArn2,
+                None,
+                None
+              )
+            )
+          )
         )
         mockGetAgentRecordWithChecks(testArn2)(testAgentDetailsDesResponse)
 
         val testEk = EnrolmentKey(s"$HMRCPILLAR2ORG~PLRID~${testPillar2Ref.value}")
 
-        await(TestService.getClientDetailsWithChecks(testEk)) shouldBe Some(
-          ClientDetailsStrideResponse(
-            "testClientName",
-            List(pillar2PendingInvitationWithAgentName),
-            Some(ActiveMainAgent("ABC Ltd", testArn2.value, HMRCPILLAR2ORG))
+        await(TestService.getClientDetailsWithChecks(testEk)) shouldBe
+          Some(
+            ClientDetailsStrideResponse(
+              "testClientName",
+              List(pillar2PendingInvitationWithAgentName),
+              Some(
+                ActiveMainAgent(
+                  "ABC Ltd",
+                  testArn2.value,
+                  HMRCPILLAR2ORG
+                )
+              )
+            )
           )
-        )
       }
     }
 
     "pending invitations exist for HMRC-PPT-ORG" should {
       "return Some(ClientDetailsStrideResponse)" in {
         val pptPendingInvitation = itsaInvitation.copy(service = HMRCPPTORG)
-        val pptPendingInvitationWithAgentName =
-          InvitationWithAgentName.fromInvitationAndAgentRecord(pptPendingInvitation, testAgentDetailsDesResponse)
+        val pptPendingInvitationWithAgentName = InvitationWithAgentName.fromInvitationAndAgentRecord(
+          pptPendingInvitation,
+          testAgentDetailsDesResponse
+        )
         mockFindAllPendingForClient(testPptRef.value, Seq(HMRCPPTORG))(Seq(pptPendingInvitation))
         mockGetAgentRecordWithChecks(testArn)(testAgentDetailsDesResponse)
         mockGetActiveRelationshipsForClient(testPptRef, Ppt)(
-          Future.successful(Some(ActiveRelationship(testArn2, None, None)))
+          Future.successful(
+            Some(
+              ActiveRelationship(
+                testArn2,
+                None,
+                None
+              )
+            )
+          )
         )
         mockGetAgentRecordWithChecks(testArn2)(testAgentDetailsDesResponse)
 
         val testEk = EnrolmentKey(s"$HMRCPPTORG~EtmpRegistrationNumber~${testPptRef.value}")
 
-        await(TestService.getClientDetailsWithChecks(testEk)) shouldBe Some(
-          ClientDetailsStrideResponse(
-            "testClientName",
-            List(pptPendingInvitationWithAgentName),
-            Some(ActiveMainAgent("ABC Ltd", testArn2.value, HMRCPPTORG))
+        await(TestService.getClientDetailsWithChecks(testEk)) shouldBe
+          Some(
+            ClientDetailsStrideResponse(
+              "testClientName",
+              List(pptPendingInvitationWithAgentName),
+              Some(
+                ActiveMainAgent(
+                  "ABC Ltd",
+                  testArn2.value,
+                  HMRCPPTORG
+                )
+              )
+            )
           )
-        )
       }
     }
   }
+
 }

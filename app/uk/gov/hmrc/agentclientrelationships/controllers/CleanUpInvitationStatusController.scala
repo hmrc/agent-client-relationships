@@ -19,22 +19,29 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 import cats.data.EitherT
 import play.api.Logger
 import play.api.libs.json.JsValue
-import play.api.mvc.{Action, ControllerComponents, Result}
+import play.api.mvc.Action
+import play.api.mvc.ControllerComponents
+import play.api.mvc.Result
 import uk.gov.hmrc.agentclientrelationships.model.CleanUpInvitationStatusRequest
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse
-import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.{InvalidClientId, InvitationNotFound, UnsupportedService, UpdateStatusFailed}
+import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.InvalidClientId
+import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.InvitationNotFound
+import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.UnsupportedService
+import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.UpdateStatusFailed
 import uk.gov.hmrc.agentclientrelationships.services.CleanUpInvitationStatusService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
-import javax.inject.{Inject, Singleton}
-import scala.concurrent.{ExecutionContext, Future}
+import javax.inject.Inject
+import javax.inject.Singleton
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 @Singleton
 class CleanUpInvitationStatusController @Inject() (
   setRelationshipEndedService: CleanUpInvitationStatusService,
   cc: ControllerComponents
 )(implicit ec: ExecutionContext)
-    extends BackendController(cc) {
+extends BackendController(cc) {
 
   def deauthoriseInvitation: Action[JsValue] =
     Action.async(parse.json) { implicit request =>
@@ -43,22 +50,21 @@ class CleanUpInvitationStatusController @Inject() (
         .fold(
           errs => Future.successful(BadRequest(s"Invalid payload: $errs")),
           payload => {
-            val responseT = for {
-              service <- EitherT.fromEither[Future](
-                           setRelationshipEndedService.validateService(payload.service)
-                         )
-              clientId <- EitherT.fromEither[Future](
-                            setRelationshipEndedService.validateClientId(service, payload.clientId)
-                          )
-              result <- EitherT(
-                          setRelationshipEndedService.deauthoriseInvitation(
-                            arn = payload.arn,
-                            clientId = clientId.value,
-                            service = service.id,
-                            relationshipEndedBy = "HMRC"
-                          )
-                        )
-            } yield result
+            val responseT =
+              for {
+                service <- EitherT.fromEither[Future](setRelationshipEndedService.validateService(payload.service))
+                clientId <- EitherT.fromEither[Future](
+                  setRelationshipEndedService.validateClientId(service, payload.clientId)
+                )
+                result <- EitherT(
+                  setRelationshipEndedService.deauthoriseInvitation(
+                    arn = payload.arn,
+                    clientId = clientId.value,
+                    service = service.id,
+                    relationshipEndedBy = "HMRC"
+                  )
+                )
+              } yield result
 
             responseT.value
               .map(
@@ -88,16 +94,13 @@ class CleanUpInvitationStatusController @Inject() (
         UnsupportedService.getResult(msg)
 
       case InvalidClientId =>
-        val msg =
-          s"""Invalid clientId "$clientId", for service type "$service""""
+        val msg = s"""Invalid clientId "$clientId", for service type "$service""""
         Logger(getClass).warn(msg)
         InvalidClientId.getResult(msg)
 
-      case InvitationNotFound =>
-        InvitationNotFound.getResult("")
+      case InvitationNotFound => InvitationNotFound.getResult("")
 
-      case updateStatusFailed @ UpdateStatusFailed(_) =>
-        updateStatusFailed.getResult("")
+      case updateStatusFailed @ UpdateStatusFailed(_) => updateStatusFailed.getResult("")
 
       case _ => BadRequest
     }

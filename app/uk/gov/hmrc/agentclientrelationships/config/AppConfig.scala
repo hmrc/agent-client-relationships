@@ -17,7 +17,8 @@
 package uk.gov.hmrc.agentclientrelationships.config
 
 import java.net.URLDecoder
-import javax.inject.{Inject, Singleton}
+import javax.inject.Inject
+import javax.inject.Singleton
 import play.api.Configuration
 import uk.gov.hmrc.agentclientrelationships.model.BasicAuthentication
 import uk.gov.hmrc.agentmtdidentifiers.model.Service
@@ -26,15 +27,21 @@ import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 import scala.concurrent.duration.Duration
 import scala.util.matching.Regex
 
-case class ConfigNotFoundException(message: String) extends RuntimeException(message)
+case class ConfigNotFoundException(message: String)
+extends RuntimeException(message)
 
 @Singleton
-class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig) {
+class AppConfig @Inject() (
+  config: Configuration,
+  servicesConfig: ServicesConfig
+) {
 
   val appName = servicesConfig.getString("appName")
 
-  private def getConfigString(key: String) =
-    servicesConfig.getConfString(key, throw ConfigNotFoundException(s"Could not find config key: '$key'"))
+  private def getConfigString(key: String) = servicesConfig.getConfString(
+    key,
+    throw ConfigNotFoundException(s"Could not find config key: '$key'")
+  )
 
   def expectedAuth: BasicAuthentication = {
     val username = config
@@ -53,7 +60,7 @@ class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig
 
   val userGroupsSearchUrl = servicesConfig.baseUrl("users-groups-search")
 
-  val agentPermissionsUrl = servicesConfig.baseUrl("agent-permissions")
+  val agentPermissionsUrl: String = servicesConfig.baseUrl("agent-permissions")
 
   val agentFiRelationshipBaseUrl: String = servicesConfig.baseUrl("agent-fi-relationship")
 
@@ -62,7 +69,11 @@ class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig
   val desToken = getConfigString("des.authorization-token")
 
   val ifPlatformBaseUrl = servicesConfig.baseUrl("if")
-  val ifEnvironment = getConfigString("if.environment")
+
+  /** Itegration Framework (If) Environment
+    */
+  val ifEnvironment: String = getConfigString("if.environment")
+
   val ifAPI1171Token = getConfigString("if.authorization-api1171-token")
   val ifAPI1712Token = getConfigString("if.authorization-api1712-token")
   val ifAPI1495Token = getConfigString("if.authorization-api1495-token")
@@ -111,13 +122,18 @@ class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig
 
   val terminationStrideRole = servicesConfig.getString("termination.stride.role")
 
-  val inactiveRelationshipsClientRecordStartDate =
-    servicesConfig.getString("inactive-relationships-client.record-start-date")
+  val inactiveRelationshipsClientRecordStartDate = servicesConfig.getString(
+    "inactive-relationships-client.record-start-date"
+  )
 
   // Note: Personal Income Record is not handled through agent-client-relationships for many of the endpoints
   val supportedServicesWithoutPir: Seq[Service] = Service.supportedServices.filterNot(_ == Service.PersonalIncomeRecord)
   val supportedServices: Seq[Service] = Service.supportedServices
-  val apiSupportedServices: Seq[Service] = Seq(Service.MtdIt, Service.MtdItSupp, Service.Vat)
+  val apiSupportedServices: Seq[Service] = Seq(
+    Service.MtdIt,
+    Service.MtdItSupp,
+    Service.Vat
+  )
 
   val internalHostPatterns: Seq[Regex] = config.get[Seq[String]]("internalServiceHostPatterns").map(_.r)
 
@@ -129,4 +145,5 @@ class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig
   val emailSchedulerWarningCronExp: String = servicesConfig.getString("emailScheduler.warningEmailCronExpression")
   val emailSchedulerExpiredCronExp: String = servicesConfig.getString("emailScheduler.expiredEmailCronExpression")
   val emailSchedulerLockTTL: Int = servicesConfig.getInt("emailScheduler.lockDurationInSeconds")
+
 }

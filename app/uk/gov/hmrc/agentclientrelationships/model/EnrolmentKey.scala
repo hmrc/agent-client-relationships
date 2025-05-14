@@ -17,32 +17,44 @@
 package uk.gov.hmrc.agentclientrelationships.model
 
 import play.api.libs.json._
-import uk.gov.hmrc.agentmtdidentifiers.model.{ClientIdType, ClientIdentifier, Identifier, Service}
+import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdType
+import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier
+import uk.gov.hmrc.agentmtdidentifiers.model.Identifier
+import uk.gov.hmrc.agentmtdidentifiers.model.Service
 import uk.gov.hmrc.domain.TaxIdentifier
 
-/*
-An implementation of EnrolmentKey with some extra features to make life easier.
- */
-case class EnrolmentKey(service: String, identifiers: Seq[Identifier]) {
+/** An implementation of EnrolmentKey with some extra features to make life easier.
+  */
+case class EnrolmentKey(
+  service: String,
+  identifiers: Seq[Identifier]
+) {
+
   lazy val tag = // note: we intentionally do not use the Identifier's toString below because it upper cases everything!
     s"$service~${identifiers.map(identifier => s"${identifier.key}~${identifier.value}").mkString("~")}"
+
+  // TODO: enrolmentKey is a case class with overridden toString which is used to construct urls.
+  // This is misleading, difficult to spot, an in general not correct implementation
+  // result in errors in connectors
   override def toString: String = tag
 
   /** Note: unsafe (i.e. can throw exceptions)
     *
-    * Supplying no key assumes the service has a single 'supported' identifier! For other enrolments with multiple
-    * identifiers you should try and specify which one, or it will grab the first.
+    * Supplying no key assumes the service has a single 'supported' identifier! For other enrolments with multiple identifiers you should try and specify which
+    * one, or it will grab the first.
     */
-  def oneIdentifier(key: Option[String] = None): Identifier =
-    identifiers
-      .find(i =>
-        i.key == key.getOrElse(
+  def oneIdentifier(key: Option[String] = None): Identifier = identifiers
+    .find(i =>
+      i.key ==
+        key.getOrElse(
           if (Service.Cbc.id == service) { // would prefer match on supported services but too many 'special' cases
             Service.forId(service).supportedClientIdType.enrolmentId
-          } else identifiers.head.key // fallback to old behaviour
+          }
+          else
+            identifiers.head.key // fallback to old behaviour
         )
-      )
-      .getOrElse(throw new IllegalArgumentException(s"No identifier for $key with $service"))
+    )
+    .getOrElse(throw new IllegalArgumentException(s"No identifier for $key with $service"))
 
   /* Note: unsafe, see oneIdentifier */
   def oneTaxIdentifier(key: Option[String] = None): TaxIdentifier = {
@@ -54,17 +66,22 @@ case class EnrolmentKey(service: String, identifiers: Seq[Identifier]) {
 
 object EnrolmentKey {
 
-  def apply(s: String): EnrolmentKey =
-    parse(s).getOrElse(throw new IllegalArgumentException("Invalid enrolment key: " + s))
+  def apply(s: String): EnrolmentKey = parse(s).getOrElse(
+    throw new IllegalArgumentException("Invalid enrolment key: " + s)
+  )
 
-  def apply(service: Service, taxIdentifier: TaxIdentifier): EnrolmentKey =
-    EnrolmentKey(service.id, taxIdentifier)
+  def apply(
+    service: Service,
+    taxIdentifier: TaxIdentifier
+  ): EnrolmentKey = EnrolmentKey(service.id, taxIdentifier)
 
-  def apply(serviceKey: String, taxIdentifier: TaxIdentifier): EnrolmentKey =
-    EnrolmentKey(
-      serviceKey,
-      Seq(Identifier(ClientIdentifier(taxIdentifier).enrolmentId, taxIdentifier.value))
-    )
+  def apply(
+    serviceKey: String,
+    taxIdentifier: TaxIdentifier
+  ): EnrolmentKey = EnrolmentKey(
+    serviceKey,
+    Seq(Identifier(ClientIdentifier(taxIdentifier).enrolmentId, taxIdentifier.value))
+  )
 
   def parse(s: String): Option[EnrolmentKey] = {
     val parts = s.split("~")
@@ -72,17 +89,23 @@ object EnrolmentKey {
       val service = parts.head
       val identifiers = parts.tail.sliding(2, 2).map(a => Identifier(a(0), a(1))).toSeq
       Some(EnrolmentKey(service, identifiers))
-    } else None
-  }
-
-  implicit val writes: Writes[EnrolmentKey] = new Writes[EnrolmentKey] {
-    override def writes(ek: EnrolmentKey): JsValue = JsString(ek.toString)
-  }
-
-  implicit val reads: Reads[EnrolmentKey] = new Reads[EnrolmentKey] {
-    override def reads(json: JsValue): JsResult[EnrolmentKey] = json match {
-      case JsString(value) => parse(value).fold[JsResult[EnrolmentKey]](JsError("Invalid enrolment key"))(JsSuccess(_))
-      case _               => JsError("STRING_VALUE_EXPECTED")
     }
+    else
+      None
   }
+
+  implicit val writes: Writes[EnrolmentKey] =
+    new Writes[EnrolmentKey] {
+      override def writes(ek: EnrolmentKey): JsValue = JsString(ek.toString)
+    }
+
+  implicit val reads: Reads[EnrolmentKey] =
+    new Reads[EnrolmentKey] {
+      override def reads(json: JsValue): JsResult[EnrolmentKey] =
+        json match {
+          case JsString(value) => parse(value).fold[JsResult[EnrolmentKey]](JsError("Invalid enrolment key"))(JsSuccess(_))
+          case _ => JsError("STRING_VALUE_EXPECTED")
+        }
+    }
+
 }

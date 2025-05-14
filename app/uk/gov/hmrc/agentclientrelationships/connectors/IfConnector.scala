@@ -17,34 +17,47 @@
 package uk.gov.hmrc.agentclientrelationships.connectors
 
 import play.api.Logging
-import play.api.http.Status.{NOT_FOUND, OK}
+import play.api.http.Status.NOT_FOUND
+import play.api.http.Status.OK
 import play.api.libs.json._
-import uk.gov.hmrc.agentclientrelationships.UriPathEncoding.encodePathSegment
+import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
+import uk.gov.hmrc.agentclientrelationships.connectors.helpers.CorrelationIdGenerator
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsFailureResponse
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsNotFound
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ErrorRetrievingClientDetails
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa.ItsaBusinessDetails
-import uk.gov.hmrc.agentclientrelationships.model.clientDetails.{ClientDetailsFailureResponse, ClientDetailsNotFound, ErrorRetrievingClientDetails}
-import uk.gov.hmrc.agentclientrelationships.util.HttpAPIMonitor
+import uk.gov.hmrc.agentclientrelationships.util.HttpApiMonitor
+import uk.gov.hmrc.agentclientrelationships.util.RequestSupport._
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.HttpReads.Implicits._
-import uk.gov.hmrc.http.{Authorization, HeaderCarrier, HeaderNames, HttpClient, HttpReads, HttpResponse}
+import uk.gov.hmrc.http.client.HttpClientV2
+import uk.gov.hmrc.http.HeaderNames
+import uk.gov.hmrc.http.HttpResponse
+import uk.gov.hmrc.http.StringContextOps
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import java.net.URL
-import java.util.UUID
-import javax.inject.{Inject, Singleton}
-import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success, Try}
+import javax.inject.Inject
+import javax.inject.Singleton
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
+import scala.util.Failure
+import scala.util.Success
+import scala.util.Try
 
 @Singleton
 class IfConnector @Inject() (
-  val httpClient: HttpClient,
-  val ec: ExecutionContext
+  httpClient: HttpClientV2,
+  randomUuidGenerator: CorrelationIdGenerator,
+  appConfig: AppConfig
 )(implicit
   val metrics: Metrics,
-  val appConfig: AppConfig
-) extends HttpAPIMonitor
-    with Logging {
+  val ec: ExecutionContext
+)
+extends HttpApiMonitor
+with Logging {
 
   private val ifBaseUrl = appConfig.ifPlatformBaseUrl
 
@@ -55,12 +68,17 @@ class IfConnector @Inject() (
 API#1171 Get Business Details (for ITSA customers)
 https://confluence.tools.tax.service.gov.uk/display/AG/API+1171+%28API+5%29+-+Get+Business+Details
    * */
-  def getNinoFor(mtdId: MtdItId)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[Nino]] = {
-    val url = new URL(s"$ifBaseUrl/registration/business-details/mtdId/${encodePathSegment(mtdId.value)}")
+  def getNinoFor(mtdId: MtdItId)(implicit request: RequestHeader): Future[Option[Nino]] = {
+    val url = url"$ifBaseUrl/registration/business-details/mtdId/${mtdId.value}"
 
-    getWithIFHeaders("GetBusinessDetailsByMtdId", url, ifAPI1171Token, ifEnv).map { result =>
+    getWithIFHeaders(
+      "GetBusinessDetailsByMtdId",
+      url,
+      ifAPI1171Token,
+      ifEnv
+    ).map { result =>
       result.status match {
-        case OK        => Option((result.json \ "taxPayerDisplayResponse" \ "nino").as[Nino])
+        case OK => Option((result.json \ "taxPayerDisplayResponse" \ "nino").as[Nino])
         case NOT_FOUND => None
         case other =>
           logger.error(s"Error API#1171 GetBusinessDetailsByMtdIId. $other, ${result.body}")
@@ -73,12 +91,17 @@ https://confluence.tools.tax.service.gov.uk/display/AG/API+1171+%28API+5%29+-+Ge
     API#1171 Get Business Details (for ITSA customers)
     https://confluence.tools.tax.service.gov.uk/display/AG/API+1171+%28API+5%29+-+Get+Business+Details
    * */
-  def getMtdIdFor(nino: Nino)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[MtdItId]] = {
-    val url = new URL(s"$ifBaseUrl/registration/business-details/nino/${encodePathSegment(nino.value)}")
+  def getMtdIdFor(nino: Nino)(implicit request: RequestHeader): Future[Option[MtdItId]] = {
+    val url = url"$ifBaseUrl/registration/business-details/nino/${nino.value}"
 
-    getWithIFHeaders("GetBusinessDetailsByNino", url, ifAPI1171Token, ifEnv).map { result =>
+    getWithIFHeaders(
+      "GetBusinessDetailsByNino",
+      url,
+      ifAPI1171Token,
+      ifEnv
+    ).map { result =>
       result.status match {
-        case OK        => Option((result.json \ "taxPayerDisplayResponse" \ "mtdId").as[MtdItId])
+        case OK => Option((result.json \ "taxPayerDisplayResponse" \ "mtdId").as[MtdItId])
         case NOT_FOUND => None
         case other =>
           logger.error(s"Error API#1171 GetBusinessDetailsByNino. $other, ${result.body}")
@@ -88,16 +111,19 @@ https://confluence.tools.tax.service.gov.uk/display/AG/API+1171+%28API+5%29+-+Ge
   }
 
   // API#1171 Get Business Details
-  def getItsaBusinessDetails(
-    nino: String
-  )(implicit
-    hc: HeaderCarrier,
+  def getItsaBusinessDetails(nino: String)(implicit
+    request: RequestHeader,
     ec: ExecutionContext
   ): Future[Either[ClientDetailsFailureResponse, ItsaBusinessDetails]] = {
 
-    val url = new URL(s"$ifBaseUrl/registration/business-details/nino/${encodePathSegment(nino)}")
+    val url = url"$ifBaseUrl/registration/business-details/nino/$nino"
 
-    getWithIFHeaders("ConsumedAPI-IF-GetBusinessDetails-GET", url, ifAPI1171Token, ifEnv).map { result =>
+    getWithIFHeaders(
+      "ConsumedAPI-IF-GetBusinessDetails-GET",
+      url,
+      ifAPI1171Token,
+      ifEnv
+    ).map { result =>
       result.status match {
         case OK =>
           val optionalData = Try(result.json \ "taxPayerDisplayResponse" \ "businessData").map(_(0))
@@ -119,62 +145,43 @@ https://confluence.tools.tax.service.gov.uk/display/AG/API+1171+%28API+5%29+-+Ge
   private val Environment = "Environment"
   private val CorrelationId = "CorrelationId"
 
-  private def isInternalHost(url: URL): Boolean =
-    appConfig.internalHostPatterns.exists(_.pattern.matcher(url.getHost).matches())
+  private def isInternalHost(url: URL): Boolean = appConfig.internalHostPatterns
+    .exists(_.pattern.matcher(url.getHost).matches())
 
-  private[connectors] def getWithIFHeaders(apiName: String, url: URL, authToken: String, env: String)(implicit
-    hc: HeaderCarrier,
+  private[connectors] def getWithIFHeaders(
+    apiName: String,
+    url: URL,
+    authToken: String,
+    env: String
+  )(implicit
+    request: RequestHeader,
     ec: ExecutionContext
-  ): Future[HttpResponse] = {
-
-    val isInternal = isInternalHost(url)
-
+  ): Future[HttpResponse] =
     monitor(s"ConsumedAPI-IF-$apiName-GET") {
-      httpClient.GET(url.toString, Nil, ifHeaders(authToken, env, isInternal))(
-        implicitly[HttpReads[HttpResponse]],
-        if (isInternal) hc.copy(authorization = Some(Authorization(s"Bearer $authToken"))) else hc,
-        ec
-      )
+      httpClient.get(url).setHeader(ifHeaders(authToken, env): _*).execute[HttpResponse]
     }
-  }
 
-  private[connectors] def postWithIFHeaders(apiName: String, url: URL, body: JsValue, authToken: String, env: String)(
-    implicit
-    hc: HeaderCarrier,
+  private[connectors] def postWithIFHeaders(
+    apiName: String,
+    url: URL,
+    body: JsValue,
+    authToken: String,
+    env: String
+  )(implicit
+    request: RequestHeader,
     ec: ExecutionContext
-  ): Future[HttpResponse] = {
-
-    val isInternal = isInternalHost(url)
-
+  ): Future[HttpResponse] =
     monitor(s"ConsumedAPI-IF-$apiName-POST") {
-      httpClient.POST(url.toString, body, ifHeaders(authToken, env, isInternal))(
-        implicitly[Writes[JsValue]],
-        implicitly[HttpReads[HttpResponse]],
-        if (isInternal) hc.copy(authorization = Some(Authorization(s"Bearer $authToken"))) else hc,
-        ec
-      )
+      httpClient.post(url).withBody(body).setHeader(ifHeaders(authToken, env): _*).execute[HttpResponse]
     }
-  }
 
-  /*
-   * If the service being called is external (e.g. DES/IF in QA or Prod):
-   * headers from HeaderCarrier are removed (except user-agent header).
-   * Therefore, required headers must be explicitly set.
-   * See https://github.com/hmrc/http-verbs?tab=readme-ov-file#propagation-of-headers
-   * */
-  def ifHeaders(authToken: String, env: String, isInternalHost: Boolean)(implicit
-    hc: HeaderCarrier
-  ): Seq[(String, String)] = {
-
-    val additionalHeaders =
-      if (isInternalHost) Seq.empty
-      else
-        Seq(
-          HeaderNames.authorisation -> s"Bearer $authToken",
-          HeaderNames.xRequestId    -> hc.requestId.map(_.value).getOrElse(UUID.randomUUID().toString)
-        ) ++ hc.sessionId.fold(Seq.empty[(String, String)])(x => Seq(HeaderNames.xSessionId -> x.value))
-    val commonHeaders = Seq(Environment -> env, CorrelationId -> UUID.randomUUID().toString)
-    commonHeaders ++ additionalHeaders
-  }
+  def ifHeaders(
+    authToken: String,
+    env: String
+  ): Seq[(String, String)] = Seq(
+    Environment -> env,
+    CorrelationId -> randomUuidGenerator.makeCorrelationId(),
+    HeaderNames.authorisation -> s"Bearer $authToken"
+  )
 
 }

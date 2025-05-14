@@ -23,27 +23,33 @@ import play.api.libs.json.Json
 import uk.gov.hmrc.agentclientrelationships.model.EmailInformation
 import uk.gov.hmrc.agentclientrelationships.support.TestData
 
-trait EmailStubs extends TestData {
+trait EmailStubs
+extends TestData {
 
-  def verifyRejectInvitationSent(emailInformation: EmailInformation, count: Int = 1) =
-    eventually {
-      verify(
-        count,
-        postRequestedFor(urlPathEqualTo(s"/hmrc/email"))
-          .withRequestBody(similarToJson(Json.toJson(emailInformation).toString))
-      )
-    }
-
-  private def similarToJson(value: String) = equalToJson(value.stripMargin, true, true)
-
-  def givenEmailSent(emailInformation: EmailInformation, status: Int = 202): StubMapping =
-    stubFor(
-      post("/hmrc/email")
-        .withRequestBody(similarToJson(Json.toJson(emailInformation).toString()))
-        .willReturn(
-          aResponse()
-            .withStatus(status)
-        )
+  def verifyRejectInvitationSent(
+    emailInformation: EmailInformation,
+    count: Int = 1
+  ) = eventually {
+    verify(
+      count,
+      postRequestedFor(urlPathEqualTo(s"/hmrc/email"))
+        .withRequestBody(similarToJson(Json.toJson(emailInformation).toString))
     )
+  }
+
+  private def similarToJson(value: String) = equalToJson(
+    value.stripMargin,
+    true,
+    true
+  )
+
+  def givenEmailSent(
+    emailInformation: EmailInformation,
+    status: Int = 202
+  ): StubMapping = stubFor(
+    post("/hmrc/email")
+      .withRequestBody(similarToJson(Json.toJson(emailInformation).toString()))
+      .willReturn(aResponse().withStatus(status))
+  )
 
 }

@@ -17,11 +17,14 @@
 package uk.gov.hmrc.agentclientrelationships.binders
 
 import play.api.mvc.QueryStringBindable
-import uk.gov.hmrc.agentclientrelationships.model.{InvitationStatus, UserId}
+import uk.gov.hmrc.agentclientrelationships.model.InvitationStatus
+import uk.gov.hmrc.agentclientrelationships.model.UserId
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.Nino
 
+// scalafmt: { binPack.parentConstructors = Always }
 object PathBinders {
+
   implicit object ArnBinder extends SimpleObjectBinder[Arn](Arn.apply, _.value)
   implicit object MtdItIdBinder extends SimpleObjectBinder[MtdItId](MtdItId.apply, _.value)
   implicit object NinoBinder extends SimpleObjectBinder[Nino](Nino.apply, _.value)
@@ -32,39 +35,50 @@ object PathBinders {
   implicit object PlrIdBinder extends SimpleObjectBinder[PlrId](PlrId.apply, _.value)
   implicit object UserIdBinder extends SimpleObjectBinder[UserId](UserId.apply, _.value)
   implicit object ArnQueryBinder extends QueryStringBindable[Arn] {
-    override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, Arn]] =
-      params
-        .get(key)
-        .flatMap(_.headOption)
-        .map { value =>
-          try
-            Right(Arn.apply(value))
-          catch {
-            case err: Throwable =>
-              Left(
-                s"Cannot parse parameter as Arn: [$value] is not a valid Arn"
-              )
-          }
-        }
 
-    override def unbind(key: String, value: Arn): String = s"$key=${Arn.unapply(value)}"
+    override def bind(
+      key: String,
+      params: Map[String, Seq[String]]
+    ): Option[Either[String, Arn]] = params
+      .get(key)
+      .flatMap(_.headOption)
+      .map { value =>
+        try Right(Arn.apply(value))
+        catch {
+          case err: Throwable => Left(s"Cannot parse parameter as Arn: [$value] is not a valid Arn")
+        }
+      }
+
+    override def unbind(
+      key: String,
+      value: Arn
+    ): String = s"$key=${Arn.unapply(value)}"
+
   }
+
   implicit object InvitationStatusBinder extends QueryStringBindable[InvitationStatus] {
-    override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, InvitationStatus]] =
-      params
-        .get(key)
-        .flatMap(_.headOption)
-        .map { value =>
-          try
-            Right(InvitationStatus.apply(value))
-          catch {
-            case err: Throwable =>
-              Left(
-                s"Cannot parse parameter status as InvitationStatus: status of [$value] is not a valid InvitationStatus"
-              )
-          }
-        }
 
-    override def unbind(key: String, value: InvitationStatus): String = s"$key=${InvitationStatus.unapply(value)}"
+    override def bind(
+      key: String,
+      params: Map[String, Seq[String]]
+    ): Option[Either[String, InvitationStatus]] = params
+      .get(key)
+      .flatMap(_.headOption)
+      .map { value =>
+        try Right(InvitationStatus.apply(value))
+        catch {
+          case err: Throwable =>
+            Left(
+              s"Cannot parse parameter status as InvitationStatus: status of [$value] is not a valid InvitationStatus"
+            )
+        }
+      }
+
+    override def unbind(
+      key: String,
+      value: InvitationStatus
+    ): String = s"$key=${InvitationStatus.unapply(value)}"
+
   }
+
 }

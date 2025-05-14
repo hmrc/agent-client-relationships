@@ -18,46 +18,57 @@ package uk.gov.hmrc.agentclientrelationships.services
 
 import play.api.Logging
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse
-import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.{InvalidClientId, InvitationNotFound, UnsupportedService}
+import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.InvalidClientId
+import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.InvitationNotFound
+import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.UnsupportedService
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
 import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier.ClientId
-import uk.gov.hmrc.agentmtdidentifiers.model.{ClientIdentifier, Service}
+import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier
+import uk.gov.hmrc.agentmtdidentifiers.model.Service
 
-import javax.inject.{Inject, Singleton}
-import scala.concurrent.{ExecutionContext, Future}
+import javax.inject.Inject
+import javax.inject.Singleton
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 import scala.util.Try
 
 @Singleton
-class CleanUpInvitationStatusService @Inject() (
-  invitationsRepository: InvitationsRepository
-)(implicit ec: ExecutionContext)
-    extends Logging {
+class CleanUpInvitationStatusService @Inject() (invitationsRepository: InvitationsRepository)(implicit
+  ec: ExecutionContext
+)
+extends Logging {
 
-  def validateService(serviceStr: String): Either[InvitationFailureResponse, Service] = for {
-    service <- Try(Service.forId(serviceStr))
-                 .fold(_ => Left(UnsupportedService), Right(_))
-  } yield service
+  def validateService(serviceStr: String): Either[InvitationFailureResponse, Service] =
+    for {
+      service <- Try(Service.forId(serviceStr)).fold(_ => Left(UnsupportedService), Right(_))
+    } yield service
 
-  def validateClientId(service: Service, clientIdStr: String): Either[InvitationFailureResponse, ClientId] = for {
-    clientId <- Try(ClientIdentifier(clientIdStr, service.supportedClientIdType.id))
-                  .fold(_ => Left(InvalidClientId), Right(_))
-  } yield clientId
+  def validateClientId(
+    service: Service,
+    clientIdStr: String
+  ): Either[InvitationFailureResponse, ClientId] =
+    for {
+      clientId <- Try(ClientIdentifier(clientIdStr, service.supportedClientIdType.id)).fold(
+        _ => Left(InvalidClientId),
+        Right(_)
+      )
+    } yield clientId
 
   def deauthoriseInvitation(
     arn: String,
     clientId: String,
     service: String,
     relationshipEndedBy: String
-  ): Future[Either[InvitationFailureResponse, Unit]] =
-    invitationsRepository
-      .deauthAcceptedInvitation(
-        arn = arn,
-        clientId = clientId,
-        service = service,
-        relationshipEndedBy = relationshipEndedBy
-      )
-      .map {
-        case true  => Right(())
-        case false => Left(InvitationNotFound)
-      }
+  ): Future[Either[InvitationFailureResponse, Unit]] = invitationsRepository
+    .deauthAcceptedInvitation(
+      arn = arn,
+      clientId = clientId,
+      service = service,
+      relationshipEndedBy = relationshipEndedBy
+    )
+    .map {
+      case true => Right(())
+      case false => Left(InvitationNotFound)
+    }
+
 }

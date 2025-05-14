@@ -16,29 +16,45 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
-import org.mockito.ArgumentMatchers.{any, eq => eqTo}
+import org.mockito.ArgumentMatchers.any
+import org.mockito.ArgumentMatchers.{eq => eqTo}
 import org.mockito.Mockito.verify
-import play.api.i18n.{Lang, Langs, MessagesApi}
+import play.api.i18n.Lang
+import play.api.i18n.Langs
+import play.api.i18n.MessagesApi
 import play.api.test.Helpers.stubControllerComponents
 import uk.gov.hmrc.agentclientrelationships.connectors.EmailConnector
-import uk.gov.hmrc.agentclientrelationships.model.{EmailInformation, Invitation}
-import uk.gov.hmrc.agentclientrelationships.support.{ResettingMockitoSugar, UnitSpec}
+import uk.gov.hmrc.agentclientrelationships.model.EmailInformation
+import uk.gov.hmrc.agentclientrelationships.model.Invitation
+import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
+import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.Vat
 import uk.gov.hmrc.agentmtdidentifiers.model.Vrn
-import uk.gov.hmrc.http.HeaderCarrier
+import play.api.mvc.AnyContentAsEmpty
+import play.api.mvc.RequestHeader
+import play.api.test.FakeRequest
 
-import java.time.{Instant, LocalDate}
+import java.time.Instant
+import java.time.LocalDate
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class EmailServiceSpec extends UnitSpec with ResettingMockitoSugar {
+class EmailServiceSpec
+extends UnitSpec
+with ResettingMockitoSugar {
 
   val mockEmailConnector: EmailConnector = resettingMock[EmailConnector]
   lazy val messagesApi: MessagesApi = stubControllerComponents().messagesApi
-  implicit val langs: Langs = stubControllerComponents().langs
+  val langs: Langs = stubControllerComponents().langs
   implicit val lang: Lang = langs.availables.head
+  implicit val request: RequestHeader = FakeRequest()
 
-  val service = new EmailService(mockEmailConnector, messagesApi)
+  val service =
+    new EmailService(
+      mockEmailConnector,
+      messagesApi,
+      langs
+    )
 
   val invitation: Invitation = Invitation
     .createNew(
@@ -61,16 +77,16 @@ class EmailServiceSpec extends UnitSpec with ResettingMockitoSugar {
         to = Seq("agent@email.com"),
         templateId = "agent_invitations_about_to_expire",
         parameters = Map(
-          "agencyName"          -> "Will Gates",
+          "agencyName" -> "Will Gates",
           "numberOfInvitations" -> "2",
-          "createdDate"         -> "6 June 2020",
-          "expiryDate"          -> "1 January 2020"
+          "createdDate" -> "6 June 2020",
+          "expiryDate" -> "1 January 2020"
         )
       )
       val invitations = Seq(invitation, invitation.copy(invitationId = "2", suppliedClientId = "2"))
 
       service.sendWarningEmail(invitations)
-      verify(mockEmailConnector).sendEmail(eqTo(expectedEmailInfoModel))(any[HeaderCarrier](), any[ExecutionContext]())
+      verify(mockEmailConnector).sendEmail(eqTo(expectedEmailInfoModel))(any[RequestHeader]())
     }
 
     "send the correct model to the connector when there is one invitation" in {
@@ -78,15 +94,15 @@ class EmailServiceSpec extends UnitSpec with ResettingMockitoSugar {
         to = Seq("agent@email.com"),
         templateId = "agent_invitation_about_to_expire_single",
         parameters = Map(
-          "agencyName"          -> "Will Gates",
+          "agencyName" -> "Will Gates",
           "numberOfInvitations" -> "1",
-          "createdDate"         -> "6 June 2020",
-          "expiryDate"          -> "1 January 2020"
+          "createdDate" -> "6 June 2020",
+          "expiryDate" -> "1 January 2020"
         )
       )
 
       service.sendWarningEmail(Seq(invitation))
-      verify(mockEmailConnector).sendEmail(eqTo(expectedEmailInfoModel))(any[HeaderCarrier](), any[ExecutionContext]())
+      verify(mockEmailConnector).sendEmail(eqTo(expectedEmailInfoModel))(any[RequestHeader]())
     }
   }
 
@@ -106,8 +122,7 @@ class EmailServiceSpec extends UnitSpec with ResettingMockitoSugar {
       "HMRC-PILLAR2-ORG"
     )
 
-    "send the correct model to the connector" when {
-
+    "send the correct model to the connector" when
       serviceKeys.foreach { serviceKey =>
         s"the service is $serviceKey" in {
           val expectedEmailInfoModel = EmailInformation(
@@ -117,15 +132,14 @@ class EmailServiceSpec extends UnitSpec with ResettingMockitoSugar {
               "agencyName" -> "Will Gates",
               "clientName" -> "Macrosoft",
               "expiryDate" -> "1 January 2020",
-              "service"    -> messagesApi(s"service.$serviceKey")
+              "service" -> messagesApi(s"service.$serviceKey")
             )
           )
 
           service.sendExpiredEmail(invitation.copy(service = serviceKey))
-          verify(mockEmailConnector)
-            .sendEmail(eqTo(expectedEmailInfoModel))(any[HeaderCarrier](), any[ExecutionContext]())
+          verify(mockEmailConnector).sendEmail(eqTo(expectedEmailInfoModel))(any[RequestHeader]())
         }
       }
-    }
   }
+
 }

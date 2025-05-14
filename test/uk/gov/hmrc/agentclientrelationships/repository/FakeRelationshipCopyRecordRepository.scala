@@ -25,63 +25,91 @@ import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class FakeRelationshipCopyRecordRepository extends RelationshipCopyRecordRepository {
+class FakeRelationshipCopyRecordRepository
+extends RelationshipCopyRecordRepository {
+
   private val data: mutable.Map[(Arn, EnrolmentKey), RelationshipCopyRecord] = mutable.Map()
   private val UPDATED_RECORD_COUNT = 1
 
   // the provided RelationshipCopyRecord must use an enrolment key
-  override def create(record: RelationshipCopyRecord): Future[Int] =
-    findBy(Arn(record.arn), record.enrolmentKey.get).map { result =>
+  override def create(record: RelationshipCopyRecord): Future[Int] = findBy(Arn(record.arn), record.enrolmentKey.get)
+    .map { result =>
       if (result.isDefined) {
         throw new MongoException("duplicate key error collection")
-      } else {
+      }
+      else {
         data += ((Arn(record.arn), record.enrolmentKey.get) -> record)
         1
       }
     }
 
-  override def findBy(arn: Arn, enrolmentKey: EnrolmentKey): Future[Option[RelationshipCopyRecord]] = {
+  override def findBy(
+    arn: Arn,
+    enrolmentKey: EnrolmentKey
+  ): Future[Option[RelationshipCopyRecord]] = {
     val maybeValue: Option[RelationshipCopyRecord] = data.get((arn, enrolmentKey))
-    Future.successful(if (maybeValue.isDefined) {
-      maybeValue
-    } else {
-      None
-    })
+    Future.successful(
+      if (maybeValue.isDefined) {
+        maybeValue
+      }
+      else {
+        None
+      }
+    )
   }
 
-  override def updateEtmpSyncStatus(arn: Arn, enrolmentKey: EnrolmentKey, status: SyncStatus): Future[Int] = {
+  override def updateEtmpSyncStatus(
+    arn: Arn,
+    enrolmentKey: EnrolmentKey,
+    status: SyncStatus
+  ): Future[Int] = {
     val maybeValue: Option[RelationshipCopyRecord] = data.get((arn, enrolmentKey))
-    Future.successful(if (maybeValue.isDefined) {
-      data((arn, enrolmentKey)) = maybeValue.get.copy(syncToETMPStatus = Some(status))
-      UPDATED_RECORD_COUNT
-    } else {
-      throw new IllegalArgumentException(s"Unexpected arn and identifier $arn, ${enrolmentKey.tag}")
-    })
+    Future.successful(
+      if (maybeValue.isDefined) {
+        data((arn, enrolmentKey)) = maybeValue.get.copy(syncToETMPStatus = Some(status))
+        UPDATED_RECORD_COUNT
+      }
+      else {
+        throw new IllegalArgumentException(s"Unexpected arn and identifier $arn, ${enrolmentKey.tag}")
+      }
+    )
 
   }
 
-  override def updateEsSyncStatus(arn: Arn, enrolmentKey: EnrolmentKey, status: SyncStatus): Future[Int] = {
+  override def updateEsSyncStatus(
+    arn: Arn,
+    enrolmentKey: EnrolmentKey,
+    status: SyncStatus
+  ): Future[Int] = {
     val maybeValue: Option[RelationshipCopyRecord] = data.get((arn, enrolmentKey))
-    Future.successful(if (maybeValue.isDefined) {
-      data((arn, enrolmentKey)) = maybeValue.get.copy(syncToESStatus = Some(status))
-      UPDATED_RECORD_COUNT
-    } else {
-      throw new IllegalArgumentException(s"Unexpected arn and identifier $arn, ${enrolmentKey.tag}")
-    })
+    Future.successful(
+      if (maybeValue.isDefined) {
+        data((arn, enrolmentKey)) = maybeValue.get.copy(syncToESStatus = Some(status))
+        UPDATED_RECORD_COUNT
+      }
+      else {
+        throw new IllegalArgumentException(s"Unexpected arn and identifier $arn, ${enrolmentKey.tag}")
+      }
+    )
   }
 
-  override def remove(arn: Arn, enrolmentKey: EnrolmentKey): Future[Int] = {
+  override def remove(
+    arn: Arn,
+    enrolmentKey: EnrolmentKey
+  ): Future[Int] = {
     val maybeRemove = data.remove((arn, enrolmentKey))
-    if (maybeRemove.isDefined) Future.successful(1)
-    else Future.successful(0)
+    if (maybeRemove.isDefined)
+      Future.successful(1)
+    else
+      Future.successful(0)
   }
 
-  def reset() =
-    data.clear()
+  def reset() = data.clear()
 
   override def terminateAgent(arn: Arn): Future[Either[String, Int]] = {
     val keysToRemove: Seq[(Arn, EnrolmentKey)] = data.keys.filter(_._1 == arn).toSeq
     keysToRemove.foreach(data.remove)
     Future.successful(Right(keysToRemove.size))
   }
+
 }

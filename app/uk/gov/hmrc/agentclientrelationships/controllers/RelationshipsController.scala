@@ -20,21 +20,28 @@ import cats.implicits._
 import play.api.libs.json.Json
 import play.api.mvc._
 import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys._
-import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
+import uk.gov.hmrc.agentclientrelationships.audit.AuditData
+import uk.gov.hmrc.agentclientrelationships.audit.AuditService
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.connectors.{DesConnector, EnrolmentStoreProxyConnector, IfOrHipConnector, MappingConnector}
+import uk.gov.hmrc.agentclientrelationships.connectors.DesConnector
+import uk.gov.hmrc.agentclientrelationships.connectors.EnrolmentStoreProxyConnector
+import uk.gov.hmrc.agentclientrelationships.connectors.IfOrHipConnector
+import uk.gov.hmrc.agentclientrelationships.connectors.MappingConnector
 import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax._
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.services._
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.auth.core.AuthConnector
-import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
+import uk.gov.hmrc.domain.Nino
+import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
-import javax.inject.{Inject, Singleton}
-import scala.concurrent.{ExecutionContext, Future}
+import javax.inject.Inject
+import javax.inject.Singleton
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 import scala.util.control.NonFatal
 
 @Singleton
@@ -54,9 +61,9 @@ class RelationshipsController @Inject() (
   auditService: AuditService,
   validationService: ValidationService,
   override val controllerComponents: ControllerComponents
-)(implicit executionContext: ExecutionContext)
-    extends BackendController(controllerComponents)
-    with AuthActions {
+)(implicit val executionContext: ExecutionContext)
+extends BackendController(controllerComponents)
+with AuthActions {
 
   private val strideRoles = Seq(appConfig.oldAuthStrideRole, appConfig.newAuthStrideRole)
 
@@ -70,17 +77,33 @@ class RelationshipsController @Inject() (
     userId: Option[String]
   ): Action[AnyContent] = Action.async { implicit request =>
     checkOrchestratorService
-      .checkForRelationship(arn, service, clientIdType, clientId, userId)
+      .checkForRelationship(
+        arn,
+        service,
+        clientIdType,
+        clientId,
+        userId
+      )
       .map {
-        case CheckRelationshipFound             => Ok
+        case CheckRelationshipFound => Ok
         case CheckRelationshipNotFound(message) => NotFound(toJson(message))
-        case CheckRelationshipInvalidRequest    => BadRequest
+        case CheckRelationshipInvalidRequest => BadRequest
       }
   }
 
-  def create(arn: Arn, serviceId: String, clientIdType: String, clientId: String): Action[AnyContent] = Action.async {
-    implicit request =>
-      validationService.validateForEnrolmentKey(serviceId, clientIdType, clientId).flatMap {
+  def create(
+    arn: Arn,
+    serviceId: String,
+    clientIdType: String,
+    clientId: String
+  ): Action[AnyContent] = Action.async { implicit request =>
+    validationService
+      .validateForEnrolmentKey(
+        serviceId,
+        clientIdType,
+        clientId
+      )
+      .flatMap {
         case Right(enrolmentKey) =>
           val taxIdentifier = enrolmentKey.oneTaxIdentifier()
           authorisedClientOrStrideUserOrAgent(taxIdentifier, strideRoles) { currentUser =>
@@ -91,7 +114,10 @@ class RelationshipsController @Inject() (
             auditData.set(clientIdTypeKey, clientIdType)
             auditData.set(
               howRelationshipCreatedKey,
-              if (currentUser.isStride) hmrcAcceptedInvitation else clientAcceptedInvitation
+              if (currentUser.isStride)
+                hmrcAcceptedInvitation
+              else
+                clientAcceptedInvitation
             )
 
             createService
@@ -104,7 +130,9 @@ class RelationshipsController @Inject() (
               )
               .map {
                 case Some(_) => Created
-                case None    => logger.warn(s"create relationship is currently in Locked state"); Locked
+                case None =>
+                  logger.warn(s"create relationship is currently in Locked state");
+                  Locked
               }
               .recover {
                 case upS: UpstreamErrorResponse =>
@@ -120,35 +148,53 @@ class RelationshipsController @Inject() (
       }
   }
 
-  def delete(arn: Arn, serviceId: String, clientIdType: String, clientId: String): Action[AnyContent] = Action.async {
-    implicit request =>
-      validationService.validateForEnrolmentKey(serviceId, clientIdType, clientId).flatMap {
+  def delete(
+    arn: Arn,
+    serviceId: String,
+    clientIdType: String,
+    clientId: String
+  ): Action[AnyContent] = Action.async { implicit request =>
+    validationService
+      .validateForEnrolmentKey(
+        serviceId,
+        clientIdType,
+        clientId
+      )
+      .flatMap {
         case Right(enrolmentKey) =>
-          val taxIdentifier =
-            enrolmentKey.oneTaxIdentifier()
-          authorisedUser(Some(arn), taxIdentifier, strideRoles) { implicit currentUser =>
-            (for {
-              maybeEk <- taxIdentifier match {
-                           // turn a NINO-based enrolment key for IT into a MtdItId-based one if necessary
-                           case nino @ Nino(_) =>
-                             ifOrHipConnector.getMtdIdFor(nino).map(_.map(EnrolmentKey(Service.MtdIt, _)))
-                           case _ => Future.successful(Some(enrolmentKey))
-                         }
-              _ <- maybeEk.fold {
-                     Future.successful(logger.error(s"Could not identify $taxIdentifier for $clientIdType"))
-                   } { ek =>
-                     deleteService
-                       .deleteRelationship(arn, ek, currentUser.affinityGroup)
-                   }
-            } yield NoContent)
-              .recover {
-                case upS: UpstreamErrorResponse =>
-                  logger.warn(s"Could not delete relationship: ${upS.getMessage}")
-                  InternalServerError(toJson(upS.getMessage))
-                case NonFatal(ex) =>
-                  logger.warn(s"Could not delete relationship: ${ex.getMessage}")
-                  InternalServerError(toJson(ex.getMessage))
-              }
+          val taxIdentifier = enrolmentKey.oneTaxIdentifier()
+          authorisedUser(
+            Some(arn),
+            taxIdentifier,
+            strideRoles
+          ) { implicit currentUser =>
+            (
+              for {
+                maybeEk <-
+                  taxIdentifier match {
+                    // turn a NINO-based enrolment key for IT into a MtdItId-based one if necessary
+                    case nino @ Nino(_) => ifOrHipConnector.getMtdIdFor(nino).map(_.map(EnrolmentKey(Service.MtdIt, _)))
+                    case _ => Future.successful(Some(enrolmentKey))
+                  }
+                _ <-
+                  maybeEk.fold {
+                    Future.successful(logger.error(s"Could not identify $taxIdentifier for $clientIdType"))
+                  } { ek =>
+                    deleteService.deleteRelationship(
+                      arn,
+                      ek,
+                      currentUser.affinityGroup
+                    )
+                  }
+              } yield NoContent
+            ).recover {
+              case upS: UpstreamErrorResponse =>
+                logger.warn(s"Could not delete relationship: ${upS.getMessage}")
+                InternalServerError(toJson(upS.getMessage))
+              case NonFatal(ex) =>
+                logger.warn(s"Could not delete relationship: ${ex.getMessage}")
+                InternalServerError(toJson(ex.getMessage))
+            }
           }
         case Left(error) => Future.successful(BadRequest(error))
       }
@@ -158,7 +204,13 @@ class RelationshipsController @Inject() (
     withAuthorisedAsClient { identifiers: Map[Service, TaxIdentifier] =>
       findService
         .getActiveRelationshipsForClient(identifiers)
-        .map(relationships => Ok(Json.toJson(relationships.map { case (k, v) => (k.id, v) })))
+        .map(relationships =>
+          Ok(
+            Json.toJson(
+              relationships.map { case (k, v) => (k.id, v) }
+            )
+          )
+        )
     }
   }
 
@@ -172,27 +224,40 @@ class RelationshipsController @Inject() (
 
   def getRelationshipsByServiceViaClient(service: String): Action[AnyContent] = Action.async { implicit request =>
     authorisedAsClient(service) { implicit clientId =>
-      findService.getActiveRelationshipsForClient(clientId, Service(service)).map {
-        case Some(relationship) => Ok(Json.toJson(relationship))
-        case None               => NotFound
-      }
+      findService
+        .getActiveRelationshipsForClient(clientId, Service(service))
+        .map {
+          case Some(relationship) => Ok(Json.toJson(relationship))
+          case None => NotFound
+        }
     }
   }
 
-  def getRelationships(service: String, clientIdType: String, clientId: String): Action[AnyContent] = Action.async {
-    implicit request =>
-      validationService.validateForEnrolmentKey(service, clientIdType, clientId).flatMap {
+  def getRelationships(
+    service: String,
+    clientIdType: String,
+    clientId: String
+  ): Action[AnyContent] = Action.async { implicit request =>
+    validationService
+      .validateForEnrolmentKey(
+        service,
+        clientIdType,
+        clientId
+      )
+      .flatMap {
         case Right(enrolmentKey) =>
           val taxIdentifier = enrolmentKey.oneTaxIdentifier()
           authorisedWithStride(appConfig.oldAuthStrideRole, appConfig.newAuthStrideRole) { _ =>
-            val relationships = if (service == Service.MtdIt.id || service == Service.MtdItSupp.id) {
-              findService.getItsaRelationshipForClient(Nino(taxIdentifier.value), Service(service))
-            } else {
-              findService.getActiveRelationshipsForClient(taxIdentifier, Service(service))
-            }
+            val relationships =
+              if (service == Service.MtdIt.id || service == Service.MtdItSupp.id) {
+                findService.getItsaRelationshipForClient(Nino(taxIdentifier.value), Service(service))
+              }
+              else {
+                findService.getActiveRelationshipsForClient(taxIdentifier, Service(service))
+              }
             relationships.map {
               case Some(relationship) => Ok(Json.toJson(relationship))
-              case None               => NotFound
+              case None => NotFound
             }
           }
         case Left(error) => Future.successful(BadRequest(error))
@@ -201,10 +266,14 @@ class RelationshipsController @Inject() (
 
   def getInactiveRelationshipsAgent: Action[AnyContent] = Action.async { implicit request =>
     withAuthorisedAsAgent { arn =>
-      findService.getInactiveRelationshipsForAgent(arn).map { relationships =>
-        if (relationships.nonEmpty) Ok(Json.toJson(relationships))
-        else NotFound
-      }
+      findService
+        .getInactiveRelationshipsForAgent(arn)
+        .map { relationships =>
+          if (relationships.nonEmpty)
+            Ok(Json.toJson(relationships))
+          else
+            NotFound
+        }
     }
   }
 
@@ -226,32 +295,43 @@ class RelationshipsController @Inject() (
    * This endpoint is used by agent-invitations-frontend to determine if the client has a legacy SA relationship in CESA
    * and whether the relationship has been mapped to the Arn.
    * */
-  def getLegacySaRelationshipStatus(arn: Arn, nino: Nino): Action[AnyContent] = Action async { implicit request =>
-    implicit val auditData: AuditData = new AuditData()
-    auditData.set(arnKey, arn)
-    auditData.set(howRelationshipCreatedKey, "hasLegacyMapping")
-    auditData.set(serviceKey, "mtd-it")
-    auditData.set(clientIdKey, nino)
-    auditData.set(clientIdTypeKey, "nino")
+  def getLegacySaRelationshipStatus(
+    arn: Arn,
+    nino: Nino
+  ): Action[AnyContent] =
+    Action async { implicit request =>
+      implicit val auditData: AuditData = new AuditData()
+      auditData.set(arnKey, arn)
+      auditData.set(howRelationshipCreatedKey, "hasLegacyMapping")
+      auditData.set(serviceKey, "mtd-it")
+      auditData.set(clientIdKey, nino)
+      auditData.set(clientIdTypeKey, "nino")
 
-    withAuthorisedAsAgent { arn =>
-      des.getClientSaAgentSaReferences(nino).flatMap { references =>
-        if (references.nonEmpty) {
-          checkOldAndCopyService
-            .intersection(references)(mappingConnector.getSaAgentReferencesFor(arn))
-            .map { matching =>
-              if (matching.nonEmpty) {
-                auditData.set(saAgentRefKey, matching.mkString(","))
-                auditData.set(cesaRelationshipKey, matching.nonEmpty)
-                auditService.sendCheckCesaAndPartialAuthAuditEvent()
-                NoContent // a legacy SA relationship was found and it is mapped to the Arn
-              } else Ok // A legacy SA relationship was found but it is not mapped to the Arn
+      withAuthorisedAsAgent { arn =>
+        des
+          .getClientSaAgentSaReferences(nino)
+          .flatMap { references =>
+            if (references.nonEmpty) {
+              checkOldAndCopyService
+                .intersection(references)(mappingConnector.getSaAgentReferencesFor(arn))
+                .map { matching =>
+                  if (matching.nonEmpty) {
+                    auditData.set(saAgentRefKey, matching.mkString(","))
+                    auditData.set(cesaRelationshipKey, matching.nonEmpty)
+                    auditService.sendCheckCesaAndPartialAuthAuditEvent()
+                    NoContent // a legacy SA relationship was found and it is mapped to the Arn
+                  }
+                  else
+                    Ok // A legacy SA relationship was found but it is not mapped to the Arn
+                }
+                .recover {
+                  case e: UpstreamErrorResponse if e.statusCode == 404 => Ok
+                }
             }
-            .recover {
-              case e: UpstreamErrorResponse if e.statusCode == 404 => Ok
-            }
-        } else Future successful NotFound // No legacy SA relationship was found
+            else
+              Future successful NotFound // No legacy SA relationship was found
+          }
       }
     }
-  }
+
 }

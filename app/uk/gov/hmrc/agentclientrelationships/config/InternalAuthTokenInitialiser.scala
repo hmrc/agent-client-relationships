@@ -22,18 +22,24 @@ import play.api.http.Status.CREATED
 import play.api.libs.json.Json
 import uk.gov.hmrc.http.HttpReads.Implicits.readRaw
 import uk.gov.hmrc.http.client.HttpClientV2
-import uk.gov.hmrc.http.{HeaderCarrier, StringContextOps}
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.StringContextOps
 
-import javax.inject.{Inject, Singleton}
+import java.time.Clock
+import javax.inject.Inject
+import javax.inject.Singleton
 import scala.concurrent.duration.DurationInt
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.Await
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 abstract class InternalAuthTokenInitialiser {
   val initialised: Future[Done]
 }
 
 @Singleton
-class NoOpInternalAuthTokenInitialiser @Inject() extends InternalAuthTokenInitialiser {
+class NoOpInternalAuthTokenInitialiser @Inject()
+extends InternalAuthTokenInitialiser {
   override val initialised: Future[Done] = Future.successful(Done)
 }
 
@@ -41,25 +47,29 @@ class NoOpInternalAuthTokenInitialiser @Inject() extends InternalAuthTokenInitia
 class InternalAuthTokenInitialiserImpl @Inject() (
   appConfig: AppConfig,
   httpClient: HttpClientV2
-)(implicit ec: ExecutionContext)
-    extends InternalAuthTokenInitialiser
-    with Logging {
+)(implicit
+  ec: ExecutionContext,
+  clock: Clock
+)
+extends InternalAuthTokenInitialiser
+with Logging {
 
-  override val initialised: Future[Done] = for {
-    _ <- ensureAuthToken()
-  } yield Done
+  override val initialised: Future[Done] =
+    for {
+      _ <- ensureAuthToken()
+    } yield Done
 
   Await.result(initialised, 30.seconds)
 
-  private def ensureAuthToken(): Future[Done] =
-    authTokenIsValid.flatMap { isValid =>
-      if (isValid) {
-        logger.info("Auth token is already valid")
-        Future.successful(Done)
-      } else {
-        createClientAuthToken()
-      }
+  private def ensureAuthToken(): Future[Done] = authTokenIsValid.flatMap { isValid =>
+    if (isValid) {
+      logger.info("Auth token is already valid")
+      Future.successful(Done)
     }
+    else {
+      createClientAuthToken()
+    }
+  }
 
   private def createClientAuthToken(): Future[Done] = {
     logger.info("Initialising auth token")
@@ -67,15 +77,16 @@ class InternalAuthTokenInitialiserImpl @Inject() (
       .post(url"${appConfig.internalAuthBaseUrl}/test-only/token")(HeaderCarrier())
       .withBody(
         Json.obj(
-          "token"     -> appConfig.internalAuthToken,
+          "token" -> appConfig.internalAuthToken,
           "principal" -> appConfig.appName,
-          "permissions" -> Seq(
-            Json.obj(
-              "resourceType"     -> "agent-assurance",
-              "resourceLocation" -> "agent-record-with-checks/arn",
-              "actions"          -> Seq("WRITE")
+          "permissions" ->
+            Seq(
+              Json.obj(
+                "resourceType" -> "agent-assurance",
+                "resourceLocation" -> "agent-record-with-checks/arn",
+                "actions" -> Seq("WRITE")
+              )
             )
-          )
         )
       )
       .execute
@@ -83,7 +94,8 @@ class InternalAuthTokenInitialiserImpl @Inject() (
         if (response.status == CREATED) {
           logger.info("Auth token initialised")
           Future.successful(Done)
-        } else {
+        }
+        else {
           Future.failed(new RuntimeException("Unable to initialise internal-auth token"))
         }
       }

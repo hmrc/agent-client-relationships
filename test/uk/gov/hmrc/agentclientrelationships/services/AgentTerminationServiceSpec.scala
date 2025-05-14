@@ -19,20 +19,29 @@ package uk.gov.hmrc.agentclientrelationships.services
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import uk.gov.hmrc.agentclientrelationships.model.{DeletionCount, TerminationResponse}
-import uk.gov.hmrc.agentclientrelationships.repository.{DeleteRecordRepository, RelationshipCopyRecordRepository}
+import uk.gov.hmrc.agentclientrelationships.model.DeletionCount
+import uk.gov.hmrc.agentclientrelationships.model.TerminationResponse
+import uk.gov.hmrc.agentclientrelationships.repository.DeleteRecordRepository
+import uk.gov.hmrc.agentclientrelationships.repository.RelationshipCopyRecordRepository
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.http.HeaderCarrier
+import play.api.mvc.RequestHeader
 import org.scalamock.scalatest.MockFactory
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{ExecutionContext, Future}
+import play.api.test.FakeRequest
 
-class AgentTerminationServiceSpec extends AnyFlatSpec with MockFactory with ScalaFutures with Matchers {
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
+
+class AgentTerminationServiceSpec
+extends AnyFlatSpec
+with MockFactory
+with ScalaFutures
+with Matchers {
+
   val arn: Arn = Arn("AARN0000002")
 
   val drrMock: DeleteRecordRepository = mock[DeleteRecordRepository]
   val rcrrMock: RelationshipCopyRecordRepository = mock[RelationshipCopyRecordRepository]
-  val hc: HeaderCarrier = HeaderCarrier()
   val ec: ExecutionContext = implicitly[ExecutionContext]
 
   val service = new AgentTerminationService(drrMock, rcrrMock)
@@ -42,21 +51,27 @@ class AgentTerminationServiceSpec extends AnyFlatSpec with MockFactory with Scal
     (drrMock.terminateAgent(_: Arn)).expects(arn).returning(Future.successful(Right(1)))
     (rcrrMock.terminateAgent(_: Arn)).expects(arn).returning(Future.successful(Right(1)))
 
-    service.terminateAgent(arn).value.futureValue shouldBe Right(
-      TerminationResponse(
-        Seq(
-          DeletionCount("agent-client-relationships", "delete-record", 1),
-          DeletionCount("agent-client-relationships", "relationship-copy-record", 1)
+    service.terminateAgent(arn).value.futureValue shouldBe
+      Right(
+        TerminationResponse(
+          Seq(
+            DeletionCount(
+              "agent-client-relationships",
+              "delete-record",
+              1
+            ),
+            DeletionCount(
+              "agent-client-relationships",
+              "relationship-copy-record",
+              1
+            )
+          )
         )
       )
-    )
   }
 
   it should "handle error from DeleteRecordRepository" in {
-    (drrMock
-      .terminateAgent(_: Arn))
-      .expects(arn)
-      .returning(Future.successful(Left("some error")))
+    (drrMock.terminateAgent(_: Arn)).expects(arn).returning(Future.successful(Left("some error")))
     (rcrrMock.terminateAgent(_: Arn)).expects(arn).returning(Future.successful(Right(1)))
 
     service.terminateAgent(arn).value.futureValue shouldBe Left("some error")
@@ -64,11 +79,9 @@ class AgentTerminationServiceSpec extends AnyFlatSpec with MockFactory with Scal
 
   it should "handle error from RelationshipCopyRecordRepository" in {
     (drrMock.terminateAgent(_: Arn)).expects(arn).returning(Future.successful(Right(1)))
-    (rcrrMock
-      .terminateAgent(_: Arn))
-      .expects(arn)
-      .returning(Future.successful(Left("some error")))
+    (rcrrMock.terminateAgent(_: Arn)).expects(arn).returning(Future.successful(Left("some error")))
 
     service.terminateAgent(arn).value.futureValue shouldBe Left("some error")
   }
+
 }

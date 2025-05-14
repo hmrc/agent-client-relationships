@@ -19,60 +19,62 @@ package uk.gov.hmrc.agentclientrelationships.connectors
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
+import play.api.mvc.RequestHeader
+import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.model.{ActiveRelationship, InactiveRelationship}
+import uk.gov.hmrc.agentclientrelationships.model.ActiveRelationship
+import uk.gov.hmrc.agentclientrelationships.model.InactiveRelationship
 import uk.gov.hmrc.agentclientrelationships.stubs.AfiRelationshipStub
-import uk.gov.hmrc.agentclientrelationships.support.{UnitSpec, WireMockSupport}
+import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
+import uk.gov.hmrc.agentclientrelationships.support.WireMockSupport
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.http.client.HttpClientV2
-import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
-import java.time.{LocalDate, LocalDateTime}
-import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
+import java.time.LocalDate
+import java.time.LocalDateTime
+import scala.concurrent.ExecutionContext
+import scala.concurrent.ExecutionContextExecutor
 
 class AgentFiRelationshipConnectorISpec
-    extends UnitSpec
-    with GuiceOneServerPerSuite
-    with WireMockSupport
-    with AfiRelationshipStub {
+extends UnitSpec
+with GuiceOneServerPerSuite
+with WireMockSupport
+with AfiRelationshipStub {
 
-  override implicit lazy val app: Application = appBuilder
-    .build()
+  override implicit lazy val app: Application = appBuilder.build()
 
   val httpClient: HttpClientV2 = app.injector.instanceOf[HttpClientV2]
   val metrics: Metrics = app.injector.instanceOf[Metrics]
-  implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
-  implicit val ec: ExecutionContextExecutor = ExecutionContext.global
+  val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
 
-  protected def appBuilder: GuiceApplicationBuilder =
-    new GuiceApplicationBuilder()
-      .configure(
-        "microservice.services.enrolment-store-proxy.port" -> wireMockPort,
-        "microservice.services.tax-enrolments.port"        -> wireMockPort,
-        "microservice.services.users-groups-search.port"   -> wireMockPort,
-        "microservice.services.des.port"                   -> wireMockPort,
-        "microservice.services.auth.port"                  -> wireMockPort,
-        "microservice.services.agent-fi-relationship.port" -> wireMockPort,
-        "microservice.services.des.environment"            -> "stub",
-        "microservice.services.des.authorization-token"    -> "token",
-        "microservice.services.agent-mapping.port"         -> wireMockPort,
-        "auditing.consumer.baseUri.host"                   -> wireMockHost,
-        "auditing.consumer.baseUri.port"                   -> wireMockPort,
-        "features.copy-relationship.mtd-it"                -> true,
-        "features.copy-relationship.mtd-vat"               -> true,
-        "features.recovery-enable"                         -> false,
-        "agent.cache.expires"                              -> "1 millis",
-        "agent.cache.enabled"                              -> false,
-        "agent.trackPage.cache.expires"                    -> "1 millis",
-        "agent.trackPage.cache.enabled"                    -> false
-      )
+  protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder().configure(
+    "microservice.services.enrolment-store-proxy.port" -> wireMockPort,
+    "microservice.services.tax-enrolments.port" -> wireMockPort,
+    "microservice.services.users-groups-search.port" -> wireMockPort,
+    "microservice.services.des.port" -> wireMockPort,
+    "microservice.services.auth.port" -> wireMockPort,
+    "microservice.services.agent-fi-relationship.port" -> wireMockPort,
+    "microservice.services.des.environment" -> "stub",
+    "microservice.services.des.authorization-token" -> "token",
+    "microservice.services.agent-mapping.port" -> wireMockPort,
+    "auditing.consumer.baseUri.host" -> wireMockHost,
+    "auditing.consumer.baseUri.port" -> wireMockPort,
+    "features.copy-relationship.mtd-it" -> true,
+    "features.copy-relationship.mtd-vat" -> true,
+    "features.recovery-enable" -> false,
+    "agent.cache.expires" -> "1 millis",
+    "agent.cache.enabled" -> false,
+    "agent.trackPage.cache.expires" -> "1 millis",
+    "agent.trackPage.cache.enabled" -> false
+  )
 
-  private implicit val hc: HeaderCarrier = HeaderCarrier()
+  private implicit val request: RequestHeader = FakeRequest()
 
-  val agentFiRelationshipConnector =
-    new AgentFiRelationshipConnector(appConfig, httpClient, metrics)(ec)
+  val agentFiRelationshipConnector = app.injector.instanceOf[AgentFiRelationshipConnector]
 
   val arn: Arn = Arn("ABCDE123456")
   val service: String = Service.PersonalIncomeRecord.id
@@ -80,42 +82,123 @@ class AgentFiRelationshipConnectorISpec
 
   "deleteRelationship" should {
     "return a true if PersonalIncomeRecord has been deleted" in {
-      givenTerminateAfiRelationshipSucceeds(arn, service, clientId)
-      await(agentFiRelationshipConnector.deleteRelationship(arn, service, clientId)) shouldBe true
+      givenTerminateAfiRelationshipSucceeds(
+        arn,
+        service,
+        clientId
+      )
+      await(
+        agentFiRelationshipConnector.deleteRelationship(
+          arn,
+          service,
+          clientId
+        )
+      ) shouldBe true
     }
     "return a false if PersonalIncomeRecord has not been found" in {
-      givenTerminateAfiRelationshipFails(arn, service, clientId, NOT_FOUND)
-      await(agentFiRelationshipConnector.deleteRelationship(arn, service, clientId)) shouldBe false
+      givenTerminateAfiRelationshipFails(
+        arn,
+        service,
+        clientId,
+        NOT_FOUND
+      )
+      await(
+        agentFiRelationshipConnector.deleteRelationship(
+          arn,
+          service,
+          clientId
+        )
+      ) shouldBe false
     }
     "throw an if PersonalIncomeRecord fails to delete" in {
-      givenTerminateAfiRelationshipFails(arn, service, clientId, INTERNAL_SERVER_ERROR)
-      intercept[UpstreamErrorResponse](await(agentFiRelationshipConnector.deleteRelationship(arn, service, clientId)))
+      givenTerminateAfiRelationshipFails(
+        arn,
+        service,
+        clientId,
+        INTERNAL_SERVER_ERROR
+      )
+      intercept[UpstreamErrorResponse](
+        await(
+          agentFiRelationshipConnector.deleteRelationship(
+            arn,
+            service,
+            clientId
+          )
+        )
+      )
     }
   }
 
   "createRelationship" should {
-    "return a true if PersonalIncomeRecord has been created" in {
-      givenCreateAfiRelationshipSucceeds(arn, service, clientId)
-      await(agentFiRelationshipConnector.createRelationship(arn, service, clientId, LocalDateTime.now())) shouldBe true
+    "return unit if PersonalIncomeRecord has been created" in {
+      givenCreateAfiRelationshipSucceeds(
+        arn,
+        service,
+        clientId
+      )
+      await(
+        agentFiRelationshipConnector.createRelationship(
+          arn,
+          service,
+          clientId,
+          LocalDateTime.now()
+        )
+      ) shouldBe ()
     }
     "throw an if PersonalIncomeRecord fails to create" in {
-      givenCreateAfiRelationshipFails(arn, service, clientId)
+      givenCreateAfiRelationshipFails(
+        arn,
+        service,
+        clientId
+      )
       intercept[UpstreamErrorResponse](
-        await(agentFiRelationshipConnector.createRelationship(arn, service, clientId, LocalDateTime.now()))
+        await(
+          agentFiRelationshipConnector.createRelationship(
+            arn,
+            service,
+            clientId,
+            LocalDateTime.now()
+          )
+        )
       )
     }
   }
 
   "getRelationship" should {
     "return an active relationship if active PersonalIncomeRecord exists" in {
-      givenAfiRelationshipIsActive(arn, service, clientId, fromCesa = false)
-      await(agentFiRelationshipConnector.getRelationship(arn, service, clientId)) shouldBe Some(
-        ActiveRelationship(Arn("ABCDE123456"), None, Some(LocalDate.parse("2017-12-08")))
+      givenAfiRelationshipIsActive(
+        arn,
+        service,
+        clientId,
+        fromCesa = false
+      )
+      await(
+        agentFiRelationshipConnector.getRelationship(
+          arn,
+          service,
+          clientId
+        )
+      ) shouldBe Some(
+        ActiveRelationship(
+          Arn("ABCDE123456"),
+          None,
+          Some(LocalDate.parse("2017-12-08"))
+        )
       )
     }
     "return None if active PersonalIncomeRecord does not exist" in {
-      givenAfiRelationshipNotFound(arn, service, clientId)
-      await(agentFiRelationshipConnector.getRelationship(arn, service, clientId)) shouldBe None
+      givenAfiRelationshipNotFound(
+        arn,
+        service,
+        clientId
+      )
+      await(
+        agentFiRelationshipConnector.getRelationship(
+          arn,
+          service,
+          clientId
+        )
+      ) shouldBe None
     }
   }
 
@@ -146,4 +229,5 @@ class AgentFiRelationshipConnectorISpec
       await(agentFiRelationshipConnector.getInactiveRelationships) shouldBe Nil
     }
   }
+
 }

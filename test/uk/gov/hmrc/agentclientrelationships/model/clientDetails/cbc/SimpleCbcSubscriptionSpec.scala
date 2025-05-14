@@ -19,7 +19,8 @@ package uk.gov.hmrc.agentclientrelationships.model.clientDetails.cbc
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 
-class SimpleCbcSubscriptionSpec extends UnitSpec {
+class SimpleCbcSubscriptionSpec
+extends UnitSpec {
 
   "SimpleCbcSubscription" should {
 
@@ -28,64 +29,62 @@ class SimpleCbcSubscriptionSpec extends UnitSpec {
       "optional fields are present" in {
 
         val json = Json.obj(
-          "displaySubscriptionForCBCResponse" -> Json.obj(
-            "responseDetail" -> Json.obj(
-              "isGBUser"    -> true,
-              "tradingName" -> "CFG Solutions",
-              "primaryContact" -> Json.arr(
+          "displaySubscriptionForCBCResponse" ->
+            Json.obj(
+              "responseDetail" ->
                 Json.obj(
-                  "email" -> "test@email.com",
-                  "individual" -> Json.obj(
-                    "firstName" -> "Erling",
-                    "lastName"  -> "Haal"
-                  ),
-                  "organisation" -> Json.obj(
-                    "organisationName" -> "CFG"
-                  )
+                  "isGBUser" -> true,
+                  "tradingName" -> "CFG Solutions",
+                  "primaryContact" ->
+                    Json.arr(
+                      Json.obj(
+                        "email" -> "test@email.com",
+                        "individual" -> Json.obj("firstName" -> "Erling", "lastName" -> "Haal"),
+                        "organisation" -> Json.obj("organisationName" -> "CFG")
+                      )
+                    ),
+                  "secondaryContact" ->
+                    Json.arr(
+                      Json.obj(
+                        "email" -> "test2@email.com",
+                        "individual" -> Json.obj("firstName" -> "Kevin", "lastName" -> "De Burner"),
+                        "organisation" -> Json.obj("organisationName" -> "CFG")
+                      )
+                    )
                 )
-              ),
-              "secondaryContact" -> Json.arr(
-                Json.obj(
-                  "email" -> "test2@email.com",
-                  "individual" -> Json.obj(
-                    "firstName" -> "Kevin",
-                    "lastName"  -> "De Burner"
-                  ),
-                  "organisation" -> Json.obj(
-                    "organisationName" -> "CFG"
-                  )
-                )
-              )
             )
-          )
         )
 
-        json.as[SimpleCbcSubscription] shouldBe SimpleCbcSubscription(
-          Some("CFG Solutions"),
-          Seq("Erling Haal", "Kevin De Burner"),
-          isGBUser = true,
-          Seq("test@email.com", "test2@email.com")
-        )
+        json.as[SimpleCbcSubscription] shouldBe
+          SimpleCbcSubscription(
+            Some("CFG Solutions"),
+            Seq("Erling Haal", "Kevin De Burner"),
+            isGBUser = true,
+            Seq("test@email.com", "test2@email.com")
+          )
       }
 
       "optional fields are not present" in {
 
         val json = Json.obj(
-          "displaySubscriptionForCBCResponse" -> Json.obj(
-            "responseDetail" -> Json.obj(
-              "isGBUser"         -> true,
-              "primaryContact"   -> Json.arr(),
-              "secondaryContact" -> Json.arr()
+          "displaySubscriptionForCBCResponse" ->
+            Json.obj(
+              "responseDetail" ->
+                Json.obj(
+                  "isGBUser" -> true,
+                  "primaryContact" -> Json.arr(),
+                  "secondaryContact" -> Json.arr()
+                )
             )
-          )
         )
 
-        json.as[SimpleCbcSubscription] shouldBe SimpleCbcSubscription(
-          None,
-          Seq(),
-          isGBUser = true,
-          Seq()
-        )
+        json.as[SimpleCbcSubscription] shouldBe
+          SimpleCbcSubscription(
+            None,
+            Seq(),
+            isGBUser = true,
+            Seq()
+          )
       }
     }
   }
@@ -96,28 +95,34 @@ class SimpleCbcSubscriptionSpec extends UnitSpec {
 
       val model = DisplaySubscriptionForCBCRequest(
         DisplaySubscriptionDetails(
-          RequestCommonForSubscription("CBC", "2020-01-01T00:00:00Z", "abc123", "MDTP", Some("abc123")),
+          RequestCommonForSubscription(
+            "CBC",
+            "2020-01-01T00:00:00Z",
+            "abc123",
+            "MDTP",
+            Some("abc123")
+          ),
           ReadSubscriptionRequestDetail("CBC", "XCBCX1234567890")
         )
       )
 
       val expectedJson = Json.obj(
-        "displaySubscriptionForCBCRequest" -> Json.obj(
-          "requestCommon" -> Json.obj(
-            "regime"                   -> "CBC",
-            "receiptDate"              -> "2020-01-01T00:00:00Z",
-            "acknowledgementReference" -> "abc123",
-            "originatingSystem"        -> "MDTP",
-            "conversationID"           -> "abc123"
-          ),
-          "requestDetail" -> Json.obj(
-            "IDType"   -> "CBC",
-            "IDNumber" -> "XCBCX1234567890"
+        "displaySubscriptionForCBCRequest" ->
+          Json.obj(
+            "requestCommon" ->
+              Json.obj(
+                "regime" -> "CBC",
+                "receiptDate" -> "2020-01-01T00:00:00Z",
+                "acknowledgementReference" -> "abc123",
+                "originatingSystem" -> "MDTP",
+                "conversationID" -> "abc123"
+              ),
+            "requestDetail" -> Json.obj("IDType" -> "CBC", "IDNumber" -> "XCBCX1234567890")
           )
-        )
       )
 
       Json.toJson(model) shouldBe expectedJson
     }
   }
+
 }

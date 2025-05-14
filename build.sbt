@@ -31,9 +31,17 @@ lazy val root = (project in file("."))
     libraryDependencies ++= AppDependencies.compile ++ AppDependencies.test,
     scoverageSettings,
     Compile / unmanagedResourceDirectories += baseDirectory.value / "resources",
-    routesImport ++= Seq("uk.gov.hmrc.agentclientrelationships.binders.PathBinders._"),
+    routesImport ++= Seq(
+      "uk.gov.hmrc.agentclientrelationships.binders.PathBinders._",
+      "uk.gov.hmrc.agentmtdidentifiers.model.Arn",
+      "uk.gov.hmrc.domain.Nino",
+      "uk.gov.hmrc.agentclientrelationships.model.InvitationStatus"
+    ),
+
     Compile / scalafmtOnCompile := true,
-    Test / scalafmtOnCompile := true
+    Test / scalafmtOnCompile := true,
+    Compile / doc / scalacOptions := Seq(), //this will allow to have warnings in `doc` task
+    Test / doc / scalacOptions := Seq(), //this will allow to have warnings in `doc` task
   )
   .enablePlugins(PlayScala, SbtDistributablesPlugin)
 

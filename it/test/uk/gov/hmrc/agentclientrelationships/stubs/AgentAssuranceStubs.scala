@@ -20,42 +20,45 @@ import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.stubbing.StubMapping
 import org.scalatest.concurrent.Eventually.eventually
 import play.api.libs.json.Json
-import play.api.test.Helpers.{AUTHORIZATION, USER_AGENT}
+import play.api.test.Helpers.AUTHORIZATION
+import play.api.test.Helpers.USER_AGENT
 import uk.gov.hmrc.agentclientrelationships.support.TestData
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 
-trait AgentAssuranceStubs extends TestData {
+trait AgentAssuranceStubs
+extends TestData {
 
-  def givenAgentRecordFound(arn: Arn, agentRecord: TestAgentDetailsDesResponse): StubMapping =
-    stubFor(
-      get(urlEqualTo(s"/agent-assurance/agent-record-with-checks/arn/${arn.value}"))
-        .withHeader(AUTHORIZATION, equalTo("internalAuthToken"))
-        .withHeader(USER_AGENT, equalTo("agent-client-relationships"))
-        .willReturn(
-          aResponse()
-            .withStatus(200)
-            .withBody(Json.toJson(agentRecord).toString)
-        )
-    )
+  def givenAgentRecordFound(
+    arn: Arn,
+    agentRecord: TestAgentDetailsDesResponse
+  ): StubMapping = stubFor(
+    get(urlEqualTo(s"/agent-assurance/agent-record-with-checks/arn/${arn.value}"))
+      .withHeader(AUTHORIZATION, equalTo("internalAuthToken"))
+      .withHeader(USER_AGENT, equalTo("agent-client-relationships"))
+      .willReturn(aResponse().withStatus(200).withBody(Json.toJson(agentRecord).toString))
+  )
 
-  def verifyAgentRecordFoundSent(arn: Arn, count: Int = 1) =
-    eventually {
-      verify(
-        count,
-        getRequestedFor(urlPathEqualTo(s"/agent-assurance/agent-record-with-checks/arn/${arn.value}"))
-      )
-    }
+  def verifyAgentRecordFoundSent(
+    arn: Arn,
+    count: Int = 1
+  ) = eventually {
+    verify(count, getRequestedFor(urlPathEqualTo(s"/agent-assurance/agent-record-with-checks/arn/${arn.value}")))
+  }
 
-  def givenAgentDetailsErrorResponse(arn: Arn, status: Int): StubMapping =
-    stubFor(
-      get(urlEqualTo(s"/agent-assurance/agent-record-with-checks/arn/${arn.value}"))
-        .withHeader(AUTHORIZATION, equalTo("internalAuthToken"))
-        .withHeader(USER_AGENT, equalTo("agent-client-relationships"))
-        .willReturn(
-          aResponse()
-            .withStatus(status)
-        )
-    )
+  def givenAgentDetailsErrorResponse(
+    arn: Arn,
+    status: Int
+  ): StubMapping = stubFor(
+    get(urlEqualTo(s"/agent-assurance/agent-record-with-checks/arn/${arn.value}"))
+      .withHeader(AUTHORIZATION, equalTo("internalAuthToken"))
+      .withHeader(USER_AGENT, equalTo("agent-client-relationships"))
+      .willReturn(aResponse().withStatus(status))
+  )
 
-  private def similarToJson(value: String) = equalToJson(value.stripMargin, true, true)
+  private def similarToJson(value: String) = equalToJson(
+    value.stripMargin,
+    true,
+    true
+  )
+
 }

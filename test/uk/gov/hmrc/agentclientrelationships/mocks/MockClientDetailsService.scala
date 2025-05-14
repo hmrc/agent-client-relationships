@@ -16,13 +16,15 @@
 
 package uk.gov.hmrc.agentclientrelationships.mocks
 
-import org.mockito.ArgumentMatchers.{any, eq => eqs}
+import org.mockito.ArgumentMatchers.any
+import org.mockito.ArgumentMatchers.{eq => eqs}
 import org.mockito.Mockito.when
 import org.mockito.stubbing.OngoingStubbing
-import uk.gov.hmrc.agentclientrelationships.model.clientDetails.{ClientDetailsFailureResponse, ClientDetailsResponse}
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsFailureResponse
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsResponse
 import uk.gov.hmrc.agentclientrelationships.services.ClientDetailsService
 import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
-import uk.gov.hmrc.http.HeaderCarrier
+import play.api.mvc.RequestHeader
 
 import scala.concurrent.Future
 
@@ -31,12 +33,13 @@ trait MockClientDetailsService {
 
   val mockClientDetailsService: ClientDetailsService = resettingMock[ClientDetailsService]
 
-  def mockFindClientDetails(service: String, clientId: String)(
+  def mockFindClientDetails(
+    service: String,
+    clientId: String
+  )(
     response: Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]]
-  ): OngoingStubbing[Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]]] =
-    when(
-      mockClientDetailsService
-        .findClientDetails(eqs(service), eqs(clientId))(any[HeaderCarrier])
-    ).thenReturn(response)
+  ): OngoingStubbing[Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]]] = when(
+    mockClientDetailsService.findClientDetails(eqs(service), eqs(clientId))(any[RequestHeader])
+  ).thenReturn(response)
 
 }

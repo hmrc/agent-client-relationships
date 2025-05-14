@@ -20,59 +20,67 @@ import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
+import play.api.mvc.RequestHeader
+import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
-import uk.gov.hmrc.agentclientrelationships.stubs.{DataStreamStub, EnrolmentStoreProxyStubs}
-import uk.gov.hmrc.agentclientrelationships.support.{RelationshipNotFound, UnitSpec, WireMockSupport}
+import uk.gov.hmrc.agentclientrelationships.stubs.DataStreamStub
+import uk.gov.hmrc.agentclientrelationships.stubs.EnrolmentStoreProxyStubs
+import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
+import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
+import uk.gov.hmrc.agentclientrelationships.support.WireMockSupport
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.MtdIt
 import uk.gov.hmrc.agentmtdidentifiers.model._
-import uk.gov.hmrc.domain.{AgentCode, Nino}
+import uk.gov.hmrc.domain.AgentCode
+import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http
 import uk.gov.hmrc.http._
+import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import scala.concurrent.ExecutionContext
 
 class EnrolmentStoreProxyConnectorSpec
-    extends UnitSpec
-    with GuiceOneServerPerSuite
-    with WireMockSupport
-    with EnrolmentStoreProxyStubs
-    with DataStreamStub
-    with MockitoSugar {
+extends UnitSpec
+with GuiceOneServerPerSuite
+with WireMockSupport
+with EnrolmentStoreProxyStubs
+with DataStreamStub
+with MockitoSugar {
 
-  override implicit lazy val app: Application = appBuilder
-    .build()
+  override implicit lazy val app: Application = appBuilder.build()
 
-  protected def appBuilder: GuiceApplicationBuilder =
-    new GuiceApplicationBuilder()
-      .configure(
-        "microservice.services.enrolment-store-proxy.port" -> wireMockPort,
-        "microservice.services.tax-enrolments.port"        -> wireMockPort,
-        "microservice.services.users-groups-search.port"   -> wireMockPort,
-        "microservice.services.des.port"                   -> wireMockPort,
-        "microservice.services.auth.port"                  -> wireMockPort,
-        "microservice.services.agent-mapping.port"         -> wireMockPort,
-        "auditing.consumer.baseUri.host"                   -> wireMockHost,
-        "auditing.consumer.baseUri.port"                   -> wireMockPort,
-        "features.copy-relationship.mtd-it"                -> true,
-        "features.copy-relationship.mtd-vat"               -> true,
-        "features.recovery-enable"                         -> false,
-        "agent.cache.expires"                              -> "1 millis",
-        "agent.cache.enabled"                              -> true,
-        "agent.trackPage.cache.expires"                    -> "1 millis",
-        "agent.trackPage.cache.enabled"                    -> true
-      )
+  protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder().configure(
+    "microservice.services.enrolment-store-proxy.port" -> wireMockPort,
+    "microservice.services.tax-enrolments.port" -> wireMockPort,
+    "microservice.services.users-groups-search.port" -> wireMockPort,
+    "microservice.services.des.port" -> wireMockPort,
+    "microservice.services.auth.port" -> wireMockPort,
+    "microservice.services.agent-mapping.port" -> wireMockPort,
+    "auditing.consumer.baseUri.host" -> wireMockHost,
+    "auditing.consumer.baseUri.port" -> wireMockPort,
+    "features.copy-relationship.mtd-it" -> true,
+    "features.copy-relationship.mtd-vat" -> true,
+    "features.recovery-enable" -> false,
+    "agent.cache.expires" -> "1 millis",
+    "agent.cache.enabled" -> true,
+    "agent.trackPage.cache.expires" -> "1 millis",
+    "agent.trackPage.cache.enabled" -> true
+  )
 
-  implicit val hc: HeaderCarrier = HeaderCarrier()
+  implicit val request: RequestHeader = FakeRequest()
   implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
 
-  val httpClient: HttpClient = app.injector.instanceOf[http.HttpClient]
+  val httpClient: HttpClientV2 = app.injector.instanceOf[HttpClientV2]
   implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
 
   val connector =
-    new EnrolmentStoreProxyConnector(httpClient)(app.injector.instanceOf[Metrics], appConfig, ec)
+    new EnrolmentStoreProxyConnector(
+      httpClient,
+      app.injector.instanceOf[Metrics],
+      appConfig
+    )(ec)
 
   "EnrolmentStoreProxy" should {
 
@@ -95,7 +103,14 @@ class EnrolmentStoreProxyConnectorSpec
 
     "return some agents's groupIds for given MTDITID" in {
       givenAuditConnector()
-      givenDelegatedGroupIdsExistFor(mtdItEnrolmentKey, Set("bar", "car", "dar"))
+      givenDelegatedGroupIdsExistFor(
+        mtdItEnrolmentKey,
+        Set(
+          "bar",
+          "car",
+          "dar"
+        )
+      )
       await(connector.getDelegatedGroupIdsFor(mtdItEnrolmentKey)) should contain("bar")
     }
 
@@ -107,7 +122,14 @@ class EnrolmentStoreProxyConnectorSpec
 
     "return some agents's groupIds for given NINO" in {
       givenAuditConnector()
-      givenDelegatedGroupIdsExistFor(EnrolmentKey(Service.MtdIt, Nino("AB123456C")), Set("bar", "car", "dar"))
+      givenDelegatedGroupIdsExistFor(
+        EnrolmentKey(Service.MtdIt, Nino("AB123456C")),
+        Set(
+          "bar",
+          "car",
+          "dar"
+        )
+      )
       await(connector.getDelegatedGroupIdsFor(EnrolmentKey(Service.MtdIt, Nino("AB123456C")))) should contain("bar")
     }
 
@@ -119,13 +141,27 @@ class EnrolmentStoreProxyConnectorSpec
 
     "return some agents's groupIds for given VRN" in {
       givenAuditConnector()
-      givenDelegatedGroupIdsExistFor(vatEnrolmentKey, Set("bar", "car", "dar"))
+      givenDelegatedGroupIdsExistFor(
+        vatEnrolmentKey,
+        Set(
+          "bar",
+          "car",
+          "dar"
+        )
+      )
       await(connector.getDelegatedGroupIdsFor(vatEnrolmentKey)) should contain("bar")
     }
 
     "return some agents's groupIds for given VATRegNo" in {
       givenAuditConnector()
-      givenDelegatedGroupIdsExistFor(EnrolmentKey("HMCE-VATDEC-ORG~VATRegNo~oldfoo"), Set("bar", "car", "dar"))
+      givenDelegatedGroupIdsExistFor(
+        EnrolmentKey("HMCE-VATDEC-ORG~VATRegNo~oldfoo"),
+        Set(
+          "bar",
+          "car",
+          "dar"
+        )
+      )
       await(connector.getDelegatedGroupIdsForHMCEVATDECORG(Vrn("oldfoo"))) should contain("bar")
     }
 
@@ -151,17 +187,37 @@ class EnrolmentStoreProxyConnectorSpec
       val testGroupId = "testGroupId"
       val testEnrolment = EnrolmentKey(MtdIt, MtdItId("ABCDEF123456789")).toString
       givenAuditConnector()
-      givenUpdateEnrolmentFriendlyNameResponse(testGroupId, testEnrolment, NO_CONTENT)
-      await(connector.updateEnrolmentFriendlyName(testGroupId, testEnrolment, "testName"))
+      givenUpdateEnrolmentFriendlyNameResponse(
+        testGroupId,
+        testEnrolment,
+        NO_CONTENT
+      )
+      await(
+        connector.updateEnrolmentFriendlyName(
+          testGroupId,
+          testEnrolment,
+          "testName"
+        )
+      )
     }
 
     "throw an error when updating friendly name returns an unexpected status" in {
       val testGroupId = "testGroupId"
       val testEnrolment = EnrolmentKey(MtdIt, MtdItId("ABCDEF123456789")).toString
       givenAuditConnector()
-      givenUpdateEnrolmentFriendlyNameResponse(testGroupId, testEnrolment, INTERNAL_SERVER_ERROR)
+      givenUpdateEnrolmentFriendlyNameResponse(
+        testGroupId,
+        testEnrolment,
+        INTERNAL_SERVER_ERROR
+      )
       intercept[UpstreamErrorResponse](
-        await(connector.updateEnrolmentFriendlyName(testGroupId, testEnrolment, "testName"))
+        await(
+          connector.updateEnrolmentFriendlyName(
+            testGroupId,
+            testEnrolment,
+            "testName"
+          )
+        )
       )
     }
 
@@ -192,52 +248,154 @@ class EnrolmentStoreProxyConnectorSpec
 
     "allocate an enrolment to an agent" in {
       givenAuditConnector()
-      givenEnrolmentAllocationSucceeds("group1", "user1", enrolmentKey, "bar")
-      await(connector.allocateEnrolmentToAgent("group1", "user1", enrolmentKey, AgentCode("bar")))
-      verifyEnrolmentAllocationAttempt("group1", "user1", enrolmentKey, "bar")
+      givenEnrolmentAllocationSucceeds(
+        "group1",
+        "user1",
+        enrolmentKey,
+        "bar"
+      )
+      await(
+        connector.allocateEnrolmentToAgent(
+          "group1",
+          "user1",
+          enrolmentKey,
+          AgentCode("bar")
+        )
+      )
+      verifyEnrolmentAllocationAttempt(
+        "group1",
+        "user1",
+        enrolmentKey,
+        "bar"
+      )
     }
 
     "throw an exception if allocation failed because of missing agent or enrolment" in {
       givenAuditConnector()
-      givenEnrolmentAllocationFailsWith(404)("group1", "user1", enrolmentKey, "bar")
+      givenEnrolmentAllocationFailsWith(404)(
+        "group1",
+        "user1",
+        enrolmentKey,
+        "bar"
+      )
       an[UpstreamErrorResponse] shouldBe thrownBy {
-        await(connector.allocateEnrolmentToAgent("group1", "user1", enrolmentKey, AgentCode("bar")))
+        await(
+          connector.allocateEnrolmentToAgent(
+            "group1",
+            "user1",
+            enrolmentKey,
+            AgentCode("bar")
+          )
+        )
       }
-      verifyEnrolmentAllocationAttempt("group1", "user1", enrolmentKey, "bar")
+      verifyEnrolmentAllocationAttempt(
+        "group1",
+        "user1",
+        enrolmentKey,
+        "bar"
+      )
     }
 
     "throw an exception if allocation failed because of bad request" in {
       givenAuditConnector()
-      givenEnrolmentAllocationFailsWith(400)("group1", "user1", enrolmentKey, "bar")
+      givenEnrolmentAllocationFailsWith(400)(
+        "group1",
+        "user1",
+        enrolmentKey,
+        "bar"
+      )
       an[UpstreamErrorResponse] shouldBe thrownBy {
-        await(connector.allocateEnrolmentToAgent("group1", "user1", enrolmentKey, AgentCode("bar")))
+        await(
+          connector.allocateEnrolmentToAgent(
+            "group1",
+            "user1",
+            enrolmentKey,
+            AgentCode("bar")
+          )
+        )
       }
-      verifyEnrolmentAllocationAttempt("group1", "user1", enrolmentKey, "bar")
+      verifyEnrolmentAllocationAttempt(
+        "group1",
+        "user1",
+        enrolmentKey,
+        "bar"
+      )
     }
 
     "throw an exception if allocation failed because of unauthorized" in {
       givenAuditConnector()
-      givenEnrolmentAllocationFailsWith(401)("group1", "user1", enrolmentKey, "bar")
+      givenEnrolmentAllocationFailsWith(401)(
+        "group1",
+        "user1",
+        enrolmentKey,
+        "bar"
+      )
       an[UpstreamErrorResponse] shouldBe thrownBy {
-        await(connector.allocateEnrolmentToAgent("group1", "user1", enrolmentKey, AgentCode("bar")))
+        await(
+          connector.allocateEnrolmentToAgent(
+            "group1",
+            "user1",
+            enrolmentKey,
+            AgentCode("bar")
+          )
+        )
       }
-      verifyEnrolmentAllocationAttempt("group1", "user1", enrolmentKey, "bar")
+      verifyEnrolmentAllocationAttempt(
+        "group1",
+        "user1",
+        enrolmentKey,
+        "bar"
+      )
     }
 
     "keep calm if conflict reported" in {
       givenAuditConnector()
-      givenEnrolmentAllocationFailsWith(409)("group1", "user1", enrolmentKey, "bar")
-      await(connector.allocateEnrolmentToAgent("group1", "user1", enrolmentKey, AgentCode("bar")))
-      verifyEnrolmentAllocationAttempt("group1", "user1", enrolmentKey, "bar")
+      givenEnrolmentAllocationFailsWith(409)(
+        "group1",
+        "user1",
+        enrolmentKey,
+        "bar"
+      )
+      await(
+        connector.allocateEnrolmentToAgent(
+          "group1",
+          "user1",
+          enrolmentKey,
+          AgentCode("bar")
+        )
+      )
+      verifyEnrolmentAllocationAttempt(
+        "group1",
+        "user1",
+        enrolmentKey,
+        "bar"
+      )
     }
 
     "throw an exception if service not available when allocating enrolment" in {
       givenAuditConnector()
-      givenEnrolmentAllocationFailsWith(503)("group1", "user1", enrolmentKey, "bar")
+      givenEnrolmentAllocationFailsWith(503)(
+        "group1",
+        "user1",
+        enrolmentKey,
+        "bar"
+      )
       an[UpstreamErrorResponse] shouldBe thrownBy {
-        await(connector.allocateEnrolmentToAgent("group1", "user1", enrolmentKey, AgentCode("bar")))
+        await(
+          connector.allocateEnrolmentToAgent(
+            "group1",
+            "user1",
+            enrolmentKey,
+            AgentCode("bar")
+          )
+        )
       }
-      verifyEnrolmentAllocationAttempt("group1", "user1", enrolmentKey, "bar")
+      verifyEnrolmentAllocationAttempt(
+        "group1",
+        "user1",
+        enrolmentKey,
+        "bar"
+      )
     }
 
     "de-allocate an enrolment from an agent" in {
@@ -283,4 +441,5 @@ class EnrolmentStoreProxyConnectorSpec
       verifyEnrolmentDeallocationAttempt("group1", enrolmentKey)
     }
   }
+
 }

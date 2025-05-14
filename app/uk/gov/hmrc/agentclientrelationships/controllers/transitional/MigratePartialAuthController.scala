@@ -18,21 +18,25 @@ package uk.gov.hmrc.agentclientrelationships.controllers.transitional
 
 import org.mongodb.scala.MongoWriteException
 import play.api.Logging
-import play.api.mvc.{Action, AnyContent, ControllerComponents}
+import play.api.mvc.Action
+import play.api.mvc.AnyContent
+import play.api.mvc.ControllerComponents
 import uk.gov.hmrc.agentclientrelationships.model.Invitation
 import uk.gov.hmrc.agentclientrelationships.services.InvitationService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
-import javax.inject.{Inject, Singleton}
-import scala.concurrent.{ExecutionContext, Future}
+import javax.inject.Inject
+import javax.inject.Singleton
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 @Singleton
 class MigratePartialAuthController @Inject() (
   invitationService: InvitationService,
   cc: ControllerComponents
 )(implicit ec: ExecutionContext)
-    extends BackendController(cc)
-    with Logging {
+extends BackendController(cc)
+with Logging {
 
   def migratePartialAuth: Action[AnyContent] = Action.async { implicit request =>
     val invitation = request.body.asJson.get.as[Invitation](Invitation.acaReads)
@@ -45,12 +49,11 @@ class MigratePartialAuthController @Inject() (
             logger.warn(
               s"Duplicate found for invitationId ${invitation.invitationId} so record already there and continuing with deletion"
             )
-            Future(
-              NoContent
-            )
+            Future(NoContent)
           case other => Future.failed(other)
         }
-    else Future.successful(BadRequest)
+    else
+      Future.successful(BadRequest)
   }
 
 }

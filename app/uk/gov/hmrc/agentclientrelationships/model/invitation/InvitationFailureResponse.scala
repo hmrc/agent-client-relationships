@@ -17,9 +17,16 @@
 package uk.gov.hmrc.agentclientrelationships.model.invitation
 
 import play.api.libs.json.Json.toJson
-import play.api.libs.json.{JsValue, Json, Writes}
-import play.api.mvc.Results.{BadRequest, Forbidden, InternalServerError, NotFound, NotImplemented}
-import play.api.mvc.{Result, Results}
+import play.api.libs.json.JsValue
+import play.api.libs.json.Json
+import play.api.libs.json.Writes
+import play.api.mvc.Results.BadRequest
+import play.api.mvc.Results.Forbidden
+import play.api.mvc.Results.InternalServerError
+import play.api.mvc.Results.NotFound
+import play.api.mvc.Results.NotImplemented
+import play.api.mvc.Result
+import play.api.mvc.Results
 
 sealed trait InvitationFailureResponse {
   def getResult(message: String): Result
@@ -27,29 +34,38 @@ sealed trait InvitationFailureResponse {
 
 object InvitationFailureResponse {
 
-  case class ErrorBody(code: String, message: String)
+  case class ErrorBody(
+    code: String,
+    message: String
+  )
 
-  implicit val errorBodyWrites: Writes[ErrorBody] = new Writes[ErrorBody] {
-    override def writes(body: ErrorBody): JsValue = Json.obj("code" -> body.code, "message" -> body.message)
-  }
+  implicit val errorBodyWrites: Writes[ErrorBody] =
+    new Writes[ErrorBody] {
+      override def writes(body: ErrorBody): JsValue = Json.obj("code" -> body.code, "message" -> body.message)
+    }
 
-  case object UnsupportedService extends InvitationFailureResponse {
+  case object UnsupportedService
+  extends InvitationFailureResponse {
     def getResult(message: String): Result = NotImplemented(toJson(ErrorBody("UNSUPPORTED_SERVICE", message)))
   }
 
-  case object InvalidClientId extends InvitationFailureResponse {
+  case object InvalidClientId
+  extends InvitationFailureResponse {
     def getResult(message: String): Result = BadRequest(toJson(ErrorBody("INVALID_CLIENT_ID", message)))
   }
 
-  case object UnsupportedClientIdType extends InvitationFailureResponse {
+  case object UnsupportedClientIdType
+  extends InvitationFailureResponse {
     def getResult(message: String): Result = BadRequest(toJson(ErrorBody("UNSUPPORTED_CLIENT_ID_TYPE", message)))
   }
 
-  case object UnsupportedClientType extends InvitationFailureResponse {
+  case object UnsupportedClientType
+  extends InvitationFailureResponse {
     def getResult(message: String): Result = BadRequest(toJson(ErrorBody("UNSUPPORTED_CLIENT_TYPE", message)))
   }
 
-  case object ClientRegistrationNotFound extends InvitationFailureResponse {
+  case object ClientRegistrationNotFound
+  extends InvitationFailureResponse {
     def getResult(message: String): Result = Forbidden(
       toJson(
         ErrorBody(
@@ -60,7 +76,8 @@ object InvitationFailureResponse {
     )
   }
 
-  case object DuplicateInvitationError extends InvitationFailureResponse {
+  case object DuplicateInvitationError
+  extends InvitationFailureResponse {
     def getResult(message: String): Result = Forbidden(
       toJson(
         ErrorBody(
@@ -71,94 +88,119 @@ object InvitationFailureResponse {
     )
   }
 
-  case object RelationshipNotFound extends InvitationFailureResponse {
+  case object RelationshipNotFound
+  extends InvitationFailureResponse {
     def getResult(message: String): Result = NotFound(
       toJson(ErrorBody("RELATIONSHIP_NOT_FOUND", "The specified relationship was not found."))
     )
   }
 
-  case object EnrolmentKeyNotFound extends InvitationFailureResponse {
+  case object EnrolmentKeyNotFound
+  extends InvitationFailureResponse {
     def getResult(message: String): Result = BadRequest
   }
 
-  case class RelationshipDeleteFailed(msg: String) extends InvitationFailureResponse {
+  case class RelationshipDeleteFailed(msg: String)
+  extends InvitationFailureResponse {
     def getResult(message: String): Result = InternalServerError(toJson(msg))
   }
 
-  case object NoPendingInvitation extends InvitationFailureResponse {
+  case object NoPendingInvitation
+  extends InvitationFailureResponse {
     def getResult(message: String): Result = NotFound(message)
   }
 
-  case object UnsupportedStatusChange extends InvitationFailureResponse {
+  case object UnsupportedStatusChange
+  extends InvitationFailureResponse {
     def getResult(message: String): Result = BadRequest(
       toJson(ErrorBody("UNSUPPORTED_STATUS_CHANGE", "Not supported invitation status change"))
     )
   }
 
-  case class UpdateStatusFailed(msg: String) extends InvitationFailureResponse {
+  case class UpdateStatusFailed(msg: String)
+  extends InvitationFailureResponse {
     def getResult(message: String): Result = InternalServerError(toJson(msg))
   }
 
-  case object InvitationNotFound extends InvitationFailureResponse {
+  case object InvitationNotFound
+  extends InvitationFailureResponse {
     def getResult(message: String): Result = NotFound
   }
 
-  case object PostcodeRequired extends InvitationFailureResponse {
+  case object PostcodeRequired
+  extends InvitationFailureResponse {
     def getResult(message: String): Result = NotFound
   }
 
-  case object PostcodeFormatInvalid extends InvitationFailureResponse {
+  case object PostcodeFormatInvalid
+  extends InvitationFailureResponse {
     def getResult(message: String): Result = NotFound
   }
-  case object PostcodeDoesNotMatch extends InvitationFailureResponse {
-    def getResult(message: String): Result = NotFound
-  }
-
-  case object NotUkAddress extends InvitationFailureResponse {
-    def getResult(message: String): Result = NotFound
-  }
-
-  case object VatKnownFormatInvalid extends InvitationFailureResponse {
+  case object PostcodeDoesNotMatch
+  extends InvitationFailureResponse {
     def getResult(message: String): Result = NotFound
   }
 
-  case object VatKnownFactNotMatched extends InvitationFailureResponse {
+  case object NotUkAddress
+  extends InvitationFailureResponse {
     def getResult(message: String): Result = NotFound
   }
 
-  case object UnsupportedKnowFacts extends InvitationFailureResponse {
+  case object VatKnownFormatInvalid
+  extends InvitationFailureResponse {
     def getResult(message: String): Result = NotFound
   }
 
-  case class ErrorRetrievingClientDetails(status: Int, msg: String) extends InvitationFailureResponse {
+  case object VatKnownFactNotMatched
+  extends InvitationFailureResponse {
+    def getResult(message: String): Result = NotFound
+  }
+
+  case object UnsupportedKnowFacts
+  extends InvitationFailureResponse {
+    def getResult(message: String): Result = NotFound
+  }
+
+  case class ErrorRetrievingClientDetails(
+    status: Int,
+    msg: String
+  )
+  extends InvitationFailureResponse {
     override def getResult(message: String): Result = Results.Status(status)(toJson(msg))
   }
 
-  case class ErrorRetrievingAgentDetails(msg: String) extends InvitationFailureResponse {
+  case class ErrorRetrievingAgentDetails(msg: String)
+  extends InvitationFailureResponse {
     def getResult(message: String): Result = InternalServerError(toJson(msg))
   }
 
-  case object ErrorRetrievingRelationships extends InvitationFailureResponse {
+  case object ErrorRetrievingRelationships
+  extends InvitationFailureResponse {
     override def getResult(message: String): Result = InternalServerError
   }
 
-  case object AgentSuspended extends InvitationFailureResponse {
+  case object AgentSuspended
+  extends InvitationFailureResponse {
     def getResult(message: String): Result = InternalServerError("Agent data not founmd")
   }
 
-  case object DuplicateRelationshipRequest extends InvitationFailureResponse {
+  case object DuplicateRelationshipRequest
+  extends InvitationFailureResponse {
     def getResult(message: String): Result = NotFound
   }
 
-  case class DuplicateAuthorisationRequest(invitationId: Option[String]) extends InvitationFailureResponse {
+  case class DuplicateAuthorisationRequest(invitationId: Option[String])
+  extends InvitationFailureResponse {
     def getResult(message: String): Result = NotFound
   }
 
-  case object VatClientInsolvent extends InvitationFailureResponse {
+  case object VatClientInsolvent
+  extends InvitationFailureResponse {
     def getResult(message: String): Result = NotFound
   }
 
-  case object NoPermissionOnAgency extends InvitationFailureResponse {
+  case object NoPermissionOnAgency
+  extends InvitationFailureResponse {
     def getResult(message: String): Result = Forbidden
   }
 

@@ -16,7 +16,10 @@
 
 package uk.gov.hmrc.agentclientrelationships.support
 
-import org.apache.pekko.actor.{Actor, ActorRef, ActorSystem, Props}
+import org.apache.pekko.actor.Actor
+import org.apache.pekko.actor.ActorRef
+import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.actor.Props
 import org.apache.pekko.extension.quartz.QuartzSchedulerExtension
 import org.apache.pekko.stream.Materializer
 import org.apache.pekko.stream.scaladsl.Source
@@ -24,10 +27,13 @@ import play.api.Logging
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.Expired
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
-import uk.gov.hmrc.agentclientrelationships.services.{EmailService, MongoLockService}
+import uk.gov.hmrc.agentclientrelationships.services.EmailService
+import uk.gov.hmrc.agentclientrelationships.services.MongoLockService
+import uk.gov.hmrc.agentclientrelationships.util.RequestSupport
 
 import java.util.TimeZone
-import javax.inject.{Inject, Singleton}
+import javax.inject.Inject
+import javax.inject.Singleton
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 
@@ -37,8 +43,12 @@ class EmailScheduler @Inject() (
   emailService: EmailService,
   invitationsRepository: InvitationsRepository,
   mongoLockService: MongoLockService
-)(implicit ec: ExecutionContext, mat: Materializer, appConfig: AppConfig)
-    extends Logging {
+)(implicit
+  ec: ExecutionContext,
+  mat: Materializer,
+  appConfig: AppConfig
+)
+extends Logging {
 
   if (appConfig.emailSchedulerEnabled) {
 
@@ -46,9 +56,15 @@ class EmailScheduler @Inject() (
 
     logger.info("[EmailScheduler] Scheduler is enabled")
 
-    val warningEmailActorRef: ActorRef = actorSystem.actorOf(Props {
-      new WarningEmailActor(invitationsRepository, emailService, mongoLockService)
-    })
+    val warningEmailActorRef: ActorRef = actorSystem.actorOf(
+      Props {
+        new WarningEmailActor(
+          invitationsRepository,
+          emailService,
+          mongoLockService
+        )
+      }
+    )
 
     scheduler.createJobSchedule(
       name = "WarningEmailSchedule",
@@ -59,9 +75,15 @@ class EmailScheduler @Inject() (
       msg = "<start>"
     )
 
-    val expiredEmailActorRef: ActorRef = actorSystem.actorOf(Props {
-      new ExpiredEmailActor(invitationsRepository, emailService, mongoLockService)
-    })
+    val expiredEmailActorRef: ActorRef = actorSystem.actorOf(
+      Props {
+        new ExpiredEmailActor(
+          invitationsRepository,
+          emailService,
+          mongoLockService
+        )
+      }
+    )
 
     scheduler.createJobSchedule(
       name = "ExpiredEmailSchedule",
@@ -71,7 +93,8 @@ class EmailScheduler @Inject() (
       receiver = expiredEmailActorRef,
       msg = "<start>"
     )
-  } else {
+  }
+  else {
     logger.info("[EmailScheduler] Scheduler is disabled")
   }
 }
@@ -84,8 +107,9 @@ class WarningEmailActor(
   ec: ExecutionContext,
   mat: Materializer,
   appConfig: AppConfig
-) extends Actor
-    with Logging {
+)
+extends Actor
+with Logging {
 
   def receive: Receive = { case _ =>
     mongoLockService.schedulerLock("WarningEmailSchedule") {
@@ -94,14 +118,16 @@ class WarningEmailActor(
         .fromPublisher(invitationsRepository.findAllForWarningEmail)
         .throttle(10, 1.second)
         .runForeach { aggregationResult =>
-          emailService.sendWarningEmail(aggregationResult.invitations).map {
-            case true =>
-              aggregationResult.invitations.foreach { invitation =>
-                invitationsRepository.updateWarningEmailSent(invitation.invitationId)
-              }
-            case false =>
-              logger.warn(s"[EmailScheduler] Warning email failed to send for ARN: ${aggregationResult.arn}")
-          }
+          emailService
+            .sendWarningEmail(aggregationResult.invitations)(RequestSupport.thereIsNoRequest)
+            .map {
+              case true =>
+                aggregationResult.invitations
+                  .foreach { invitation =>
+                    invitationsRepository.updateWarningEmailSent(invitation.invitationId)
+                  }
+              case false => logger.warn(s"[EmailScheduler] Warning email failed to send for ARN: ${aggregationResult.arn}")
+            }
           ()
         }
     }
@@ -117,8 +143,9 @@ class ExpiredEmailActor(
   ec: ExecutionContext,
   mat: Materializer,
   appConfig: AppConfig
-) extends Actor
-    with Logging {
+)
+extends Actor
+with Logging {
 
   def receive: Receive = { case _ =>
     mongoLockService.schedulerLock("ExpiredEmailSchedule") {
@@ -128,12 +155,19 @@ class ExpiredEmailActor(
         .throttle(10, 1.second)
         .runForeach { invitation =>
           invitationsRepository.updateStatus(invitation.invitationId, Expired)
-          emailService.sendExpiredEmail(invitation).map {
-            case true =>
-              invitationsRepository.updateExpiredEmailSent(invitation.invitationId)
-            case false =>
-              logger.warn(s"[EmailScheduler] Expiry email failed to send for invitation: ${invitation.invitationId}")
-          }
+
+          emailService
+            .sendExpiredEmail(invitation)(NoRequest)
+            .map {
+              case true => invitationsRepository.updateExpiredEmailSent(invitation.invitationId)
+              case false =>
+                // TODO: Improve error handling to provide clearer insights into why the email was not sent.
+                // Throw an exception in EmailConnector so it can fail properly.
+                // This will allow the error to be logged correctly by the error handler.
+                // Then it can be monitored in kibana and actioned when failures happen on production.
+                // The current approach suppresses such details  hindering debugging and monitoring efforts.
+                logger.warn(s"[EmailScheduler] Expiry email failed to send for invitation: ${invitation.invitationId}")
+            }
           ()
         }
     }
