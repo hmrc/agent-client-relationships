@@ -96,12 +96,6 @@ with Logging {
         .execute[HttpResponse]
         .map { response =>
           response.status match {
-            // TODO: Simplify how our backend responds for certain cases.
-            // Don't rely on global HTTP status codes to reflect certain business cases
-            // Currently
-            // - NO_CONTENT suggest NotFound case
-            // - OK with empty groupIds throws exception, this could be represented as None or handled by error handler if this is not expected
-            // - OK with more then 1 groupId also is problematic, if there expectation is to have only one groupId
             case Status.NO_CONTENT => throw RelationshipNotFound(s"UNKNOWN_${identifierNickname(arn)}")
             case Status.OK =>
               val groupIds = (response.json \ "principalGroupIds").as[Seq[String]]
@@ -131,7 +125,6 @@ with Logging {
         .execute[HttpResponse]
         .map { response =>
           response.status match {
-            // TODO: improve error handling as described above and don't use NO_CONTENT for the case of no enrolments
             case Status.OK => (response.json \ "delegatedGroupIds").as[Seq[String]].toSet
             case Status.NO_CONTENT => Set.empty
             case other =>
@@ -169,7 +162,6 @@ with Logging {
         .execute[HttpResponse]
         .map { response =>
           response.status match {
-            // TODO: improve error handling as described above and don't use NO_CONTENT for the case of no enrolments
             case Status.OK =>
               response.json
                 .as[ES2Response]
@@ -199,7 +191,6 @@ with Logging {
         .execute[HttpResponse]
         .map { response =>
           response.status match {
-            // TODO: improve error handling as described above and don't use NO_CONTENT for the case of no enrolments
             case Status.OK =>
               (response.json \ "enrolments")
                 .as[Seq[JsObject]]
