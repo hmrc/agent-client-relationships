@@ -33,7 +33,9 @@ lazy val root = (project in file("."))
     Compile / unmanagedResourceDirectories += baseDirectory.value / "resources",
     routesImport ++= Seq("uk.gov.hmrc.agentclientrelationships.binders.PathBinders._"),
     Compile / scalafmtOnCompile := true,
-    Test / scalafmtOnCompile := true
+    Test / scalafmtOnCompile := true,
+    Compile / doc / scalacOptions := Seq(), //this will allow to have warnings in `doc` task
+    Test / doc / scalacOptions := Seq(), //this will allow to have warnings in `doc` task
   )
   .enablePlugins(PlayScala, SbtDistributablesPlugin)
 
