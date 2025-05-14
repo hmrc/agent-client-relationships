@@ -18,13 +18,10 @@ package uk.gov.hmrc.agentclientrelationships.model.invitation
 
 import play.api.libs.json.{Format, Json}
 import uk.gov.hmrc.agentclientrelationships.model.{Invitation, InvitationStatus}
-import uk.gov.hmrc.agentmtdidentifiers.model.Service
 
 import java.time.{Instant, LocalDate}
 
-case class ApiAuthorisationRequestInfo(
-  uid: String,
-  normalizedAgentName: String,
+case class ApiSeqAuthorisation(
   created: Instant,
   service: String,
   status: InvitationStatus,
@@ -33,22 +30,39 @@ case class ApiAuthorisationRequestInfo(
   lastUpdated: Instant
 )
 
-object ApiAuthorisationRequestInfo {
-  implicit val format: Format[ApiAuthorisationRequestInfo] = Json.format[ApiAuthorisationRequestInfo]
+object ApiSeqAuthorisation {
+  implicit val format: Format[ApiSeqAuthorisation] = Json.format[ApiSeqAuthorisation]
 
-  def createApiAuthorisationRequestInfo(
-    invitation: Invitation,
-    uid: String,
-    normalizedAgentName: String
-  ): ApiAuthorisationRequestInfo =
-    ApiAuthorisationRequestInfo(
-      uid = uid,
-      normalizedAgentName = normalizedAgentName,
+  def createApiSeqAuthorisation(invitation: Invitation): ApiSeqAuthorisation =
+    ApiSeqAuthorisation(
       created = invitation.created,
       service = invitation.service,
       status = invitation.status,
       expiresOn = invitation.expiryDate,
       invitationId = invitation.invitationId,
       lastUpdated = invitation.lastUpdated
+    )
+
+}
+
+case class ApiSeqAuthorisations(
+  uid: String,
+  normalizedAgentName: String,
+  invitations: Seq[ApiSeqAuthorisation]
+)
+
+object ApiSeqAuthorisations {
+  implicit val format: Format[ApiSeqAuthorisations] = Json.format[ApiSeqAuthorisations]
+
+  def createApiSeqAuthorisations(
+    invitations: Seq[Invitation],
+    uid: String,
+    normalizedAgentName: String
+  ): ApiSeqAuthorisations =
+    ApiSeqAuthorisations(
+      uid = uid,
+      normalizedAgentName = normalizedAgentName,
+      invitations = invitations
+        .map(ApiSeqAuthorisation.createApiSeqAuthorisation)
     )
 }

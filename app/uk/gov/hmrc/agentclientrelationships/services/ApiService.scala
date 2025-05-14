@@ -24,7 +24,7 @@ import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.{AgentAssuranceConnector, IfOrHipConnector}
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.{ClientDetailsFailureResponse, ClientDetailsNotFound, ClientDetailsResponse, ErrorRetrievingClientDetails}
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.DuplicateAuthorisationRequest
-import uk.gov.hmrc.agentclientrelationships.model.invitation.{ApiAuthorisationRequestInfo, ApiCreateInvitationRequest, InvitationFailureResponse}
+import uk.gov.hmrc.agentclientrelationships.model.invitation.{ApiAuthorisation, ApiCreateInvitationRequest, ApiSeqAuthorisations, InvitationFailureResponse}
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.{AgencyDetails, AgentDetailsDesResponse, AgentReferenceRecord}
 import uk.gov.hmrc.agentclientrelationships.model.{Invitation, Pending}
 import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
@@ -105,7 +105,7 @@ class ApiService @Inject() (
 
   def findInvitationForAgent(arn: Arn, invitationId: String, supportedServices: Seq[Service])(implicit
     request: RequestHeader
-  ): Future[Either[InvitationFailureResponse, ApiAuthorisationRequestInfo]] =
+  ): Future[Either[InvitationFailureResponse, ApiAuthorisation]] =
     (for {
 
       _ <- EitherT.fromEither[Future](
@@ -124,8 +124,30 @@ class ApiService @Inject() (
 
       invitation <- EitherT(findInvitation(invitationId, arn, supportedServices))
 
-    } yield ApiAuthorisationRequestInfo.createApiAuthorisationRequestInfo(
+    } yield ApiAuthorisation.createApiAuthorisation(
       invitation,
+      agentReferenceRecord.uid,
+      newNormaliseAgentName
+    )).value
+
+  def findAllInvitationsForAgent(arn: Arn, supportedServices: Seq[Service])(implicit
+    request: RequestHeader
+  ): Future[Either[InvitationFailureResponse, ApiSeqAuthorisations]] =
+    (for {
+
+      agentRecord <- EitherT(getAgentDetailsByArn(arn))
+
+      newNormaliseAgentName = invitationLinkService.normaliseAgentName(agentRecord.agencyDetails.agencyName)
+
+      agentReferenceRecord <-
+        EitherT.right[InvitationFailureResponse](
+          invitationLinkService.getAgentReferenceRecordByArn(arn = arn, newNormaliseAgentName = newNormaliseAgentName)
+        )
+
+      invitations <- EitherT(findAllInvitationForArn(arn, supportedServices))
+
+    } yield ApiSeqAuthorisations.createApiSeqAuthorisations(
+      invitations,
       agentReferenceRecord.uid,
       newNormaliseAgentName
     )).value
@@ -144,7 +166,7 @@ class ApiService @Inject() (
     case _ => Future successful Right(suppliedClientId)
   }
 
-  def findInvitation(
+  private def findInvitation(
     invitationId: String,
     arn: Arn,
     supportedServices: Seq[Service]
@@ -159,6 +181,17 @@ class ApiService @Inject() (
               else Left(InvitationFailureResponse.UnsupportedService)
             else Left(InvitationFailureResponse.NoPermissionOnAgency)
         )
+      }
+
+  private def findAllInvitationForArn(
+    arn: Arn,
+    supportedServices: Seq[Service]
+  ): Future[Either[InvitationFailureResponse, Seq[Invitation]]] =
+    invitationsRepository
+      .findAllForAgentService(arn = arn.value, services = supportedServices.map(_.id))
+      .map {
+        case Nil         => Left(InvitationFailureResponse.InvitationNotFound)
+        case invitations => Right(invitations)
       }
 
   private def create(

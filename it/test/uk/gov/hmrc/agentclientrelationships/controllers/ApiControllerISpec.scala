@@ -23,7 +23,7 @@ import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.audit.AuditService
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiErrorResults.ErrorBody
-import uk.gov.hmrc.agentclientrelationships.model.invitation.{ApiAuthorisationRequestInfo, ApiCreateInvitationRequest}
+import uk.gov.hmrc.agentclientrelationships.model.invitation.{ApiAuthorisation, ApiCreateInvitationRequest}
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentReferenceRecord
 import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, _}
 import uk.gov.hmrc.agentclientrelationships.repository.{AgentReferenceRepository, InvitationsRepository, PartialAuthRepository}
@@ -129,6 +129,21 @@ class ApiControllerISpec extends BaseControllerISpec with ClientDetailsStub with
         service = Vat,
         clientId = vrn,
         suppliedClientId = vrn,
+        clientName = "TestClientName",
+        agencyName = agencyName,
+        agencyEmail = "agent@email.com",
+        expiryDate = testDate,
+        clientType = Some("personal")
+      )
+      .copy(created = testTime, lastUpdated = testTime)
+
+  val trustInvitation: Invitation =
+    Invitation
+      .createNew(
+        arn = arn.value,
+        service = Trust,
+        clientId = utr,
+        suppliedClientId = utr,
         clientName = "TestClientName",
         agencyName = agencyName,
         agencyEmail = "agent@email.com",
@@ -941,7 +956,7 @@ class ApiControllerISpec extends BaseControllerISpec with ClientDetailsStub with
         val result = doGetRequest(requestPath)
         result.status shouldBe 200
 
-        val resultApiAuthorisationRequestInfo = result.json.as[ApiAuthorisationRequestInfo]
+        val resultApiAuthorisationRequestInfo = result.json.as[ApiAuthorisation]
         resultApiAuthorisationRequestInfo.normalizedAgentName shouldBe normalizedAgencyName
         resultApiAuthorisationRequestInfo.status shouldBe Pending
         resultApiAuthorisationRequestInfo.service shouldBe invitation.service
@@ -1063,6 +1078,121 @@ class ApiControllerISpec extends BaseControllerISpec with ClientDetailsStub with
 
       }
     )
+
+  }
+
+  "get invitations" should {
+
+    // Expected tests
+    s"return 200 status and valid JSON when invitations exists for arn " in {
+      val invitations: Seq[Invitation] = Seq(itsaInvitation, itsaSuppInvitation, vatInvitation, trustInvitation)
+
+      await(invitationRepo.collection.insertMany(invitations).toFuture())
+      await(agentReferenceRepo.create(agentReferenceRecord))
+      givenAgentRecordFound(arn, testAgentRecord)
+
+      val requestPath = s"/agent-client-relationships/api/${arn.value}/invitations"
+      val result = doGetRequest(requestPath)
+      result.status shouldBe 200
+
+      result.json shouldBe Json.obj(
+        "uid"                 -> agentReferenceRecord.uid,
+        "normalizedAgentName" -> normalizedAgencyName,
+        "invitations" -> Json.arr(
+          Json.obj(
+            "created"      -> testTime.toString,
+            "service"      -> itsaInvitation.service,
+            "status"       -> itsaInvitation.status,
+            "expiresOn"    -> testDate.toString,
+            "invitationId" -> itsaInvitation.invitationId,
+            "lastUpdated"  -> testTime.toString
+          ),
+          Json.obj(
+            "created"      -> testTime.toString,
+            "service"      -> itsaSuppInvitation.service,
+            "status"       -> itsaSuppInvitation.status,
+            "expiresOn"    -> testDate.toString,
+            "invitationId" -> itsaSuppInvitation.invitationId,
+            "lastUpdated"  -> testTime.toString
+          ),
+          Json.obj(
+            "created"      -> testTime.toString,
+            "service"      -> vatInvitation.service,
+            "status"       -> vatInvitation.status,
+            "expiresOn"    -> testDate.toString,
+            "invitationId" -> vatInvitation.invitationId,
+            "lastUpdated"  -> testTime.toString
+          )
+        )
+      )
+
+    }
+
+    s"return 404 NotFound status and valid JSON INVITATION_NOT_FOUND when no invitations for arn or supported service" in {
+      val invitations: Seq[Invitation] = Seq(
+        itsaInvitation.copy(arn = arn2.value),
+        itsaSuppInvitation.copy(arn = arn2.value),
+        vatInvitation.copy(arn = arn2.value),
+        trustInvitation.copy(arn = arn2.value)
+      )
+
+      await(invitationRepo.collection.insertMany(invitations).toFuture())
+      await(agentReferenceRepo.create(agentReferenceRecord))
+      givenAgentRecordFound(arn, testAgentRecord)
+
+      val expectedJson: JsValue = Json.toJson(
+        toJson(
+          ErrorBody(
+            "INVITATION_NOT_FOUND",
+            "The authorisation request cannot be found."
+          )
+        )
+      )
+      val requestPath = s"/agent-client-relationships/api/${arn.value}/invitations"
+      val result = doGetRequest(requestPath)
+      result.status shouldBe NOT_FOUND
+      result.json shouldBe expectedJson
+
+    }
+
+    s"return 403 FORBIDDEN status and valid JSON AGENT_SUSPENDED when invitation exists but agent is suspended" in {
+      val invitations: Seq[Invitation] = Seq(itsaInvitation, itsaSuppInvitation, vatInvitation, trustInvitation)
+
+      await(invitationRepo.collection.insertMany(invitations).toFuture())
+      await(agentReferenceRepo.create(agentReferenceRecord))
+      givenAgentRecordFound(
+        arn,
+        testAgentRecord.copy(suspensionDetails = Some(SuspensionDetails(suspensionStatus = true, regimes = None)))
+      )
+
+      val expectedJson: JsValue = Json.toJson(
+        toJson(
+          ErrorBody(
+            "AGENT_SUSPENDED",
+            "This agent is suspended"
+          )
+        )
+      )
+
+      val requestPath = s"/agent-client-relationships/api/${arn.value}/invitations"
+      val result = doGetRequest(requestPath)
+      result.status shouldBe FORBIDDEN
+      result.json shouldBe expectedJson
+
+    }
+
+    s"return 500 INTERNAL_SERVER_ERROR status and valid JSON  when invitation exists but agent data not found " in {
+      val invitations: Seq[Invitation] = Seq(itsaInvitation, itsaSuppInvitation, vatInvitation, trustInvitation)
+
+      await(invitationRepo.collection.insertMany(invitations).toFuture())
+      await(agentReferenceRepo.create(agentReferenceRecord))
+      givenAgentDetailsErrorResponse(arn, 404)
+
+      val requestPath = s"/agent-client-relationships/api/${arn.value}/invitations"
+      val result = doGetRequest(requestPath)
+      result.status shouldBe INTERNAL_SERVER_ERROR
+
+    }
 
   }
 

@@ -47,8 +47,6 @@ class ApiController @Inject() (
 
   val apiSupportedServices: Seq[Service] = appConfig.apiSupportedServices
 
-  private val strideRoles = Seq(appConfig.oldAuthStrideRole, appConfig.newAuthStrideRole)
-
   def createInvitation(arn: Arn): Action[JsValue] = Action.async(parse.json) { implicit request =>
     request.body
       .validate[ApiCreateInvitationRequest]
@@ -113,6 +111,21 @@ class ApiController @Inject() (
           case InvitationFailureResponse.UnsupportedService   => ApiErrorResults.UnsupportedService
           case InvitationFailureResponse.NoPermissionOnAgency => ApiErrorResults.NoPermissionOnAgency
           case _                                              => InternalServerError
+        }
+    }
+  }
+
+  def getInvitations(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
+    apiService.findAllInvitationsForAgent(arn, apiSupportedServices).map {
+      case Right(apiSeqAuthorisationRequestInfo) => Ok(Json.toJson(apiSeqAuthorisationRequestInfo))
+      case Left(invitationFailureResponse) =>
+        invitationFailureResponse match {
+          // Agent
+          case InvitationFailureResponse.AgentSuspended => ApiErrorResults.AgentSuspended
+          case e @ ErrorRetrievingAgentDetails(_)       => e.getResult("")
+          // Invitation
+          case InvitationFailureResponse.InvitationNotFound => ApiErrorResults.InvitationNotFound
+          case _                                            => InternalServerError
         }
     }
   }
