@@ -19,24 +19,23 @@ package uk.gov.hmrc.agentclientrelationships.services
 import cats.data.EitherT
 import org.mongodb.scala.MongoException
 import play.api.Logging
-import play.api.mvc.AnyContent
 import play.api.mvc.Request
+import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.AgentAssuranceConnector
 import uk.gov.hmrc.agentclientrelationships.connectors.IfOrHipConnector
-import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsFailureResponse
+import uk.gov.hmrc.agentclientrelationships.model.Invitation
+import uk.gov.hmrc.agentclientrelationships.model.Pending
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsNotFound
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsResponse
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ErrorRetrievingClientDetails
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.DuplicateAuthorisationRequest
-import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiAuthorisationRequestInfo
+import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiAuthorisation
+import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiBulkAuthorisations
 import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiCreateInvitationRequest
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgencyDetails
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentDetailsDesResponse
-import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentReferenceRecord
-import uk.gov.hmrc.agentclientrelationships.model.Invitation
-import uk.gov.hmrc.agentclientrelationships.model.Pending
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
 import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
 import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier.ClientId
@@ -47,7 +46,6 @@ import uk.gov.hmrc.agentmtdidentifiers.model.Service.MtdItSupp
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.agentclientrelationships.util.RequestSupport._
 
 import java.time.Instant
 import java.time.ZoneOffset
@@ -55,7 +53,6 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import play.api.mvc.RequestHeader
 
 @Singleton
 class ApiService @Inject() (
@@ -168,23 +165,25 @@ extends Logging {
       newNormaliseAgentName
     )).value
 
-  def findAllInvitationsForAgent(arn: Arn, supportedServices: Seq[Service])(implicit
+  def findAllInvitationsForAgent(
+    arn: Arn,
+    supportedServices: Seq[Service]
+  )(implicit
     request: RequestHeader
-  ): Future[Either[InvitationFailureResponse, ApiSeqAuthorisations]] =
+  ): Future[Either[InvitationFailureResponse, ApiBulkAuthorisations]] =
     (for {
 
       agentRecord <- EitherT(getAgentDetailsByArn(arn))
 
       newNormaliseAgentName = invitationLinkService.normaliseAgentName(agentRecord.agencyDetails.agencyName)
 
-      agentReferenceRecord <-
-        EitherT.right[InvitationFailureResponse](
-          invitationLinkService.getAgentReferenceRecordByArn(arn = arn, newNormaliseAgentName = newNormaliseAgentName)
-        )
+      agentReferenceRecord <- EitherT.right[InvitationFailureResponse](
+        invitationLinkService.getAgentReferenceRecordByArn(arn = arn, newNormaliseAgentName = newNormaliseAgentName)
+      )
 
       invitations <- EitherT(findAllInvitationForArn(arn, supportedServices))
 
-    } yield ApiSeqAuthorisations.createApiSeqAuthorisations(
+    } yield ApiBulkAuthorisations.createApiBulkAuthorisations(
       invitations,
       agentReferenceRecord.uid,
       newNormaliseAgentName
@@ -229,13 +228,12 @@ extends Logging {
   private def findAllInvitationForArn(
     arn: Arn,
     supportedServices: Seq[Service]
-  ): Future[Either[InvitationFailureResponse, Seq[Invitation]]] =
-    invitationsRepository
-      .findAllForAgentService(arn = arn.value, services = supportedServices.map(_.id))
-      .map {
-        case Nil         => Left(InvitationFailureResponse.InvitationNotFound)
-        case invitations => Right(invitations)
-      }
+  ): Future[Either[InvitationFailureResponse, Seq[Invitation]]] = invitationsRepository
+    .findAllForAgentService(arn = arn.value, services = supportedServices.map(_.id))
+    .map {
+      case Nil => Left(InvitationFailureResponse.InvitationNotFound)
+      case invitations => Right(invitations)
+    }
 
   private def create(
     arn: Arn,

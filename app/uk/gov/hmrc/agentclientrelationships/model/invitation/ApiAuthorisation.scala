@@ -16,11 +16,14 @@
 
 package uk.gov.hmrc.agentclientrelationships.model.invitation
 
-import play.api.libs.json.{Format, Json}
-import uk.gov.hmrc.agentclientrelationships.model.{Invitation, InvitationStatus}
+import play.api.libs.json.Format
+import play.api.libs.json.Json
+import uk.gov.hmrc.agentclientrelationships.model.Invitation
+import uk.gov.hmrc.agentclientrelationships.model.InvitationStatus
 import uk.gov.hmrc.agentmtdidentifiers.model.Service
 
-import java.time.{Instant, LocalDate}
+import java.time.Instant
+import java.time.LocalDate
 
 case class ApiAuthorisation(
   uid: String,
@@ -34,21 +37,22 @@ case class ApiAuthorisation(
 )
 
 object ApiAuthorisation {
+
   implicit val format: Format[ApiAuthorisation] = Json.format[ApiAuthorisation]
 
   def createApiAuthorisation(
     invitation: Invitation,
     uid: String,
     normalizedAgentName: String
-  ): ApiAuthorisation =
-    ApiAuthorisation(
-      uid = uid,
-      normalizedAgentName = normalizedAgentName,
-      created = invitation.created,
-      service = invitation.service,
-      status = invitation.status,
-      expiresOn = invitation.expiryDate,
-      invitationId = invitation.invitationId,
-      lastUpdated = invitation.lastUpdated
-    )
+  ): ApiAuthorisation = ApiAuthorisation(
+    uid = uid,
+    normalizedAgentName = normalizedAgentName,
+    created = invitation.created,
+    service = invitation.service,
+    status = invitation.status,
+    expiresOn = invitation.expiryDate,
+    invitationId = invitation.invitationId,
+    lastUpdated = invitation.lastUpdated
+  )
+
 }

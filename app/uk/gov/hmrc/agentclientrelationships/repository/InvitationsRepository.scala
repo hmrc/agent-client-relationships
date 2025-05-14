@@ -203,15 +203,17 @@ with Logging {
 
   def findAllForAgent(arn: String): Future[Seq[Invitation]] = collection.find(equal(arnKey, arn)).toFuture()
 
-  def findAllForAgentService(arn: String, services: Seq[String]): Future[Seq[Invitation]] =
-    collection
-      .find(
-        and(
-          equal(arnKey, arn),
-          in(serviceKey, services: _*)
-        )
+  def findAllForAgentService(
+    arn: String,
+    services: Seq[String]
+  ): Future[Seq[Invitation]] = collection
+    .find(
+      and(
+        equal(arnKey, arn),
+        in(serviceKey, services: _*)
       )
-      .toFuture()
+    )
+    .toFuture()
 
   def findAllForAgent(
     arn: String,

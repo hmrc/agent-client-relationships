@@ -24,7 +24,6 @@ import play.api.mvc.ControllerComponents
 import uk.gov.hmrc.agentclientrelationships.audit.AuditService
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.model.Pending
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse._
 import uk.gov.hmrc.agentclientrelationships.model.invitation._
 import uk.gov.hmrc.agentclientrelationships.services.ApiService
@@ -52,20 +51,25 @@ with AuthActions {
 
   val apiSupportedServices: Seq[Service] = appConfig.apiSupportedServices
 
-  def createInvitation(arn: Arn): Action[JsValue] = Action.async(parse.json) { implicit request =>
-    request.body
-      .validate[ApiCreateInvitationRequest]
-      .fold(
-        errs => Future.successful(ApiErrorResults.InvalidPayload),
-        apiCreateInvitationRequest =>
-          apiService.createInvitation(arn, apiCreateInvitationRequest, apiSupportedServices).map { response =>
-            response.fold(
-              {
-                // InputData Validation
-                case UnsupportedService      => ApiErrorResults.UnsupportedService
-                case InvalidClientId         => ApiErrorResults.ClientIdInvalidFormat
-                case UnsupportedClientIdType => ApiErrorResults.ClientIdDoesNotMatchService
-                case UnsupportedClientType   => ApiErrorResults.UnsupportedClientType
+  def createInvitation(arn: Arn): Action[JsValue] =
+    Action.async(parse.json) { implicit request =>
+      request.body
+        .validate[ApiCreateInvitationRequest]
+        .fold(
+          errs => Future.successful(ApiErrorResults.InvalidPayload),
+          apiCreateInvitationRequest =>
+            apiService.createInvitation(
+              arn,
+              apiCreateInvitationRequest,
+              apiSupportedServices
+            ).map { response =>
+              response.fold(
+                {
+                  // InputData Validation
+                  case UnsupportedService => ApiErrorResults.UnsupportedService
+                  case InvalidClientId => ApiErrorResults.ClientIdInvalidFormat
+                  case UnsupportedClientIdType => ApiErrorResults.ClientIdDoesNotMatchService
+                  case UnsupportedClientType => ApiErrorResults.UnsupportedClientType
 
                   // Get Agent, suspention check NoPermissionOnAgency
                   case AgentSuspended => ApiErrorResults.AgentSuspended
@@ -110,7 +114,7 @@ with AuthActions {
       invitationId,
       apiSupportedServices
     ).map {
-      case Right(apiAuthorisationRequestInfo) => Ok(Json.toJson(apiAuthorisationRequestInfo))
+      case Right(apiAuthorisation) => Ok(Json.toJson(apiAuthorisation))
       case Left(invitationFailureResponse) =>
         invitationFailureResponse match {
           // Agent
@@ -127,15 +131,15 @@ with AuthActions {
 
   def getInvitations(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
     apiService.findAllInvitationsForAgent(arn, apiSupportedServices).map {
-      case Right(apiSeqAuthorisationRequestInfo) => Ok(Json.toJson(apiSeqAuthorisationRequestInfo))
+      case Right(apiBulkAuthorisation) => Ok(Json.toJson(apiBulkAuthorisation))
       case Left(invitationFailureResponse) =>
         invitationFailureResponse match {
           // Agent
           case InvitationFailureResponse.AgentSuspended => ApiErrorResults.AgentSuspended
-          case e @ ErrorRetrievingAgentDetails(_)       => e.getResult("")
+          case e @ ErrorRetrievingAgentDetails(_) => e.getResult("")
           // Invitation
           case InvitationFailureResponse.InvitationNotFound => ApiErrorResults.InvitationNotFound
-          case _                                            => InternalServerError
+          case _ => InternalServerError
         }
     }
   }

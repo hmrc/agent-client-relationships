@@ -25,12 +25,11 @@ import play.api.libs.json.Json.toJson
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.audit.AuditService
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiAuthorisationRequestInfo
+import uk.gov.hmrc.agentclientrelationships.model._
+import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiAuthorisation
 import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiCreateInvitationRequest
 import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiErrorResults.ErrorBody
-import uk.gov.hmrc.agentclientrelationships.model.invitation.{ApiAuthorisation, ApiCreateInvitationRequest}
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentReferenceRecord
-import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentclientrelationships.repository.AgentReferenceRepository
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
 import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
@@ -147,20 +146,19 @@ with TestData {
     )
     .copy(created = testTime, lastUpdated = testTime)
 
-  val trustInvitation: Invitation =
-    Invitation
-      .createNew(
-        arn = arn.value,
-        service = Trust,
-        clientId = utr,
-        suppliedClientId = utr,
-        clientName = "TestClientName",
-        agencyName = agencyName,
-        agencyEmail = "agent@email.com",
-        expiryDate = testDate,
-        clientType = Some("personal")
-      )
-      .copy(created = testTime, lastUpdated = testTime)
+  val trustInvitation: Invitation = Invitation
+    .createNew(
+      arn = arn.value,
+      service = Trust,
+      clientId = utr,
+      suppliedClientId = utr,
+      clientName = "TestClientName",
+      agencyName = agencyName,
+      agencyEmail = "agent@email.com",
+      expiryDate = testDate,
+      clientType = Some("personal")
+    )
+    .copy(created = testTime, lastUpdated = testTime)
 
   val agentReferenceRecord: AgentReferenceRecord = AgentReferenceRecord(
     uid = uid,
@@ -1145,7 +1143,12 @@ with TestData {
 
     // Expected tests
     s"return 200 status and valid JSON when invitations exists for arn " in {
-      val invitations: Seq[Invitation] = Seq(itsaInvitation, itsaSuppInvitation, vatInvitation, trustInvitation)
+      val invitations: Seq[Invitation] = Seq(
+        itsaInvitation,
+        itsaSuppInvitation,
+        vatInvitation,
+        trustInvitation
+      )
 
       await(invitationRepo.collection.insertMany(invitations).toFuture())
       await(agentReferenceRepo.create(agentReferenceRecord))
@@ -1156,32 +1159,32 @@ with TestData {
       result.status shouldBe 200
 
       result.json shouldBe Json.obj(
-        "uid"                 -> agentReferenceRecord.uid,
+        "uid" -> agentReferenceRecord.uid,
         "normalizedAgentName" -> normalizedAgencyName,
         "invitations" -> Json.arr(
           Json.obj(
-            "created"      -> testTime.toString,
-            "service"      -> itsaInvitation.service,
-            "status"       -> itsaInvitation.status,
-            "expiresOn"    -> testDate.toString,
+            "created" -> testTime.toString,
+            "service" -> itsaInvitation.service,
+            "status" -> itsaInvitation.status,
+            "expiresOn" -> testDate.toString,
             "invitationId" -> itsaInvitation.invitationId,
-            "lastUpdated"  -> testTime.toString
+            "lastUpdated" -> testTime.toString
           ),
           Json.obj(
-            "created"      -> testTime.toString,
-            "service"      -> itsaSuppInvitation.service,
-            "status"       -> itsaSuppInvitation.status,
-            "expiresOn"    -> testDate.toString,
+            "created" -> testTime.toString,
+            "service" -> itsaSuppInvitation.service,
+            "status" -> itsaSuppInvitation.status,
+            "expiresOn" -> testDate.toString,
             "invitationId" -> itsaSuppInvitation.invitationId,
-            "lastUpdated"  -> testTime.toString
+            "lastUpdated" -> testTime.toString
           ),
           Json.obj(
-            "created"      -> testTime.toString,
-            "service"      -> vatInvitation.service,
-            "status"       -> vatInvitation.status,
-            "expiresOn"    -> testDate.toString,
+            "created" -> testTime.toString,
+            "service" -> vatInvitation.service,
+            "status" -> vatInvitation.status,
+            "expiresOn" -> testDate.toString,
             "invitationId" -> vatInvitation.invitationId,
-            "lastUpdated"  -> testTime.toString
+            "lastUpdated" -> testTime.toString
           )
         )
       )
@@ -1216,7 +1219,12 @@ with TestData {
     }
 
     s"return 403 FORBIDDEN status and valid JSON AGENT_SUSPENDED when invitation exists but agent is suspended" in {
-      val invitations: Seq[Invitation] = Seq(itsaInvitation, itsaSuppInvitation, vatInvitation, trustInvitation)
+      val invitations: Seq[Invitation] = Seq(
+        itsaInvitation,
+        itsaSuppInvitation,
+        vatInvitation,
+        trustInvitation
+      )
 
       await(invitationRepo.collection.insertMany(invitations).toFuture())
       await(agentReferenceRepo.create(agentReferenceRecord))
@@ -1242,7 +1250,12 @@ with TestData {
     }
 
     s"return 500 INTERNAL_SERVER_ERROR status and valid JSON  when invitation exists but agent data not found " in {
-      val invitations: Seq[Invitation] = Seq(itsaInvitation, itsaSuppInvitation, vatInvitation, trustInvitation)
+      val invitations: Seq[Invitation] = Seq(
+        itsaInvitation,
+        itsaSuppInvitation,
+        vatInvitation,
+        trustInvitation
+      )
 
       await(invitationRepo.collection.insertMany(invitations).toFuture())
       await(agentReferenceRepo.create(agentReferenceRecord))

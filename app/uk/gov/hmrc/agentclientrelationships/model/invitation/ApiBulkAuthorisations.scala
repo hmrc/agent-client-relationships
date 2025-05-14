@@ -16,10 +16,13 @@
 
 package uk.gov.hmrc.agentclientrelationships.model.invitation
 
-import play.api.libs.json.{Format, Json}
-import uk.gov.hmrc.agentclientrelationships.model.{Invitation, InvitationStatus}
+import play.api.libs.json.Format
+import play.api.libs.json.Json
+import uk.gov.hmrc.agentclientrelationships.model.Invitation
+import uk.gov.hmrc.agentclientrelationships.model.InvitationStatus
 
-import java.time.{Instant, LocalDate}
+import java.time.Instant
+import java.time.LocalDate
 
 case class ApiBulkAuthorisation(
   created: Instant,
@@ -31,38 +34,39 @@ case class ApiBulkAuthorisation(
 )
 
 object ApiBulkAuthorisation {
+
   implicit val format: Format[ApiBulkAuthorisation] = Json.format[ApiBulkAuthorisation]
 
-  def createApiSeqAuthorisation(invitation: Invitation): ApiBulkAuthorisation =
-    ApiBulkAuthorisation(
-      created = invitation.created,
-      service = invitation.service,
-      status = invitation.status,
-      expiresOn = invitation.expiryDate,
-      invitationId = invitation.invitationId,
-      lastUpdated = invitation.lastUpdated
-    )
+  def createApiBulkAuthorisation(invitation: Invitation): ApiBulkAuthorisation = ApiBulkAuthorisation(
+    created = invitation.created,
+    service = invitation.service,
+    status = invitation.status,
+    expiresOn = invitation.expiryDate,
+    invitationId = invitation.invitationId,
+    lastUpdated = invitation.lastUpdated
+  )
 
 }
 
-case class ApiSeqAuthorisations(
+case class ApiBulkAuthorisations(
   uid: String,
   normalizedAgentName: String,
   invitations: Seq[ApiBulkAuthorisation]
 )
 
-object ApiSeqAuthorisations {
-  implicit val format: Format[ApiSeqAuthorisations] = Json.format[ApiSeqAuthorisations]
+object ApiBulkAuthorisations {
 
-  def createApiSeqAuthorisations(
+  implicit val format: Format[ApiBulkAuthorisations] = Json.format[ApiBulkAuthorisations]
+
+  def createApiBulkAuthorisations(
     invitations: Seq[Invitation],
     uid: String,
     normalizedAgentName: String
-  ): ApiSeqAuthorisations =
-    ApiSeqAuthorisations(
-      uid = uid,
-      normalizedAgentName = normalizedAgentName,
-      invitations = invitations
-        .map(ApiBulkAuthorisation.createApiSeqAuthorisation)
-    )
+  ): ApiBulkAuthorisations = ApiBulkAuthorisations(
+    uid = uid,
+    normalizedAgentName = normalizedAgentName,
+    invitations = invitations
+      .map(ApiBulkAuthorisation.createApiBulkAuthorisation)
+  )
+
 }
