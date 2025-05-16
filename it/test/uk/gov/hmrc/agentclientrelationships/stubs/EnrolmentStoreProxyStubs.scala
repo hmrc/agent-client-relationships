@@ -226,7 +226,7 @@ extends Eventually {
     groupId: String,
     enrolmentKey: EnrolmentKey
   ): StubMapping = stubFor(
-    get(urlEqualTo(s"$esBaseUrl/groups/$groupId/enrolments?type=principal&service=HMRC-AS-AGENT")).willReturn(
+    get(urlEqualTo(s"$esBaseUrl/groups/$groupId/enrolments?type=principal")).willReturn(
       aResponse()
         .withStatus(200)
         .withBody(s"""
@@ -247,6 +247,20 @@ extends Eventually {
                      |                 "value": "${enrolmentKey.oneIdentifier().value}"
                      |              }
                      |           ]
+                     |        },
+                     |        {
+                     |           "service": "HMCE-VAT-AGNT",
+                     |           "state": "active",
+                     |           "friendlyName": "My Client's VAT Enrolment",
+                     |           "enrolmentDate": "2018-10-05T14:48:00.000Z",
+                     |           "failedActivationCount": 1,
+                     |           "activationDate": "2018-10-13T17:36:00.000Z",
+                     |           "identifiers": [
+                     |              {
+                     |                 "key": "HMCE-VAT-AGNT~AgentRefNo~123456789",
+                     |                 "value": "123456789"
+                     |              }
+                     |           ]
                      |        }
                      |    ]
                      |}
@@ -255,7 +269,7 @@ extends Eventually {
   )
 
   def givenEnrolmentNotExistsForGroupId(groupId: String): StubMapping = stubFor(
-    get(urlEqualTo(s"$esBaseUrl/groups/$groupId/enrolments?type=principal&service=HMRC-AS-AGENT")).willReturn(
+    get(urlEqualTo(s"$esBaseUrl/groups/$groupId/enrolments?type=principal")).willReturn(
       aResponse().withStatus(204)
     )
   )

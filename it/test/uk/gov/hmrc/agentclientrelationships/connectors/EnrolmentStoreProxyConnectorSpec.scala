@@ -34,7 +34,6 @@ import uk.gov.hmrc.agentmtdidentifiers.model.Service.MtdIt
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.AgentCode
 import uk.gov.hmrc.domain.Nino
-import uk.gov.hmrc.http
 import uk.gov.hmrc.http._
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
