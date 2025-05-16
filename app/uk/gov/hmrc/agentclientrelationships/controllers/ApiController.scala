@@ -24,7 +24,6 @@ import play.api.mvc.ControllerComponents
 import uk.gov.hmrc.agentclientrelationships.audit.AuditService
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.model.Pending
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse._
 import uk.gov.hmrc.agentclientrelationships.model.invitation._
 import uk.gov.hmrc.agentclientrelationships.services.ApiService
@@ -51,8 +50,6 @@ with AuthActions {
   val supportedServices: Seq[Service] = appConfig.supportedServicesWithoutPir
 
   val apiSupportedServices: Seq[Service] = appConfig.apiSupportedServices
-
-  private val strideRoles = Seq(appConfig.oldAuthStrideRole, appConfig.newAuthStrideRole)
 
   def createInvitation(arn: Arn): Action[JsValue] =
     Action.async(parse.json) { implicit request =>
@@ -117,7 +114,7 @@ with AuthActions {
       invitationId,
       apiSupportedServices
     ).map {
-      case Right(apiAuthorisationRequestInfo) => Ok(Json.toJson(apiAuthorisationRequestInfo))
+      case Right(apiAuthorisation) => Ok(Json.toJson(apiAuthorisation))
       case Left(invitationFailureResponse) =>
         invitationFailureResponse match {
           // Agent
@@ -127,6 +124,21 @@ with AuthActions {
           case InvitationFailureResponse.InvitationNotFound => ApiErrorResults.InvitationNotFound
           case InvitationFailureResponse.UnsupportedService => ApiErrorResults.UnsupportedService
           case InvitationFailureResponse.NoPermissionOnAgency => ApiErrorResults.NoPermissionOnAgency
+          case _ => InternalServerError
+        }
+    }
+  }
+
+  def getInvitations(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
+    apiService.findAllInvitationsForAgent(arn, apiSupportedServices).map {
+      case Right(apiBulkAuthorisation) => Ok(Json.toJson(apiBulkAuthorisation))
+      case Left(invitationFailureResponse) =>
+        invitationFailureResponse match {
+          // Agent
+          case InvitationFailureResponse.AgentSuspended => ApiErrorResults.AgentSuspended
+          case e @ ErrorRetrievingAgentDetails(_) => e.getResult("")
+          // Invitation
+          case InvitationFailureResponse.InvitationNotFound => ApiErrorResults.InvitationNotFound
           case _ => InternalServerError
         }
     }

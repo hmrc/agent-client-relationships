@@ -20,14 +20,11 @@ import play.api.libs.json.Format
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentclientrelationships.model.Invitation
 import uk.gov.hmrc.agentclientrelationships.model.InvitationStatus
-import uk.gov.hmrc.agentmtdidentifiers.model.Service
 
 import java.time.Instant
 import java.time.LocalDate
 
-case class ApiAuthorisationRequestInfo(
-  uid: String,
-  normalizedAgentName: String,
+case class ApiBulkAuthorisation(
   created: Instant,
   service: String,
   status: InvitationStatus,
@@ -36,23 +33,40 @@ case class ApiAuthorisationRequestInfo(
   lastUpdated: Instant
 )
 
-object ApiAuthorisationRequestInfo {
+object ApiBulkAuthorisation {
 
-  implicit val format: Format[ApiAuthorisationRequestInfo] = Json.format[ApiAuthorisationRequestInfo]
+  implicit val format: Format[ApiBulkAuthorisation] = Json.format[ApiBulkAuthorisation]
 
-  def createApiAuthorisationRequestInfo(
-    invitation: Invitation,
-    uid: String,
-    normalizedAgentName: String
-  ): ApiAuthorisationRequestInfo = ApiAuthorisationRequestInfo(
-    uid = uid,
-    normalizedAgentName = normalizedAgentName,
+  def createApiBulkAuthorisation(invitation: Invitation): ApiBulkAuthorisation = ApiBulkAuthorisation(
     created = invitation.created,
     service = invitation.service,
     status = invitation.status,
     expiresOn = invitation.expiryDate,
     invitationId = invitation.invitationId,
     lastUpdated = invitation.lastUpdated
+  )
+
+}
+
+case class ApiBulkAuthorisations(
+  uid: String,
+  normalizedAgentName: String,
+  invitations: Seq[ApiBulkAuthorisation]
+)
+
+object ApiBulkAuthorisations {
+
+  implicit val format: Format[ApiBulkAuthorisations] = Json.format[ApiBulkAuthorisations]
+
+  def createApiBulkAuthorisations(
+    invitations: Seq[Invitation],
+    uid: String,
+    normalizedAgentName: String
+  ): ApiBulkAuthorisations = ApiBulkAuthorisations(
+    uid = uid,
+    normalizedAgentName = normalizedAgentName,
+    invitations = invitations
+      .map(ApiBulkAuthorisation.createApiBulkAuthorisation)
   )
 
 }
