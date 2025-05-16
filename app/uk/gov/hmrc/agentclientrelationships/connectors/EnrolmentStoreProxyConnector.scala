@@ -33,10 +33,10 @@ import uk.gov.hmrc.agentclientrelationships.util.RequestSupport.hc
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.AgentCode
 import uk.gov.hmrc.http.HttpReads.Implicits._
-import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.HttpResponse
 import uk.gov.hmrc.http.StringContextOps
 import uk.gov.hmrc.http.UpstreamErrorResponse
+import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import java.net.URL
@@ -151,8 +151,8 @@ with Logging {
   )(implicit request: RequestHeader): Future[Seq[Enrolment]] = {
 
     val url: URL =
-      uri"$espBaseUrl/enrolment-store-proxy/enrolment-store/users/$userId/enrolments?type=delegated"
-        .withParam("service", service)
+      uri"$espBaseUrl/enrolment-store-proxy/enrolment-store/users/$userId/enrolments"
+        .withParams(Map("type" -> "delegated") ++ service.map(src => "service" -> src).toMap)
         .toJavaUri
         .toURL
 
