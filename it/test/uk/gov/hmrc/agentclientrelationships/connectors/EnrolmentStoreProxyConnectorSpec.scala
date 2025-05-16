@@ -25,16 +25,11 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
-import uk.gov.hmrc.agentclientrelationships.stubs.DataStreamStub
-import uk.gov.hmrc.agentclientrelationships.stubs.EnrolmentStoreProxyStubs
-import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
-import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
-import uk.gov.hmrc.agentclientrelationships.support.WireMockSupport
+import uk.gov.hmrc.agentclientrelationships.stubs.{DataStreamStub, EnrolmentStoreProxyStubs}
+import uk.gov.hmrc.agentclientrelationships.support.{RelationshipNotFound, UnitSpec, WireMockSupport}
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.MtdIt
 import uk.gov.hmrc.agentmtdidentifiers.model._
-import uk.gov.hmrc.domain.AgentCode
-import uk.gov.hmrc.domain.Nino
-import uk.gov.hmrc.http
+import uk.gov.hmrc.domain.{AgentCode, Nino}
 import uk.gov.hmrc.http._
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
@@ -175,6 +170,12 @@ with MockitoSugar {
       givenAuditConnector()
       givenEnrolmentExistsForGroupId("bar", agentEnrolmentKey(Arn("foo")))
       await(connector.getAgentReferenceNumberFor("bar")) shouldBe Some(Arn("foo"))
+    }
+
+    "return None for the known groupId when no enrolment with a service for HMRC-AS-Agent exist" in {
+      givenAuditConnector()
+      givenIncorrectEnrolmentExistsForGroupId("bar", agentEnrolmentKey(Arn("foo")))
+      await(connector.getAgentReferenceNumberFor("bar")) shouldBe None
     }
 
     "return None for unknown groupId" in {

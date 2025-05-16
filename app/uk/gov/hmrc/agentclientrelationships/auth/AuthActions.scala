@@ -30,7 +30,6 @@ import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals._
 import uk.gov.hmrc.auth.core.retrieve.Credentials
 import uk.gov.hmrc.auth.core.retrieve.~
 import uk.gov.hmrc.domain.TaxIdentifier
-import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.HeaderNames
 
 import java.nio.charset.StandardCharsets.UTF_8

@@ -222,43 +222,90 @@ extends Eventually {
     )
   }
 
-  def givenEnrolmentExistsForGroupId(
-    groupId: String,
-    enrolmentKey: EnrolmentKey
-  ): StubMapping = stubFor(
-    get(urlEqualTo(s"$esBaseUrl/groups/$groupId/enrolments?type=principal&service=HMRC-AS-AGENT")).willReturn(
-      aResponse()
-        .withStatus(200)
-        .withBody(s"""
-                     |{
-                     |    "startRecord": 1,
-                     |    "totalRecords": 1,
-                     |    "enrolments": [
-                     |        {
-                     |           "service": "${enrolmentKey.service}",
-                     |           "state": "active",
-                     |           "friendlyName": "My First Client's PAYE Enrolment",
-                     |           "enrolmentDate": "2018-10-05T14:48:00.000Z",
-                     |           "failedActivationCount": 1,
-                     |           "activationDate": "2018-10-13T17:36:00.000Z",
-                     |           "identifiers": [
-                     |              {
-                     |                 "key": "${enrolmentKey.oneIdentifier().key}",
-                     |                 "value": "${enrolmentKey.oneIdentifier().value}"
-                     |              }
-                     |           ]
-                     |        }
-                     |    ]
-                     |}
+  def givenEnrolmentExistsForGroupId(groupId: String, enrolmentKey: EnrolmentKey): StubMapping =
+    stubFor(
+      get(urlEqualTo(s"$esBaseUrl/groups/$groupId/enrolments?type=principal"))
+        .willReturn(
+          aResponse()
+            .withStatus(200)
+            .withBody(s"""
+                         |{
+                         |    "startRecord": 1,
+                         |    "totalRecords": 1,
+                         |    "enrolments": [
+                         |        {
+                         |           "service": "${enrolmentKey.service}",
+                         |           "state": "active",
+                         |           "friendlyName": "My First Client's PAYE Enrolment",
+                         |           "enrolmentDate": "2018-10-05T14:48:00.000Z",
+                         |           "failedActivationCount": 1,
+                         |           "activationDate": "2018-10-13T17:36:00.000Z",
+                         |           "identifiers": [
+                         |              {
+                         |                 "key": "${enrolmentKey.oneIdentifier().key}",
+                         |                 "value": "${enrolmentKey.oneIdentifier().value}"
+                         |              }
+                         |           ]
+                         |        },
+                         |        {
+                         |           "service": "HMCE-VAT-AGNT",
+                         |           "state": "active",
+                         |           "friendlyName": "My Client's VAT Enrolment",
+                         |           "enrolmentDate": "2018-10-05T14:48:00.000Z",
+                         |           "failedActivationCount": 1,
+                         |           "activationDate": "2018-10-13T17:36:00.000Z",
+                         |           "identifiers": [
+                         |              {
+                         |                 "key": "HMCE-VAT-AGNT~AgentRefNo~123456789",
+                         |                 "value": "123456789"
+                         |              }
+                         |           ]
+                         |        }
+                         |    ]
+                         |}
              """.stripMargin)
+        )
     )
-  )
 
-  def givenEnrolmentNotExistsForGroupId(groupId: String): StubMapping = stubFor(
-    get(urlEqualTo(s"$esBaseUrl/groups/$groupId/enrolments?type=principal&service=HMRC-AS-AGENT")).willReturn(
-      aResponse().withStatus(204)
+  def givenIncorrectEnrolmentExistsForGroupId(groupId: String, enrolmentKey: EnrolmentKey): StubMapping =
+    stubFor(
+      get(urlEqualTo(s"$esBaseUrl/groups/$groupId/enrolments?type=principal"))
+        .willReturn(
+          aResponse()
+            .withStatus(200)
+            .withBody(s"""
+                         |{
+                         |    "startRecord": 1,
+                         |    "totalRecords": 1,
+                         |    "enrolments": [
+                         |        {
+                         |           "service": "HMCE-VAT-AGNT",
+                         |           "state": "active",
+                         |           "friendlyName": "My Client's VAT Enrolment",
+                         |           "enrolmentDate": "2018-10-05T14:48:00.000Z",
+                         |           "failedActivationCount": 1,
+                         |           "activationDate": "2018-10-13T17:36:00.000Z",
+                         |           "identifiers": [
+                         |              {
+                         |                 "key": "HMCE-VAT-AGNT~AgentRefNo~123456789",
+                         |                 "value": "123456789"
+                         |              }
+                         |           ]
+                         |        }
+                         |    ]
+                         |}
+             """.stripMargin)
+        )
     )
-  )
+
+  def givenEnrolmentNotExistsForGroupId(groupId: String): StubMapping =
+    stubFor(
+      get(urlEqualTo(s"$esBaseUrl/groups/$groupId/enrolments?type=principal"))
+        .willReturn(
+          aResponse()
+            .withStatus(204)
+        )
+    )
 
   // ES19 - updateEnrolmentFriendlyName
   def givenUpdateEnrolmentFriendlyNameResponse(

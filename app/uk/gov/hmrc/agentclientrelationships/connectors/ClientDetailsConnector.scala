@@ -45,9 +45,6 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import scala.util.Failure
-import scala.util.Success
-import scala.util.Try
 
 @Singleton
 class ClientDetailsConnector @Inject() (
