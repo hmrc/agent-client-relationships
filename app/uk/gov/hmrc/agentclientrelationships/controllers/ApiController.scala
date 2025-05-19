@@ -137,8 +137,6 @@ with AuthActions {
           // Agent
           case InvitationFailureResponse.AgentSuspended => ApiErrorResults.AgentSuspended
           case e @ ErrorRetrievingAgentDetails(_) => e.getResult("")
-          // Invitation
-          case InvitationFailureResponse.InvitationNotFound => ApiErrorResults.InvitationNotFound
           case _ => InternalServerError
         }
     }

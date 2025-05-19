@@ -225,10 +225,6 @@ extends Logging {
     supportedServices: Seq[Service]
   ): Future[Seq[Invitation]] = invitationsRepository
     .findAllForAgentService(arn = arn.value, services = supportedServices.map(_.id))
-//    .map {
-//      case Nil => Left(InvitationFailureResponse.InvitationNotFound)
-//      case invitations => Right(invitations)
-//    }
 
   private def create(
     arn: Arn,
