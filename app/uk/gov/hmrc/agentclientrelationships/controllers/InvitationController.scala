@@ -18,7 +18,7 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 
 import play.api.Logger
 import play.api.libs.json.{JsValue, Json}
-import play.api.mvc.{Action, AnyContent, ControllerComponents}
+import play.api.mvc.{Action, AnyContent, ControllerComponents, Results}
 import uk.gov.hmrc.agentclientrelationships.audit.AuditService
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
@@ -163,23 +163,11 @@ class InvitationController @Inject() (
   def cancelInvitation(invitationId: String): Action[AnyContent] = Action.async { implicit request =>
     withAuthorisedAsAgent { authArn =>
       invitationService.cancelInvitation(authArn, invitationId).map { response =>
-        response.fold(
-          {
-            case NoPendingInvitation =>
-              val msg =
-                s"Pending Invitation not found for combination of arn ${authArn.value} and invitationId $invitationId"
-              Logger(getClass).warn(msg)
-              NoPendingInvitation.getResult(msg)
-
-            case NoPermissionOnAgency => Forbidden
-
-            case _ => BadRequest
-          },
-          _ => NoContent
-        )
+        response match {
+          case Left(response) => response.getResult("")
+          case Right(_)       => Results.NoContent
+        }
       }
-
     }
   }
-
 }

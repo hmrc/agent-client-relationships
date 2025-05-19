@@ -24,4 +24,5 @@ object CancelInvitationResponse {
   case object Success extends CancelInvitationResponse
   case object NoPermission extends CancelInvitationResponse
   case object NotFound extends CancelInvitationResponse
+  case object WrongInvitationStatus extends CancelInvitationResponse
 }

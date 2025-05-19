@@ -82,6 +82,17 @@ object InvitationFailureResponse {
     )
   }
 
+  case object InvalidInvitationStatus extends InvitationFailureResponse {
+    def getResult(message: String): Result = Forbidden(
+      toJson(
+        ErrorBody(
+          "INVALID_INVITATION_STATUS",
+          "This authorisation request cannot be cancelled as the client has already responded to the request, or the request has expired."
+        )
+      )
+    )
+  }
+
   case object RelationshipNotFound extends InvitationFailureResponse {
     def getResult(message: String): Result = NotFound(
       toJson(ErrorBody("RELATIONSHIP_NOT_FOUND", "The specified relationship was not found."))

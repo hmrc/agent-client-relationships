@@ -523,8 +523,8 @@ class InvitationControllerISpec
 
         val clientIdentifier = ClientIdentifier(clientId, clientIdType)
 
-        await(
-          invitationRepo.create(
+        invitationRepo
+          .create(
             arn.value,
             Service.forId(taxService),
             clientIdentifier,
@@ -535,7 +535,7 @@ class InvitationControllerISpec
             LocalDate.now(),
             Some("personal")
           )
-        )
+          .futureValue
 
         val pendingInvitation = invitationRepo
           .findAllForAgent(arn.value)
@@ -567,8 +567,8 @@ class InvitationControllerISpec
 
         val clientIdentifier = ClientIdentifier(clientId, clientIdType)
 
-        await(
-          invitationRepo.create(
+        invitationRepo
+          .create(
             arn.value,
             Service.forId(taxService),
             clientIdentifier,
@@ -579,7 +579,7 @@ class InvitationControllerISpec
             LocalDate.now(),
             Some("personal")
           )
-        )
+          .futureValue
 
         val pendingInvitation = invitationRepo
           .findAllForAgent(arn.value)
@@ -590,7 +590,11 @@ class InvitationControllerISpec
         givenAuthorisedAsValidAgent(fakeRequest, arn2.value)
 
         val result = doAgentPutRequest(testUrl)
+        val codeText: String = "NO_PERMISSION_ON_AGENCY"
+        val messageText: String =
+          "The user that is signed in cannot access this authorisation request. Their details do not match the agent business that created the authorisation request."
         result.status shouldBe FORBIDDEN
+        result.body shouldBe s"{\"code\":\"$codeText\",\"message\":\"$messageText\"}"
 
         val invitationSeq = invitationRepo
           .findAllForAgent(arn.value)
