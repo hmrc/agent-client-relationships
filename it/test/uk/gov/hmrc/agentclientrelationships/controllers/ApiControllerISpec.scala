@@ -26,7 +26,7 @@ import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.audit.AuditService
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model._
-import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiAuthorisation
+import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiInvitationResponse
 import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiCreateInvitationRequest
 import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiErrorResults.ErrorBody
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentReferenceRecord
@@ -311,7 +311,7 @@ with TestData {
       val taxService = HMRCMTDIT
       val inputData: ApiCreateInvitationRequest = baseInvitationInputData
 
-      await(invitationRepo.collection.insertOne(itsaInvitation).toFuture())
+      invitationRepo.collection.insertOne(itsaInvitation).toFuture().futureValue
       getStandardStubForCreateInvitation(taxService)
 
       val expectedJson: JsValue = Json.toJson(
@@ -341,7 +341,7 @@ with TestData {
         else
           inputData.suppliedClientId
 
-      await(invitationRepo.collection.insertOne(itsaSuppInvitation).toFuture())
+      invitationRepo.collection.insertOne(itsaSuppInvitation).toFuture().futureValue
       getStandardStubForCreateInvitation(taxService)
 
       val expectedJson: JsValue = Json.toJson(
@@ -370,7 +370,7 @@ with TestData {
         else
           inputData.suppliedClientId
 
-      await(invitationRepo.collection.insertOne(itsaInvitation).toFuture())
+      invitationRepo.collection.insertOne(itsaInvitation).toFuture().futureValue
       getStandardStubForCreateInvitation(taxService)
 
       val expectedJson: JsValue = Json.toJson(
@@ -398,8 +398,7 @@ with TestData {
           mtdItId.value
         else
           inputData.suppliedClientId
-
-      await(invitationRepo.collection.insertOne(itsaInvitation.copy(status = Rejected)).toFuture())
+      invitationRepo.collection.insertOne(itsaInvitation.copy(status = Rejected)).toFuture().futureValue
       getStandardStubForCreateInvitation(taxService)
 
       val requestPath = s"/agent-client-relationships/api/${arn.value}/invitation"
@@ -537,15 +536,13 @@ with TestData {
       givenMtdItIdIsUnKnownFor(nino)
       givenNinoIsUnknownFor(mtdItId)
 
-      await(
-        partialAuthRepository
-          .create(
-            Instant.parse("2020-01-01T00:00:00.000Z"),
-            arn,
-            HMRCMTDIT,
-            nino
-          )
-      )
+      partialAuthRepository
+        .create(
+          Instant.parse("2020-01-01T00:00:00.000Z"),
+          arn,
+          HMRCMTDIT,
+          nino
+        ).futureValue
 
       val expectedJson: JsValue = Json.toJson(
         toJson(
@@ -567,15 +564,13 @@ with TestData {
 
       getStandardStubForCreateInvitation(HMRCMTDIT)
 
-      await(
-        partialAuthRepository
-          .create(
-            Instant.parse("2020-01-01T00:00:00.000Z"),
-            arn,
-            HMRCMTDIT,
-            nino
-          )
-      )
+      partialAuthRepository
+        .create(
+          Instant.parse("2020-01-01T00:00:00.000Z"),
+          arn,
+          HMRCMTDIT,
+          nino
+        ).futureValue
 
       val expectedJson: JsValue = Json.toJson(
         toJson(
@@ -598,15 +593,13 @@ with TestData {
       getStandardStubForCreateInvitation(HMRCMTDIT)
       val clientId = mtdItId.value
 
-      await(
-        partialAuthRepository
-          .create(
-            Instant.parse("2020-01-01T00:00:00.000Z"),
-            arn,
-            HMRCMTDITSUPP,
-            nino
-          )
-      )
+      partialAuthRepository
+        .create(
+          Instant.parse("2020-01-01T00:00:00.000Z"),
+          arn,
+          HMRCMTDITSUPP,
+          nino
+        ).futureValue
 
       val requestPath = s"/agent-client-relationships/api/${arn.value}/invitation"
       val result = doAgentPostRequest(requestPath, Json.toJson(inputData).toString())
@@ -639,15 +632,13 @@ with TestData {
       getStandardStubForCreateInvitation(HMRCMTDITSUPP)
       val clientId = mtdItId.value
 
-      await(
-        partialAuthRepository
-          .create(
-            Instant.parse("2020-01-01T00:00:00.000Z"),
-            arn,
-            HMRCMTDIT,
-            nino
-          )
-      )
+      partialAuthRepository
+        .create(
+          Instant.parse("2020-01-01T00:00:00.000Z"),
+          arn,
+          HMRCMTDIT,
+          nino
+        ).futureValue
 
       val requestPath = s"/agent-client-relationships/api/${arn.value}/invitation"
       val result = doAgentPostRequest(requestPath, Json.toJson(inputData).toString())
@@ -955,8 +946,8 @@ with TestData {
       s"return 200 status and valid JSON when invitation exists for $taxService" in {
         val invitation: Invitation = allServicesGetInvitation(taxService)
 
-        await(invitationRepo.collection.insertOne(invitation).toFuture())
-        await(agentReferenceRepo.create(agentReferenceRecord))
+        invitationRepo.collection.insertOne(invitation).toFuture().futureValue
+        agentReferenceRepo.create(agentReferenceRecord).futureValue
         givenAgentRecordFound(arn, testAgentRecord)
 
         val requestPath = s"/agent-client-relationships/api/${invitation.arn}/invitation/${invitation.invitationId}"
@@ -981,8 +972,8 @@ with TestData {
       s"return 200 status and valid JSON when invitation exists in any state for $taxService" in {
         val invitation: Invitation = allServicesGetInvitation(taxService).copy(status = Cancelled)
 
-        await(invitationRepo.collection.insertOne(invitation).toFuture())
-        await(agentReferenceRepo.create(agentReferenceRecord))
+        invitationRepo.collection.insertOne(invitation).toFuture().futureValue
+        agentReferenceRepo.create(agentReferenceRecord).futureValue
         givenAgentRecordFound(arn, testAgentRecord)
 
         val requestPath = s"/agent-client-relationships/api/${invitation.arn}/invitation/${invitation.invitationId}"
@@ -1007,18 +998,18 @@ with TestData {
       s"return 200 status and valid JSON when invitation exists and create new UID if does not exists for $taxService" in {
         val invitation: Invitation = allServicesGetInvitation(taxService)
 
-        await(invitationRepo.collection.insertOne(invitation).toFuture())
+        invitationRepo.collection.insertOne(invitation).toFuture().futureValue
         givenAgentRecordFound(arn, testAgentRecord)
 
         val requestPath = s"/agent-client-relationships/api/${invitation.arn}/invitation/${invitation.invitationId}"
         val result = doGetRequest(requestPath)
         result.status shouldBe 200
 
-        val resultApiAuthorisationRequestInfo = result.json.as[ApiAuthorisation]
-        resultApiAuthorisationRequestInfo.normalizedAgentName shouldBe normalizedAgencyName
-        resultApiAuthorisationRequestInfo.status shouldBe Pending
-        resultApiAuthorisationRequestInfo.service shouldBe invitation.service
-        resultApiAuthorisationRequestInfo.invitationId shouldBe invitation.invitationId
+        val apiInvitationResponse = result.json.as[ApiInvitationResponse]
+        apiInvitationResponse.normalizedAgentName shouldBe normalizedAgencyName
+        apiInvitationResponse.status shouldBe Pending
+        apiInvitationResponse.service shouldBe invitation.service
+        apiInvitationResponse.invitationId shouldBe invitation.invitationId
 
       }
     )
@@ -1027,7 +1018,7 @@ with TestData {
       s"return 404 NotFound status and valid JSON INVITATION_NOT_FOUND when invitationId does not for $taxService" in {
         val invitation: Invitation = allServicesGetInvitation(taxService)
 
-        await(agentReferenceRepo.create(agentReferenceRecord))
+        agentReferenceRepo.create(agentReferenceRecord).futureValue
         givenAgentRecordFound(arn, testAgentRecord)
 
         val expectedJson: JsValue = Json.toJson(
@@ -1050,8 +1041,8 @@ with TestData {
     s"return 400 BAD_REQUEST status and valid JSON SERVICE_NOT_SUPPORTED when invitationId does not for Trust" in {
       val invitation: Invitation = vatInvitation.copy(service = Service.Trust.id)
 
-      await(invitationRepo.collection.insertOne(invitation).toFuture())
-      await(agentReferenceRepo.create(agentReferenceRecord))
+      invitationRepo.collection.insertOne(invitation).toFuture().futureValue
+      agentReferenceRepo.create(agentReferenceRecord).futureValue
       givenAgentRecordFound(arn, testAgentRecord)
 
       val expectedJson: JsValue = Json.toJson(
@@ -1073,8 +1064,8 @@ with TestData {
     s"return 403 FORBIDDEN status and valid JSON NO_PERMISSION_ON_AGENCY when invitationId does not for Trust" in {
       val invitation: Invitation = vatInvitation.copy(arn = arn2.value)
 
-      await(invitationRepo.collection.insertOne(invitation).toFuture())
-      await(agentReferenceRepo.create(agentReferenceRecord))
+      invitationRepo.collection.insertOne(invitation).toFuture().futureValue
+      agentReferenceRepo.create(agentReferenceRecord).futureValue
       givenAgentRecordFound(arn, testAgentRecord)
 
       val expectedJson: JsValue = Json.toJson(
@@ -1098,8 +1089,8 @@ with TestData {
       s"return 403 FORBIDDEN status and valid JSON AGENT_SUSPENDED when invitation exists but agent is suspended  $taxService" in {
         val invitation: Invitation = allServicesGetInvitation(taxService)
 
-        await(agentReferenceRepo.create(agentReferenceRecord))
-        await(invitationRepo.collection.insertOne(invitation).toFuture())
+        agentReferenceRepo.create(agentReferenceRecord).futureValue
+        invitationRepo.collection.insertOne(invitation).toFuture().futureValue
         givenAgentRecordFound(
           arn,
           testAgentRecord.copy(suspensionDetails = Some(SuspensionDetails(suspensionStatus = true, regimes = None)))
@@ -1126,8 +1117,8 @@ with TestData {
       s"return 500 INTERNAL_SERVER_ERROR status and valid JSON  when invitation exists but agent data not found  $taxService" in {
         val invitation: Invitation = allServicesGetInvitation(taxService)
 
-        await(agentReferenceRepo.create(agentReferenceRecord))
-        await(invitationRepo.collection.insertOne(invitation).toFuture())
+        agentReferenceRepo.create(agentReferenceRecord).futureValue
+        invitationRepo.collection.insertOne(invitation).toFuture().futureValue
         givenAgentDetailsErrorResponse(arn, 404)
 
         val requestPath = s"/agent-client-relationships/api/${invitation.arn}/invitation/${invitation.invitationId}"
@@ -1150,8 +1141,8 @@ with TestData {
         trustInvitation
       )
 
-      await(invitationRepo.collection.insertMany(invitations).toFuture())
-      await(agentReferenceRepo.create(agentReferenceRecord))
+      invitationRepo.collection.insertMany(invitations).toFuture().futureValue
+      agentReferenceRepo.create(agentReferenceRecord).futureValue
       givenAgentRecordFound(arn, testAgentRecord)
 
       val requestPath = s"/agent-client-relationships/api/${arn.value}/invitations"
@@ -1191,7 +1182,7 @@ with TestData {
 
     }
 
-    s"return 404 NotFound status and valid JSON INVITATION_NOT_FOUND when no invitations for arn or supported service" in {
+    s"return 204 and valid JSON I when no invitations for arn or supported service" in {
       val invitations: Seq[Invitation] = Seq(
         itsaInvitation.copy(arn = arn2.value),
         itsaSuppInvitation.copy(arn = arn2.value),
@@ -1199,22 +1190,19 @@ with TestData {
         trustInvitation.copy(arn = arn2.value)
       )
 
-      await(invitationRepo.collection.insertMany(invitations).toFuture())
-      await(agentReferenceRepo.create(agentReferenceRecord))
+      invitationRepo.collection.insertMany(invitations).toFuture().futureValue
+      agentReferenceRepo.create(agentReferenceRecord).futureValue
       givenAgentRecordFound(arn, testAgentRecord)
 
-      val expectedJson: JsValue = Json.toJson(
-        toJson(
-          ErrorBody(
-            "INVITATION_NOT_FOUND",
-            "The authorisation request cannot be found."
-          )
-        )
-      )
       val requestPath = s"/agent-client-relationships/api/${arn.value}/invitations"
       val result = doGetRequest(requestPath)
-      result.status shouldBe NOT_FOUND
-      result.json shouldBe expectedJson
+      result.status shouldBe 200
+
+      result.json shouldBe Json.obj(
+        "uid" -> agentReferenceRecord.uid,
+        "normalizedAgentName" -> normalizedAgencyName,
+        "invitations" -> Json.arr()
+      )
 
     }
 
@@ -1226,8 +1214,8 @@ with TestData {
         trustInvitation
       )
 
-      await(invitationRepo.collection.insertMany(invitations).toFuture())
-      await(agentReferenceRepo.create(agentReferenceRecord))
+      invitationRepo.collection.insertMany(invitations).toFuture().futureValue
+      agentReferenceRepo.create(agentReferenceRecord).futureValue
       givenAgentRecordFound(
         arn,
         testAgentRecord.copy(suspensionDetails = Some(SuspensionDetails(suspensionStatus = true, regimes = None)))
@@ -1257,14 +1245,14 @@ with TestData {
         trustInvitation
       )
 
-      await(invitationRepo.collection.insertMany(invitations).toFuture())
-      await(agentReferenceRepo.create(agentReferenceRecord))
+      invitationRepo.collection.insertMany(invitations).toFuture().futureValue
+      agentReferenceRepo.create(agentReferenceRecord).futureValue
       givenAgentDetailsErrorResponse(arn, 404)
 
       val requestPath = s"/agent-client-relationships/api/${arn.value}/invitations"
       val result = doGetRequest(requestPath)
       result.status shouldBe INTERNAL_SERVER_ERROR
-
+      result.body shouldBe "\"Agent record unavailable: des response code: 404\""
     }
 
   }

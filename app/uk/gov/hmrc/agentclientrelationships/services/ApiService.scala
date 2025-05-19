@@ -30,8 +30,8 @@ import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsNot
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsResponse
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ErrorRetrievingClientDetails
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.DuplicateAuthorisationRequest
-import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiAuthorisation
-import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiBulkAuthorisations
+import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiInvitationResponse
+import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiBulkInvitationsResponse
 import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiCreateInvitationRequest
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgencyDetails
@@ -135,7 +135,7 @@ extends Logging {
     supportedServices: Seq[Service]
   )(implicit
     request: RequestHeader
-  ): Future[Either[InvitationFailureResponse, ApiAuthorisation]] =
+  ): Future[Either[InvitationFailureResponse, ApiInvitationResponse]] =
     (for {
 
       _ <- EitherT.fromEither[Future](
@@ -159,7 +159,7 @@ extends Logging {
         supportedServices
       ))
 
-    } yield ApiAuthorisation.createApiAuthorisation(
+    } yield ApiInvitationResponse.createApiInvitationResponse(
       invitation,
       agentReferenceRecord.uid,
       newNormaliseAgentName
@@ -170,20 +170,15 @@ extends Logging {
     supportedServices: Seq[Service]
   )(implicit
     request: RequestHeader
-  ): Future[Either[InvitationFailureResponse, ApiBulkAuthorisations]] =
+  ): Future[Either[InvitationFailureResponse, ApiBulkInvitationsResponse]] =
     (for {
-
       agentRecord <- EitherT(getAgentDetailsByArn(arn))
-
       newNormaliseAgentName = invitationLinkService.normaliseAgentName(agentRecord.agencyDetails.agencyName)
-
       agentReferenceRecord <- EitherT.right[InvitationFailureResponse](
         invitationLinkService.getAgentReferenceRecordByArn(arn = arn, newNormaliseAgentName = newNormaliseAgentName)
       )
-
-      invitations <- EitherT(findAllInvitationForArn(arn, supportedServices))
-
-    } yield ApiBulkAuthorisations.createApiBulkAuthorisations(
+      invitations <- EitherT.right[InvitationFailureResponse](findAllInvitationForArn(arn, supportedServices))
+    } yield ApiBulkInvitationsResponse.createApiBulkInvitationsResponse(
       invitations,
       agentReferenceRecord.uid,
       newNormaliseAgentName
@@ -228,12 +223,12 @@ extends Logging {
   private def findAllInvitationForArn(
     arn: Arn,
     supportedServices: Seq[Service]
-  ): Future[Either[InvitationFailureResponse, Seq[Invitation]]] = invitationsRepository
+  ): Future[Seq[Invitation]] = invitationsRepository
     .findAllForAgentService(arn = arn.value, services = supportedServices.map(_.id))
-    .map {
-      case Nil => Left(InvitationFailureResponse.InvitationNotFound)
-      case invitations => Right(invitations)
-    }
+//    .map {
+//      case Nil => Left(InvitationFailureResponse.InvitationNotFound)
+//      case invitations => Right(invitations)
+//    }
 
   private def create(
     arn: Arn,

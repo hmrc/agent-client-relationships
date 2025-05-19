@@ -24,7 +24,7 @@ import uk.gov.hmrc.agentclientrelationships.model.InvitationStatus
 import java.time.Instant
 import java.time.LocalDate
 
-case class ApiBulkAuthorisation(
+case class ApiBulkInvitationResponse(
   created: Instant,
   service: String,
   status: InvitationStatus,
@@ -33,11 +33,11 @@ case class ApiBulkAuthorisation(
   lastUpdated: Instant
 )
 
-object ApiBulkAuthorisation {
+object ApiBulkInvitationResponse {
 
-  implicit val format: Format[ApiBulkAuthorisation] = Json.format[ApiBulkAuthorisation]
+  implicit val format: Format[ApiBulkInvitationResponse] = Json.format[ApiBulkInvitationResponse]
 
-  def createApiBulkAuthorisation(invitation: Invitation): ApiBulkAuthorisation = ApiBulkAuthorisation(
+  def createApiBulkInvitationResponse(invitation: Invitation): ApiBulkInvitationResponse = ApiBulkInvitationResponse(
     created = invitation.created,
     service = invitation.service,
     status = invitation.status,
@@ -48,25 +48,25 @@ object ApiBulkAuthorisation {
 
 }
 
-case class ApiBulkAuthorisations(
+case class ApiBulkInvitationsResponse(
   uid: String,
   normalizedAgentName: String,
-  invitations: Seq[ApiBulkAuthorisation]
+  invitations: Seq[ApiBulkInvitationResponse]
 )
 
-object ApiBulkAuthorisations {
+object ApiBulkInvitationsResponse {
 
-  implicit val format: Format[ApiBulkAuthorisations] = Json.format[ApiBulkAuthorisations]
+  implicit val format: Format[ApiBulkInvitationsResponse] = Json.format[ApiBulkInvitationsResponse]
 
-  def createApiBulkAuthorisations(
+  def createApiBulkInvitationsResponse(
     invitations: Seq[Invitation],
     uid: String,
     normalizedAgentName: String
-  ): ApiBulkAuthorisations = ApiBulkAuthorisations(
+  ): ApiBulkInvitationsResponse = ApiBulkInvitationsResponse(
     uid = uid,
     normalizedAgentName = normalizedAgentName,
     invitations = invitations
-      .map(ApiBulkAuthorisation.createApiBulkAuthorisation)
+      .map(ApiBulkInvitationResponse.createApiBulkInvitationResponse)
   )
 
 }

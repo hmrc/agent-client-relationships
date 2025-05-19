@@ -114,7 +114,7 @@ with AuthActions {
       invitationId,
       apiSupportedServices
     ).map {
-      case Right(apiAuthorisation) => Ok(Json.toJson(apiAuthorisation))
+      case Right(apiInvitationResponse) => Ok(Json.toJson(apiInvitationResponse))
       case Left(invitationFailureResponse) =>
         invitationFailureResponse match {
           // Agent
@@ -131,7 +131,7 @@ with AuthActions {
 
   def getInvitations(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
     apiService.findAllInvitationsForAgent(arn, apiSupportedServices).map {
-      case Right(apiBulkAuthorisation) => Ok(Json.toJson(apiBulkAuthorisation))
+      case Right(apiBulkInvitationsResponse) => Ok(Json.toJson(apiBulkInvitationsResponse))
       case Left(invitationFailureResponse) =>
         invitationFailureResponse match {
           // Agent
