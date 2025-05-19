@@ -27,7 +27,6 @@ object ApiErrorResults {
 
   case class ErrorBody(
     code: String,
-    message: String,
     invitationId: Option[String] = None
   )
 
@@ -37,167 +36,135 @@ object ApiErrorResults {
         .map(id =>
           Json.obj(
             "code" -> body.code,
-            "message" -> body.message,
             "invitationId" -> id
           )
         )
-        .getOrElse(Json.obj("code" -> body.code, "message" -> body.message))
+        .getOrElse(Json.obj("code" -> body.code))
     }
 
-  val UnsupportedService: Result = BadRequest(
+  val UnsupportedService: Result = UnprocessableEntity(
     toJson(
       ErrorBody(
-        "SERVICE_NOT_SUPPORTED",
-        "The service requested is not supported. Check the API documentation to find which services are supported."
+        "SERVICE_NOT_SUPPORTED"
       )
     )
   )
 
-  val UnsupportedClientType: Result = BadRequest(
+  val UnsupportedClientType: Result = UnprocessableEntity(
     toJson(
       ErrorBody(
-        "CLIENT_TYPE_NOT_SUPPORTED",
-        "The client type requested is not supported. Check the API documentation to find which client types are supported."
+        "CLIENT_TYPE_NOT_SUPPORTED"
       )
     )
   )
 
-  val UnsupportedAgentType: Result = BadRequest(
+  val UnsupportedAgentType: Result = UnprocessableEntity(
     toJson(
       ErrorBody(
-        "AGENT_TYPE_NOT_SUPPORTED",
-        "The agent type requested is not supported. Check the API documentation to find which agent types are supported."
+        "AGENT_TYPE_NOT_SUPPORTED"
       )
     )
   )
 
-  val ClientIdDoesNotMatchService: Result = BadRequest(
+  val ClientIdDoesNotMatchService: Result = UnprocessableEntity(
     toJson(
       ErrorBody(
-        "CLIENT_ID_DOES_NOT_MATCH_SERVICE",
-        "The specified client identifier does not match the requested service. Check the API documentation to find the correct format."
+        "CLIENT_ID_DOES_NOT_MATCH_SERVICE"
       )
     )
   )
 
-  val ClientIdInvalidFormat: Result = BadRequest(
+  val ClientIdInvalidFormat: Result = UnprocessableEntity(
     toJson(
       ErrorBody(
-        "CLIENT_ID_FORMAT_INVALID",
-        "Client identifier must be in the correct format. Check the API documentation to find the correct format."
+        "CLIENT_ID_FORMAT_INVALID"
       )
     )
   )
 
-  val PostcodeFormatInvalid: Result = BadRequest(
+  val PostcodeFormatInvalid: Result = UnprocessableEntity(
     toJson(
       ErrorBody(
-        "POSTCODE_FORMAT_INVALID",
-        "Postcode must be in the correct format. Check the API documentation to find the correct format."
+        "POSTCODE_FORMAT_INVALID"
       )
     )
   )
 
-  val VatRegDateFormatInvalid: Result = BadRequest(
+  val VatRegDateFormatInvalid: Result = UnprocessableEntity(
     toJson(
       ErrorBody(
-        "VAT_REG_DATE_FORMAT_INVALID",
-        "VAT registration date must be in the correct format. Check the API documentation to find the correct format."
+        "VAT_REG_DATE_FORMAT_INVALID"
       )
     )
   )
 
-  val PostcodeDoesNotMatch: Result = Forbidden(
-    toJson(ErrorBody("POSTCODE_DOES_NOT_MATCH", "The postcode provided does not match HMRC's record for this client."))
+  val PostcodeDoesNotMatch: Result = UnprocessableEntity(
+    toJson(ErrorBody("POSTCODE_DOES_NOT_MATCH"))
   )
 
-  val VatRegDateDoesNotMatch: Result = Forbidden(
+  val VatRegDateDoesNotMatch: Result = UnprocessableEntity(
     toJson(
       ErrorBody(
-        "VAT_REG_DATE_DOES_NOT_MATCH",
-        "The VAT registration date provided does not match HMRC's record for this client."
+        "VAT_REG_DATE_DOES_NOT_MATCH"
       )
     )
   )
 
-  val VatClientInsolvent: Result = Forbidden(
+  val VatClientInsolvent: Result = UnprocessableEntity(
     toJson(
       ErrorBody(
-        "VAT_CLIENT_INSOLVENT",
-        "The Vat registration number belongs to a customer that is insolvent."
+        "VAT_CLIENT_INSOLVENT"
       )
     )
   )
 
-  val ClientRegistrationNotFound: Result = Forbidden(
+  val ClientRegistrationNotFound: Result = UnprocessableEntity(
     toJson(
-      ErrorBody("CLIENT_REGISTRATION_NOT_FOUND", "The details provided for this client do not match HMRC's records.")
+      ErrorBody("CLIENT_REGISTRATION_NOT_FOUND")
     )
   )
 
-  val AgentNotSubscribed: Result = Forbidden(
+  val AgentSuspended: Result = UnprocessableEntity(
     toJson(
       ErrorBody(
-        "AGENT_NOT_SUBSCRIBED",
-        "This agent needs to create an agent services account before they can use this service."
+        "AGENT_SUSPENDED"
       )
     )
   )
 
-  val AgentSuspended: Result = Forbidden(
+  val InvitationNotFound: Result = UnprocessableEntity(
+    toJson(ErrorBody("INVITATION_NOT_FOUND"))
+  )
+
+  val RelationshipNotFound: Result = UnprocessableEntity(
     toJson(
-      ErrorBody(
-        "AGENT_SUSPENDED",
-        "This agent is suspended"
-      )
+      ErrorBody("RELATIONSHIP_NOT_FOUND")
     )
   )
 
-  val InvitationNotFound: Result = NotFound(
-    toJson(ErrorBody("INVITATION_NOT_FOUND", "The authorisation request cannot be found."))
-  )
+  val InvalidPayload: Result = BadRequest(toJson(ErrorBody("INVALID_PAYLOAD")))
 
-  val InvalidInvitationStatus: Result = Forbidden(
-    toJson(
-      ErrorBody(
-        "INVALID_INVITATION_STATUS",
-        "This authorisation request cannot be cancelled as the client has already responded to the request, or the request has expired."
-      )
-    )
-  )
-
-  val RelationshipNotFound: Result = NotFound(
-    toJson(
-      ErrorBody("RELATIONSHIP_NOT_FOUND", "Relationship is inactive. Agent is not authorised to act for this client.")
-    )
-  )
-
-  val InvalidPayload: Result = BadRequest(toJson(ErrorBody("INVALID_PAYLOAD", "The payload is invalid.")))
-
-  def DuplicateAuthorisationRequest(invitationId: Option[String]): Result = Forbidden(
+  def DuplicateAuthorisationRequest(invitationId: Option[String]): Result = UnprocessableEntity(
     toJson(
       ErrorBody(
         "DUPLICATE_AUTHORISATION_REQUEST",
-        "An authorisation request for this service has already been created and is awaiting the client’s response.",
         invitationId = invitationId
       )
     )
   )
 
-  val AlreadyAuthorised: Result = Forbidden(
+  val AlreadyAuthorised: Result = UnprocessableEntity(
     toJson(
       ErrorBody(
-        "ALREADY_AUTHORISED",
-        "The client has already authorised the agent for this service. The agent does not need ask the client for this authorisation again."
+        "ALREADY_AUTHORISED"
       )
     )
   )
 
-  val NoPermissionOnAgency: Result = Forbidden(
+  val NoPermissionOnAgency: Result = UnprocessableEntity(
     toJson(
       ErrorBody(
-        "NO_PERMISSION_ON_AGENCY",
-        "The user that is signed in cannot access this authorisation request. Their details do not match the agent business that created the authorisation request."
+        "NO_PERMISSION_ON_AGENCY"
       )
     )
   )

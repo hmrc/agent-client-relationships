@@ -79,7 +79,7 @@ extends Logging {
     val invitationT =
       for {
 
-        // validate inputData
+        // casting/parsing inputData
         suppliedClientId <- EitherT.fromEither[Future](apiCreateInvitationInputData.getSuppliedClientId(supportedServices))
         service <- EitherT.fromEither[Future](apiCreateInvitationInputData.getService(supportedServices))
         clientId <- EitherT(getClientId(suppliedClientId, service))
