@@ -17,13 +17,10 @@
 package uk.gov.hmrc.agentclientrelationships.stubs
 
 import com.github.tomakehurst.wiremock.client.WireMock._
-import com.github.tomakehurst.wiremock.matching.MatchResult
-import com.github.tomakehurst.wiremock.matching.UrlPattern
+import com.github.tomakehurst.wiremock.matching.{MatchResult, UrlPattern}
 import com.github.tomakehurst.wiremock.stubbing.StubMapping
 import org.scalatest.concurrent.Eventually
-import org.scalatest.time.Millis
-import org.scalatest.time.Seconds
-import org.scalatest.time.Span
+import org.scalatest.time.{Millis, Seconds, Span}
 import play.api.http.Status
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
@@ -271,6 +268,7 @@ extends Eventually {
   def givenEnrolmentNotExistsForGroupId(groupId: String): StubMapping = stubFor(
     get(urlEqualTo(s"$esBaseUrl/groups/$groupId/enrolments?type=principal")).willReturn(
       aResponse().withStatus(204)
+        .withBody("")
     )
   )
 
@@ -361,7 +359,7 @@ extends Eventually {
   ): StubMapping = stubFor(
     get(
       urlEqualTo(
-        s"$esBaseUrl/groups/$groupId/enrolments?type=principal&service=HMRC-AS-AGENT"
+        s"$esBaseUrl/groups/$groupId/enrolments?type=principal"
       )
     ).willReturn(
       aResponse()
@@ -373,6 +371,7 @@ extends Eventually {
                      |    "enrolments": [
                      |        {
                      |           "service": "HMRC-AS-AGENT",
+                     |           "state": "active",
                      |           "friendlyName": "anyName",
                      |           "enrolmentDate": "2018-10-05T14:48:00.000Z",
                      |           "failedActivationCount": 1,

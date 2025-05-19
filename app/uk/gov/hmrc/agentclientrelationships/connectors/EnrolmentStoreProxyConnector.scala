@@ -195,8 +195,8 @@ with Logging {
               (response.json \ "enrolments")
                 .as[Seq[Enrolment]]
                 .find(_.service == "HMRC-AS-AGENT")
-                .flatMap(enrolmentKey => enrolmentKey.identifiers.find(_.key == "AgentReferenceNumber"))
-                .map(i => Arn.apply(i.value))
+                .flatMap(_.identifiers.find(_.key == "AgentReferenceNumber"))
+                .map(i => Arn(i.value))
             case Status.NO_CONTENT => None
             case other =>
               throw UpstreamErrorResponse(
