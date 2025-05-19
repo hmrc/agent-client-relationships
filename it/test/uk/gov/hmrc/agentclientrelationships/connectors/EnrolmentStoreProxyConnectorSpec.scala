@@ -173,7 +173,6 @@ with MockitoSugar {
     "return some ARN for the known groupId" in {
       givenAuditConnector()
       givenEnrolmentExistsForGroupId("bar", agentEnrolmentKey(Arn("foo")))
-      await(connector.getAgentReferenceNumberFor("bar")) shouldBe 200
       await(connector.getAgentReferenceNumberFor("bar")) shouldBe Some(Arn("foo"))
     }
 
@@ -181,7 +180,6 @@ with MockitoSugar {
       givenAuditConnector()
       givenEnrolmentNotExistsForGroupId("bar")
       await(connector.getAgentReferenceNumberFor("bar")) shouldBe None
-      await(connector.getAgentReferenceNumberFor("bar")) shouldBe Some(Arn(""))
     }
 
     "return a success when updating friendly name" in {
