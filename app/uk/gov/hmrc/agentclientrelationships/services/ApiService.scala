@@ -137,22 +137,11 @@ extends Logging {
     request: RequestHeader
   ): Future[Either[InvitationFailureResponse, ApiInvitationResponse]] =
     (for {
-
-      _ <- EitherT.fromEither[Future](
-        if (InvitationId.isValid(invitationId))
-          Right(invitationId)
-        else
-          Left(InvitationFailureResponse.InvitationNotFound)
-      )
-
       agentRecord <- EitherT(getAgentDetailsByArn(arn))
-
       newNormaliseAgentName = invitationLinkService.normaliseAgentName(agentRecord.agencyDetails.agencyName)
-
       agentReferenceRecord <- EitherT.right[InvitationFailureResponse](
         invitationLinkService.getAgentReferenceRecordByArn(arn = arn, newNormaliseAgentName = newNormaliseAgentName)
       )
-
       invitation <- EitherT(findInvitation(
         invitationId,
         arn,

@@ -56,7 +56,7 @@ with AuthActions {
       request.body
         .validate[ApiCreateInvitationRequest]
         .fold(
-          errs => Future.successful(ApiErrorResults.InvalidPayload),
+          _ => Future.successful(ApiErrorResults.InvalidPayload),
           apiCreateInvitationRequest =>
             apiService.createInvitation(
               arn,
