@@ -46,6 +46,27 @@ import scala.concurrent.Future
 import scala.util.control.NonFatal
 
 @Singleton
+class ServiceNoEc @Inject() ()
+extends Logging {
+
+  def doStuffF(s: String): Future[Unit] = Future.successful {
+    Thread.sleep(500)
+    logger.info(s"doing stuff '$s'... (this computation may happen on another thread)")
+  }
+
+}
+
+@Singleton
+class ServiceYesEc @Inject() (implicit ec: ExecutionContext)
+extends Logging {
+
+  def doStuffF(s: String): Future[Unit] = Future {
+    Thread.sleep(500)
+    logger.info(s"doing stuff '$s'... (this computation may happen on another thread)")
+  }
+}
+
+@Singleton
 class RelationshipsController @Inject() (
   override val authConnector: AuthConnector,
   val appConfig: AppConfig,
@@ -61,6 +82,8 @@ class RelationshipsController @Inject() (
   mappingConnector: MappingConnector,
   auditService: AuditService,
   validationService: ValidationService,
+  serviceNoEc: ServiceNoEc,
+  serviceYesEc: ServiceYesEc,
   override val controllerComponents: ControllerComponents
 )(implicit val executionContext: ExecutionContext)
 extends BackendController(controllerComponents)
@@ -70,6 +93,27 @@ with Logging {
   private val strideRoles = Seq(appConfig.oldAuthStrideRole, appConfig.newAuthStrideRole)
 
   val supportedServices: Seq[Service] = appConfig.supportedServicesWithoutPir
+
+  def loggingDemo: Action[AnyContent] = Action.async { implicit request =>
+    logger.info("sialala")
+
+    def doStuffFromControllerF(s: String): Future[Unit] = Future {
+      Thread.sleep(1000)
+      logger.info(s"doing stuff '$s'... (this computation may happen on another thread)")
+    }
+
+    val validate = doStuffFromControllerF("validate")
+    val sendNotification = serviceNoEc.doStuffF("send notification")
+    val callEtmp = serviceYesEc.doStuffF("call etmp")
+
+    for {
+      _ <- validate
+      _ <- sendNotification
+      _ <- callEtmp
+    } yield ()
+
+    Future.successful(Ok(s"${1 / 0}"))
+  }
 
   def checkForRelationship(
     arn: Arn,
@@ -279,29 +323,6 @@ with Logging {
             NotFound
         }
     }
-  }
-
-  def loggingDemo: Action[AnyContent] = Action.async { implicit request =>
-    logger.info("sialala")
-
-    def doStuffF(s: String): Future[Unit] = Future {
-      Thread.sleep(1000)
-      logger.info(s"doing stuff '$s'... (this computation may happen on another thread)")
-    }
-
-    val getDataFromDb = doStuffF("get some data from db")
-    val validate = doStuffF("validate")
-
-    for {
-      _ <- getDataFromDb
-      _ <- validate
-      // below will happen in sequence, likely will get the same thread allocated
-      _ <- doStuffF("send notification")
-      _ <- doStuffF("send email")
-      _ <- doStuffF("call etmp")
-    } yield ()
-
-    Future.successful(Ok(s"${1 / 0}"))
   }
 
   def terminateAgent(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
