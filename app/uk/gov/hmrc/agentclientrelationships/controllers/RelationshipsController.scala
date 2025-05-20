@@ -17,6 +17,7 @@
 package uk.gov.hmrc.agentclientrelationships.controllers
 
 import cats.implicits._
+import play.api.Logging
 import play.api.libs.json.Json
 import play.api.mvc._
 import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys._
@@ -63,7 +64,8 @@ class RelationshipsController @Inject() (
   override val controllerComponents: ControllerComponents
 )(implicit val executionContext: ExecutionContext)
 extends BackendController(controllerComponents)
-with AuthActions {
+with AuthActions
+with Logging {
 
   private val strideRoles = Seq(appConfig.oldAuthStrideRole, appConfig.newAuthStrideRole)
 
@@ -265,6 +267,8 @@ with AuthActions {
   }
 
   def getInactiveRelationshipsAgent: Action[AnyContent] = Action.async { implicit request =>
+    logger.info("sialala")
+
     withAuthorisedAsAgent { arn =>
       findService
         .getInactiveRelationshipsForAgent(arn)
@@ -275,6 +279,29 @@ with AuthActions {
             NotFound
         }
     }
+  }
+
+  def loggingDemo: Action[AnyContent] = Action.async { implicit request =>
+    logger.info("sialala")
+
+    def doStuffF(s: String): Future[Unit] = Future {
+      Thread.sleep(1000)
+      logger.info(s"doing stuff '$s'... (this computation may happen on another thread)")
+    }
+
+    val getDataFromDb = doStuffF("get some data from db")
+    val validate = doStuffF("validate")
+
+    for {
+      _ <- getDataFromDb
+      _ <- validate
+      // below will happen in sequence, likely will get the same thread allocated
+      _ <- doStuffF("send notification")
+      _ <- doStuffF("send email")
+      _ <- doStuffF("call etmp")
+    } yield ()
+
+    Future.successful(Ok(s"${1 / 0}"))
   }
 
   def terminateAgent(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
