@@ -20,14 +20,11 @@ import play.api.libs.json.Format
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentclientrelationships.model.Invitation
 import uk.gov.hmrc.agentclientrelationships.model.InvitationStatus
-import uk.gov.hmrc.agentmtdidentifiers.model.Service
 
 import java.time.Instant
 import java.time.LocalDate
 
-case class ApiAuthorisationRequestInfo(
-  uid: String,
-  normalizedAgentName: String,
+case class ApiBulkInvitationResponse(
   created: Instant,
   service: String,
   status: InvitationStatus,
@@ -36,23 +33,40 @@ case class ApiAuthorisationRequestInfo(
   lastUpdated: Instant
 )
 
-object ApiAuthorisationRequestInfo {
+object ApiBulkInvitationResponse {
 
-  implicit val format: Format[ApiAuthorisationRequestInfo] = Json.format[ApiAuthorisationRequestInfo]
+  implicit val format: Format[ApiBulkInvitationResponse] = Json.format[ApiBulkInvitationResponse]
 
-  def createApiAuthorisationRequestInfo(
-    invitation: Invitation,
-    uid: String,
-    normalizedAgentName: String
-  ): ApiAuthorisationRequestInfo = ApiAuthorisationRequestInfo(
-    uid = uid,
-    normalizedAgentName = normalizedAgentName,
+  def createApiBulkInvitationResponse(invitation: Invitation): ApiBulkInvitationResponse = ApiBulkInvitationResponse(
     created = invitation.created,
     service = invitation.service,
     status = invitation.status,
     expiresOn = invitation.expiryDate,
     invitationId = invitation.invitationId,
     lastUpdated = invitation.lastUpdated
+  )
+
+}
+
+case class ApiBulkInvitationsResponse(
+  uid: String,
+  normalizedAgentName: String,
+  invitations: Seq[ApiBulkInvitationResponse]
+)
+
+object ApiBulkInvitationsResponse {
+
+  implicit val format: Format[ApiBulkInvitationsResponse] = Json.format[ApiBulkInvitationsResponse]
+
+  def createApiBulkInvitationsResponse(
+    invitations: Seq[Invitation],
+    uid: String,
+    normalizedAgentName: String
+  ): ApiBulkInvitationsResponse = ApiBulkInvitationsResponse(
+    uid = uid,
+    normalizedAgentName = normalizedAgentName,
+    invitations = invitations
+      .map(ApiBulkInvitationResponse.createApiBulkInvitationResponse)
   )
 
 }

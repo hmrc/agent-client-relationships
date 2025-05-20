@@ -20,13 +20,12 @@ import play.api.libs.json.Json.toJson
 import play.api.libs.json.JsValue
 import play.api.libs.json.Json
 import play.api.libs.json.Writes
+import play.api.mvc.Result
 import play.api.mvc.Results.BadRequest
 import play.api.mvc.Results.Forbidden
 import play.api.mvc.Results.InternalServerError
 import play.api.mvc.Results.NotFound
 import play.api.mvc.Results.NotImplemented
-import play.api.mvc.Result
-import play.api.mvc.Results
 
 sealed trait InvitationFailureResponse {
   def getResult(message: String): Result
@@ -125,83 +124,6 @@ object InvitationFailureResponse {
   case object InvitationNotFound
   extends InvitationFailureResponse {
     def getResult(message: String): Result = NotFound
-  }
-
-  case object PostcodeRequired
-  extends InvitationFailureResponse {
-    def getResult(message: String): Result = NotFound
-  }
-
-  case object PostcodeFormatInvalid
-  extends InvitationFailureResponse {
-    def getResult(message: String): Result = NotFound
-  }
-  case object PostcodeDoesNotMatch
-  extends InvitationFailureResponse {
-    def getResult(message: String): Result = NotFound
-  }
-
-  case object NotUkAddress
-  extends InvitationFailureResponse {
-    def getResult(message: String): Result = NotFound
-  }
-
-  case object VatKnownFormatInvalid
-  extends InvitationFailureResponse {
-    def getResult(message: String): Result = NotFound
-  }
-
-  case object VatKnownFactNotMatched
-  extends InvitationFailureResponse {
-    def getResult(message: String): Result = NotFound
-  }
-
-  case object UnsupportedKnowFacts
-  extends InvitationFailureResponse {
-    def getResult(message: String): Result = NotFound
-  }
-
-  case class ErrorRetrievingClientDetails(
-    status: Int,
-    msg: String
-  )
-  extends InvitationFailureResponse {
-    override def getResult(message: String): Result = Results.Status(status)(toJson(msg))
-  }
-
-  case class ErrorRetrievingAgentDetails(msg: String)
-  extends InvitationFailureResponse {
-    def getResult(message: String): Result = InternalServerError(toJson(msg))
-  }
-
-  case object ErrorRetrievingRelationships
-  extends InvitationFailureResponse {
-    override def getResult(message: String): Result = InternalServerError
-  }
-
-  case object AgentSuspended
-  extends InvitationFailureResponse {
-    def getResult(message: String): Result = InternalServerError("Agent data not founmd")
-  }
-
-  case object DuplicateRelationshipRequest
-  extends InvitationFailureResponse {
-    def getResult(message: String): Result = NotFound
-  }
-
-  case class DuplicateAuthorisationRequest(invitationId: Option[String])
-  extends InvitationFailureResponse {
-    def getResult(message: String): Result = NotFound
-  }
-
-  case object VatClientInsolvent
-  extends InvitationFailureResponse {
-    def getResult(message: String): Result = NotFound
-  }
-
-  case object NoPermissionOnAgency
-  extends InvitationFailureResponse {
-    def getResult(message: String): Result = Forbidden
   }
 
 }

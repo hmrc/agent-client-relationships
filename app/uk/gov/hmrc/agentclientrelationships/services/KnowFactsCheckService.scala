@@ -19,7 +19,7 @@ package uk.gov.hmrc.agentclientrelationships.services
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsResponse
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.KnownFactType
 import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiCreateInvitationRequest
-import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse
+import uk.gov.hmrc.agentclientrelationships.model.invitation.KnowFactsFailure
 
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -36,7 +36,7 @@ class KnowFactsCheckService @Inject() {
   def checkKnowFacts(
     apiCreateInvitationInputData: ApiCreateInvitationRequest,
     clientDetailsResponse: ClientDetailsResponse
-  ): Either[InvitationFailureResponse, Boolean] =
+  ): Either[KnowFactsFailure, Boolean] =
     clientDetailsResponse.knownFactType match {
       case Some(value) =>
         value match {
@@ -47,24 +47,24 @@ class KnowFactsCheckService @Inject() {
               clientDetailsResponse.isOverseas.getOrElse(false)
             )
           case KnownFactType.Date => checkDate(apiCreateInvitationInputData.knownFact, clientDetailsResponse.knownFacts.head)
-          case KnownFactType.CountryCode | KnownFactType.Email => Left(InvitationFailureResponse.UnsupportedKnowFacts)
+          case KnownFactType.CountryCode | KnownFactType.Email => Left(KnowFactsFailure.UnsupportedKnowFacts)
         }
-      case None => Left(InvitationFailureResponse.UnsupportedKnowFacts)
+      case None => Left(KnowFactsFailure.UnsupportedKnowFacts)
     }
 
   private def checkDate(
     suppliedDateStr: String,
     knowFactDateStr: String
-  ): Either[InvitationFailureResponse, Boolean] = {
-    def getLocalDate(dateStr: String): Either[InvitationFailureResponse, LocalDate] = Try(LocalDate.parse(dateStr, DateTimeFormatter.ISO_LOCAL_DATE))
-      .fold(_ => Left(InvitationFailureResponse.VatKnownFormatInvalid), x => Right(x))
+  ): Either[KnowFactsFailure, Boolean] = {
+    def getLocalDate(dateStr: String): Either[KnowFactsFailure, LocalDate] = Try(LocalDate.parse(dateStr, DateTimeFormatter.ISO_LOCAL_DATE))
+      .fold(_ => Left(KnowFactsFailure.VatRegDateFormatInvalid), x => Right(x))
 
     (for {
       suppliedDate <- getLocalDate(suppliedDateStr)
       knowFactDate <- getLocalDate(knowFactDateStr)
     } yield suppliedDate == knowFactDate) match {
       case Right(true) => Right(true)
-      case Right(false) => Left(InvitationFailureResponse.VatKnownFactNotMatched)
+      case Right(false) => Left(KnowFactsFailure.VatRegDateDoesNotMatch)
       case Left(err) => Left(err)
     }
   }
@@ -73,27 +73,27 @@ class KnowFactsCheckService @Inject() {
     suppliedPostCode: String,
     postcode: String,
     isOverseas: Boolean
-  ): Either[InvitationFailureResponse, Boolean] =
+  ): Either[KnowFactsFailure, Boolean] =
     if (suppliedPostCode.isEmpty)
-      Left(InvitationFailureResponse.PostcodeRequired)
+      Left(KnowFactsFailure.PostcodeFormatInvalid)
     else {
       postcodeWithoutSpacesRegex
         .findFirstIn(normalise(suppliedPostCode))
         .map { _ =>
           if (isOverseas) {
-            Left(InvitationFailureResponse.NotUkAddress)
+            Left(KnowFactsFailure.PostcodeDoesNotMatch)
           }
           else {
             if (normalise(postcode).contains(normalise(suppliedPostCode))) {
               Right(true)
             }
             else {
-              Left(InvitationFailureResponse.PostcodeDoesNotMatch)
+              Left(KnowFactsFailure.PostcodeDoesNotMatch)
             }
           }
         }
         .getOrElse {
-          Left(InvitationFailureResponse.PostcodeFormatInvalid)
+          Left(KnowFactsFailure.PostcodeFormatInvalid)
         }
     }
 
