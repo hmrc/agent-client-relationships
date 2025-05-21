@@ -267,8 +267,6 @@ with RequestAwareLogging {
   }
 
   def getInactiveRelationshipsAgent: Action[AnyContent] = Action.async { implicit request =>
-    logger.info("sialala")
-
     withAuthorisedAsAgent { arn =>
       findService
         .getInactiveRelationshipsForAgent(arn)
