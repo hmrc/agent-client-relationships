@@ -23,6 +23,7 @@ import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.AgentAssuranceConnector
 import uk.gov.hmrc.agentclientrelationships.connectors.IfOrHipConnector
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.DuplicateInvitationError
+import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiFailureResponse
 import uk.gov.hmrc.agentclientrelationships.model.invitation.CreateInvitationRequest
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgencyDetails
@@ -41,6 +42,10 @@ import uk.gov.hmrc.agentmtdidentifiers.model.NinoType
 import uk.gov.hmrc.agentmtdidentifiers.model.Service
 import uk.gov.hmrc.domain.Nino
 import play.api.mvc.RequestHeader
+import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiFailureResponse.InvitationNotFound
+import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiFailureResponse.InvalidInvitationStatus
+import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiFailureResponse.NoPermissionOnAgency
+import uk.gov.hmrc.agentclientrelationships.model.invitation.CancelInvitationResponse._
 
 import java.time.Instant
 import java.time.ZoneOffset
@@ -121,7 +126,12 @@ extends Logging {
   def cancelInvitation(
     arn: Arn,
     invitationId: String
-  ): Future[Unit] = invitationsRepository.cancelByIdForAgent(arn.value, invitationId)
+  )(implicit ec: ExecutionContext): Future[Either[ApiFailureResponse, Unit]] = invitationsRepository.cancelByIdForAgent(arn.value, invitationId).map {
+    case Success => Right(())
+    case NotFound => Left(InvitationNotFound)
+    case NoPermission => Left(NoPermissionOnAgency)
+    case WrongInvitationStatus => Left(InvalidInvitationStatus)
+  }
 
   def deauthoriseInvitation(
     arn: Arn,

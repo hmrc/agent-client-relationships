@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.controllers
 
+import play.api.http.Status.UNPROCESSABLE_ENTITY
 import play.api.i18n.Lang
 import play.api.i18n.Langs
 import play.api.i18n.MessagesApi
@@ -612,7 +613,8 @@ with TestData {
           givenAuthorisedAsValidAgent(fakeRequest, arn2.value)
 
           val result = doAgentPutRequest(testUrl)
-          result.status shouldBe FORBIDDEN
+          result.status shouldBe UNPROCESSABLE_ENTITY
+          result.body shouldBe "{\"code\":\"NO_PERMISSION_ON_AGENCY\"}"
 
           val invitationSeq =
             invitationRepo

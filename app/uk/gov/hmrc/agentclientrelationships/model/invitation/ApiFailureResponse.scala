@@ -130,6 +130,11 @@ object ApiFailureResponse {
     def getResult: Result = UnprocessableEntity(toJson(ErrorBody("NO_PERMISSION_ON_AGENCY")))
   }
 
+  case object InvalidInvitationStatus
+  extends ApiFailureResponse {
+    def getResult: Result = UnprocessableEntity(toJson(ErrorBody("INVALID_INVITATION_STATUS")))
+  }
+
   case class ApiInternalServerError(msg: String)
   extends ApiFailureResponse {
     def getResult: Result = InternalServerError(toJson(msg))

@@ -185,7 +185,12 @@ with AuthActions {
 
   def cancelInvitation(invitationId: String): Action[AnyContent] = Action.async { implicit request =>
     withAuthorisedAsAgent { authArn =>
-      invitationService.cancelInvitation(authArn, invitationId).map(_ => NoContent)
+      invitationService.cancelInvitation(authArn, invitationId).map { response =>
+        response match {
+          case Left(response) => response.getResult
+          case Right(_) => NoContent
+        }
+      }
     }
   }
 

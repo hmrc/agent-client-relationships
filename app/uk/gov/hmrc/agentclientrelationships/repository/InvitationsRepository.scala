@@ -29,6 +29,8 @@ import org.mongodb.scala.result.InsertOneResult
 import play.api.Logging
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model._
+import uk.gov.hmrc.agentclientrelationships.model.invitation.CancelInvitationResponse
+import uk.gov.hmrc.agentclientrelationships.model.invitation.CancelInvitationResponse._
 import uk.gov.hmrc.agentclientrelationships.repository.FieldKeys._
 import uk.gov.hmrc.agentclientrelationships.util.CryptoUtil.encryptedString
 import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier.ClientId
@@ -153,17 +155,30 @@ with Logging {
   def cancelByIdForAgent(
     arn: String,
     invitationId: String
-  ): Future[Unit] = collection
-    .updateOne(
-      and(
-        equal(arnKey, arn),
-        equal(invitationIdKey, invitationId),
-        equal("status", Codecs.toBson[InvitationStatus](Pending))
-      ),
-      combine(set("status", Codecs.toBson[InvitationStatus](Cancelled)), set("lastUpdated", Instant.now()))
-    )
-    .toFuture()
-    .map(_ => ())
+  ): Future[CancelInvitationResponse] = {
+    val filterById = equal(invitationIdKey, invitationId)
+
+    collection.find(filterById).headOption().flatMap {
+      case None => Future.successful(NotFound)
+      case Some(invitation) if invitation.status != Pending => Future.successful(WrongInvitationStatus)
+      case Some(invitation) if invitation.arn != arn => Future.successful(NoPermission)
+      case Some(_) =>
+        collection
+          .updateOne(
+            and(
+              equal(arnKey, arn),
+              equal(invitationIdKey, invitationId),
+              equal("status", Codecs.toBson[InvitationStatus](Pending))
+            ),
+            combine(
+              set("status", Codecs.toBson[InvitationStatus](Cancelled)),
+              set("lastUpdated", Instant.now())
+            )
+          )
+          .toFuture()
+          .map(_ => Success)
+    }
+  }
 
   def findOneById(invitationId: String): Future[Option[Invitation]] = collection
     .find(equal(invitationIdKey, invitationId))
