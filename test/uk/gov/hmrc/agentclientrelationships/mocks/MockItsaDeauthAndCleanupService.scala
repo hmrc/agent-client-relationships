@@ -20,7 +20,6 @@ import org.mockito.ArgumentMatchers.any
 import org.mockito.ArgumentMatchers.{eq => eqs}
 import org.mockito.Mockito.when
 import org.mockito.stubbing.OngoingStubbing
-import play.api.mvc.Request
 import uk.gov.hmrc.agentclientrelationships.auth.CurrentUser
 import uk.gov.hmrc.agentclientrelationships.services.ItsaDeauthAndCleanupService
 import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar

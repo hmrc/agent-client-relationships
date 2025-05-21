@@ -25,7 +25,6 @@ import uk.gov.hmrc.agentclientrelationships.services.EmailService
 import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
 import play.api.mvc.RequestHeader
 
-import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 trait MockEmailService {

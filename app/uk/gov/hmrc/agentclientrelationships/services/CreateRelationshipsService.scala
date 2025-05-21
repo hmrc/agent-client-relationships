@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 HM Revenue & Customs
+ * Copyright 2025 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@
 package uk.gov.hmrc.agentclientrelationships.services
 
 import play.api.Logging
-import play.api.mvc.Request
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys.enrolmentDelegatedKey
 import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys.etmpRelationshipCreatedKey

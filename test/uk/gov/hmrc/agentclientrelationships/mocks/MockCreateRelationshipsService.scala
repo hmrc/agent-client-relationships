@@ -20,7 +20,6 @@ import org.mockito.ArgumentMatchers.any
 import org.mockito.ArgumentMatchers.{eq => eqs}
 import org.mockito.Mockito.when
 import org.mockito.stubbing.OngoingStubbing
-import play.api.mvc.Request
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.repository.DbUpdateStatus
@@ -29,7 +28,6 @@ import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import play.api.mvc.RequestHeader
 
-import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 trait MockCreateRelationshipsService {

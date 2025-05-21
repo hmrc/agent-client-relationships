@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.agentclientrelationships.mocks
 
-import uk.gov.hmrc.agentclientrelationships.connectors.IfConnector
 import uk.gov.hmrc.agentclientrelationships.connectors.IfOrHipConnector
 import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
 

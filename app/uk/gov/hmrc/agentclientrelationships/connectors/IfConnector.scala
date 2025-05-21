@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 HM Revenue & Customs
+ * Copyright 2025 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -144,9 +144,6 @@ https://confluence.tools.tax.service.gov.uk/display/AG/API+1171+%28API+5%29+-+Ge
 
   private val Environment = "Environment"
   private val CorrelationId = "CorrelationId"
-
-  private def isInternalHost(url: URL): Boolean = appConfig.internalHostPatterns
-    .exists(_.pattern.matcher(url.getHost).matches())
 
   private[connectors] def getWithIFHeaders(
     apiName: String,

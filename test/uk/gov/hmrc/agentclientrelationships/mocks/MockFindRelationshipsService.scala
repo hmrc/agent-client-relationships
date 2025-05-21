@@ -28,7 +28,6 @@ import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.domain.TaxIdentifier
 import play.api.mvc.RequestHeader
 
-import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 trait MockFindRelationshipsService {

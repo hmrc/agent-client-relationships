@@ -71,7 +71,7 @@ with AuthActions {
             case None => Future.successful(false)
           }
         existingRelationships <-
-          if (partialAuthRecords.exists(_.active) || irvRelationshipExists) {
+          if (partialAuthRecords.iterator.exists(_.active) || irvRelationshipExists) {
             Future.successful(true)
           }
           else {
@@ -83,7 +83,7 @@ with AuthActions {
         Json.toJson(
           CustomerStatus(
             hasPendingInvitations = invitations.exists(_.status == Pending),
-            hasInvitationsHistory = invitations.nonEmpty || partialAuthRecords.nonEmpty,
+            hasInvitationsHistory = invitations.nonEmpty || partialAuthRecords.iterator.nonEmpty,
             hasExistingRelationships = existingRelationships
           )
         )

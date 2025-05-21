@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 HM Revenue & Customs
+ * Copyright 2025 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,9 +28,6 @@ class IfHeaders @Inject() (
 
   private val Environment = "Environment"
   private val CorrelationId = "CorrelationId"
-
-  private val mdtp = "MDTP"
-  private val hip = "HIP"
 
   def makeHeaders(authToken: String): Seq[(String, String)] = Seq(
     Environment -> appConfig.ifEnvironment,
