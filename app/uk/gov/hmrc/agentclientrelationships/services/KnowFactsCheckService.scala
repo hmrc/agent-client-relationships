@@ -34,19 +34,19 @@ class KnowFactsCheckService @Inject() {
   private def normalise(postcode: String): String = postcode.replaceAll("\\s", "").toUpperCase
 
   def checkKnowFacts(
-    apiCreateInvitationInputData: ApiCreateInvitationRequest,
+    knownFact: String,
     clientDetailsResponse: ClientDetailsResponse
-  ): Either[KnowFactsFailure, Boolean] =
+  ): Either[KnowFactsFailure, Unit] =
     clientDetailsResponse.knownFactType match {
       case Some(value) =>
         value match {
           case KnownFactType.PostalCode =>
             checkPostCode(
-              apiCreateInvitationInputData.knownFact,
+              knownFact,
               clientDetailsResponse.knownFacts.head,
               clientDetailsResponse.isOverseas.getOrElse(false)
             )
-          case KnownFactType.Date => checkDate(apiCreateInvitationInputData.knownFact, clientDetailsResponse.knownFacts.head)
+          case KnownFactType.Date => checkDate(knownFact, clientDetailsResponse.knownFacts.head)
           case KnownFactType.CountryCode | KnownFactType.Email => Left(KnowFactsFailure.UnsupportedKnowFacts)
         }
       case None => Left(KnowFactsFailure.UnsupportedKnowFacts)
@@ -55,7 +55,7 @@ class KnowFactsCheckService @Inject() {
   private def checkDate(
     suppliedDateStr: String,
     knowFactDateStr: String
-  ): Either[KnowFactsFailure, Boolean] = {
+  ): Either[KnowFactsFailure, Unit] = {
     def getLocalDate(dateStr: String): Either[KnowFactsFailure, LocalDate] = Try(LocalDate.parse(dateStr, DateTimeFormatter.ISO_LOCAL_DATE))
       .fold(_ => Left(KnowFactsFailure.VatRegDateFormatInvalid), x => Right(x))
 
@@ -63,7 +63,7 @@ class KnowFactsCheckService @Inject() {
       suppliedDate <- getLocalDate(suppliedDateStr)
       knowFactDate <- getLocalDate(knowFactDateStr)
     } yield suppliedDate == knowFactDate) match {
-      case Right(true) => Right(true)
+      case Right(true) => Right()
       case Right(false) => Left(KnowFactsFailure.VatRegDateDoesNotMatch)
       case Left(err) => Left(err)
     }
@@ -73,7 +73,7 @@ class KnowFactsCheckService @Inject() {
     suppliedPostCode: String,
     postcode: String,
     isOverseas: Boolean
-  ): Either[KnowFactsFailure, Boolean] =
+  ): Either[KnowFactsFailure, Unit] =
     if (suppliedPostCode.isEmpty)
       Left(KnowFactsFailure.PostcodeFormatInvalid)
     else {
@@ -85,7 +85,7 @@ class KnowFactsCheckService @Inject() {
           }
           else {
             if (normalise(postcode).contains(normalise(suppliedPostCode))) {
-              Right(true)
+              Right()
             }
             else {
               Left(KnowFactsFailure.PostcodeDoesNotMatch)

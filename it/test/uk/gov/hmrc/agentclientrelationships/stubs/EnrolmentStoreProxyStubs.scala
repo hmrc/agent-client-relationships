@@ -93,8 +93,16 @@ extends Eventually {
     )
   )
 
+  // this stub seems to match completely unrelated requests
   def givenDelegatedGroupIdRequestFailsWith(status: Int): StubMapping = stubFor(
     get(urlContains("/groups?type=delegated")).willReturn(aResponse().withStatus(status))
+  )
+
+  def givenDelegatedGroupIdRequestFailsWith(
+    enrolmentKey: EnrolmentKey,
+    status: Int
+  ): StubMapping = stubFor(
+    get(urlEqualTo(s"$esBaseUrl/enrolments/${enrolmentKey.tag}/groups?type=delegated")).willReturn(aResponse().withStatus(status))
   )
 
   def givenPrincipalUserIdExistFor(

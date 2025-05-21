@@ -139,7 +139,7 @@ with AuthActions {
               EitherT.rightT[Future, ApiFailureResponse](clientDetailsResponse)
           }
 
-        _ <- EitherT.fromEither[Future](knowFactsCheckService.checkKnowFacts(apiCreateInvitationInputData, clientDetails))
+        _ <- EitherT.fromEither[Future](knowFactsCheckService.checkKnowFacts(apiCreateInvitationInputData.knownFact, clientDetails))
           .leftMap {
             case KnowFactsFailure.UnsupportedKnowFacts => ApiFailureResponse.InvalidPayload
             case KnowFactsFailure.PostcodeFormatInvalid => ApiFailureResponse.PostcodeFormatInvalid

@@ -282,10 +282,9 @@ with Logging {
 
 }
 
+// scalafmt: { binPack.parentConstructors = Always }
+
 sealed trait CheckRelationshipResult
-case object CheckRelationshipFound
-extends CheckRelationshipResult
-case class CheckRelationshipNotFound(message: String = "RELATIONSHIP_NOT_FOUND")
-extends CheckRelationshipResult
-case object CheckRelationshipInvalidRequest
-extends CheckRelationshipResult
+case object CheckRelationshipFound extends CheckRelationshipResult
+case class CheckRelationshipNotFound(message: String = "RELATIONSHIP_NOT_FOUND") extends CheckRelationshipResult
+case object CheckRelationshipInvalidRequest extends CheckRelationshipResult

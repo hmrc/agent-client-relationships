@@ -42,7 +42,6 @@ import scala.concurrent.Future
 @Singleton
 class ClientDetailsService @Inject() (
   clientDetailsConnector: ClientDetailsConnector,
-  appConfig: AppConfig,
   ifOrHipConnector: IfOrHipConnector
 )(implicit ec: ExecutionContext)
 extends Logging {

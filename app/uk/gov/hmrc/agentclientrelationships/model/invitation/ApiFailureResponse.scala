@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.model.invitation
 
+import play.api.libs.json.Json.obj
 import play.api.libs.json.Json.toJson
 import play.api.libs.json.JsValue
 import play.api.libs.json.Json
@@ -133,6 +134,16 @@ object ApiFailureResponse {
   case class ApiInternalServerError(msg: String)
   extends ApiFailureResponse {
     def getResult: Result = InternalServerError(toJson(msg))
+  }
+
+  case object KnownFactDoesNotMatch
+  extends ApiFailureResponse {
+    def getResult: Result = UnprocessableEntity(toJson(ErrorBody("KNOWN_FACT_DOES_NOT_MATCH")))
+  }
+
+  case object ClientInsolvent
+  extends ApiFailureResponse {
+    def getResult: Result = UnprocessableEntity(toJson(ErrorBody("CLIENT_INSOLVENT")))
   }
 
 }
