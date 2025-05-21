@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 HM Revenue & Customs
+ * Copyright 2025 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -318,7 +318,7 @@ with TestData {
 
     }
 
-    "return BadRequest 400 status and and JSON Error when clientIdType is not valid for service" in {
+    "return BadRequest 400 status and JSON Error when clientIdType is not valid for service" in {
       val suppliedClientId = nino.value
       val suppliedClientIdType = "NotValidClientIdType"
       val service = MtdIt.id
@@ -351,7 +351,7 @@ with TestData {
 
     }
 
-    "return BadRequest 400 status and and JSON Error when clientType is not valid for service" in {
+    "return BadRequest 400 status and JSON Error when clientType is not valid for service" in {
       val suppliedClientId = nino.value
       val suppliedClientIdType = NinoType.id
       val service = MtdIt.id
@@ -528,7 +528,7 @@ with TestData {
   "cancel invitation" should {
 
     allServices.keySet
-      .foreach(taxService =>
+      .foreach(taxService => {
         s"return 204 status when invitation is cancelled for $taxService" in {
           val inputData: CreateInvitationRequest = allServices(taxService)
           val clientId =
@@ -572,7 +572,58 @@ with TestData {
           invitationSeq.head.status shouldBe Cancelled
 
         }
-      )
+
+        s"return 403 when the auth ARN does not match the ARN in the found invitation for $taxService" in {
+          val inputData: CreateInvitationRequest = allServices(taxService)
+          val clientId =
+            if (taxService == HMRCMTDIT || taxService == HMRCMTDITSUPP)
+              mtdItId.value
+            else
+              inputData.clientId
+          val clientIdType =
+            if (taxService == HMRCMTDIT || taxService == HMRCMTDITSUPP)
+              MtdItIdType.id
+            else
+              inputData.suppliedClientIdType
+
+          val clientIdentifier = ClientIdentifier(clientId, clientIdType)
+
+          invitationRepo
+            .create(
+              arn.value,
+              Service.forId(taxService),
+              clientIdentifier,
+              clientIdentifier,
+              "Erling Haal",
+              "testAgentName",
+              "agent@email.com",
+              LocalDate.now(),
+              Some("personal")
+            )
+            .futureValue
+
+          val pendingInvitation =
+            invitationRepo
+              .findAllForAgent(arn.value)
+              .futureValue
+              .head
+          val testUrl = s"/agent-client-relationships/agent/cancel-invitation/${pendingInvitation.invitationId}"
+          val fakeRequest = FakeRequest("PUT", testUrl)
+          givenAuthorisedAsValidAgent(fakeRequest, arn2.value)
+
+          val result = doAgentPutRequest(testUrl)
+          result.status shouldBe FORBIDDEN
+
+          val invitationSeq =
+            invitationRepo
+              .findAllForAgent(arn.value)
+              .futureValue
+
+          invitationSeq.size shouldBe 1
+          invitationSeq.head.status shouldBe Pending
+        }
+
+      })
 
     s"return NoFound status when no Pending Invitation " ignore {
       // TODO: Add missing WireMock setup for /auth/authorise endpoint
