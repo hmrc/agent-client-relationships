@@ -16,17 +16,17 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
+import org.scalamock.scalatest.MockFactory
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import uk.gov.hmrc.agentclientrelationships.model.DeletionCount
 import uk.gov.hmrc.agentclientrelationships.model.TerminationResponse
 import uk.gov.hmrc.agentclientrelationships.repository.DeleteRecordRepository
+import uk.gov.hmrc.agentclientrelationships.repository.FakeDeleteRecordRepository
+import uk.gov.hmrc.agentclientrelationships.repository.FakeRelationshipCopyRecordRepository
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipCopyRecordRepository
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import play.api.mvc.RequestHeader
-import org.scalamock.scalatest.MockFactory
-import play.api.test.FakeRequest
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.ExecutionContext
@@ -40,8 +40,8 @@ with Matchers {
 
   val arn: Arn = Arn("AARN0000002")
 
-  val drrMock: DeleteRecordRepository = mock[DeleteRecordRepository]
-  val rcrrMock: RelationshipCopyRecordRepository = mock[RelationshipCopyRecordRepository]
+  val drrMock: DeleteRecordRepository = mock[FakeDeleteRecordRepository]
+  val rcrrMock: RelationshipCopyRecordRepository = mock[FakeRelationshipCopyRecordRepository]
   val ec: ExecutionContext = implicitly[ExecutionContext]
 
   val service = new AgentTerminationService(drrMock, rcrrMock)

@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.connectors
 
-import play.api.Logging
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import play.api.libs.json._
 import play.api.mvc.RequestHeader
 import play.api.http.Status
@@ -73,7 +73,7 @@ class MappingConnector @Inject() (
   val ec: ExecutionContext
 )
 extends HttpApiMonitor
-with Logging {
+with RequestAwareLogging {
 
   def getSaAgentReferencesFor(arn: Arn)(implicit rh: RequestHeader): Future[Seq[SaAgentReference]] =
     monitor(s"ConsumedAPI-Digital-Mappings-GET") {

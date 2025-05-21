@@ -179,7 +179,7 @@ with AuthActions {
     clientName: String,
     clientType: Option[String],
     agentDetails: AgencyDetails
-  ): Future[Either[ApiFailureResponse, Invitation]] = {
+  )(implicit requestHeader: RequestHeader): Future[Either[ApiFailureResponse, Invitation]] = {
     val expiryDate = currentTime().plusSeconds(invitationExpiryDuration.toSeconds).toLocalDate
     (for {
       invitation <- invitationsRepository.create(

@@ -18,7 +18,7 @@ package uk.gov.hmrc.agentclientrelationships.services
 
 import cats.data.EitherT
 import cats.implicits._
-import play.api.Logging
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors._
 import uk.gov.hmrc.agentclientrelationships.model._
@@ -43,7 +43,7 @@ class FindRelationshipsService @Inject() (
   val metrics: Metrics
 )(implicit executionContext: ExecutionContext)
 extends Monitoring
-with Logging {
+with RequestAwareLogging {
 
   def getItsaRelationshipForClient(
     nino: Nino,

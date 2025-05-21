@@ -16,24 +16,33 @@
 
 package uk.gov.hmrc.agentclientrelationships.repository
 
+import org.mockito.Mockito.when
 import org.mongodb.scala.MongoException
+import org.scalatestplus.mockito.MockitoSugar.mock
+import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus.SyncStatus
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.mongo.MongoComponent
+import uk.gov.hmrc.mongo.MongoUtils
 
 import java.time.Instant
 import java.time.ZoneOffset
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import scala.concurrent.duration.DurationInt
+import scala.util.chaining.scalaUtilChainingOps
 
 class FakeDeleteRecordRepository
-extends DeleteRecordRepository {
+extends DeleteRecordRepository(FakeMongoComponent.make) {
+
+  override lazy val initialised: Future[Unit] = Future.unit
 
   private val data: mutable.Map[(Arn, EnrolmentKey), DeleteRecord] = mutable.Map()
 
   // the provided DeleteCopyRecord must use an enrolment key
-  override def create(record: DeleteRecord): Future[Int] = findBy(Arn(record.arn), record.enrolmentKey.get).map(result =>
+  override def create(record: DeleteRecord)(implicit requestHeader: RequestHeader): Future[Int] = findBy(Arn(record.arn), record.enrolmentKey.get).map(result =>
     if (result.isDefined)
       throw new MongoException("duplicate key error collection")
     else {
@@ -59,7 +68,7 @@ extends DeleteRecordRepository {
     arn: Arn,
     enrolmentKey: EnrolmentKey,
     status: SyncStatus
-  ): Future[Int] = {
+  )(implicit requestHeader: RequestHeader): Future[Int] = {
     val maybeValue: Option[DeleteRecord] = data.get((arn, enrolmentKey))
     Future.successful(
       if (maybeValue.isDefined) {
@@ -76,7 +85,7 @@ extends DeleteRecordRepository {
     arn: Arn,
     enrolmentKey: EnrolmentKey,
     status: SyncStatus
-  ): Future[Int] = {
+  )(implicit requestHeader: RequestHeader): Future[Int] = {
     val maybeValue: Option[DeleteRecord] = data.get((arn, enrolmentKey))
     Future.successful(
       if (maybeValue.isDefined) {

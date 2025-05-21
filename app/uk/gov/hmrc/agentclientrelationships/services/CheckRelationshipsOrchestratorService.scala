@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
-import play.api.Logging
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import play.api.mvc.Request
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
@@ -57,7 +57,7 @@ class CheckRelationshipsOrchestratorService @Inject() (
   agentFiRelationshipConnector: AgentFiRelationshipConnector
 )(implicit executionContext: ExecutionContext)
 extends Monitoring
-with Logging {
+with RequestAwareLogging {
 
   def checkForRelationship(
     arn: Arn,

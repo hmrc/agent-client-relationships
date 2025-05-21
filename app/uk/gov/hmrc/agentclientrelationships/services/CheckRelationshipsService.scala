@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
-import play.api.Logging
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.agentclientrelationships.connectors._
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.ExistingMainAgent
 import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey => LocalEnrolmentKey}
@@ -52,7 +52,7 @@ class CheckRelationshipsService @Inject() (
   val metrics: Metrics
 )(implicit executionContext: ExecutionContext)
 extends Monitoring
-with Logging {
+with RequestAwareLogging {
 
   def checkForRelationship(
     arn: Arn,

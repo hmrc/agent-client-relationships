@@ -37,7 +37,7 @@ extends BackendController(controllerComponents) {
   def cleanCopyStatusRecord(
     arn: Arn,
     mtdItId: MtdItId
-  ): Action[AnyContent] = Action.async { _ =>
+  ): Action[AnyContent] = Action.async { implicit request =>
     checkOldAndCopyService
       .cleanCopyStatusRecord(arn, mtdItId)
       .map(_ => NoContent)

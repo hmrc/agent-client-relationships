@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
-import play.api.Logging
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import play.api.i18n.Lang
 import play.api.i18n.Langs
 import play.api.i18n.MessagesApi
@@ -35,7 +35,7 @@ class EmailService @Inject() (
   messagesApi: MessagesApi,
   langs: Langs
 )(implicit ec: ExecutionContext)
-extends Logging {
+extends RequestAwareLogging {
 
   // TODO: Currently, the language defaults to English by selecting the first available language.
   // Update the implementation to allow the frontend to specify the desired language for sending emails.

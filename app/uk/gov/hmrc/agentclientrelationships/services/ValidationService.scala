@@ -17,7 +17,7 @@
 package uk.gov.hmrc.agentclientrelationships.services
 
 import cats.data.EitherT
-import play.api.Logging
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors._
@@ -41,7 +41,7 @@ class ValidationService @Inject() (
   esConnector: EnrolmentStoreProxyConnector,
   appConfig: AppConfig
 )(implicit ec: ExecutionContext)
-extends Logging {
+extends RequestAwareLogging {
 
   // TODO look into updating this to not be an either as we never actually handle the Left it returns in a useful way
   // noinspection ScalaStyle

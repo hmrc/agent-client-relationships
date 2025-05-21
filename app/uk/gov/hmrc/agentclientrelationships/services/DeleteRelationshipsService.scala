@@ -32,11 +32,11 @@ import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _, _}
 import uk.gov.hmrc.agentclientrelationships.support.Monitoring
 import uk.gov.hmrc.agentclientrelationships.support.NoRequest
 import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
+import uk.gov.hmrc.agentclientrelationships.util.RequestSupport._
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.auth.core.AffinityGroup
 import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
-import uk.gov.hmrc.agentclientrelationships.util.RequestSupport._
 
 import java.time.Instant
 import java.time.ZoneOffset
@@ -297,7 +297,7 @@ with Logging {
   def removeDeleteRecord(
     arn: Arn,
     enrolmentKey: EnrolmentKey
-  ): Future[Boolean] = deleteRecordRepository
+  )(implicit request: RequestHeader): Future[Boolean] = deleteRecordRepository
     .remove(arn, enrolmentKey)
     .map(_ > 0)
     .recoverWith { case NonFatal(ex) =>
@@ -305,7 +305,9 @@ with Logging {
       Future.successful(false)
     }
 
-  def tryToResume(implicit auditData: AuditData): Future[Boolean] = deleteRecordRepository
+  def tryToResume(implicit
+    auditData: AuditData
+  ): Future[Boolean] = deleteRecordRepository
     .selectNextToRecover()
     .flatMap {
       case Some(record) =>
@@ -450,7 +452,7 @@ with Logging {
     arn: Arn,
     enrolmentKey: EnrolmentKey,
     endedBy: String
-  ): Future[Done] = invitationService
+  )(implicit request: RequestHeader): Future[Done] = invitationService
     .deauthoriseInvitation(
       arn,
       enrolmentKey,

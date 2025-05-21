@@ -4,7 +4,6 @@ PUT           /agent/:arn/service/:service/client/:clientIdType/:clientId    @uk
 DELETE        /agent/:arn/service/:service/client/:clientIdType/:clientId    @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.delete(arn: Arn, service: String, clientIdType: String, clientId: String)
 
 GET           /agent/relationships/inactive                                  @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getInactiveRelationshipsAgent
-GET           /logging-demo                                                  @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.loggingDemo
 
 DELETE        /agent/:arn/terminate                                          @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.terminateAgent(arn: Arn)
 GET           /agent/:arn/client/:nino/legacy-mapped-relationship            @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getLegacySaRelationshipStatus(arn: Arn, nino: Nino)

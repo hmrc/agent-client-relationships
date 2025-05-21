@@ -16,12 +16,12 @@
 
 package uk.gov.hmrc.agentclientrelationships.model.transitional
 
-import play.api.Logging
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 
 sealed trait InvitationStatusAction
 
 object InvitationStatusAction
-extends Logging {
+extends RequestAwareLogging {
 
   case object Accept
   extends InvitationStatusAction
@@ -37,9 +37,7 @@ extends Logging {
       case "accept" => Accept
       case "cancel" => Cancel
       case "reject" => Reject
-      case value =>
-        logger.warn(s"Action of [$value] is not a valid status change action")
-        throw new IllegalArgumentException
+      case value => throw new IllegalArgumentException(s"Action of [$value] is not a valid status change action")
     }
 
 }

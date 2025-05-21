@@ -30,8 +30,8 @@ import play.api.test.Helpers._
 import play.utils.UriEncoding
 import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey => LocalEnrolmentKey}
 import uk.gov.hmrc.agentclientrelationships.repository.DeleteRecord
-import uk.gov.hmrc.agentclientrelationships.repository.MongoDeleteRecordRepository
-import uk.gov.hmrc.agentclientrelationships.repository.MongoRelationshipCopyRecordRepository
+import uk.gov.hmrc.agentclientrelationships.repository.DeleteRecordRepository
+import uk.gov.hmrc.agentclientrelationships.repository.RelationshipCopyRecordRepository
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus
 import uk.gov.hmrc.agentclientrelationships.services.MongoLockService
 import uk.gov.hmrc.agentclientrelationships.services.MongoLockServiceImpl
@@ -122,8 +122,8 @@ with IntegrationPatience {
   implicit lazy val ws: WSClient = app.injector.instanceOf[WSClient]
   implicit val request: RequestHeader = FakeRequest()
 
-  def repo: MongoRelationshipCopyRecordRepository = new MongoRelationshipCopyRecordRepository(mongoComponent)
-  def deleteRecordRepository: MongoDeleteRecordRepository = new MongoDeleteRecordRepository(mongoComponent)
+  def repo: RelationshipCopyRecordRepository = new RelationshipCopyRecordRepository(mongoComponent)
+  def deleteRecordRepository: DeleteRecordRepository = new DeleteRecordRepository(mongoComponent)
 
   override def beforeEach() = {
     super.beforeEach()

@@ -17,16 +17,21 @@
 package uk.gov.hmrc.agentclientrelationships.repository
 
 import org.mongodb.scala.MongoException
+import org.scalatestplus.mockito.MockitoSugar.mock
+import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus.SyncStatus
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.mongo.MongoComponent
 
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 class FakeRelationshipCopyRecordRepository
-extends RelationshipCopyRecordRepository {
+extends RelationshipCopyRecordRepository(FakeMongoComponent.make) {
+
+  override lazy val initialised: Future[Unit] = Future.unit
 
   private val data: mutable.Map[(Arn, EnrolmentKey), RelationshipCopyRecord] = mutable.Map()
   private val UPDATED_RECORD_COUNT = 1
@@ -62,7 +67,7 @@ extends RelationshipCopyRecordRepository {
     arn: Arn,
     enrolmentKey: EnrolmentKey,
     status: SyncStatus
-  ): Future[Int] = {
+  )(implicit requestHeader: RequestHeader): Future[Int] = {
     val maybeValue: Option[RelationshipCopyRecord] = data.get((arn, enrolmentKey))
     Future.successful(
       if (maybeValue.isDefined) {
@@ -80,7 +85,7 @@ extends RelationshipCopyRecordRepository {
     arn: Arn,
     enrolmentKey: EnrolmentKey,
     status: SyncStatus
-  ): Future[Int] = {
+  )(implicit requestHeader: RequestHeader): Future[Int] = {
     val maybeValue: Option[RelationshipCopyRecord] = data.get((arn, enrolmentKey))
     Future.successful(
       if (maybeValue.isDefined) {

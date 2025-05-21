@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.connectors
 
-import play.api.Logging
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import play.api.http.Status
 import play.api.libs.json.Format
 import play.api.libs.json.JsObject
@@ -81,7 +81,7 @@ class EnrolmentStoreProxyConnector @Inject() (
   appConfig: AppConfig
 )(implicit val ec: ExecutionContext)
 extends HttpApiMonitor
-with Logging {
+with RequestAwareLogging {
 
   val espBaseUrl = appConfig.enrolmentStoreProxyUrl
   val teBaseUrl = appConfig.taxEnrolmentsUrl

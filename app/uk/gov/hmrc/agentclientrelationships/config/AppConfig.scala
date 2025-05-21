@@ -43,6 +43,8 @@ class AppConfig @Inject() (
     throw ConfigNotFoundException(s"Could not find config key: '$key'")
   )
 
+  val internalAuthTokenEnabled: Boolean = config.get[Boolean]("internal-auth-token-enabled-on-start")
+
   def expectedAuth: BasicAuthentication = {
     val username = config
       .get[Option[String]]("agent-termination.username")

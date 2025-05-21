@@ -21,7 +21,7 @@ import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import javax.inject.Inject
 import javax.inject.Singleton
-import play.api.Logging
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import play.api.http.Status
 import play.api.libs.json._
 import play.api.mvc.RequestHeader
@@ -78,7 +78,7 @@ class UsersGroupsSearchConnector @Inject() (
 )
 extends HttpApiMonitor
 with HttpErrorFunctions
-with Logging {
+with RequestAwareLogging {
 
   def getGroupUsers(groupId: String)(implicit rh: RequestHeader): Future[Seq[UserDetails]] =
     monitor(s"ConsumedAPI-UGS-getGroupUsers-GET") {

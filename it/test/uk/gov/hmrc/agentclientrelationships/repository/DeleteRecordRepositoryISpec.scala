@@ -21,6 +21,7 @@ import org.scalatest.concurrent.IntegrationPatience
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
+import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus.Failed
@@ -43,13 +44,15 @@ with MongoApp
 with GuiceOneAppPerSuite
 with IntegrationPatience {
 
+  implicit val request = FakeRequest()
+
   protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder()
     .configure("features.recovery-enable" -> false)
     .configure(mongoConfiguration)
 
   override implicit lazy val app: Application = appBuilder.build()
 
-  private lazy val repo = app.injector.instanceOf[MongoDeleteRecordRepository]
+  private lazy val repo = app.injector.instanceOf[DeleteRecordRepository]
 
   def now: LocalDateTime = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime.truncatedTo(MILLIS)
 

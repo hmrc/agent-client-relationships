@@ -20,9 +20,10 @@ import com.google.inject.ImplementedBy
 import org.mongodb.scala.MongoWriteException
 import org.mongodb.scala.model.Indexes.ascending
 import org.mongodb.scala.model._
-import play.api.Logging
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import play.api.libs.json.Json.format
 import play.api.libs.json._
+import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.MongoLocalDateTimeFormat
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipCopyRecord.formats
@@ -30,6 +31,7 @@ import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
+import uk.gov.hmrc.play.http.logging.Mdc
 
 import java.time.temporal.ChronoUnit.MILLIS
 import java.time.Instant
@@ -70,34 +72,8 @@ object RelationshipCopyRecord {
 
 }
 
-@ImplementedBy(classOf[MongoRelationshipCopyRecordRepository])
-trait RelationshipCopyRecordRepository {
-
-  def create(record: RelationshipCopyRecord): Future[Int]
-  def findBy(
-    arn: Arn,
-    enrolmentKey: EnrolmentKey
-  ): Future[Option[RelationshipCopyRecord]]
-  def updateEtmpSyncStatus(
-    arn: Arn,
-    enrolmentKey: EnrolmentKey,
-    status: SyncStatus
-  ): Future[Int]
-  def updateEsSyncStatus(
-    arn: Arn,
-    enrolmentKey: EnrolmentKey,
-    status: SyncStatus
-  ): Future[Int]
-  def remove(
-    arn: Arn,
-    enrolmentKey: EnrolmentKey
-  ): Future[Int]
-  def terminateAgent(arn: Arn): Future[Either[String, Int]]
-
-}
-
 @Singleton
-class MongoRelationshipCopyRecordRepository @Inject() (mongoComponent: MongoComponent)(implicit ec: ExecutionContext)
+class RelationshipCopyRecordRepository @Inject() (mongoComponent: MongoComponent)(implicit ec: ExecutionContext)
 extends PlayMongoRepository[RelationshipCopyRecord](
   mongoComponent = mongoComponent,
   collectionName = "relationship-copy-record",
@@ -126,64 +102,73 @@ extends PlayMongoRepository[RelationshipCopyRecord](
   ),
   replaceIndexes = true
 )
-with RelationshipCopyRecordRepository
-with Logging {
+with RequestAwareLogging {
 
   private val INDICATE_ERROR_DURING_DB_UPDATE = 0
 
-  override def create(record: RelationshipCopyRecord): Future[Int] = collection
-    .findOneAndReplace(
-      filter(
-        Arn(record.arn),
-        record.enrolmentKey.get
-      ), // we assume that all newly created records WILL have an enrolment key
-      record,
-      FindOneAndReplaceOptions().upsert(true)
-    )
-    .toFuture()
-    .map(_ => 1)
+  def create(record: RelationshipCopyRecord): Future[Int] = Mdc.preservingMdc {
+    collection
+      .findOneAndReplace(
+        filter(
+          Arn(record.arn),
+          record.enrolmentKey.get
+        ), // we assume that all newly created records WILL have an enrolment key
+        record,
+        FindOneAndReplaceOptions().upsert(true)
+      )
+      .toFuture()
+      .map(_ => 1)
+  }
 
-  override def findBy(
+  def findBy(
     arn: Arn,
     enrolmentKey: EnrolmentKey
   ): Future[Option[RelationshipCopyRecord]] = collection.find(filter(arn, enrolmentKey)).headOption()
 
-  override def updateEtmpSyncStatus(
+  def updateEtmpSyncStatus(
     arn: Arn,
     enrolmentKey: EnrolmentKey,
     status: SyncStatus
-  ): Future[Int] = collection
-    .updateMany(filter(arn, enrolmentKey), Updates.set("syncToETMPStatus", status.toString))
-    .toFuture()
-    .map(res => res.getModifiedCount.toInt)
-    .recover { case e: MongoWriteException =>
-      logger.warn(s"Updating ETMP sync status ($status) failed: ${e.getMessage}");
-      INDICATE_ERROR_DURING_DB_UPDATE
-    }
+  )(implicit requestHeader: RequestHeader): Future[Int] = Mdc.preservingMdc {
+    collection
+      .updateMany(filter(arn, enrolmentKey), Updates.set("syncToETMPStatus", status.toString))
+      .toFuture()
+      .map(res => res.getModifiedCount.toInt)
+      .recover { case e: MongoWriteException =>
+        logger.warn(s"Updating ETMP sync status ($status) failed: ${e.getMessage}");
+        INDICATE_ERROR_DURING_DB_UPDATE
+      }
+  }
 
-  override def updateEsSyncStatus(
+  def updateEsSyncStatus(
     arn: Arn,
     enrolmentKey: EnrolmentKey,
     status: SyncStatus
-  ): Future[Int] = collection
-    .updateMany(filter(arn, enrolmentKey), Updates.set("syncToESStatus", status.toString))
-    .toFuture()
-    .map(res => res.getModifiedCount.toInt)
-    .recover { case e: MongoWriteException =>
-      logger.warn(s"Updating ES sync status ($status) failed: ${e.getMessage}");
-      INDICATE_ERROR_DURING_DB_UPDATE
-    }
+  )(implicit requestHeader: RequestHeader): Future[Int] = Mdc.preservingMdc {
+    collection
+      .updateMany(filter(arn, enrolmentKey), Updates.set("syncToESStatus", status.toString))
+      .toFuture()
+      .map(res => res.getModifiedCount.toInt)
+      .recover { case e: MongoWriteException =>
+        logger.warn(s"Updating ES sync status ($status) failed: ${e.getMessage}");
+        INDICATE_ERROR_DURING_DB_UPDATE
+      }
+  }
 
-  override def remove(
+  def remove(
     arn: Arn,
     enrolmentKey: EnrolmentKey
-  ): Future[Int] = collection.deleteMany(filter(arn, enrolmentKey)).toFuture().map(res => res.getDeletedCount.toInt)
+  ): Future[Int] = Mdc.preservingMdc {
+    collection.deleteMany(filter(arn, enrolmentKey)).toFuture().map(res => res.getDeletedCount.toInt)
+  }
 
-  override def terminateAgent(arn: Arn): Future[Either[String, Int]] = collection
-    .deleteMany(Filters.equal("arn", arn.value))
-    .toFuture()
-    .map(res => Right(res.getDeletedCount.toInt))
-    .recover { case ex: MongoWriteException => Left(ex.getMessage) }
+  def terminateAgent(arn: Arn): Future[Either[String, Int]] = Mdc.preservingMdc {
+    collection
+      .deleteMany(Filters.equal("arn", arn.value))
+      .toFuture()
+      .map(res => Right(res.getDeletedCount.toInt))
+      .recover { case ex: MongoWriteException => Left(ex.getMessage) }
+  }
 
   private def filter(
     arn: Arn,

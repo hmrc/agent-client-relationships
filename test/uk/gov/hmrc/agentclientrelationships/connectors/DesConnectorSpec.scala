@@ -16,9 +16,11 @@
 
 package uk.gov.hmrc.agentclientrelationships.connectors
 
+import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.when
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 import org.scalatestplus.mockito.MockitoSugar
+import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.helpers.CorrelationIdGenerator
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
@@ -45,7 +47,8 @@ with MockitoSugar {
 
   "desHeaders" should {
     "contain correct headers" in {
-      when(correlationIdGenerator.makeCorrelationId()).thenReturn("testCorrelationId")
+      when(correlationIdGenerator.makeCorrelationId()(any[RequestHeader])).thenReturn("testCorrelationId")
+      implicit val request: RequestHeader = mock[RequestHeader]
       underTest.desHeaders(authToken = "testAuthToken", env = "testEnv").toMap shouldBe
         Map(
           "Authorization" -> "Bearer testAuthToken",

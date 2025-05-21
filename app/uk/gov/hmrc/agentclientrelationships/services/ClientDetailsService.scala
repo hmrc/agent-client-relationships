@@ -17,7 +17,7 @@
 package uk.gov.hmrc.agentclientrelationships.services
 
 import cats.data.EitherT
-import play.api.Logging
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.ClientDetailsConnector
 import uk.gov.hmrc.agentclientrelationships.connectors.IfOrHipConnector
@@ -45,7 +45,7 @@ class ClientDetailsService @Inject() (
   appConfig: AppConfig,
   ifOrHipConnector: IfOrHipConnector
 )(implicit ec: ExecutionContext)
-extends Logging {
+extends RequestAwareLogging {
 
   def findClientDetailsByTaxIdentifier(
     taxIdentifier: TaxIdentifier

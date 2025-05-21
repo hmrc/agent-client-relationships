@@ -126,7 +126,7 @@ with DataStreamStub {
         )
         .build()
 
-      app.injector.instanceOf[InternalAuthTokenInitialiser].initialised.futureValue
+      app.injector.instanceOf[InternalAuthTokenInitialiser]
 
       verify(1, getRequestedFor(urlMatching("/test-only/token")).withHeader(AUTHORIZATION, equalTo(authToken)))
       verify(0, postRequestedFor(urlMatching("/test-only/token")))
@@ -151,7 +151,7 @@ with DataStreamStub {
         )
         .build()
 
-      app.injector.instanceOf[InternalAuthTokenInitialiser].initialised.futureValue
+      app.injector.instanceOf[InternalAuthTokenInitialiser]
 
       verify(0, getRequestedFor(urlMatching("/test-only/token")))
       verify(0, postRequestedFor(urlMatching("/test-only/token")))
