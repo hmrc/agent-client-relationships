@@ -81,11 +81,11 @@ class RequestAwareLogger(
     Error
   )
 
-  private def context(implicit request: RequestHeader) = s"[context: ${request.method} ${request.path}] $sessionId $requestId $userAgent $referer $deviceId"
+  private def context(implicit request: RequestHeader) = s"[Context: ${request.method} ${request.path}] $sessionId $requestId $userAgent $referer $deviceId"
 
-  private def sessionId(implicit request: RequestHeader) = s"[${hc.sessionId.toString}]"
+  private def sessionId(implicit request: RequestHeader) = s"[SessionId: ${hc.sessionId.getOrElse("")}]"
 
-  private def requestId(implicit request: RequestHeader) = s"[${hc.requestId.toString}]"
+  private def requestId(implicit request: RequestHeader) = s"[RequestId: ${hc.requestId.getOrElse("")}]"
 
   private def referer(implicit r: RequestHeader) = s"[Referer: ${r.headers.get(HeaderNames.REFERER).getOrElse("")}]"
 
