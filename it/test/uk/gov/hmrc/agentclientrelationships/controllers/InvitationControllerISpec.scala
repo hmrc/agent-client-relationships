@@ -30,6 +30,7 @@ import uk.gov.hmrc.agentclientrelationships.connectors.AgentFiRelationshipConnec
 import uk.gov.hmrc.agentclientrelationships.connectors.EnrolmentStoreProxyConnector
 import uk.gov.hmrc.agentclientrelationships.model.invitation.CreateInvitationRequest
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.ErrorBody
+import uk.gov.hmrc.agentclientrelationships.model.Accepted
 import uk.gov.hmrc.agentclientrelationships.model.Cancelled
 import uk.gov.hmrc.agentclientrelationships.model.EmailInformation
 import uk.gov.hmrc.agentclientrelationships.model.Pending
@@ -574,7 +575,7 @@ with TestData {
 
         }
 
-        s"return 403 when the auth ARN does not match the ARN in the found invitation for $taxService" in {
+        s"return 422 when the auth ARN does not match the ARN in the found invitation for $taxService" in {
           val inputData: CreateInvitationRequest = allServices(taxService)
           val clientId =
             if (taxService == HMRCMTDIT || taxService == HMRCMTDITSUPP)
@@ -623,6 +624,65 @@ with TestData {
 
           invitationSeq.size shouldBe 1
           invitationSeq.head.status shouldBe Pending
+        }
+
+        s"return 422 when status of the invitation is invalid for $taxService" in {
+          val inputData: CreateInvitationRequest = allServices(taxService)
+          val clientId =
+            if (taxService == HMRCMTDIT || taxService == HMRCMTDITSUPP)
+              mtdItId.value
+            else
+              inputData.clientId
+          val clientIdType =
+            if (taxService == HMRCMTDIT || taxService == HMRCMTDITSUPP)
+              MtdItIdType.id
+            else
+              inputData.suppliedClientIdType
+
+          val clientIdentifier = ClientIdentifier(clientId, clientIdType)
+
+          invitationRepo
+            .create(
+              arn.value,
+              Service.forId(taxService),
+              clientIdentifier,
+              clientIdentifier,
+              "Erling Haal",
+              "testAgentName",
+              "agent@email.com",
+              LocalDate.now(),
+              Some("personal")
+            )
+            .futureValue
+
+          val pendingInvitation =
+            invitationRepo
+              .findAllForAgent(arn.value)
+              .futureValue
+              .head
+
+          invitationRepo
+            .updateStatus(
+              pendingInvitation.invitationId,
+              Accepted
+            )
+            .futureValue
+
+          val testUrl = s"/agent-client-relationships/agent/cancel-invitation/${pendingInvitation.invitationId}"
+          val fakeRequest = FakeRequest("PUT", testUrl)
+          givenAuthorisedAsValidAgent(fakeRequest, arn2.value)
+
+          val result = doAgentPutRequest(testUrl)
+          result.status shouldBe UNPROCESSABLE_ENTITY
+          result.body shouldBe "{\"code\":\"INVALID_INVITATION_STATUS\"}"
+
+          val invitationSeq =
+            invitationRepo
+              .findAllForAgent(arn.value)
+              .futureValue
+
+          invitationSeq.size shouldBe 1
+          invitationSeq.head.status shouldBe Accepted
         }
 
       })
