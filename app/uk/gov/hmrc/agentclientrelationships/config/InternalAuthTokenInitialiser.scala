@@ -18,8 +18,10 @@ package uk.gov.hmrc.agentclientrelationships.config
 
 import org.apache.pekko.Done
 import play.api.Logging
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import play.api.http.Status.CREATED
 import play.api.libs.json.Json
+import play.api.mvc.RequestHeader
 import uk.gov.hmrc.http.HttpReads.Implicits.readRaw
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.HeaderCarrier
@@ -33,35 +35,35 @@ import scala.concurrent.Await
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
-abstract class InternalAuthTokenInitialiser {
-  val initialised: Future[Done]
-}
-
+/** Auth token initialiser is required on local test/dev environment, where it is not possible to preconfigure application with the auth token. It has to be
+  * obtained during runtime. On production environment, the auth-token is pre-registered and hardcoded in config. This cannot be done on test environments, such
+  * design ...
+  */
 @Singleton
-class NoOpInternalAuthTokenInitialiser @Inject()
-extends InternalAuthTokenInitialiser {
-  override val initialised: Future[Done] = Future.successful(Done)
-}
-
-@Singleton
-class InternalAuthTokenInitialiserImpl @Inject() (
+class InternalAuthTokenInitialiser @Inject() (
   appConfig: AppConfig,
   httpClient: HttpClientV2
 )(implicit
-  ec: ExecutionContext,
-  clock: Clock
+  ec: ExecutionContext
 )
-extends InternalAuthTokenInitialiser
-with Logging {
+extends Logging {
 
-  override val initialised: Future[Done] =
-    for {
-      _ <- ensureAuthToken()
-    } yield Done
+  Await.result(
+    {
+      logger.info("Auth token initialising ...")
+      if (appConfig.internalAuthTokenEnabled) {
+        ensureAuthToken()
+          .map(_ => logger.info("Auth token initialised"))
+      }
+      else {
+        logger.info("Auth token initialising - skipped")
+        Future.successful(())
+      }
+    },
+    30.seconds
+  )
 
-  Await.result(initialised, 30.seconds)
-
-  private def ensureAuthToken(): Future[Done] = authTokenIsValid.flatMap { isValid =>
+  private def ensureAuthToken(): Future[Done] = isAuthTokenValid.flatMap { isValid =>
     if (isValid) {
       logger.info("Auth token is already valid")
       Future.successful(Done)
@@ -72,7 +74,7 @@ with Logging {
   }
 
   private def createClientAuthToken(): Future[Done] = {
-    logger.info("Initialising auth token")
+    logger.info("Creating auth token...")
     httpClient
       .post(url"${appConfig.internalAuthBaseUrl}/test-only/token")(HeaderCarrier())
       .withBody(
@@ -102,7 +104,7 @@ with Logging {
 
   }
 
-  private def authTokenIsValid: Future[Boolean] = {
+  private def isAuthTokenValid: Future[Boolean] = {
     logger.info("Checking auth token")
     httpClient
       .get(url"${appConfig.internalAuthBaseUrl}/test-only/token")(HeaderCarrier())

@@ -20,6 +20,7 @@ import org.mongodb.scala.model.Filters
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
+import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus.Failed
@@ -41,13 +42,15 @@ extends UnitSpec
 with MongoApp
 with GuiceOneServerPerSuite {
 
+  implicit val request = FakeRequest()
+
   protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder()
     .configure("features.recovery-enable" -> false)
     .configure(mongoConfiguration)
 
   override implicit lazy val app: Application = appBuilder.build()
 
-  private lazy val repo = app.injector.instanceOf[MongoRelationshipCopyRecordRepository]
+  private lazy val repo = app.injector.instanceOf[RelationshipCopyRecordRepository]
 
   override def beforeEach(): Unit = {
     super.beforeEach()

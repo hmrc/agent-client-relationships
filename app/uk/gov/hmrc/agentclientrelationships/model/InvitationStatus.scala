@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.model
 
-import play.api.Logging
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import play.api.libs.json._
 
 // scalafmt: { binPack.parentConstructors = Always }
@@ -31,7 +31,7 @@ case object Cancelled extends InvitationStatus
 case object DeAuthorised extends InvitationStatus
 case object PartialAuth extends InvitationStatus
 
-object InvitationStatus extends Logging {
+object InvitationStatus {
 
   def apply(status: String): InvitationStatus =
     status.toLowerCase match {
@@ -42,9 +42,7 @@ object InvitationStatus extends Logging {
       case "expired" => Expired
       case "deauthorised" => DeAuthorised
       case "partialauth" => PartialAuth
-      case value =>
-        logger.warn(s"Status of [$value] is not a valid InvitationStatus")
-        throw new IllegalArgumentException
+      case value => throw new IllegalArgumentException(s"Status of [$value] is not a valid InvitationStatus")
     }
 
   def unapply(status: InvitationStatus): String =

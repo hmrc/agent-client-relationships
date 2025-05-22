@@ -17,7 +17,7 @@
 package uk.gov.hmrc.agentclientrelationships.services.transitional
 
 import cats.data.EitherT
-import play.api.Logging
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.InvitationNotFound
@@ -41,7 +41,7 @@ class ChangeInvitationStatusByIdService @Inject() (
   invitationsRepository: InvitationsRepository,
   partialAuthRepository: PartialAuthRepository
 )(implicit ec: ExecutionContext)
-extends Logging {
+extends RequestAwareLogging {
 
   val validInvitationStatusActionsFrom: Map[InvitationStatusAction, Set[InvitationStatus]] = Map(
     InvitationStatusAction.Accept -> Set(Pending),

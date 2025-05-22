@@ -24,7 +24,8 @@ import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 import javax.inject.Inject
 import javax.inject.Singleton
 import play.api.Configuration
-import play.api.Logging
+import play.api.mvc.RequestHeader
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.agentclientrelationships.connectors.GroupInfo
 import uk.gov.hmrc.agentclientrelationships.connectors.UserDetails
 import uk.gov.hmrc.agentclientrelationships.model.InactiveRelationship
@@ -39,25 +40,23 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.util.Success
 
-trait KenshooCacheMetrics
-extends Logging {
+trait KenshooCacheMetrics {
 
   val kenshooRegistry: MetricRegistry
 
   def record(name: String): Unit = {
     kenshooRegistry.getMeters.getOrDefault(name, kenshooRegistry.meter(name)).mark()
-    logger.debug(s"kenshoo-event::meter::$name::recorded")
   }
 
 }
 
 trait Cache[T] {
-  def apply(key: String)(body: => Future[T])(implicit ec: ExecutionContext): Future[T]
+  def apply(key: String)(body: => Future[T])(implicit request: RequestHeader): Future[T]
 }
 
 class DoNotCache[T]
 extends Cache[T] {
-  def apply(key: String)(body: => Future[T])(implicit ec: ExecutionContext): Future[T] = body
+  def apply(key: String)(body: => Future[T])(implicit request: RequestHeader): Future[T] = body
 }
 
 @Singleton
@@ -85,16 +84,18 @@ class MongoCache[T] @Inject() (
 )(implicit
   metrics: Metrics,
   reads: Reads[T],
-  writes: Writes[T]
+  writes: Writes[T],
+  executionContext: ExecutionContext
 )
 extends KenshooCacheMetrics
+with RequestAwareLogging
 with Cache[T] {
 
   val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 
   private lazy val cacheRepository: MongoCacheRepository[String] = cacheRepositoryFactory(collectionName, ttlConfigKey)
 
-  def apply(cacheId: String)(body: => Future[T])(implicit ec: ExecutionContext): Future[T] = {
+  def apply(cacheId: String)(body: => Future[T])(implicit request: RequestHeader): Future[T] = {
     val dataKey: DataKey[T] = DataKey[T](cacheId)
 
     cacheRepository
@@ -118,7 +119,10 @@ with Cache[T] {
 class AgentCacheProvider @Inject() (
   configuration: Configuration,
   cacheRepositoryFactory: CacheRepositoryFactory
-)(implicit metrics: Metrics) {
+)(implicit
+  metrics: Metrics,
+  executionContext: ExecutionContext
+) {
 
   implicit val readsOptionalGroupInfo: Reads[Option[GroupInfo]] = _.validateOpt[GroupInfo]
   implicit val readsOptionalUserDetails: Reads[Option[UserDetails]] = _.validateOpt[UserDetails]
@@ -144,27 +148,27 @@ class AgentCacheProvider @Inject() (
       new DoNotCache[T]
 
   val esPrincipalGroupIdCache: Cache[String] = createCache[String](
-    cacheEnabled,
-    "es-principalGroupId-cache",
-    "agent.cache.expires"
+    enabled = cacheEnabled,
+    collectionName = "es-principalGroupId-cache",
+    ttlConfigKey = "agent.cache.expires"
   )
 
   val ugsFirstGroupAdminCache: Cache[Option[UserDetails]] = createCache[Option[UserDetails]](
-    cacheEnabled,
-    "ugs-firstGroupAdmin-cache",
-    "agent.cache.expires"
+    enabled = cacheEnabled,
+    collectionName = "ugs-firstGroupAdmin-cache",
+    ttlConfigKey = "agent.cache.expires"
   )
 
   val ugsGroupInfoCache: Cache[Option[GroupInfo]] = createCache[Option[GroupInfo]](
-    cacheEnabled,
-    "ugs-groupInfo-cache",
-    "agent.cache.expires"
+    enabled = cacheEnabled,
+    collectionName = "ugs-groupInfo-cache",
+    ttlConfigKey = "agent.cache.expires"
   )
 
   val agentTrackPageCache: Cache[Seq[InactiveRelationship]] = createCache[Seq[InactiveRelationship]](
-    agentTrackPageCacheEnabled,
-    "agent-trackPage-cache",
-    "agent.trackPage.cache.expires"
+    enabled = agentTrackPageCacheEnabled,
+    collectionName = "agent-trackPage-cache",
+    ttlConfigKey = "agent.trackPage.cache.expires"
   )
 
 }

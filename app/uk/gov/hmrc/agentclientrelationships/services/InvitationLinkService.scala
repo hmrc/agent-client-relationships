@@ -19,7 +19,7 @@ package uk.gov.hmrc.agentclientrelationships.services
 import cats.data.EitherT
 import cats.implicits._
 import org.apache.commons.lang3.RandomStringUtils
-import play.api.Logging
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.agentclientrelationships.connectors.AgentAssuranceConnector
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink._
 import uk.gov.hmrc.agentclientrelationships.repository.AgentReferenceRepository
@@ -37,7 +37,7 @@ class InvitationLinkService @Inject() (
   agentReferenceRepository: AgentReferenceRepository,
   agentAssuranceConnector: AgentAssuranceConnector
 )(implicit ec: ExecutionContext)
-extends Logging {
+extends RequestAwareLogging {
 
   private val codetable = "ABCDEFGHJKLMNOPRSTUWXYZ123456789"
 

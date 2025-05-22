@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
-import play.api.Logging
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.InvalidClientId
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.InvitationNotFound
@@ -36,7 +36,7 @@ import scala.util.Try
 class CleanUpInvitationStatusService @Inject() (invitationsRepository: InvitationsRepository)(implicit
   ec: ExecutionContext
 )
-extends Logging {
+extends RequestAwareLogging {
 
   def validateService(serviceStr: String): Either[InvitationFailureResponse, Service] =
     for {

@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.connectors
 
-import play.api.Logging
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import play.api.http.Status.NOT_FOUND
 import play.api.http.Status.NO_CONTENT
 import play.api.mvc.RequestHeader
@@ -42,7 +42,7 @@ class AgentUserClientDetailsConnector @Inject() (
   appConfig: AppConfig
 )(implicit val ec: ExecutionContext)
 extends HttpApiMonitor
-with Logging {
+with RequestAwareLogging {
 
   val baseUrl = appConfig.agentUserClientDetailsUrl
 

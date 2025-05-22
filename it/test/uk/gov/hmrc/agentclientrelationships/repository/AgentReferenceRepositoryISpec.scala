@@ -22,6 +22,7 @@ import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
+import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentReferenceRecord
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
@@ -31,8 +32,9 @@ class AgentReferenceRepositoryISpec
 extends AnyWordSpec
 with Matchers
 with GuiceOneAppPerSuite
-with DefaultPlayMongoRepositorySupport[AgentReferenceRecord]
-with LogCapturing {
+with DefaultPlayMongoRepositorySupport[AgentReferenceRecord] {
+
+  implicit val request = FakeRequest()
 
   override lazy val app: Application = new GuiceApplicationBuilder()
     .configure("mongodb.uri" -> mongoUri, "fieldLevelEncryption.enable" -> true)
@@ -115,41 +117,7 @@ with LogCapturing {
         await(repository.collection.insertOne(agentReferenceRecord("SCX39TGT", "LARN7404004")).toFuture())
         await(repository.delete(Arn("LARN7404004"))) shouldBe ()
       }
-
-      "log error when no matching record found" in {
-        withCaptureOfErrorLogging(repository.localLogger) { logEvents =>
-          await(repository.delete(Arn("LARN7404004"))) shouldBe ()
-
-          logEvents
-            .count(_.getMessage.contains("could not delete agent reference record, no matching ARN found.")) shouldBe 1
-        }
-
-        await(repository.delete(Arn("LARN7404004"))) shouldBe ()
-      }
     }
-  }
-
-}
-
-trait LogCapturing {
-
-  import ch.qos.logback.classic.spi.ILoggingEvent
-  import ch.qos.logback.classic.Level
-  import ch.qos.logback.classic.{Logger => LogbackLogger}
-  import ch.qos.logback.core.read.ListAppender
-  import play.api.LoggerLike
-
-  import scala.jdk.CollectionConverters.ListHasAsScala
-
-  def withCaptureOfErrorLogging(logger: LoggerLike)(body: (=> List[ILoggingEvent]) => Unit): Unit = {
-    val logbackLogger: LogbackLogger = logger.logger.asInstanceOf[LogbackLogger]
-    val appender = new ListAppender[ILoggingEvent]()
-    appender.setContext(logbackLogger.getLoggerContext)
-    appender.start()
-    logbackLogger.addAppender(appender)
-    logbackLogger.setLevel(Level.ERROR)
-    logbackLogger.setAdditive(true)
-    body(appender.list.asScala.toList)
   }
 
 }

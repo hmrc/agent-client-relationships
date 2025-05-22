@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.connectors
 
-import play.api.Logging
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import play.api.http.Status
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
@@ -43,7 +43,7 @@ class AgentPermissionsConnector @Inject() (
   val metrics: Metrics
 )(implicit val ec: ExecutionContext)
 extends HttpApiMonitor
-with Logging {
+with RequestAwareLogging {
 
   def isClientUnassigned(
     arn: Arn,

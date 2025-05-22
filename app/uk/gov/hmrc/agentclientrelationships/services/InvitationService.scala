@@ -18,7 +18,7 @@ package uk.gov.hmrc.agentclientrelationships.services
 
 import cats.data.EitherT
 import org.mongodb.scala.MongoException
-import play.api.Logging
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.AgentAssuranceConnector
 import uk.gov.hmrc.agentclientrelationships.connectors.IfOrHipConnector
@@ -59,7 +59,7 @@ class InvitationService @Inject() (
   emailService: EmailService,
   appConfig: AppConfig
 )(implicit ec: ExecutionContext)
-extends Logging {
+extends RequestAwareLogging {
 
   def trackRequests(
     arn: Arn,
@@ -111,7 +111,6 @@ extends Logging {
   def findInvitation(invitationId: String): Future[Option[Invitation]] = invitationsRepository.findOneById(invitationId)
 
   def rejectInvitation(invitationId: String)(implicit
-    ec: ExecutionContext,
     request: RequestHeader
   ): Future[Invitation] =
     for {
@@ -128,7 +127,7 @@ extends Logging {
     arn: Arn,
     enrolmentKey: EnrolmentKey,
     endedBy: String
-  )(implicit ec: ExecutionContext): Future[Boolean] = invitationsRepository
+  ): Future[Boolean] = invitationsRepository
     .deauthorise(
       arn.value,
       enrolmentKey.oneIdentifier().value,
@@ -222,7 +221,7 @@ extends Logging {
     clientName: String,
     clientType: Option[String],
     agentDetails: AgencyDetails
-  )(implicit ec: ExecutionContext): Future[Either[InvitationFailureResponse, Invitation]] = {
+  )(implicit request: RequestHeader): Future[Either[InvitationFailureResponse, Invitation]] = {
     val expiryDate = currentTime().plusSeconds(invitationExpiryDuration.toSeconds).toLocalDate
     (
       for {

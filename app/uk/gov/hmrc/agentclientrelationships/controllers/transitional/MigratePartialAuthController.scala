@@ -17,7 +17,7 @@
 package uk.gov.hmrc.agentclientrelationships.controllers.transitional
 
 import org.mongodb.scala.MongoWriteException
-import play.api.Logging
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import play.api.mvc.Action
 import play.api.mvc.AnyContent
 import play.api.mvc.ControllerComponents
@@ -36,7 +36,7 @@ class MigratePartialAuthController @Inject() (
   cc: ControllerComponents
 )(implicit ec: ExecutionContext)
 extends BackendController(cc)
-with Logging {
+with RequestAwareLogging {
 
   def migratePartialAuth: Action[AnyContent] = Action.async { implicit request =>
     val invitation = request.body.asJson.get.as[Invitation](Invitation.acaReads)

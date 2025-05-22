@@ -17,6 +17,7 @@
 package uk.gov.hmrc.agentclientrelationships.connectors.helpers
 
 import play.api.http.HeaderNames
+import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 
 import javax.inject.Inject
@@ -29,10 +30,7 @@ class IfHeaders @Inject() (
   private val Environment = "Environment"
   private val CorrelationId = "CorrelationId"
 
-  private val mdtp = "MDTP"
-  private val hip = "HIP"
-
-  def makeHeaders(authToken: String): Seq[(String, String)] = Seq(
+  def makeHeaders(authToken: String)(implicit requestHeader: RequestHeader): Seq[(String, String)] = Seq(
     Environment -> appConfig.ifEnvironment,
     CorrelationId -> randomUuidGenerator.makeCorrelationId(),
     HeaderNames.AUTHORIZATION -> s"Bearer $authToken"

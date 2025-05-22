@@ -16,8 +16,6 @@
 
 package uk.gov.hmrc.agentclientrelationships.support
 
-import java.net.ServerSocket
-import java.net.URL
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock.configureFor
 import com.github.tomakehurst.wiremock.client.WireMock.reset
@@ -28,6 +26,8 @@ import org.scalatest.BeforeAndAfterEach
 import org.scalatest.Suite
 import play.api.Logging
 
+import java.net.ServerSocket
+import java.net.URL
 import scala.annotation.tailrec
 
 case class WireMockBaseUrl(value: URL)

@@ -23,7 +23,7 @@ import org.mongodb.scala.model.Updates.combine
 import org.mongodb.scala.model.Updates.inc
 import org.mongodb.scala.model.Updates.set
 import org.mongodb.scala.model._
-import play.api.Logging
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import play.api.libs.json.Json.format
 import play.api.libs.json._
 import play.api.mvc.RequestHeader
@@ -47,6 +47,7 @@ import javax.inject.Singleton
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import uk.gov.hmrc.agentclientrelationships.util.RequestSupport._
+import uk.gov.hmrc.play.http.logging.Mdc
 
 case class DeleteRecord(
   arn: String,
@@ -113,40 +114,8 @@ object DeleteRecord {
 
 }
 
-@ImplementedBy(classOf[MongoDeleteRecordRepository])
-trait DeleteRecordRepository {
-
-  def create(record: DeleteRecord): Future[Int]
-  def findBy(
-    arn: Arn,
-    enrolmentKey: EnrolmentKey
-  ): Future[Option[DeleteRecord]]
-  def updateEtmpSyncStatus(
-    arn: Arn,
-    enrolmentKey: EnrolmentKey,
-    status: SyncStatus
-  ): Future[Int]
-  def updateEsSyncStatus(
-    arn: Arn,
-    enrolmentKey: EnrolmentKey,
-    status: SyncStatus
-  ): Future[Int]
-  def markRecoveryAttempt(
-    arn: Arn,
-    enrolmentKey: EnrolmentKey
-  ): Future[Unit]
-  def remove(
-    arn: Arn,
-    enrolmentKey: EnrolmentKey
-  ): Future[Int]
-  def selectNextToRecover(): Future[Option[DeleteRecord]]
-
-  def terminateAgent(arn: Arn): Future[Either[String, Int]]
-
-}
-
 @Singleton
-class MongoDeleteRecordRepository @Inject() (mongoComponent: MongoComponent)(implicit ec: ExecutionContext)
+class DeleteRecordRepository @Inject() (mongoComponent: MongoComponent)(implicit ec: ExecutionContext)
 extends PlayMongoRepository[DeleteRecord](
   mongoComponent = mongoComponent,
   collectionName = "delete-record",
@@ -175,94 +144,109 @@ extends PlayMongoRepository[DeleteRecord](
   ),
   replaceIndexes = true
 )
-with DeleteRecordRepository
-with Logging {
+with RequestAwareLogging {
 
   private val INDICATE_ERROR_DURING_DB_UPDATE = 0
 
-  override def create(record: DeleteRecord): Future[Int] = collection
-    .insertOne(record)
-    .toFuture()
-    .map(insertResult =>
-      if (insertResult.wasAcknowledged())
-        1
-      else {
-        logger.warn("Creating DeleteRecord failed.")
-        INDICATE_ERROR_DURING_DB_UPDATE
-      }
-    )
-
-  override def findBy(
-    arn: Arn,
-    enrolmentKey: EnrolmentKey
-  ): Future[Option[DeleteRecord]] = collection.find(filter(arn, enrolmentKey)).headOption()
-
-  override def updateEtmpSyncStatus(
-    arn: Arn,
-    enrolmentKey: EnrolmentKey,
-    status: SyncStatus
-  ): Future[Int] = collection
-    .updateOne(
-      filter(arn, enrolmentKey),
-      set("syncToETMPStatus", status.toString),
-      UpdateOptions().upsert(false)
-    )
-    .toFuture()
-    .map { updateResult =>
-      if (updateResult.getModifiedCount != 1L)
-        logger.warn(s"Updating ETMP sync status ($status) failed")
-      updateResult.getModifiedCount.toInt
-    }
-
-  override def updateEsSyncStatus(
-    arn: Arn,
-    enrolmentKey: EnrolmentKey,
-    status: SyncStatus
-  ): Future[Int] = collection
-    .updateOne(
-      filter(arn, enrolmentKey),
-      set("syncToESStatus", status.toString),
-      UpdateOptions().upsert(false)
-    )
-    .toFuture()
-    .map { updateResult =>
-      if (updateResult.getModifiedCount != 1L)
-        logger.warn(s"Updating ES sync status ($status) failed")
-      updateResult.getModifiedCount.toInt
-    }
-
-  override def markRecoveryAttempt(
-    arn: Arn,
-    enrolmentKey: EnrolmentKey
-  ): Future[Unit] = collection
-    .findOneAndUpdate(
-      filter(arn, enrolmentKey),
-      combine(
-        set("lastRecoveryAttempt", Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime),
-        inc("numberOfAttempts", 1)
+  def create(record: DeleteRecord)(implicit requestHeader: RequestHeader): Future[Int] = Mdc.preservingMdc {
+    collection
+      .insertOne(record)
+      .toFuture()
+      .map(insertResult =>
+        if (insertResult.wasAcknowledged())
+          1
+        else {
+          logger.warn("Creating DeleteRecord failed.")
+          INDICATE_ERROR_DURING_DB_UPDATE
+        }
       )
-    )
-    .toFuture()
-    .map(_ => ())
+  }
 
-  override def remove(
+  def findBy(
     arn: Arn,
     enrolmentKey: EnrolmentKey
-  ): Future[Int] = collection
-    .deleteOne(filter(arn, enrolmentKey))
-    .toFuture()
-    .map(deleteResult => deleteResult.getDeletedCount.toInt)
+  ): Future[Option[DeleteRecord]] = Mdc.preservingMdc {
+    collection.find(filter(arn, enrolmentKey)).headOption()
+  }
 
-  override def selectNextToRecover(): Future[Option[DeleteRecord]] = collection
-    .find()
-    .sort(Sorts.ascending("lastRecoveryAttempt"))
-    .headOption()
+  def updateEtmpSyncStatus(
+    arn: Arn,
+    enrolmentKey: EnrolmentKey,
+    status: SyncStatus
+  )(implicit requestHeader: RequestHeader): Future[Int] = Mdc.preservingMdc {
+    collection
+      .updateOne(
+        filter(arn, enrolmentKey),
+        set("syncToETMPStatus", status.toString),
+        UpdateOptions().upsert(false)
+      )
+      .toFuture()
+      .map { updateResult =>
+        if (updateResult.getModifiedCount != 1L)
+          logger.warn(s"Updating ETMP sync status ($status) failed")
+        updateResult.getModifiedCount.toInt
+      }
+  }
 
-  override def terminateAgent(arn: Arn): Future[Either[String, Int]] = collection
-    .deleteMany(equal("arn", arn.value))
-    .toFuture()
-    .map(deleteResult => Right(deleteResult.getDeletedCount.toInt))
-    .recover { case e: MongoWriteException => Left(e.getMessage) }
+  def updateEsSyncStatus(
+    arn: Arn,
+    enrolmentKey: EnrolmentKey,
+    status: SyncStatus
+  )(implicit requestHeader: RequestHeader): Future[Int] = Mdc.preservingMdc {
+    collection
+      .updateOne(
+        filter(arn, enrolmentKey),
+        set("syncToESStatus", status.toString),
+        UpdateOptions().upsert(false)
+      )
+      .toFuture()
+      .map { updateResult =>
+        if (updateResult.getModifiedCount != 1L)
+          logger.warn(s"Updating ES sync status ($status) failed")
+        updateResult.getModifiedCount.toInt
+      }
+  }
+
+  def markRecoveryAttempt(
+    arn: Arn,
+    enrolmentKey: EnrolmentKey
+  ): Future[Unit] = Mdc.preservingMdc {
+    collection
+      .findOneAndUpdate(
+        filter(arn, enrolmentKey),
+        combine(
+          set("lastRecoveryAttempt", Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime),
+          inc("numberOfAttempts", 1)
+        )
+      )
+      .toFuture()
+      .map(_ => ())
+  }
+
+  def remove(
+    arn: Arn,
+    enrolmentKey: EnrolmentKey
+  ): Future[Int] = Mdc.preservingMdc {
+    collection
+      .deleteOne(filter(arn, enrolmentKey))
+      .toFuture()
+      .map(deleteResult => deleteResult.getDeletedCount.toInt)
+  }
+
+  def selectNextToRecover(): Future[Option[DeleteRecord]] = Mdc.preservingMdc {
+    collection
+      .find()
+      .sort(Sorts.ascending("lastRecoveryAttempt"))
+      .headOption()
+  }
+
+  def terminateAgent(arn: Arn): Future[Either[String, Int]] = Mdc.preservingMdc {
+    collection
+      .deleteMany(equal("arn", arn.value))
+      .toFuture()
+      .map(deleteResult => Right(deleteResult.getDeletedCount.toInt))
+      .recover { case e: MongoWriteException => Left(e.getMessage) }
+  }
 
   private def filter(
     arn: Arn,

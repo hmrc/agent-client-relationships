@@ -311,7 +311,7 @@ with ResettingMockitoSugar {
           val record = defaultRecord.copy(syncToETMPStatus = Some(Success), syncToESStatus = status)
           val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
           val lockService = new FakeLockService
-          when(deleteRecordRepository.create(any[DeleteRecord])).thenReturn(Future.successful(1))
+          when(deleteRecordRepository.create(any[DeleteRecord])(any[RequestHeader])).thenReturn(Future.successful(1))
           when(deleteRecordRepository.remove(any[Arn], any[EnrolmentKey])).thenReturn(Future.successful(1))
           when(agentUserService.getAgentAdminAndSetAuditData(any[Arn])(any[RequestHeader], any[AuditData])).thenReturn(
             Future.successful(agentUserForAsAgent)
@@ -1189,7 +1189,7 @@ with ResettingMockitoSugar {
           val record = defaultRecordForMtdVat.copy(syncToETMPStatus = Some(Success), syncToESStatus = status)
           val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
           val lockService = new FakeLockService
-          when(deleteRecordRepository.create(any[DeleteRecord])).thenReturn(Future.successful(1))
+          when(deleteRecordRepository.create(any[DeleteRecord])(any[RequestHeader])).thenReturn(Future.successful(1))
           when(deleteRecordRepository.remove(any[Arn], any[EnrolmentKey])).thenReturn(Future.successful(1))
           when(agentUserService.getAgentAdminAndSetAuditData(any[Arn])(any[RequestHeader], any[AuditData])).thenReturn(
             Future.successful(agentUserForAsAgent)
@@ -1924,7 +1924,7 @@ with ResettingMockitoSugar {
 
     when(es.getDelegatedGroupIdsFor(eqs(enrolmentKey))(any[RequestHeader]())).thenReturn(Future.successful(Set("foo")))
     when(es.getAgentReferenceNumberFor(eqs("foo"))(any[RequestHeader]())).thenReturn(Future.successful(Some(arn)))
-    when(deleteRecordRepository.create(any[DeleteRecord])).thenReturn(Future.successful(1))
+    when(deleteRecordRepository.create(any[DeleteRecord])(any[RequestHeader])).thenReturn(Future.successful(1))
     when(es.deallocateEnrolmentFromAgent(eqs("foo"), eqs(enrolmentKey))(any[RequestHeader]())).thenReturn(
       Future.successful(())
     )

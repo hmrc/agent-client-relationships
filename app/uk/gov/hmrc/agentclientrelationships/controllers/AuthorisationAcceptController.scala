@@ -20,7 +20,7 @@ import play.api.mvc.Action
 import play.api.mvc.AnyContent
 import play.api.mvc.ControllerComponents
 import play.api.Logger
-import play.api.Logging
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys._
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.audit.AuditService
@@ -53,7 +53,7 @@ class AuthorisationAcceptController @Inject() (
 )(implicit val executionContext: ExecutionContext)
 extends BackendController(cc)
 with AuthActions
-with Logging {
+with RequestAwareLogging {
 
   val supportedServices: Seq[Service] = appConfig.supportedServices
 

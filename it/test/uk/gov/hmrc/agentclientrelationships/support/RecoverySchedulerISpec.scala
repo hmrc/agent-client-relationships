@@ -27,6 +27,7 @@ import org.scalatest.time.Span
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
+import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
@@ -55,6 +56,8 @@ with HipStub
 with AUCDStubs
 with BeforeAndAfterEach {
 
+  implicit val request = FakeRequest()
+
   protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder().configure(
     "microservice.services.enrolment-store-proxy.port" -> wireMockPort,
     "microservice.services.tax-enrolments.port" -> wireMockPort,
@@ -73,8 +76,8 @@ with BeforeAndAfterEach {
 
   override implicit lazy val app: Application = appBuilder.build()
 
-  private lazy val recoveryRepo = app.injector.instanceOf[MongoRecoveryScheduleRepository]
-  private lazy val deleteRepo = app.injector.instanceOf[MongoDeleteRecordRepository]
+  private lazy val recoveryRepo = app.injector.instanceOf[RecoveryScheduleRepository]
+  private lazy val deleteRepo = app.injector.instanceOf[DeleteRecordRepository]
   private lazy val deleteRelationshipService = app.injector.instanceOf[DeleteRelationshipsService]
 
   override implicit val patienceConfig: PatienceConfig = PatienceConfig(
@@ -257,7 +260,6 @@ with BeforeAndAfterEach {
           givenEnrolmentDeallocationSucceeds("foo", EnrolmentKey(Service.MtdIt, iMtdItId))
           givenCacheRefresh(arn)
         }
-
         await(deleteRepo.create(deleteRecord))
       }
 

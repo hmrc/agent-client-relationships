@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 HM Revenue & Customs
+ * Copyright 2025 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,21 +14,16 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.agentclientrelationships.connectors.helpers
+package uk.gov.hmrc.agentclientrelationships.repository
 
-import play.api.mvc.RequestHeader
-import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
+import org.mockito.Mockito.when
+import org.scalatestplus.mockito.MockitoSugar.mock
+import uk.gov.hmrc.mongo.MongoComponent
+
+import scala.concurrent.duration.DurationInt
 import scala.util.chaining._
 
-import java.util.UUID
-import javax.inject.Singleton
-
-@Singleton
-class CorrelationIdGenerator
-extends RequestAwareLogging {
-
-  def makeCorrelationId()(implicit requestHeader: RequestHeader): String = UUID
-    .randomUUID()
-    .toString
-    .tap(correlationId => logger.info(s"Generated correlationId: $correlationId"))
+object FakeMongoComponent {
+  def make: MongoComponent = mock[MongoComponent]
+    .tap(mock => when(mock.initTimeout).thenReturn(1.second))
 }
