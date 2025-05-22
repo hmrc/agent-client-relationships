@@ -160,7 +160,7 @@ with RequestAwareLogging {
   def cancelByIdForAgent(
     arn: String,
     invitationId: String
-  ): Future[CancelInvitationResponse] = {
+  ): Future[CancelInvitationResponse] = Mdc.preservingMdc {
     val filterById = equal(invitationIdKey, invitationId)
 
     collection.find(filterById).headOption().flatMap {
