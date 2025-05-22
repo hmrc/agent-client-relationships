@@ -40,7 +40,8 @@ with TestData {
   val url: String = routes.ApiCheckRelationshipController.checkRelationship(arn).url
 
   s"POST $url" should {
-    "return 204 when the relationship is found" in {
+    // ITSA is a special case because it converts nino from request to mtditid
+    "return 204 when the relationship is found for ITSA" in {
       givenAuditConnector()
       givenAgentRecordFound(arn, agentRecordResponse)
       givenMtdItsaBusinessDetailsExists(
@@ -57,6 +58,27 @@ with TestData {
         HMRCMTDIT,
         nino.value,
         testPostcode
+      )
+      val result = doAgentPostRequest(url, toJson(testData).toString())
+      result.status shouldBe 204
+      result.body shouldBe ""
+    }
+    "return 204 when the relationship is found for VAT" in {
+      givenAuditConnector()
+      givenAgentRecordFound(arn, agentRecordResponse)
+      givenVatCustomerInfoExists(
+        vrn.value,
+        testVatRegDate
+      )
+      givenAgentGroupExistsFor("groupId")
+      givenAdminUser("groupId", "userId")
+      givenPrincipalGroupIdExistsFor(agentEnrolmentKey(arn), "groupId")
+      givenDelegatedGroupIdsExistFor(EnrolmentKey(HMRCMTDVAT, vrn), Set("groupId"))
+
+      val testData = ApiCheckRelationshipRequest(
+        HMRCMTDVAT,
+        vrn.value,
+        testVatRegDate
       )
       val result = doAgentPostRequest(url, toJson(testData).toString())
       result.status shouldBe 204

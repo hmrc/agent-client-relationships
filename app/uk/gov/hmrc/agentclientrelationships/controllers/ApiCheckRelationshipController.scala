@@ -61,7 +61,7 @@ with AuthActions {
               checkRelationshipsService.checkForRelationship(
                 arn,
                 request.body.service,
-                Service.forId(request.body.service).supportedSuppliedClientIdType.id,
+                Service.forId(request.body.service).supportedSuppliedClientIdType.enrolmentId,
                 request.body.suppliedClientId,
                 None
               ).map {
