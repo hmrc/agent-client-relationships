@@ -546,19 +546,17 @@ with TestData {
 
           val clientIdentifier = ClientIdentifier(clientId, clientIdType)
 
-          await(
-            invitationRepo.create(
-              arn.value,
-              Service.forId(taxService),
-              clientIdentifier,
-              clientIdentifier,
-              "Erling Haal",
-              "testAgentName",
-              "agent@email.com",
-              LocalDate.now(),
-              Some("personal")
-            )
-          )
+          invitationRepo.create(
+            arn.value,
+            Service.forId(taxService),
+            clientIdentifier,
+            clientIdentifier,
+            "Erling Haal",
+            "testAgentName",
+            "agent@email.com",
+            LocalDate.now(),
+            Some("personal")
+          ).futureValue
 
           val pendingInvitation = invitationRepo.findAllForAgent(arn.value).futureValue.head
           val testUrl = s"/agent-client-relationships/agent/cancel-invitation/${pendingInvitation.invitationId}"
@@ -687,19 +685,20 @@ with TestData {
 
       })
 
-    s"return NoFound status when no Pending Invitation " ignore {
-      // TODO: Add missing WireMock setup for /auth/authorise endpoint
-      // APB-9505
-      // Issue: Test previously passed incorrectly due to 404 response coincidentally matching test expectations
-      // After boostrap library upgrade, this no longer works and needs proper endpoint mocking
+    s"return 422 status when invitation is not found" in {
+      val testUrl = s"/agent-client-relationships/agent/cancel-invitation/FKTSJ6B9HZJBS"
+      val fakeRequest = FakeRequest("PUT", testUrl)
+      givenAuthorisedAsValidAgent(fakeRequest, arn.value)
 
-      val result = doAgentPutRequest(s"/agent-client-relationships/agent/cancel-invitation/123456")
-      result.status shouldBe 404
+      val result = doAgentPutRequest(testUrl)
+      result.status shouldBe UNPROCESSABLE_ENTITY
+      result.body shouldBe "{\"code\":\"INVITATION_NOT_FOUND\"}"
 
-      val invitationSeq = invitationRepo.findAllForAgent(arn.value).futureValue
-
+      val invitationSeq =
+        invitationRepo
+          .findAllForAgent(arn.value)
+          .futureValue
       invitationSeq.size shouldBe 0
-
     }
 
   }
