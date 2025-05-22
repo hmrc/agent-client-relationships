@@ -29,10 +29,12 @@ import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.AgentFiRelationshipConnector
 import uk.gov.hmrc.agentclientrelationships.connectors.EnrolmentStoreProxyConnector
 import uk.gov.hmrc.agentclientrelationships.model.invitation.CreateInvitationRequest
-import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.ErrorBody
+import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.{ErrorBody => IFRErrorBody}
+import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiFailureResponse.{ErrorBody => AFRErrorBody}
 import uk.gov.hmrc.agentclientrelationships.model.Accepted
 import uk.gov.hmrc.agentclientrelationships.model.Cancelled
 import uk.gov.hmrc.agentclientrelationships.model.EmailInformation
+import uk.gov.hmrc.agentclientrelationships.model.Invitation
 import uk.gov.hmrc.agentclientrelationships.model.Pending
 import uk.gov.hmrc.agentclientrelationships.model.Rejected
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
@@ -195,11 +197,11 @@ with TestData {
           val result = doAgentPostRequest(requestPath, Json.toJson(inputData).toString())
           result.status shouldBe 201
 
-          val invitationSeq = invitationRepo.findAllForAgent(arn.value).futureValue
+          val invitations: Seq[Invitation] = invitationRepo.findAllForAgent(arn.value).futureValue
 
-          invitationSeq.size shouldBe 1
+          invitations.size shouldBe 1
 
-          val invitation = invitationSeq.head
+          val invitation = invitations.head
 
           result.json shouldBe Json.obj("invitationId" -> invitation.invitationId)
 
@@ -243,11 +245,11 @@ with TestData {
       )
       result.status shouldBe 201
 
-      val invitationSeq = invitationRepo.findAllForAgent(arn.value).futureValue
+      val invitations: Seq[Invitation] = invitationRepo.findAllForAgent(arn.value).futureValue
 
-      invitationSeq.size shouldBe 1
+      invitations.size shouldBe 1
 
-      val invitation = invitationSeq.head
+      val invitation = invitations.head
 
       result.json shouldBe Json.obj("invitationId" -> invitation.invitationId)
 
@@ -288,7 +290,7 @@ with TestData {
       invitationRepo.findAllForAgent(arn.value).futureValue shouldBe empty
 
       val message = s"""Unsupported service "${createInvitationInputData.service}""""
-      result.json shouldBe toJson(ErrorBody("UNSUPPORTED_SERVICE", message))
+      result.json shouldBe toJson(IFRErrorBody("UNSUPPORTED_SERVICE", message))
     }
 
     "return BadRequest 400 status when clientId is not valid for service" in {
@@ -347,7 +349,7 @@ with TestData {
 
       val message =
         s"""Unsupported clientIdType "${createInvitationInputData.suppliedClientIdType}", for service type "${createInvitationInputData.service}"""".stripMargin
-      result.json shouldBe toJson(ErrorBody("UNSUPPORTED_CLIENT_ID_TYPE", message))
+      result.json shouldBe toJson(IFRErrorBody("UNSUPPORTED_CLIENT_ID_TYPE", message))
 
       invitationRepo.findAllForAgent(arn.value).futureValue shouldBe empty
 
@@ -379,7 +381,7 @@ with TestData {
       result.status shouldBe 400
 
       val message = s"""Unsupported clientType "${createInvitationInputData.clientType}"""".stripMargin
-      result.json shouldBe toJson(ErrorBody("UNSUPPORTED_CLIENT_TYPE", message))
+      result.json shouldBe toJson(IFRErrorBody("UNSUPPORTED_CLIENT_TYPE", message))
 
       invitationRepo.findAllForAgent(arn.value).futureValue shouldBe empty
 
@@ -439,10 +441,10 @@ with TestData {
           val result = doAgentPutRequest(requestPath)
           result.status shouldBe 204
 
-          val invitationSeq = invitationRepo.findAllForAgent(arn.value).futureValue
+          val invitations: Seq[Invitation] = invitationRepo.findAllForAgent(arn.value).futureValue
 
-          invitationSeq.size shouldBe 1
-          invitationSeq.head.status shouldBe Rejected
+          invitations.size shouldBe 1
+          invitations.head.status shouldBe Rejected
 
           verifyRejectInvitationSent(emailInfo)
           verifyRespondToInvitationAuditSent(
@@ -459,9 +461,9 @@ with TestData {
       val result = doAgentPutRequest(s"/agent-client-relationships/client/authorisation-response/reject/123456")
       result.status shouldBe 404
 
-      val invitationSeq = invitationRepo.findAllForAgent(arn.value).futureValue
+      val invitations: Seq[Invitation] = invitationRepo.findAllForAgent(arn.value).futureValue
 
-      invitationSeq.size shouldBe 0
+      invitations.size shouldBe 0
 
     }
 
@@ -565,11 +567,12 @@ with TestData {
 
           val result = doAgentPutRequest(testUrl)
           result.status shouldBe 204
+          result.body shouldBe ""
 
-          val invitationSeq = invitationRepo.findAllForAgent(arn.value).futureValue
+          val invitations: Seq[Invitation] = invitationRepo.findAllForAgent(arn.value).futureValue
 
-          invitationSeq.size shouldBe 1
-          invitationSeq.head.status shouldBe Cancelled
+          invitations.size shouldBe 1
+          invitations.head.status shouldBe Cancelled
 
         }
 
@@ -613,15 +616,15 @@ with TestData {
 
           val result = doAgentPutRequest(testUrl)
           result.status shouldBe UNPROCESSABLE_ENTITY
-          result.body shouldBe "{\"code\":\"NO_PERMISSION_ON_AGENCY\"}"
+          result.json shouldBe Json.toJson(AFRErrorBody("NO_PERMISSION_ON_AGENCY"))
 
-          val invitationSeq =
+          val invitations: Seq[Invitation] =
             invitationRepo
               .findAllForAgent(arn.value)
               .futureValue
 
-          invitationSeq.size shouldBe 1
-          invitationSeq.head.status shouldBe Pending
+          invitations.size shouldBe 1
+          invitations.head.status shouldBe Pending
         }
 
         s"return 422 when status of the invitation is invalid for $taxService" in {
@@ -672,15 +675,15 @@ with TestData {
 
           val result = doAgentPutRequest(testUrl)
           result.status shouldBe UNPROCESSABLE_ENTITY
-          result.body shouldBe "{\"code\":\"INVALID_INVITATION_STATUS\"}"
+          result.json shouldBe Json.toJson(AFRErrorBody("INVALID_INVITATION_STATUS"))
 
-          val invitationSeq =
+          val invitations: Seq[Invitation] =
             invitationRepo
               .findAllForAgent(arn.value)
               .futureValue
 
-          invitationSeq.size shouldBe 1
-          invitationSeq.head.status shouldBe Accepted
+          invitations.size shouldBe 1
+          invitations.head.status shouldBe Accepted
         }
 
       })
@@ -692,13 +695,13 @@ with TestData {
 
       val result = doAgentPutRequest(testUrl)
       result.status shouldBe UNPROCESSABLE_ENTITY
-      result.body shouldBe "{\"code\":\"INVITATION_NOT_FOUND\"}"
+      result.json shouldBe Json.toJson(AFRErrorBody("INVITATION_NOT_FOUND"))
 
-      val invitationSeq =
+      val invitations: Seq[Invitation] =
         invitationRepo
           .findAllForAgent(arn.value)
           .futureValue
-      invitationSeq.size shouldBe 0
+      invitations.size shouldBe 0
     }
 
   }
