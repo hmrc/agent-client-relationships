@@ -4,6 +4,7 @@ PUT           /agent/:arn/service/:service/client/:clientIdType/:clientId    @uk
 DELETE        /agent/:arn/service/:service/client/:clientIdType/:clientId    @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.delete(arn: Arn, service: String, clientIdType: String, clientId: String)
 
 GET           /agent/relationships/inactive                                  @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getInactiveRelationshipsAgent
+
 DELETE        /agent/:arn/terminate                                          @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.terminateAgent(arn: Arn)
 GET           /agent/:arn/client/:nino/legacy-mapped-relationship            @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getLegacySaRelationshipStatus(arn: Arn, nino: Nino)
 
@@ -46,6 +47,7 @@ GET           /stride/client-details/service/:service/client/:clientIdType/:clie
 POST          /api/:arn/invitation                                           @uk.gov.hmrc.agentclientrelationships.controllers.ApiCreateInvitationController.createInvitation(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
 GET           /api/:arn/invitation/:invitationId                             @uk.gov.hmrc.agentclientrelationships.controllers.ApiGetInvitationController.getInvitation(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, invitationId: String)
 GET           /api/:arn/invitations                                          @uk.gov.hmrc.agentclientrelationships.controllers.ApiGetInvitationsController.getInvitations(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
+POST          /api/:arn/relationship                                         @uk.gov.hmrc.agentclientrelationships.controllers.ApiCheckRelationshipController.checkRelationship(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
 
 # Transitional Routes
 # --------------------------------

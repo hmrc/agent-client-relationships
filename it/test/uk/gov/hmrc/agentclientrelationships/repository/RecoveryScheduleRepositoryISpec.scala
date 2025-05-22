@@ -39,7 +39,7 @@ with GuiceOneServerPerSuite {
 
   override implicit lazy val app: Application = appBuilder.build()
 
-  private lazy val repo = app.injector.instanceOf[MongoRecoveryScheduleRepository]
+  private lazy val repo = app.injector.instanceOf[RecoveryScheduleRepository]
 
   override def beforeEach() = {
     super.beforeEach()

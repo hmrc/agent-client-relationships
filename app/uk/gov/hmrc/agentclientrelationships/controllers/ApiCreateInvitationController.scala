@@ -139,7 +139,7 @@ with AuthActions {
               EitherT.rightT[Future, ApiFailureResponse](clientDetailsResponse)
           }
 
-        _ <- EitherT.fromEither[Future](knowFactsCheckService.checkKnowFacts(apiCreateInvitationInputData, clientDetails))
+        _ <- EitherT.fromEither[Future](knowFactsCheckService.checkKnowFacts(apiCreateInvitationInputData.knownFact, clientDetails))
           .leftMap {
             case KnowFactsFailure.UnsupportedKnowFacts => ApiFailureResponse.InvalidPayload
             case KnowFactsFailure.PostcodeFormatInvalid => ApiFailureResponse.PostcodeFormatInvalid
@@ -179,7 +179,7 @@ with AuthActions {
     clientName: String,
     clientType: Option[String],
     agentDetails: AgencyDetails
-  ): Future[Either[ApiFailureResponse, Invitation]] = {
+  )(implicit requestHeader: RequestHeader): Future[Either[ApiFailureResponse, Invitation]] = {
     val expiryDate = currentTime().plusSeconds(invitationExpiryDuration.toSeconds).toLocalDate
     (for {
       invitation <- invitationsRepository.create(

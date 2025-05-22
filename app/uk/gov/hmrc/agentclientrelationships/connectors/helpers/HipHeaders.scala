@@ -17,6 +17,7 @@
 package uk.gov.hmrc.agentclientrelationships.connectors.helpers
 
 import play.api.http.HeaderNames
+import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.util.DateTimeHelper
 
@@ -41,7 +42,7 @@ class HipHeaders @Inject() (
   private val hip = "HIP"
   private val itsa = "ITSA"
 
-  def subscriptionHeaders(): Seq[(String, String)] = Seq(
+  def makeSubscriptionHeaders()(implicit requestHeader: RequestHeader): Seq[(String, String)] = Seq(
     (HeaderNames.AUTHORIZATION, s"Basic ${appConfig.hipAuthToken}"),
     (correlationIdHeader, correlationIdGenerator.makeCorrelationId()),
     (xOriginatingSystemHeader, mdtp),
@@ -49,7 +50,7 @@ class HipHeaders @Inject() (
     (xTransmittingSystemHeader, hip)
   )
 
-  def subscriptionBusinessDetailsHeaders(): Seq[(String, String)] = Seq(
+  def makeSubscriptionBusinessDetailsHeaders()(implicit requestHeader: RequestHeader): Seq[(String, String)] = Seq(
     (HeaderNames.AUTHORIZATION, s"Basic ${appConfig.hipAuthToken}"),
     (correlationIdHeader, correlationIdGenerator.makeCorrelationId()),
     (xOriginatingSystemHeader, mdtp),

@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.connectors
 
-import play.api.Logging
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import play.api.libs.json.Json
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
@@ -43,7 +43,7 @@ class EmailConnector @Inject() (
 )(implicit val ec: ExecutionContext)
 extends HttpApiMonitor
 with HttpErrorFunctions
-with Logging {
+with RequestAwareLogging {
 
   private val baseUrl: String = appConfig.emailBaseUrl
 

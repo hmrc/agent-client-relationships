@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
-import play.api.Logging
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys.agentCodeKey
 import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys.credIdKey
@@ -44,7 +44,7 @@ class AgentUserService @Inject() (
   ugs: UsersGroupsSearchConnector,
   agentCacheProvider: AgentCacheProvider
 )(implicit val executionContext: ExecutionContext)
-extends Logging {
+extends RequestAwareLogging {
 
   val principalGroupIdCache = agentCacheProvider.esPrincipalGroupIdCache
   val firstGroupAdminCache = agentCacheProvider.ugsFirstGroupAdminCache

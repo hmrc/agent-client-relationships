@@ -16,7 +16,8 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
-import play.api.Logging
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
+import play.api.mvc.Request
 import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys._
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.audit.AuditService
@@ -53,7 +54,7 @@ class AuthorisationAcceptService @Inject() (
   agentFiRelationshipConnector: AgentFiRelationshipConnector,
   auditService: AuditService
 )(implicit ec: ExecutionContext)
-extends Logging {
+extends RequestAwareLogging {
 
   def accept(
     invitation: Invitation,

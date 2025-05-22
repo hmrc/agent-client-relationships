@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.connectors
 
-import play.api.Logging
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import play.api.http.Status
 import play.api.libs.json._
 import play.api.mvc.RequestHeader
@@ -53,7 +53,7 @@ class DesConnector @Inject() (
   val ec: ExecutionContext
 )
 extends HttpApiMonitor
-with Logging {
+with RequestAwareLogging {
 
   private val desBaseUrl = appConfig.desUrl
   private val desAuthToken = appConfig.desToken
@@ -126,7 +126,7 @@ with Logging {
   def desHeaders(
     authToken: String,
     env: String
-  ): Seq[(String, String)] = Seq(
+  )(implicit requestHeader: RequestHeader): Seq[(String, String)] = Seq(
     Environment -> env,
     HeaderNames.authorisation -> s"Bearer $authToken",
     CorrelationId -> randomUuidGenerator.makeCorrelationId()

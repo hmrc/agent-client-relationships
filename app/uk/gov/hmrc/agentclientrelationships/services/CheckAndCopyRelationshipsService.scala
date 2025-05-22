@@ -16,7 +16,8 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
-import play.api.Logging
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
+import play.api.mvc.Request
 import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys._
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.audit.AuditService
@@ -120,7 +121,7 @@ class CheckAndCopyRelationshipsService @Inject() (
   val appConfig: AppConfig
 )(implicit ec: ExecutionContext)
 extends Monitoring
-with Logging {
+with RequestAwareLogging {
 
   val copyMtdItRelationshipFlag = appConfig.copyMtdItRelationshipFlag
   val copyMtdVatRelationshipFlag = appConfig.copyMtdVatRelationshipFlag
@@ -226,7 +227,7 @@ with Logging {
     service: String,
     nino: Option[Nino],
     mtdItId: MtdItId
-  ): Future[Boolean] =
+  )(implicit request: RequestHeader): Future[Boolean] =
     nino.fold(Future.successful(false))(ni =>
       partialAuthRepo
         .deleteActivePartialAuth(
@@ -520,7 +521,7 @@ with Logging {
     } yield matching
   }
 
-  def intersection[A](referenceIds: Seq[A])(mappingServiceCall: => Future[Seq[A]]): Future[Set[A]] = {
+  def intersection[A](referenceIds: Seq[A])(mappingServiceCall: => Future[Seq[A]])(implicit request: RequestHeader): Future[Set[A]] = {
     val referenceIdSet = referenceIds.toSet
 
     if (referenceIdSet.isEmpty) {
@@ -544,7 +545,7 @@ with Logging {
   def cleanCopyStatusRecord(
     arn: Arn,
     mtdItId: MtdItId
-  ): Future[Unit] = relationshipCopyRepository
+  )(implicit requestHeader: RequestHeader): Future[Unit] = relationshipCopyRepository
     .remove(arn, EnrolmentKey(Service.MtdIt, mtdItId))
     .flatMap { n =>
       if (n == 0)

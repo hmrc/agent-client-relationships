@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
-import play.api.Logging
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.agentclientrelationships.connectors.IfOrHipConnector
 import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.ClientRegistrationNotFound
@@ -52,7 +52,7 @@ class RemoveAuthorisationService @Inject() (
   invitationsRepository: InvitationsRepository,
   ifOrHipConnector: IfOrHipConnector
 )(implicit ec: ExecutionContext)
-extends Logging {
+extends RequestAwareLogging {
 
   def validateRequest(
     serviceStr: String,

@@ -16,45 +16,39 @@
 
 package uk.gov.hmrc.agentclientrelationships.connectors
 
+import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.when
 import org.scalatestplus.mockito.MockitoSugar
 import play.api.mvc.RequestHeader
+import play.api.test.FakeRequest
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.helpers.CorrelationIdGenerator
+import uk.gov.hmrc.agentclientrelationships.connectors.helpers.IfHeaders
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import scala.concurrent.ExecutionContext
 
-class IfConnectorSpec
+class IfHeadersSpec
 extends UnitSpec
 with MockitoSugar {
 
-  implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
-  val appConfig: AppConfig = mock[AppConfig]
-  val request: RequestHeader = mock[RequestHeader]
-  val httpClient: HttpClientV2 = mock[HttpClientV2]
-  val metrics: Metrics = mock[Metrics]
-  val correlationIdGenerator: CorrelationIdGenerator = mock[CorrelationIdGenerator]
+  "ifHeaders should make correct headers" in {
+    val appConfig: AppConfig = mock[AppConfig]
+    val correlationIdGenerator: CorrelationIdGenerator = mock[CorrelationIdGenerator]
+    val ifHeaders = new IfHeaders(correlationIdGenerator, appConfig)
 
-  val underTest =
-    new IfConnector(
-      httpClient,
-      correlationIdGenerator,
-      appConfig
-    )(metrics, ec)
+    implicit val request = FakeRequest()
+    when(correlationIdGenerator.makeCorrelationId()(any[RequestHeader])).thenReturn("testCorrelationId")
+    when(appConfig.ifEnvironment).thenReturn("testEnv")
 
-  "ifHeaders" should {
-    "contain correct headers" in {
-      when(correlationIdGenerator.makeCorrelationId()).thenReturn("testCorrelationId")
-      underTest.ifHeaders("testAuthToken", "testEnv").toMap shouldBe
-        Map(
-          "Authorization" -> "Bearer testAuthToken",
-          "Environment" -> "testEnv",
-          "CorrelationId" -> "testCorrelationId"
-        )
-    }
+    ifHeaders.makeHeaders("testAuthToken").toMap shouldBe
+      Map(
+        "Authorization" -> "Bearer testAuthToken",
+        "Environment" -> "testEnv",
+        "CorrelationId" -> "testCorrelationId"
+      )
   }
 
 }

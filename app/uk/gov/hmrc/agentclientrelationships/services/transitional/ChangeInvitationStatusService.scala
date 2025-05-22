@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.services.transitional
 
-import play.api.Logging
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.InvalidClientId
@@ -45,7 +45,7 @@ class ChangeInvitationStatusService @Inject() (
   partialAuthRepository: PartialAuthRepository,
   invitationsRepository: InvitationsRepository
 )(implicit ec: ExecutionContext)
-extends Logging {
+extends RequestAwareLogging {
 
   val validStatusChangesFrom: Map[InvitationStatus, Set[InvitationStatus]] = Map(
     DeAuthorised -> Set(Accepted, PartialAuth)

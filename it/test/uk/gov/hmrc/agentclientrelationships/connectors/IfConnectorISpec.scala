@@ -24,6 +24,7 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.helpers.CorrelationIdGenerator
+import uk.gov.hmrc.agentclientrelationships.connectors.helpers.IfHeaders
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.stubs.DataStreamStub
 import uk.gov.hmrc.agentclientrelationships.stubs.IfStub
@@ -78,9 +79,9 @@ with DataStreamStub {
   implicit val request: RequestHeader = FakeRequest()
   val ifConnector =
     new IfConnector(
-      httpClient,
-      app.injector.instanceOf[CorrelationIdGenerator],
-      appConfig
+      httpClient = httpClient,
+      appConfig = appConfig,
+      ifHeaders = app.injector.instanceOf[IfHeaders]
     )(metrics, ec)
 
   val mtdItId: MtdItId = MtdItId("ABCDEF123456789")

@@ -29,7 +29,11 @@ case class ClientDetailsResponse(
   knownFactType: Option[KnownFactType],
   hasPendingInvitation: Boolean = false,
   hasExistingRelationshipFor: Option[String] = None
-)
+) {
+  def containsKnownFact(knownFact: String): Boolean = knownFacts
+    .map(_.replaceAll("\\s", "").toUpperCase)
+    .contains(knownFact.replaceAll("\\s", "").toUpperCase)
+}
 
 object ClientDetailsResponse {
   implicit val format: OFormat[ClientDetailsResponse] = Json.format[ClientDetailsResponse]

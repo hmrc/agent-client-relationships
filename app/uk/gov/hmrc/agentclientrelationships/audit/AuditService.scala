@@ -17,7 +17,7 @@
 package uk.gov.hmrc.agentclientrelationships.audit
 
 import com.google.inject.Singleton
-import play.api.Logging
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys._
@@ -65,7 +65,7 @@ class AuditData {
 
 @Singleton
 class AuditService @Inject() (auditConnector: AuditConnector)(implicit ec: ExecutionContext)
-extends Logging {
+extends RequestAwareLogging {
 
   private def collectDetails(
     data: Map[String, Any],

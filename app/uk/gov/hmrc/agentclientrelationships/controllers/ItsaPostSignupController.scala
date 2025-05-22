@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.controllers
 
-import play.api.Logging
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import play.api.libs.json.Json
 import play.api.mvc.Action
 import play.api.mvc.AnyContent
@@ -51,7 +51,7 @@ class ItsaPostSignupController @Inject() (
 )(implicit val executionContext: ExecutionContext)
 extends BackendController(cc)
 with AuthActions
-with Logging {
+with RequestAwareLogging {
 
   val supportedServices: Seq[Service] = appConfig.supportedServices
 

@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.connectors
 
-import play.api.Logging
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import play.api.http.Status.NOT_FOUND
 import play.api.http.Status.OK
 import play.api.libs.json.Json
@@ -53,7 +53,7 @@ class ClientDetailsConnector @Inject() (
   val metrics: Metrics
 )(implicit val ec: ExecutionContext)
 extends HttpApiMonitor
-with Logging {
+with RequestAwareLogging {
 
   private def desHeaders(authToken: String): Seq[(String, String)] = Seq(
     "Environment" -> appConfig.desEnv,

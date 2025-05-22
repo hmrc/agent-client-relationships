@@ -18,6 +18,7 @@ package uk.gov.hmrc.agentclientrelationships.config
 
 import com.github.tomakehurst.wiremock.client.WireMock._
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
+import play.api.Application
 import play.api.http.Status._
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.Json
@@ -53,7 +54,7 @@ with DataStreamStub {
 
       stubFor(post(urlMatching("/test-only/token")).willReturn(aResponse().withStatus(CREATED)))
 
-      new GuiceApplicationBuilder()
+      val application: Application = new GuiceApplicationBuilder()
         .configure(
           "microservice.services.internal-auth.port" -> wireMockPort,
           "appName" -> appName,
@@ -61,6 +62,8 @@ with DataStreamStub {
           "internal-auth.token" -> authToken
         )
         .build()
+
+      application.injector.instanceOf[InternalAuthTokenInitialiser]
 
       verify(1, getRequestedFor(urlMatching("/test-only/token")).withHeader(AUTHORIZATION, equalTo(authToken)))
       verify(
@@ -90,7 +93,7 @@ with DataStreamStub {
       stubFor(post(urlMatching("/test-only/token")).willReturn(aResponse().withStatus(OK)))
 
       val exception = intercept[RuntimeException] {
-        new GuiceApplicationBuilder()
+        val application: Application = new GuiceApplicationBuilder()
           .configure(
             "microservice.services.internal-auth.port" -> wireMockPort,
             "appName" -> appName,
@@ -98,6 +101,7 @@ with DataStreamStub {
             "internal-auth.token" -> authToken
           )
           .build()
+        application.injector.instanceOf[InternalAuthTokenInitialiser]
       }
 
       exception.getMessage should include("Unable to initialise internal-auth token")
@@ -126,7 +130,7 @@ with DataStreamStub {
         )
         .build()
 
-      app.injector.instanceOf[InternalAuthTokenInitialiser].initialised.futureValue
+      app.injector.instanceOf[InternalAuthTokenInitialiser]
 
       verify(1, getRequestedFor(urlMatching("/test-only/token")).withHeader(AUTHORIZATION, equalTo(authToken)))
       verify(0, postRequestedFor(urlMatching("/test-only/token")))
@@ -151,7 +155,7 @@ with DataStreamStub {
         )
         .build()
 
-      app.injector.instanceOf[InternalAuthTokenInitialiser].initialised.futureValue
+      app.injector.instanceOf[InternalAuthTokenInitialiser]
 
       verify(0, getRequestedFor(urlMatching("/test-only/token")))
       verify(0, postRequestedFor(urlMatching("/test-only/token")))

@@ -339,7 +339,6 @@ with TestData {
         val requestPath = s"/agent-client-relationships/api/${invitation.arn}/invitation/${invitation.invitationId}"
         val result = doGetRequest(requestPath)
         result.status shouldBe INTERNAL_SERVER_ERROR
-
       }
     )
 

@@ -21,11 +21,14 @@ import org.mongodb.scala.model.Indexes.ascending
 import org.mongodb.scala.model.Updates.set
 import org.mongodb.scala.model._
 import play.api.Logging
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import play.api.libs.json.Json.format
 import play.api.libs.json._
+import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.model.MongoLocalDateTimeFormat
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
+import uk.gov.hmrc.play.http.logging.Mdc
 
 import java.time.LocalDateTime
 import java.time.ZoneOffset
@@ -48,19 +51,8 @@ object RecoveryRecord {
 
 }
 
-@ImplementedBy(classOf[MongoRecoveryScheduleRepository])
-trait RecoveryScheduleRepository {
-
-  def read: Future[RecoveryRecord]
-  def write(
-    nextUid: String,
-    nextRunAt: LocalDateTime
-  ): Future[Unit]
-
-}
-
 @Singleton
-class MongoRecoveryScheduleRepository @Inject() (mongoComponent: MongoComponent)(implicit ec: ExecutionContext)
+class RecoveryScheduleRepository @Inject() (mongoComponent: MongoComponent)(implicit ec: ExecutionContext)
 extends PlayMongoRepository[RecoveryRecord](
   mongoComponent = mongoComponent,
   collectionName = "recovery-schedule",
@@ -68,37 +60,40 @@ extends PlayMongoRepository[RecoveryRecord](
   indexes = Seq(IndexModel(ascending("uid", "runAt"), IndexOptions().unique(true))),
   replaceIndexes = true
 )
-with RecoveryScheduleRepository
 with Logging {
 
-  override def read: Future[RecoveryRecord] = collection
-    .find()
-    .headOption()
-    .flatMap {
-      case Some(record) => Future successful record
-      case None =>
-        {
-          val record = RecoveryRecord(
-            UUID.randomUUID().toString,
-            LocalDateTime.now().atZone(ZoneOffset.UTC).toLocalDateTime
-          )
-          collection.insertOne(record).toFuture().map(_ => record)
-        }.recoverWith { case NonFatal(error) =>
-          logger.warn(s"Creating RecoveryRecord failed: ${error.getMessage}")
-          Future.failed(error)
-        }
-    }
+  def read: Future[RecoveryRecord] = Mdc.preservingMdc {
+    collection
+      .find()
+      .headOption()
+      .flatMap {
+        case Some(record) => Future successful record
+        case None =>
+          {
+            val record = RecoveryRecord(
+              UUID.randomUUID().toString,
+              LocalDateTime.now().atZone(ZoneOffset.UTC).toLocalDateTime
+            )
+            collection.insertOne(record).toFuture().map(_ => record)
+          }.recoverWith { case NonFatal(error) =>
+            logger.warn(s"Creating RecoveryRecord failed: ${error.getMessage}")
+            Future.failed(error)
+          }
+      }
+  }
 
-  override def write(
+  def write(
     newUid: String,
     newRunAt: LocalDateTime
-  ): Future[Unit] = collection
-    .findOneAndUpdate(
-      Filters.exists("uid"),
-      Updates.combine(set("uid", newUid), set("runAt", newRunAt)),
-      FindOneAndUpdateOptions().upsert(true)
-    )
-    .toFuture()
-    .map(_ => ())
+  ): Future[Unit] = Mdc.preservingMdc {
+    collection
+      .findOneAndUpdate(
+        Filters.exists("uid"),
+        Updates.combine(set("uid", newUid), set("runAt", newRunAt)),
+        FindOneAndUpdateOptions().upsert(true)
+      )
+      .toFuture()
+      .map(_ => ())
+  }
 
 }

@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
-import play.api.Logging
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import play.api.i18n.Lang
 import play.api.i18n.Langs
 import play.api.i18n.MessagesApi
@@ -27,14 +27,15 @@ import uk.gov.hmrc.agentclientrelationships.util.DateTimeHelper
 import play.api.mvc.RequestHeader
 
 import javax.inject.Inject
+import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 class EmailService @Inject() (
   emailConnector: EmailConnector,
   messagesApi: MessagesApi,
   langs: Langs
-)
-extends Logging {
+)(implicit ec: ExecutionContext)
+extends RequestAwareLogging {
 
   // TODO: Currently, the language defaults to English by selecting the first available language.
   // Update the implementation to allow the frontend to specify the desired language for sending emails.

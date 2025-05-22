@@ -17,6 +17,7 @@
 package uk.gov.hmrc.agentclientrelationships.controllers
 
 import cats.implicits._
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import play.api.libs.json.Json
 import play.api.mvc._
 import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys._
@@ -63,7 +64,8 @@ class RelationshipsController @Inject() (
   override val controllerComponents: ControllerComponents
 )(implicit val executionContext: ExecutionContext)
 extends BackendController(controllerComponents)
-with AuthActions {
+with AuthActions
+with RequestAwareLogging {
 
   private val strideRoles = Seq(appConfig.oldAuthStrideRole, appConfig.newAuthStrideRole)
 

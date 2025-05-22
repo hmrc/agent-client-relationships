@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 HM Revenue & Customs
+ * Copyright 2025 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,26 +14,17 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.agentclientrelationships.config
+package uk.gov.hmrc.agentclientrelationships.model.api
 
-import com.google.inject.AbstractModule
-import play.api.Configuration
-import play.api.Environment
-import uk.gov.hmrc.agentclientrelationships.support.EmailScheduler
+import play.api.libs.json.Format
+import play.api.libs.json.Json
 
-import java.time.Clock
-import java.time.ZoneId
-
-class Module(
-  environment: Environment,
-  configuration: Configuration
+case class ApiCheckRelationshipRequest(
+  service: String,
+  suppliedClientId: String,
+  knownFact: String
 )
-extends AbstractModule {
 
-  override def configure(): Unit = {
-
-    bind(classOf[Clock]).toInstance(Clock.system(ZoneId.systemDefault()))
-    bind(classOf[EmailScheduler]).asEagerSingleton()
-
-  }
+object ApiCheckRelationshipRequest {
+  implicit val format: Format[ApiCheckRelationshipRequest] = Json.format[ApiCheckRelationshipRequest]
 }

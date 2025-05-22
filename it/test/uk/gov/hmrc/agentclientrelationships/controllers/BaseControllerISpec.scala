@@ -30,8 +30,8 @@ import play.api.test.Helpers._
 import play.utils.UriEncoding
 import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey => LocalEnrolmentKey}
 import uk.gov.hmrc.agentclientrelationships.repository.DeleteRecord
-import uk.gov.hmrc.agentclientrelationships.repository.MongoDeleteRecordRepository
-import uk.gov.hmrc.agentclientrelationships.repository.MongoRelationshipCopyRecordRepository
+import uk.gov.hmrc.agentclientrelationships.repository.DeleteRecordRepository
+import uk.gov.hmrc.agentclientrelationships.repository.RelationshipCopyRecordRepository
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus
 import uk.gov.hmrc.agentclientrelationships.services.MongoLockService
 import uk.gov.hmrc.agentclientrelationships.services.MongoLockServiceImpl
@@ -122,8 +122,8 @@ with IntegrationPatience {
   implicit lazy val ws: WSClient = app.injector.instanceOf[WSClient]
   implicit val request: RequestHeader = FakeRequest()
 
-  def repo: MongoRelationshipCopyRecordRepository = new MongoRelationshipCopyRecordRepository(mongoComponent)
-  def deleteRecordRepository: MongoDeleteRecordRepository = new MongoDeleteRecordRepository(mongoComponent)
+  def repo: RelationshipCopyRecordRepository = new RelationshipCopyRecordRepository(mongoComponent)
+  def deleteRecordRepository: DeleteRecordRepository = new DeleteRecordRepository(mongoComponent)
 
   override def beforeEach() = {
     super.beforeEach()
@@ -137,6 +137,7 @@ with IntegrationPatience {
   val arn3 = Arn("AARN0000006")
   val existingAgentArn = Arn("AARN0000007")
   val mtdItId = MtdItId("ABCDEF123456789")
+  val testPostcode = "AA1 1AA"
   val utr = Utr("3087612352")
   val urn = Urn("XXTRUST12345678")
   val utrUriEncoded: String = UriEncoding.encodePathSegment(utr.value, "UTF-8")
@@ -154,6 +155,7 @@ with IntegrationPatience {
   val mtdItSuppEnrolmentKey: LocalEnrolmentKey = LocalEnrolmentKey(Service.MtdItSupp, mtdItId)
   val mtdItIdUriEncoded: String = UriEncoding.encodePathSegment(mtdItId.value, "UTF-8")
   val vrn = Vrn("101747641")
+  val testVatRegDate = "2020-01-01"
   val vatEnrolmentKey: LocalEnrolmentKey = LocalEnrolmentKey(Service.Vat, vrn)
   val vrnUriEncoded: String = UriEncoding.encodePathSegment(vrn.value, "UTF-8")
   val nino = Nino("AB123456C")

@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.connectors
 
-import play.api.Logging
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import play.api.http.Status
 import play.api.libs.json.Format
 import play.api.libs.json.JsObject
@@ -81,7 +81,7 @@ class EnrolmentStoreProxyConnector @Inject() (
   appConfig: AppConfig
 )(implicit val ec: ExecutionContext)
 extends HttpApiMonitor
-with Logging {
+with RequestAwareLogging {
 
   val espBaseUrl = appConfig.enrolmentStoreProxyUrl
   val teBaseUrl = appConfig.taxEnrolmentsUrl
@@ -186,17 +186,17 @@ with Logging {
     monitor(s"ConsumedAPI-ES-getEnrolmentsForGroupId-$groupId-GET") {
       httpClient
         .get(
-          url"$espBaseUrl/enrolment-store-proxy/enrolment-store/groups/$groupId/enrolments?type=principal&service=HMRC-AS-AGENT"
+          url"$espBaseUrl/enrolment-store-proxy/enrolment-store/groups/$groupId/enrolments?type=principal"
         )
         .execute[HttpResponse]
         .map { response =>
           response.status match {
             case Status.OK =>
               (response.json \ "enrolments")
-                .as[Seq[JsObject]]
-                .headOption
-                .map(obj => (obj \ "identifiers" \ 0 \ "value").as[String])
-                .map(Arn.apply)
+                .as[Seq[Enrolment]]
+                .find(_.service == "HMRC-AS-AGENT")
+                .flatMap(_.identifiers.find(_.key == "AgentReferenceNumber"))
+                .map(i => Arn(i.value))
             case Status.NO_CONTENT => None
             case other =>
               throw UpstreamErrorResponse(

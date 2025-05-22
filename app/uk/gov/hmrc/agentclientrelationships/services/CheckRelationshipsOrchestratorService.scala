@@ -16,7 +16,8 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
-import play.api.Logging
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
+import play.api.mvc.Request
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys.arnKey
@@ -33,6 +34,7 @@ import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
 import uk.gov.hmrc.agentmtdidentifiers.model.Service
 import uk.gov.hmrc.agentmtdidentifiers.model.Vrn
 import uk.gov.hmrc.domain.Nino
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
@@ -55,7 +57,7 @@ class CheckRelationshipsOrchestratorService @Inject() (
   agentFiRelationshipConnector: AgentFiRelationshipConnector
 )(implicit executionContext: ExecutionContext)
 extends Monitoring
-with Logging {
+with RequestAwareLogging {
 
   def checkForRelationship(
     arn: Arn,
@@ -280,10 +282,9 @@ with Logging {
 
 }
 
+// scalafmt: { binPack.parentConstructors = Always }
+
 sealed trait CheckRelationshipResult
-case object CheckRelationshipFound
-extends CheckRelationshipResult
-case class CheckRelationshipNotFound(message: String = "RELATIONSHIP_NOT_FOUND")
-extends CheckRelationshipResult
-case object CheckRelationshipInvalidRequest
-extends CheckRelationshipResult
+case object CheckRelationshipFound extends CheckRelationshipResult
+case class CheckRelationshipNotFound(message: String = "RELATIONSHIP_NOT_FOUND") extends CheckRelationshipResult
+case object CheckRelationshipInvalidRequest extends CheckRelationshipResult

@@ -17,7 +17,7 @@
 package uk.gov.hmrc.agentclientrelationships.connectors
 
 import cats.data.EitherT
-import play.api.Logging
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import play.api.http.Status
 import play.api.libs.json._
 import play.api.mvc.RequestHeader
@@ -66,7 +66,7 @@ class HipConnector @Inject() (
   val ec: ExecutionContext
 )
 extends HttpApiMonitor
-with Logging {
+with RequestAwareLogging {
 
   private val baseUrl = appConfig.hipPlatformBaseUrl
   private val showInactiveRelationshipsDays = appConfig.inactiveRelationshipShowLastDays
@@ -89,7 +89,7 @@ with Logging {
       "CreateAgentRelationship",
       url,
       requestBody,
-      headers.subscriptionHeaders
+      headers.makeSubscriptionHeaders
     ).map {
       case Right(response) => Option(response.json.as[RegistrationRelationshipResponse])
       case Left(errorResponse) =>
@@ -119,7 +119,7 @@ with Logging {
       "DeleteAgentRelationship",
       url,
       requestBody,
-      headers.subscriptionHeaders
+      headers.makeSubscriptionHeaders
     ).map {
       case Right(response) => Option(response.json.as[RegistrationRelationshipResponse])
       case Left(errorResponse) =>
@@ -145,7 +145,7 @@ with Logging {
     getWithHipHeaders(
       s"GetActiveClientRelationships",
       url,
-      headers.subscriptionHeaders
+      headers.makeSubscriptionHeaders
     ).map {
       case Right(response) => (response.json \ "relationshipDisplayResponse").as[Seq[ActiveRelationship]].find(isActive)
       case Left(errorResponse) =>
@@ -178,7 +178,7 @@ with Logging {
       getWithHipHeaders(
         s"GetAllActiveClientRelationships",
         url,
-        headers.subscriptionHeaders
+        headers.makeSubscriptionHeaders
       )
     ).map(response => (response.json \ "relationshipDisplayResponse").as[Seq[ClientRelationship]])
       .leftMap[RelationshipFailureResponse] { errorResponse =>
@@ -217,7 +217,7 @@ with Logging {
     getWithHipHeaders(
       s"GetInactiveClientRelationships",
       url,
-      headers.subscriptionHeaders
+      headers.makeSubscriptionHeaders
     ).map {
       case Right(response) => (response.json \ "relationshipDisplayResponse").as[Seq[InactiveRelationship]].filter(isNotActive)
       case Left(errorResponse) =>
@@ -250,7 +250,7 @@ with Logging {
       getWithHipHeaders(
         s"GetInactiveRelationships",
         url,
-        headers.subscriptionHeaders
+        headers.makeSubscriptionHeaders
       ).map {
         case Right(response) => (response.json \ "relationshipDisplayResponse").as[Seq[InactiveRelationship]].filter(isNotActive)
         case Left(errorResponse) =>
@@ -275,7 +275,7 @@ with Logging {
     getWithHipHeaders(
       s"GetBusinessDetailsByMtdId",
       url,
-      headers.subscriptionBusinessDetailsHeaders
+      headers.makeSubscriptionBusinessDetailsHeaders
     ).map {
       case Right(response) => Option((response.json \ "success" \ "taxPayerDisplayResponse" \ "nino").as[Nino])
       case Left(errorResponse) =>
@@ -286,7 +286,7 @@ with Logging {
             None
           case _ =>
             val msg = s"Error in HIP API#5266 'GetBusinessDetailsByMtdId ${errorResponse.getMessage()}"
-            logger.error(message = msg, error = throw new RuntimeException(msg))
+            logger.error(message = msg, ex = throw new RuntimeException(msg))
             None
         }
     }
@@ -300,7 +300,7 @@ with Logging {
     getWithHipHeaders(
       s"GetBusinessDetailsByNino",
       url,
-      headers.subscriptionBusinessDetailsHeaders
+      headers.makeSubscriptionBusinessDetailsHeaders
     ).map {
       case Right(response) => Option((response.json \ "success" \ "taxPayerDisplayResponse" \ "mtdId").as[MtdItId])
       case Left(errorResponse) =>
@@ -311,7 +311,7 @@ with Logging {
             None
           case _ =>
             val msg = s"Error in HIP API#5266 'GetBusinessDetailsByNino ${errorResponse.getMessage()}"
-            logger.error(message = msg, error = throw new RuntimeException(msg))
+            logger.error(message = msg, ex = throw new RuntimeException(msg))
             None
         }
     }
@@ -328,7 +328,7 @@ with Logging {
     getWithHipHeaders(
       s"ConsumedAPI-IF-GetBusinessDetails-GET",
       url,
-      headers.subscriptionBusinessDetailsHeaders
+      headers.makeSubscriptionBusinessDetailsHeaders
     ).map {
       case Right(response) =>
         Try(response.json \ "success" \ "taxPayerDisplayResponse" \ "businessData")

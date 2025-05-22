@@ -16,26 +16,25 @@
 
 package uk.gov.hmrc.agentclientrelationships.connectors
 
-import play.api.Logging
 import play.api.http.Status.NOT_FOUND
 import play.api.http.Status.OK
-import play.api.libs.json._
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.helpers.CorrelationIdGenerator
+import uk.gov.hmrc.agentclientrelationships.connectors.helpers.IfHeaders
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsFailureResponse
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsNotFound
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ErrorRetrievingClientDetails
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa.ItsaBusinessDetails
 import uk.gov.hmrc.agentclientrelationships.util.HttpApiMonitor
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.agentclientrelationships.util.RequestSupport._
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.HttpReads.Implicits._
-import uk.gov.hmrc.http.client.HttpClientV2
-import uk.gov.hmrc.http.HeaderNames
 import uk.gov.hmrc.http.HttpResponse
 import uk.gov.hmrc.http.StringContextOps
+import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import java.net.URL
@@ -50,19 +49,18 @@ import scala.util.Try
 @Singleton
 class IfConnector @Inject() (
   httpClient: HttpClientV2,
-  randomUuidGenerator: CorrelationIdGenerator,
-  appConfig: AppConfig
+  appConfig: AppConfig,
+  ifHeaders: IfHeaders
 )(implicit
   val metrics: Metrics,
   val ec: ExecutionContext
 )
 extends HttpApiMonitor
-with Logging {
+with RequestAwareLogging {
 
   private val ifBaseUrl = appConfig.ifPlatformBaseUrl
 
   private val ifAPI1171Token = appConfig.ifAPI1171Token
-  private val ifEnv = appConfig.ifEnvironment
 
   /*
 API#1171 Get Business Details (for ITSA customers)
@@ -74,8 +72,7 @@ https://confluence.tools.tax.service.gov.uk/display/AG/API+1171+%28API+5%29+-+Ge
     getWithIFHeaders(
       "GetBusinessDetailsByMtdId",
       url,
-      ifAPI1171Token,
-      ifEnv
+      ifAPI1171Token
     ).map { result =>
       result.status match {
         case OK => Option((result.json \ "taxPayerDisplayResponse" \ "nino").as[Nino])
@@ -97,8 +94,7 @@ https://confluence.tools.tax.service.gov.uk/display/AG/API+1171+%28API+5%29+-+Ge
     getWithIFHeaders(
       "GetBusinessDetailsByNino",
       url,
-      ifAPI1171Token,
-      ifEnv
+      ifAPI1171Token
     ).map { result =>
       result.status match {
         case OK => Option((result.json \ "taxPayerDisplayResponse" \ "mtdId").as[MtdItId])
@@ -121,8 +117,7 @@ https://confluence.tools.tax.service.gov.uk/display/AG/API+1171+%28API+5%29+-+Ge
     getWithIFHeaders(
       "ConsumedAPI-IF-GetBusinessDetails-GET",
       url,
-      ifAPI1171Token,
-      ifEnv
+      ifAPI1171Token
     ).map { result =>
       result.status match {
         case OK =>
@@ -139,46 +134,17 @@ https://confluence.tools.tax.service.gov.uk/display/AG/API+1171+%28API+5%29+-+Ge
           Left(ErrorRetrievingClientDetails(status, "Unexpected error during 'getItsaBusinessDetails'"))
       }
     }
-
   }
-
-  private val Environment = "Environment"
-  private val CorrelationId = "CorrelationId"
 
   private[connectors] def getWithIFHeaders(
     apiName: String,
     url: URL,
-    authToken: String,
-    env: String
+    authToken: String
   )(implicit
-    request: RequestHeader,
-    ec: ExecutionContext
+    request: RequestHeader
   ): Future[HttpResponse] =
     monitor(s"ConsumedAPI-IF-$apiName-GET") {
-      httpClient.get(url).setHeader(ifHeaders(authToken, env): _*).execute[HttpResponse]
+      httpClient.get(url).setHeader(ifHeaders.makeHeaders(authToken): _*).execute[HttpResponse]
     }
-
-  private[connectors] def postWithIFHeaders(
-    apiName: String,
-    url: URL,
-    body: JsValue,
-    authToken: String,
-    env: String
-  )(implicit
-    request: RequestHeader,
-    ec: ExecutionContext
-  ): Future[HttpResponse] =
-    monitor(s"ConsumedAPI-IF-$apiName-POST") {
-      httpClient.post(url).withBody(body).setHeader(ifHeaders(authToken, env): _*).execute[HttpResponse]
-    }
-
-  def ifHeaders(
-    authToken: String,
-    env: String
-  ): Seq[(String, String)] = Seq(
-    Environment -> env,
-    CorrelationId -> randomUuidGenerator.makeCorrelationId(),
-    HeaderNames.authorisation -> s"Bearer $authToken"
-  )
 
 }

@@ -21,9 +21,10 @@ import org.apache.pekko.actor.ActorRef
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.actor.Props
 import play.api.Logging
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.repository.MongoRecoveryScheduleRepository
+import uk.gov.hmrc.agentclientrelationships.repository.RecoveryScheduleRepository
 import uk.gov.hmrc.agentclientrelationships.repository.RecoveryRecord
 import uk.gov.hmrc.agentclientrelationships.services.DeleteRelationshipsService
 
@@ -39,7 +40,7 @@ import scala.util.Random
 
 @Singleton
 class RecoveryScheduler @Inject() (
-  mongoRecoveryScheduleRepository: MongoRecoveryScheduleRepository,
+  mongoRecoveryScheduleRepository: RecoveryScheduleRepository,
   deleteRelationshipsService: DeleteRelationshipsService,
   actorSystem: ActorSystem,
   appConfig: AppConfig
@@ -74,7 +75,7 @@ extends Logging {
 }
 
 class TaskActor(
-  mongoRecoveryScheduleRepository: MongoRecoveryScheduleRepository,
+  recoveryScheduleRepository: RecoveryScheduleRepository,
   recoveryInterval: Int,
   recover: => Future[Unit]
 )(implicit ec: ExecutionContext)
@@ -82,7 +83,7 @@ extends Actor
 with Logging {
 
   def receive: PartialFunction[Any, Unit] = { case uid: String =>
-    mongoRecoveryScheduleRepository.read
+    recoveryScheduleRepository.read
       .foreach { case RecoveryRecord(recordUid, runAt) =>
         val now = LocalDateTime.now().atZone(ZoneOffset.UTC).toLocalDateTime
         if (uid == recordUid) {
@@ -95,7 +96,7 @@ with Logging {
                 runAt
             ).plusSeconds(recoveryInterval + Random.nextInt(Math.min(60, recoveryInterval)))
           val delay = nextRunAt.toEpochSecond(ZoneOffset.UTC) - now.toEpochSecond(ZoneOffset.UTC)
-          mongoRecoveryScheduleRepository
+          recoveryScheduleRepository
             .write(newUid, nextRunAt)
             .map { _ =>
               context.system.scheduler

@@ -815,7 +815,7 @@ extends UnitSpec {
         eqs(arn),
         eqs(mtdItEnrolmentKey),
         eqs("HMRC")
-      )(any[ExecutionContext])
+      )
     ).thenReturn(Future.successful(true))
 
     def givenSetRelationshipEndedFails: OngoingStubbing[Future[Boolean]] = when(
@@ -823,7 +823,7 @@ extends UnitSpec {
         eqs(arn),
         eqs(mtdItEnrolmentKey),
         eqs("HMRC")
-      )(any[ExecutionContext])
+      )
     ).thenReturn(Future.successful(false))
 
     def givenAucdCacheRefresh: OngoingStubbing[Future[Unit]] = when(

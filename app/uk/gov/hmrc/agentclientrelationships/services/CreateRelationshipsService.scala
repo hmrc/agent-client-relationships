@@ -16,7 +16,8 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
-import play.api.Logging
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
+import play.api.mvc.Request
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys.enrolmentDelegatedKey
 import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys.etmpRelationshipCreatedKey
@@ -54,7 +55,7 @@ class CreateRelationshipsService @Inject() (
   val metrics: Metrics
 )(implicit ec: ExecutionContext)
 extends Monitoring
-with Logging {
+with RequestAwareLogging {
 
   // noinspection ScalaStyle
   def createRelationship(
@@ -116,12 +117,11 @@ with Logging {
     auditData: AuditData
   ): Future[DbUpdateStatus] = {
     val updateEtmpSyncStatus =
-      relationshipCopyRepository
-        .updateEtmpSyncStatus(
-          arn,
-          enrolmentKey,
-          _: SyncStatus
-        )
+      relationshipCopyRepository.updateEtmpSyncStatus(
+        arn,
+        enrolmentKey,
+        _: SyncStatus
+      )
         .map(convertDbUpdateStatus)
 
     val recoverFromException =

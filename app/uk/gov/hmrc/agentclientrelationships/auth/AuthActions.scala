@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.auth
 
-import play.api.Logging
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import play.api.mvc._
 import uk.gov.hmrc.agentclientrelationships.controllers.ErrorResults._
 import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey => LocalEnrolmentKey, _}
@@ -48,7 +48,7 @@ case class CurrentUser(
 
 trait AuthActions
 extends AuthorisedFunctions
-with Logging {
+with RequestAwareLogging {
   me: Results =>
 
   implicit val executionContext: ExecutionContext
