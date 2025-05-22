@@ -44,26 +44,12 @@ class AgentAssuranceConnector @Inject() (
 )
 extends HttpApiMonitor {
 
-  // TODO: why agent-assurance uses internal-auth.token?
+  // agent-assurance uses internal auth to support unauthenticated frontend client journey start requests
   private def aaHeaders: (String, String) = HeaderNames.authorisation -> appConfig.internalAuthToken
 
   def getAgentRecordWithChecks(arn: Arn)(implicit rh: RequestHeader): Future[AgentDetailsDesResponse] = httpClient
     .get(url"${appConfig.agentAssuranceBaseUrl}/agent-assurance/agent-record-with-checks/arn/${arn.value}")
     .setHeader(aaHeaders)
-    .execute[HttpResponse]
-    .map(response =>
-      response.status match {
-        case OK => Json.parse(response.body).as[AgentDetailsDesResponse]
-        // TODO: Review error handling flow
-        // Current implementation throws an exception with status code
-        // which gets recovered in an unknown location in the call chain.
-        // This should be implemented as below, returning None for 404 case, and errors for other cases.
-        // No recovery from exceptions should take place.
-        case other => throw UpstreamErrorResponse(s"Agent record unavailable: des response code: $other", other)
-      }
-    )
-//    .get(url"${appConfig.agentAssuranceBaseUrl}/agent-assurance/agent-record-with-checks/arn/${arn.value}")
-//    .setHeader(aaHeaders)
-//    .execute[Option[AgentDetailsDesResponse]]
+    .execute[AgentDetailsDesResponse]
 
 }

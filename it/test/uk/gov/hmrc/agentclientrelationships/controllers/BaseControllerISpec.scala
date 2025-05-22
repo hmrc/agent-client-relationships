@@ -137,6 +137,7 @@ with IntegrationPatience {
   val arn3 = Arn("AARN0000006")
   val existingAgentArn = Arn("AARN0000007")
   val mtdItId = MtdItId("ABCDEF123456789")
+  val testPostcode = "AA1 1AA"
   val utr = Utr("3087612352")
   val urn = Urn("XXTRUST12345678")
   val utrUriEncoded: String = UriEncoding.encodePathSegment(utr.value, "UTF-8")
@@ -154,6 +155,7 @@ with IntegrationPatience {
   val mtdItSuppEnrolmentKey: LocalEnrolmentKey = LocalEnrolmentKey(Service.MtdItSupp, mtdItId)
   val mtdItIdUriEncoded: String = UriEncoding.encodePathSegment(mtdItId.value, "UTF-8")
   val vrn = Vrn("101747641")
+  val testVatRegDate = "2020-01-01"
   val vatEnrolmentKey: LocalEnrolmentKey = LocalEnrolmentKey(Service.Vat, vrn)
   val vrnUriEncoded: String = UriEncoding.encodePathSegment(vrn.value, "UTF-8")
   val nino = Nino("AB123456C")

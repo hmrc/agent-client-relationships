@@ -285,7 +285,6 @@ with TestData {
       val requestPath = s"/agent-client-relationships/api/${arn.value}/invitations"
       val result = doGetRequest(requestPath)
       result.status shouldBe INTERNAL_SERVER_ERROR
-      result.body shouldBe "\"Agent record unavailable: des response code: 404\""
     }
 
   }

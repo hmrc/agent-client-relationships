@@ -54,11 +54,9 @@ extends UnitSpec {
 
   val mockConnector: ClientDetailsConnector = mock[ClientDetailsConnector]
   val mockIfOrHipConnector: IfOrHipConnector = mock[IfOrHipConnector]
-  val mockAppConfig: AppConfig = mock[AppConfig]
   val service =
     new ClientDetailsService(
       mockConnector,
-      mockAppConfig,
       mockIfOrHipConnector
     )
   implicit val request: RequestHeader = FakeRequest()

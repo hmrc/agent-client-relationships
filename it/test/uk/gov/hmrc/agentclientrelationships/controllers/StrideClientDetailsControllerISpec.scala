@@ -1088,7 +1088,7 @@ with AfiRelationshipStub {
 
     }
 
-    "return 404 when get agent data  fail" in {
+    "return 500 when get agent data  fail" in {
       val clientsRelationshipsRequest: ClientsRelationshipsRequest = ClientsRelationshipsRequest(
         Seq(ClientRelationshipRequest(NinoType.id, nino.value), ClientRelationshipRequest(VrnType.id, vrn.value))
       )
@@ -1122,8 +1122,8 @@ with AfiRelationshipStub {
 
       // Test
       val result = doAgentPostRequest(requestPath, Json.toJson(clientsRelationshipsRequest).toString())
-      result.status shouldBe 404
-
+      result.status shouldBe 500
+      result.body.contains("/agent-assurance/agent-record-with-checks/arn/AARN0000004' returned 404") shouldBe true
     }
     "return 404 when get client data fail" in {
       val clientsRelationshipsRequest: ClientsRelationshipsRequest = ClientsRelationshipsRequest(
