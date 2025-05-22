@@ -60,6 +60,7 @@ with TestData {
       )
       val result = doAgentPostRequest(url, toJson(testData).toString())
       result.status shouldBe 204
+      result.body shouldBe ""
     }
     "return 422 with AGENT_SUSPENDED when agent is suspended" in {
       givenAuditConnector()
@@ -173,6 +174,7 @@ with TestData {
       val result = doAgentPostRequest(url, toJson(testData).toString())
 
       result.status shouldBe 500
+      result.body shouldBe """{"statusCode":500,"message":""}"""
     }
   }
 

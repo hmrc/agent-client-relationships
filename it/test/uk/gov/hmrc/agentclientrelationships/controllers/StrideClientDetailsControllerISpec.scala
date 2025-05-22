@@ -1123,7 +1123,7 @@ with AfiRelationshipStub {
       // Test
       val result = doAgentPostRequest(requestPath, Json.toJson(clientsRelationshipsRequest).toString())
       result.status shouldBe 500
-
+      result.body.contains("/agent-assurance/agent-record-with-checks/arn/AARN0000004' returned 404") shouldBe true
     }
     "return 404 when get client data fail" in {
       val clientsRelationshipsRequest: ClientsRelationshipsRequest = ClientsRelationshipsRequest(
