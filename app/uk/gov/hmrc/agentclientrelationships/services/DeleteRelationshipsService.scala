@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 HM Revenue & Customs
+ * Copyright 2025 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -297,7 +297,7 @@ with Logging {
   def removeDeleteRecord(
     arn: Arn,
     enrolmentKey: EnrolmentKey
-  )(implicit request: RequestHeader): Future[Boolean] = deleteRecordRepository
+  ): Future[Boolean] = deleteRecordRepository
     .remove(arn, enrolmentKey)
     .map(_ > 0)
     .recoverWith { case NonFatal(ex) =>
@@ -452,7 +452,7 @@ with Logging {
     arn: Arn,
     enrolmentKey: EnrolmentKey,
     endedBy: String
-  )(implicit request: RequestHeader): Future[Done] = invitationService
+  ): Future[Done] = invitationService
     .deauthoriseInvitation(
       arn,
       enrolmentKey,

@@ -18,10 +18,8 @@ package uk.gov.hmrc.agentclientrelationships.config
 
 import org.apache.pekko.Done
 import play.api.Logging
-import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import play.api.http.Status.CREATED
 import play.api.libs.json.Json
-import play.api.mvc.RequestHeader
 import uk.gov.hmrc.http.HttpReads.Implicits.readRaw
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.HeaderCarrier

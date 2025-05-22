@@ -29,7 +29,6 @@ import uk.gov.hmrc.agentclientrelationships.model.Expired
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
 import uk.gov.hmrc.agentclientrelationships.services.EmailService
 import uk.gov.hmrc.agentclientrelationships.services.MongoLockService
-import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.agentclientrelationships.util.RequestSupport
 
 import java.util.TimeZone

@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.agentclientrelationships.repository
 
-import com.google.inject.ImplementedBy
 import org.mongodb.scala.MongoWriteException
 import org.mongodb.scala.model.Filters.equal
 import org.mongodb.scala.model.Updates.combine
@@ -46,7 +45,6 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import uk.gov.hmrc.agentclientrelationships.util.RequestSupport._
 import uk.gov.hmrc.play.http.logging.Mdc
 
 case class DeleteRecord(

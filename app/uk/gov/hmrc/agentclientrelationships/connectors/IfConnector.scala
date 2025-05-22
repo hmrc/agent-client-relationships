@@ -20,7 +20,6 @@ import play.api.http.Status.NOT_FOUND
 import play.api.http.Status.OK
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.connectors.helpers.CorrelationIdGenerator
 import uk.gov.hmrc.agentclientrelationships.connectors.helpers.IfHeaders
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsFailureResponse
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsNotFound

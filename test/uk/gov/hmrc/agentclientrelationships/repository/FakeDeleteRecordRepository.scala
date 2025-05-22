@@ -16,23 +16,16 @@
 
 package uk.gov.hmrc.agentclientrelationships.repository
 
-import org.mockito.Mockito.when
 import org.mongodb.scala.MongoException
-import org.scalatestplus.mockito.MockitoSugar.mock
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus.SyncStatus
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.mongo.MongoComponent
-import uk.gov.hmrc.mongo.MongoUtils
-
 import java.time.Instant
 import java.time.ZoneOffset
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import scala.concurrent.duration.DurationInt
-import scala.util.chaining.scalaUtilChainingOps
 
 class FakeDeleteRecordRepository
 extends DeleteRecordRepository(FakeMongoComponent.make) {
