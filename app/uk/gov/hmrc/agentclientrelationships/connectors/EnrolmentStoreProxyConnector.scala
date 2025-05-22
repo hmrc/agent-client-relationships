@@ -186,17 +186,17 @@ with Logging {
     monitor(s"ConsumedAPI-ES-getEnrolmentsForGroupId-$groupId-GET") {
       httpClient
         .get(
-          url"$espBaseUrl/enrolment-store-proxy/enrolment-store/groups/$groupId/enrolments?type=principal&service=HMRC-AS-AGENT"
+          url"$espBaseUrl/enrolment-store-proxy/enrolment-store/groups/$groupId/enrolments?type=principal"
         )
         .execute[HttpResponse]
         .map { response =>
           response.status match {
             case Status.OK =>
               (response.json \ "enrolments")
-                .as[Seq[JsObject]]
-                .headOption
-                .map(obj => (obj \ "identifiers" \ 0 \ "value").as[String])
-                .map(Arn.apply)
+                .as[Seq[Enrolment]]
+                .find(_.service == "HMRC-AS-AGENT")
+                .flatMap(_.identifiers.find(_.key == "AgentReferenceNumber"))
+                .map(i => Arn(i.value))
             case Status.NO_CONTENT => None
             case other =>
               throw UpstreamErrorResponse(
