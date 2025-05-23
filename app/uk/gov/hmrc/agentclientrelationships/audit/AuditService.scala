@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 HM Revenue & Customs
+ * Copyright 2025 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,7 +31,6 @@ import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.play.audit.AuditExtensions.auditHeaderCarrier
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.audit.model.DataEvent
-import uk.gov.hmrc.play.http.HeaderCarrierConverter
 
 import javax.inject.Inject
 import scala.collection.mutable
@@ -402,7 +401,7 @@ extends RequestAwareLogging {
     )
   }
 
-  private def send(events: DataEvent*)(implicit request: RequestHeader): Future[Unit] = Future {
+  private def send(events: DataEvent*): Future[Unit] = Future {
     events.foreach { event =>
       Try(auditConnector.sendEvent(event))
     }

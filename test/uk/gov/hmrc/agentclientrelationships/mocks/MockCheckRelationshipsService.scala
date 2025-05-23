@@ -26,7 +26,6 @@ import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import play.api.mvc.RequestHeader
 
-import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 trait MockCheckRelationshipsService {

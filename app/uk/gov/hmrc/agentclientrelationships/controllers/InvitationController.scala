@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 HM Revenue & Customs
+ * Copyright 2025 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -185,7 +185,12 @@ with AuthActions {
 
   def cancelInvitation(invitationId: String): Action[AnyContent] = Action.async { implicit request =>
     withAuthorisedAsAgent { authArn =>
-      invitationService.cancelInvitation(authArn, invitationId).map(_ => NoContent)
+      invitationService.cancelInvitation(authArn, invitationId).map { response =>
+        response match {
+          case Left(response) => response.getResult
+          case Right(_) => NoContent
+        }
+      }
     }
   }
 

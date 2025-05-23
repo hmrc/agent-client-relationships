@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 HM Revenue & Customs
+ * Copyright 2025 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,6 +29,8 @@ import org.mongodb.scala.result.InsertOneResult
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model._
+import uk.gov.hmrc.agentclientrelationships.model.invitation.CancelInvitationResponse
+import uk.gov.hmrc.agentclientrelationships.model.invitation.CancelInvitationResponse._
 import uk.gov.hmrc.agentclientrelationships.repository.FieldKeys._
 import uk.gov.hmrc.agentclientrelationships.util.CryptoUtil.encryptedString
 import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier.ClientId
@@ -158,18 +160,29 @@ with RequestAwareLogging {
   def cancelByIdForAgent(
     arn: String,
     invitationId: String
-  ): Future[Unit] = Mdc.preservingMdc {
-    collection
-      .updateOne(
-        and(
-          equal(arnKey, arn),
-          equal(invitationIdKey, invitationId),
-          equal("status", Codecs.toBson[InvitationStatus](Pending))
-        ),
-        combine(set("status", Codecs.toBson[InvitationStatus](Cancelled)), set("lastUpdated", Instant.now()))
-      )
-      .toFuture()
-      .map(_ => ())
+  ): Future[CancelInvitationResponse] = Mdc.preservingMdc {
+    val filterById = equal(invitationIdKey, invitationId)
+
+    collection.find(filterById).headOption().flatMap {
+      case None => Future.successful(NotFound)
+      case Some(invitation) if invitation.status != Pending => Future.successful(WrongInvitationStatus)
+      case Some(invitation) if invitation.arn != arn => Future.successful(NoPermission)
+      case Some(_) =>
+        collection
+          .updateOne(
+            and(
+              equal(arnKey, arn),
+              equal(invitationIdKey, invitationId),
+              equal("status", Codecs.toBson[InvitationStatus](Pending))
+            ),
+            combine(
+              set("status", Codecs.toBson[InvitationStatus](Cancelled)),
+              set("lastUpdated", Instant.now())
+            )
+          )
+          .toFuture()
+          .map(_ => Success)
+    }
   }
 
   def findOneById(invitationId: String): Future[Option[Invitation]] = Mdc.preservingMdc {

@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
-import play.api.mvc.Request
 import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys.agentRoleChange
 import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys.howPartialAuthTerminatedKey
 import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys.howRelationshipTerminatedKey

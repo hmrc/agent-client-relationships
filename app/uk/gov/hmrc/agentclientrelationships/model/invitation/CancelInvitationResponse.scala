@@ -14,14 +14,19 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.agentclientrelationships.mocks
+package uk.gov.hmrc.agentclientrelationships.model.invitation
 
-import uk.gov.hmrc.agentclientrelationships.connectors.IfOrHipConnector
-import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
+sealed trait CancelInvitationResponse
 
-trait MockIFConnector {
-  this: ResettingMockitoSugar =>
+object CancelInvitationResponse {
 
-  val mockIfOrHipConnector: IfOrHipConnector = resettingMock[IfOrHipConnector]
+  case object Success
+  extends CancelInvitationResponse
+  case object NoPermission
+  extends CancelInvitationResponse
+  case object NotFound
+  extends CancelInvitationResponse
+  case object WrongInvitationStatus
+  extends CancelInvitationResponse
 
 }
