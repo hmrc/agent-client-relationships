@@ -26,7 +26,6 @@ import play.api.libs.json.Json.toJson
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.audit.AuditService
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.connectors.AgentAssuranceConnector
 import uk.gov.hmrc.agentclientrelationships.connectors.IfOrHipConnector
 import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiCreateInvitationRequest
@@ -34,6 +33,7 @@ import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiFailureResponse.
 import uk.gov.hmrc.agentclientrelationships.repository.AgentReferenceRepository
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
 import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
+import uk.gov.hmrc.agentclientrelationships.services.AgentAssuranceService
 import uk.gov.hmrc.agentclientrelationships.services.CheckRelationshipsOrchestratorService
 import uk.gov.hmrc.agentclientrelationships.services.ClientDetailsService
 import uk.gov.hmrc.agentclientrelationships.services.KnowFactsCheckService
@@ -65,7 +65,7 @@ with TestData {
   val clientDetailsService: ClientDetailsService = app.injector.instanceOf[ClientDetailsService]
   val knowFactsCheckService: KnowFactsCheckService = app.injector.instanceOf[KnowFactsCheckService]
   val checkRelationshipsService: CheckRelationshipsOrchestratorService = app.injector.instanceOf[CheckRelationshipsOrchestratorService]
-  val agentAssuranceConnector: AgentAssuranceConnector = app.injector.instanceOf[AgentAssuranceConnector]
+  val agentAssuranceService: AgentAssuranceService = app.injector.instanceOf[AgentAssuranceService]
   val invitationRepo: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
   val partialAuthRepository: PartialAuthRepository = app.injector.instanceOf[PartialAuthRepository]
   val agentReferenceRepo: AgentReferenceRepository = app.injector.instanceOf[AgentReferenceRepository]
@@ -82,7 +82,7 @@ with TestData {
       clientDetailsService,
       knowFactsCheckService,
       checkRelationshipsService,
-      agentAssuranceConnector,
+      agentAssuranceService,
       invitationRepo,
       partialAuthRepository,
       auditService,

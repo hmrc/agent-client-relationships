@@ -43,7 +43,7 @@ with ResettingMockitoSugar
 with MockInvitationsRepository
 with MockPartialAuthRepository
 with MockIFConnector
-with MockAgentAssuranceConnector
+with MockAgentAssuranceService
 with MockEmailService {
 
   implicit val executionContext: ExecutionContext = ExecutionContext.Implicits.global
@@ -55,7 +55,7 @@ with MockEmailService {
     mockInvitationsRepository,
     mockPartialAuthRepository,
     mockIfOrHipConnector,
-    mockAgentAssuranceConnector,
+    mockAgentAssuranceService,
     mockEmailService,
     mockAppConfig
   )
@@ -101,10 +101,6 @@ with MockEmailService {
     agencyDetails = AgencyDetails("ABC Ltd", ""),
     suspensionDetails = None
   )
-  val testSuspendedAgentDetailsDesResponse: AgentDetailsDesResponse = AgentDetailsDesResponse(
-    agencyDetails = AgencyDetails("ABC Ltd", ""),
-    suspensionDetails = Some(SuspensionDetails(suspensionStatus = true, None))
-  )
 
   "findNonSuspendedClientInvitations" should {
     "retrieve invitations from the repository and return ones from non suspended agents" in {
@@ -122,9 +118,9 @@ with MockEmailService {
           )
         )
       )
-      mockGetAgentRecordWithChecks(Arn(testArn1))(testSuspendedAgentDetailsDesResponse)
-      mockGetAgentRecordWithChecks(Arn(testArn2))(testAgentDetailsDesResponse)
-      mockGetAgentRecordWithChecks(Arn(testArn3))(testSuspendedAgentDetailsDesResponse)
+      mockGetNonSuspendedAgentRecord(Arn(testArn1))(None)
+      mockGetNonSuspendedAgentRecord(Arn(testArn2))(Some(testAgentDetailsDesResponse))
+      mockGetNonSuspendedAgentRecord(Arn(testArn3))(None)
 
       val result = await(TestService.findNonSuspendedClientInvitations(Seq(HMRCMTDVAT), Seq(testVrn.value)))
 

@@ -22,9 +22,9 @@ import play.api.mvc.AnyContent
 import play.api.mvc.ControllerComponents
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.connectors.AgentAssuranceConnector
 import uk.gov.hmrc.agentclientrelationships.model.invitation.AuthorisationRequestInfo
 import uk.gov.hmrc.agentclientrelationships.model.invitation.AuthorisationRequestInfoForClient
+import uk.gov.hmrc.agentclientrelationships.services.AgentAssuranceService
 import uk.gov.hmrc.agentclientrelationships.services.InvitationLinkService
 import uk.gov.hmrc.agentclientrelationships.services.InvitationService
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
@@ -42,7 +42,7 @@ import scala.concurrent.Future
 class AuthorisationRequestInfoController @Inject() (
   invitationService: InvitationService,
   invitationLinkService: InvitationLinkService,
-  agentAssuranceConnector: AgentAssuranceConnector,
+  agentAssuranceService: AgentAssuranceService,
   val authConnector: AuthConnector,
   val appConfig: AppConfig,
   cc: ControllerComponents
@@ -105,7 +105,7 @@ with AuthActions {
           ) { _ =>
             val arn = Arn(invitation.arn)
             for {
-              agentDetails <- agentAssuranceConnector.getAgentRecordWithChecks(arn)
+              agentDetails <- agentAssuranceService.getAgentRecord(arn)
             } yield Ok(
               Json.toJson(
                 AuthorisationRequestInfoForClient(

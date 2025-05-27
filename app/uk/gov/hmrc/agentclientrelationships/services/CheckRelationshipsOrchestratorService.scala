@@ -51,8 +51,8 @@ class CheckRelationshipsOrchestratorService @Inject() (
   agentUserService: AgentUserService,
   deleteService: DeleteRelationshipsService,
   ifOrHipConnector: IfOrHipConnector,
-  desConnector: DesConnector,
-  agentFiRelationshipConnector: AgentFiRelationshipConnector
+  agentFiRelationshipConnector: AgentFiRelationshipConnector,
+  agentAssuranceService: AgentAssuranceService
 )(implicit executionContext: ExecutionContext)
 extends Monitoring
 with RequestAwareLogging {
@@ -224,12 +224,11 @@ with RequestAwareLogging {
 
   private def withIrSaSuspensionCheck(arn: Arn)(
     proceed: => Future[CheckRelationshipResult]
-  )(implicit request: RequestHeader): Future[CheckRelationshipResult] = desConnector
-    .getAgentRecord(arn)
+  )(implicit request: RequestHeader): Future[CheckRelationshipResult] = agentAssuranceService
+    .getNonSuspendedAgentRecord(arn)
     .flatMap {
-      case None => Future.successful(CheckRelationshipInvalidRequest)
-      case Some(record) if record.isSuspended && record.suspendedFor("ITSA") =>
-        logger.warn(s"agent with id : ${arn.value} is suspended for regime ITSA")
+      case None =>
+        logger.warn(s"agent with id : ${arn.value} is suspended")
         Future.successful(CheckRelationshipInvalidRequest)
       case _ => proceed
     }

@@ -26,7 +26,6 @@ import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.audit.AuditService
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.connectors.AgentAssuranceConnector
 import uk.gov.hmrc.agentclientrelationships.connectors.IfOrHipConnector
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsNotFound
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsResponse
@@ -62,7 +61,7 @@ class ApiCreateInvitationController @Inject() (
   clientDetailsService: ClientDetailsService,
   knowFactsCheckService: KnowFactsCheckService,
   checkRelationshipsService: CheckRelationshipsOrchestratorService,
-  agentAssuranceConnector: AgentAssuranceConnector,
+  agentAssuranceService: AgentAssuranceService,
   invitationsRepository: InvitationsRepository,
   partialAuthRepository: PartialAuthRepository,
   auditService: AuditService,
@@ -125,7 +124,7 @@ with AuthActions {
           suppliedClientId.value
         ))
 
-        agentRecord <- EitherT(getAgentDetailsByArn(arn))
+        agentRecord <- EitherT.fromOptionF(agentAssuranceService.getNonSuspendedAgentRecord(arn), ApiFailureResponse.AgentSuspended)
 
         clientDetails <- EitherT(clientDetailsService.findClientDetails(service.id, suppliedClientId.value))
           .leftMap[ApiFailureResponse] {
@@ -297,20 +296,6 @@ with AuthActions {
           }
       case result => Future.successful(result)
     }
-
-  private def getAgentDetailsByArn(arn: Arn)(implicit
-    requestHeader: RequestHeader
-  ): Future[Either[ApiFailureResponse, AgentDetailsDesResponse]] = agentAssuranceConnector
-    .getAgentRecordWithChecks(arn)
-    .map { agentRecord =>
-      if (agentIsSuspended(agentRecord))
-        Left(ApiFailureResponse.AgentSuspended)
-      else
-        Right(agentRecord)
-    }
-    .recover { case ex: Throwable => Left(ApiFailureResponse.ApiInternalServerError(ex.getMessage)) }
-
-  private def agentIsSuspended(agentRecord: AgentDetailsDesResponse): Boolean = agentRecord.suspensionDetails.exists(_.suspensionStatus)
 
   private def currentTime() = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime
 

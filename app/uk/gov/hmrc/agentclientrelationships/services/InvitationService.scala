@@ -59,7 +59,7 @@ class InvitationService @Inject() (
   invitationsRepository: InvitationsRepository,
   partialAuthRepository: PartialAuthRepository,
   ifOrHipConnector: IfOrHipConnector,
-  agentAssuranceConnector: AgentAssuranceConnector,
+  agentAssuranceService: AgentAssuranceService,
   emailService: EmailService,
   appConfig: AppConfig
 )(implicit ec: ExecutionContext)
@@ -89,7 +89,7 @@ extends RequestAwareLogging {
         suppliedClientId <- EitherT.fromEither[Future](createInvitationInputData.getSuppliedClientId)
         service <- EitherT.fromEither[Future](createInvitationInputData.getService)
         clientType <- EitherT.fromEither[Future](createInvitationInputData.getClientType)
-        agentRecord <- EitherT.right(agentAssuranceConnector.getAgentRecordWithChecks(arn))
+        agentRecord <- EitherT.right(agentAssuranceService.getAgentRecord(arn))
         clientId <- EitherT(getClientId(suppliedClientId, service))
         invitation <- EitherT(
           create(
@@ -155,14 +155,11 @@ extends RequestAwareLogging {
     def getSuspendedArns(arns: Seq[String]) = Future
       .sequence(
         arns.map { arn =>
-          agentAssuranceConnector
-            .getAgentRecordWithChecks(Arn(arn))
-            .map(record =>
-              if (record.suspensionDetails.exists(_.suspensionStatus))
-                Some(arn)
-              else
-                None
-            )
+          agentAssuranceService.getNonSuspendedAgentRecord(Arn(arn))
+            .map {
+              case None => Some(arn)
+              case Some(_) => None
+            }
         }
       )
       .map(_.flatten)

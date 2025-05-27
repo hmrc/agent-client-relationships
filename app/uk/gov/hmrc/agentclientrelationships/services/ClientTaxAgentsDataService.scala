@@ -19,9 +19,7 @@ package uk.gov.hmrc.agentclientrelationships.services
 import cats.data.EitherT
 import cats.implicits._
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.connectors.AgentAssuranceConnector
 import uk.gov.hmrc.agentclientrelationships.connectors.AgentFiRelationshipConnector
-import uk.gov.hmrc.agentclientrelationships.connectors.IfOrHipConnector
 import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentDetailsDesResponse
 import uk.gov.hmrc.agentclientrelationships.model.stride.ClientRelationship
@@ -44,12 +42,11 @@ import scala.concurrent.Future
 @Singleton
 class ClientTaxAgentsDataService @Inject() (
   invitationsRepository: InvitationsRepository,
-  agentAssuranceConnector: AgentAssuranceConnector,
+  agentAssuranceService: AgentAssuranceService,
   invitationLinkService: InvitationLinkService,
   agentFiRelationshipConnector: AgentFiRelationshipConnector,
   findRelationshipsService: FindRelationshipsService,
-  partialAuthRepository: PartialAuthRepository,
-  ifOrHipConnector: IfOrHipConnector
+  partialAuthRepository: PartialAuthRepository
 )(implicit
   ec: ExecutionContext,
   appConfig: AppConfig
@@ -150,7 +147,7 @@ class ClientTaxAgentsDataService @Inject() (
       .groupBy(_.arn)
       .map { case (arn, authorisations) =>
         for {
-          agentDetails <- EitherT(findAgentDetailsByArn(Arn(arn)))
+          agentDetails <- findAgentDetailsByArn(Arn(arn))
         } yield authorisations.map(authorisation =>
           AuthorisationEvent(
             agentDetails.agencyDetails.agencyName,
@@ -300,7 +297,7 @@ class ClientTaxAgentsDataService @Inject() (
       .groupBy(_.arn)
       .map { case (arn, relationships) =>
         for {
-          agentDetails <- EitherT(findAgentDetailsByArn(arn))
+          agentDetails <- findAgentDetailsByArn(arn)
           authorisations <- getAuthorisations(relationships, agentDetails.agencyDetails.agencyName)
         } yield AgentAuthorisations(
           agentName = agentDetails.agencyDetails.agencyName,
@@ -366,7 +363,7 @@ class ClientTaxAgentsDataService @Inject() (
       .groupBy(_.arn)
       .map { case (arn, invitations) =>
         for {
-          agentDetails <- EitherT(findAgentDetailsByArn(Arn(arn)))
+          agentDetails <- findAgentDetailsByArn(Arn(arn))
           normalizedName = invitationLinkService.normaliseAgentName(agentDetails.agencyDetails.agencyName)
           agentReference <- EitherT.right[RelationshipFailureResponse](
             invitationLinkService.getAgentReferenceRecordByArn(Arn(arn), normalizedName)
@@ -391,18 +388,11 @@ class ClientTaxAgentsDataService @Inject() (
   private def findAgentDetailsByArn(arn: Arn)(implicit
     request: RequestHeader,
     ec: ExecutionContext
-  ): Future[Either[RelationshipFailureResponse, AgentDetailsDesResponse]] = agentAssuranceConnector
-    .getAgentRecordWithChecks(arn)
-    .map { agentRecord =>
-      if (agentIsSuspended(agentRecord))
-        Left(RelationshipFailureResponse.AgentSuspended)
-      else
-        Right(agentRecord)
-    }
-    .recover { case ex: Throwable => Left(RelationshipFailureResponse.ErrorRetrievingAgentDetails(ex.getMessage)) }
-
-  private def agentIsSuspended(agentRecord: AgentDetailsDesResponse): Boolean = agentRecord.suspensionDetails
-    .exists(_.suspensionStatus)
+  ): EitherT[
+    Future,
+    RelationshipFailureResponse,
+    AgentDetailsDesResponse
+  ] = EitherT.fromOptionF(agentAssuranceService.getNonSuspendedAgentRecord(arn), RelationshipFailureResponse.AgentSuspended)
 
   private def filterOutSuspendedAgent[A](
     myEitherT: EitherT[

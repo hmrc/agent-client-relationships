@@ -622,7 +622,7 @@ trait RelationshipsControllerITSABehaviours {
       // CESA CHECK UNHAPPY PATHS
 
       "return 404 when agent not allocated to client in es nor identifier not found in des" in {
-        getAgentRecordForClient(arn)
+        givenAgentRecordFound(arn, agentRecordResponse)
         givenPrincipalAgentUser(arn, "foo")
         givenGroupInfo("foo", "bar")
         givenDelegatedGroupIdsNotExistForNino(nino)
@@ -635,7 +635,7 @@ trait RelationshipsControllerITSABehaviours {
       }
 
       "return 404 when agent not allocated to client in es nor cesa" in {
-        getAgentRecordForClient(arn)
+        givenAgentRecordFound(arn, agentRecordResponse)
         givenPrincipalAgentUser(arn, "foo")
         givenGroupInfo("foo", "bar")
         givenDelegatedGroupIdsNotExistForNino(nino)
@@ -648,7 +648,7 @@ trait RelationshipsControllerITSABehaviours {
       }
 
       "return 404 when mapping is unavailable" in {
-        getAgentRecordForClient(arn)
+        givenAgentRecordFound(arn, agentRecordResponse)
         givenPrincipalAgentUser(arn, "foo")
         givenGroupInfo("foo", "bar")
         givenDelegatedGroupIdsNotExistForNino(nino)
@@ -661,7 +661,7 @@ trait RelationshipsControllerITSABehaviours {
       }
 
       "return 404 when agent not allocated to client in es and also cesa mapping not found" in {
-        getAgentRecordForClient(arn)
+        givenAgentRecordFound(arn, agentRecordResponse)
         givenPrincipalAgentUser(arn, "foo")
         givenGroupInfo("foo", "bar")
         givenDelegatedGroupIdsNotExistForNino(nino)
@@ -675,14 +675,14 @@ trait RelationshipsControllerITSABehaviours {
       }
 
       "return 400 when agent record is suspended" in {
-        getSuspendedAgentRecordForClient(arn)
+        givenAgentRecordFound(arn, suspendedAgentRecordResponse)
 
         val result = doRequest
         result.status shouldBe 400
       }
 
       "return 200 when agent credentials unknown but relationship exists in cesa" in {
-        getAgentRecordForClient(arn)
+        givenAgentRecordFound(arn, agentRecordResponse)
         givenPrincipalGroupIdNotExistsFor(agentEnrolmentKey(arn))
         givenArnIsKnownFor(arn, SaAgentReference("foo"))
         givenClientHasRelationshipWithAgentInCESA(nino, "foo")
@@ -704,7 +704,7 @@ trait RelationshipsControllerITSABehaviours {
       }
 
       "return 200 when credentials are not found but relationship exists in cesa and no copy attempt is made" in {
-        getAgentRecordForClient(arn)
+        givenAgentRecordFound(arn, agentRecordResponse)
         givenPrincipalGroupIdNotExistsFor(agentEnrolmentKey(arn))
         givenArnIsKnownFor(arn, SaAgentReference("foo"))
         givenClientHasRelationshipWithAgentInCESA(nino, "foo")

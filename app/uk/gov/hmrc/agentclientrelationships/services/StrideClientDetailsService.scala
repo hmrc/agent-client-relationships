@@ -48,7 +48,7 @@ import scala.util.Try
 @Singleton
 class StrideClientDetailsService @Inject() (
   invitationsRepository: InvitationsRepository,
-  agentAssuranceConnector: AgentAssuranceConnector,
+  agentAssuranceService: AgentAssuranceService,
   findRelationshipsService: FindRelationshipsService,
   agentFiRelationshipConnector: AgentFiRelationshipConnector,
   partialAuthRepository: PartialAuthRepository,
@@ -209,7 +209,7 @@ class StrideClientDetailsService @Inject() (
   ] =
     activeRelationships.map { ar =>
       for {
-        agentDetails <- findAgentDetailsByArn(ar.arn)
+        agentDetails <- EitherT.right(agentAssuranceService.getAgentRecord(ar.arn))
         service <- EitherT(
           validationService.validateAuthProfileToService(
             taxIdentifier,
@@ -227,16 +227,6 @@ class StrideClientDetailsService @Inject() (
       )
     }.sequence
 
-  private def findAgentDetailsByArn(arn: Arn)(implicit
-    request: RequestHeader
-  ): EitherT[
-    Future,
-    RelationshipFailureResponse,
-    AgentDetailsDesResponse
-  ] = EitherT(Try(agentAssuranceConnector.getAgentRecordWithChecks(arn)).toEither.pure[Future])
-    .semiflatMap(identity)
-    .leftMap(er => RelationshipFailureResponse.ErrorRetrievingAgentDetails(er.getMessage))
-
   private def findClientDetailsByTaxIdentifier(taxIdentifier: TaxIdentifier)(implicit
     request: RequestHeader
   ): Future[Either[RelationshipFailureResponse, ClientDetailsResponse]] = clientDetailsService
@@ -249,9 +239,6 @@ class StrideClientDetailsService @Inject() (
         }
     )
 
-  private def agentIsSuspended(agentRecord: AgentDetailsDesResponse): Boolean = agentRecord.suspensionDetails
-    .exists(_.suspensionStatus)
-
   private def getNonSuspendedInvitations(
     clientId: String,
     services: Seq[String]
@@ -260,14 +247,12 @@ class StrideClientDetailsService @Inject() (
       invitations <- invitationsRepository.findAllPendingForSuppliedClient(clientId, services)
       nonSuspended <- Future.sequence(
         invitations.map(i =>
-          agentAssuranceConnector
-            .getAgentRecordWithChecks(Arn(i.arn))
-            .map(agentRecord =>
-              if (agentIsSuspended(agentRecord))
-                None
-              else
-                Some(InvitationWithAgentName.fromInvitationAndAgentRecord(i, agentRecord))
-            )
+          agentAssuranceService
+            .getNonSuspendedAgentRecord(Arn(i.arn))
+            .map {
+              case Some(agentRecord) => Some(InvitationWithAgentName.fromInvitationAndAgentRecord(i, agentRecord))
+              case None => None
+            }
         )
       )
     } yield nonSuspended.flatten
@@ -314,10 +299,10 @@ class StrideClientDetailsService @Inject() (
     mActiveRelationship: Option[ActiveMainAgentRelationship]
   )(implicit request: RequestHeader): Future[Option[ActiveMainAgent]] =
     mActiveRelationship.fold[Future[Option[ActiveMainAgent]]](Future.successful(None)) { activeRelationship =>
-      agentAssuranceConnector
-        .getAgentRecordWithChecks(Arn(activeRelationship.arn))
+      agentAssuranceService
+        .getAgentRecord(Arn(activeRelationship.arn))
         .map(ar =>
-          Option(
+          Some(
             ActiveMainAgent(
               ar.agencyDetails.agencyName,
               activeRelationship.arn,

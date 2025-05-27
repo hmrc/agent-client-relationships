@@ -50,7 +50,7 @@ class StrideClientDetailsServiceSpec
 extends UnitSpec
 with ResettingMockitoSugar
 with MockAgentFiRelationshipConnector
-with MockAgentAssuranceConnector
+with MockAgentAssuranceService
 with MockClientDetailsService
 with MockFindRelationshipsService
 with MockPartialAuthRepository
@@ -63,7 +63,7 @@ with MockValidationService {
     partialAuthRepository = mockPartialAuthRepository,
     agentFiRelationshipConnector = mockAgentFiRelationshipConnector,
     clientDetailsService = mockClientDetailsService,
-    agentAssuranceConnector = mockAgentAssuranceConnector,
+    agentAssuranceService = mockAgentAssuranceService,
     findRelationshipsService = mockFindRelationshipService,
     validationService = mockValidationService
   )
@@ -125,9 +125,9 @@ with MockValidationService {
     "pending invitations exist for HMRC-MTD-IT" should {
       "return Some(ClientDetailsStrideResponse)" in {
         mockFindAllPendingForClient(testNino.value, Seq(HMRCMTDIT, HMRCMTDITSUPP))(Seq(itsaInvitation))
-        mockGetAgentRecordWithChecks(testArn)(testAgentDetailsDesResponse)
+        mockGetNonSuspendedAgentRecord(testArn)(Some(testAgentDetailsDesResponse))
         mockFindMainAgent(testNino.value)(Future.successful(Some(testPartialauthRelationship)))
-        mockGetAgentRecordWithChecks(testArn2)(testAgentDetailsDesResponse)
+        mockGetAgentRecord(testArn2)(testAgentDetailsDesResponse)
 
         val testEk = EnrolmentKey(s"HMRC-MTD-IT~NINO~${testNino.value}")
 
@@ -155,11 +155,11 @@ with MockValidationService {
           testAgentDetailsDesResponse
         )
         mockFindAllPendingForClient(testNino.value, Seq(HMRCMTDIT, HMRCMTDITSUPP))(Seq(itsaSuppPendingInvitation))
-        mockGetAgentRecordWithChecks(testArn)(testAgentDetailsDesResponse)
+        mockGetNonSuspendedAgentRecord(testArn)(Some(testAgentDetailsDesResponse))
         mockFindMainAgent(testNino.value)(
           Future.successful(Some(testPartialauthRelationship.copy(arn = testArn.value)))
         )
-        mockGetAgentRecordWithChecks(testArn)(testAgentDetailsDesResponse)
+        mockGetAgentRecord(testArn)(testAgentDetailsDesResponse)
 
         val testEk = EnrolmentKey(s"HMRC-MTD-IT~NINO~${testNino.value}")
 
@@ -187,7 +187,7 @@ with MockValidationService {
           testAgentDetailsDesResponse
         )
         mockFindAllPendingForClient(testNino.value, Seq(PersonalIncomeRecord.id))(Seq(irvPendingInvitation))
-        mockGetAgentRecordWithChecks(testArn)(testAgentDetailsDesResponse)
+        mockGetNonSuspendedAgentRecord(testArn)(Some(testAgentDetailsDesResponse))
         mockFindRelationshipForClient(testNino.value)(
           Some(
             ClientRelationship(
@@ -201,7 +201,7 @@ with MockValidationService {
             )
           )
         )
-        mockGetAgentRecordWithChecks(testArn2)(testAgentDetailsDesResponse)
+        mockGetAgentRecord(testArn2)(testAgentDetailsDesResponse)
 
         val testEk = EnrolmentKey(s"PERSONAL-INCOME-RECORD~NINO~${testNino.value}")
 
@@ -230,7 +230,7 @@ with MockValidationService {
           testAgentDetailsDesResponse
         )
         mockFindAllPendingForClient(testVrn.value, Seq(HMRCMTDVAT))(Seq(vatPendingInvitation))
-        mockGetAgentRecordWithChecks(testArn)(testAgentDetailsDesResponse)
+        mockGetNonSuspendedAgentRecord(testArn)(Some(testAgentDetailsDesResponse))
         mockGetActiveRelationshipsForClient(testVrn, Vat)(
           Future.successful(
             Some(
@@ -242,7 +242,7 @@ with MockValidationService {
             )
           )
         )
-        mockGetAgentRecordWithChecks(testArn2)(testAgentDetailsDesResponse)
+        mockGetAgentRecord(testArn2)(testAgentDetailsDesResponse)
 
         val testEk = EnrolmentKey(s"$HMRCMTDVAT~VRN~${testVrn.value}")
 
@@ -270,7 +270,7 @@ with MockValidationService {
           testAgentDetailsDesResponse
         )
         mockFindAllPendingForClient(testCgtPdRef.value, Seq(HMRCCGTPD))(Seq(cgtPendingInvitation))
-        mockGetAgentRecordWithChecks(testArn)(testAgentDetailsDesResponse)
+        mockGetNonSuspendedAgentRecord(testArn)(Some(testAgentDetailsDesResponse))
         mockGetActiveRelationshipsForClient(testCgtPdRef, CapitalGains)(
           Future.successful(
             Some(
@@ -282,7 +282,7 @@ with MockValidationService {
             )
           )
         )
-        mockGetAgentRecordWithChecks(testArn2)(testAgentDetailsDesResponse)
+        mockGetAgentRecord(testArn2)(testAgentDetailsDesResponse)
 
         val testEk = EnrolmentKey(s"$HMRCCGTPD~CGTPDRef~${testCgtPdRef.value}")
 
@@ -311,7 +311,7 @@ with MockValidationService {
           testAgentDetailsDesResponse
         )
         mockFindAllPendingForClient(testCbcId.value, Seq(HMRCCBCORG))(Seq(cbcPendingInvitation))
-        mockGetAgentRecordWithChecks(testArn)(testAgentDetailsDesResponse)
+        mockGetNonSuspendedAgentRecord(testArn)(Some(testAgentDetailsDesResponse))
         mockGetActiveRelationshipsForClient(testCbcId, Cbc)(
           Future.successful(
             Some(
@@ -323,7 +323,7 @@ with MockValidationService {
             )
           )
         )
-        mockGetAgentRecordWithChecks(testArn2)(testAgentDetailsDesResponse)
+        mockGetAgentRecord(testArn2)(testAgentDetailsDesResponse)
 
         val testEk = EnrolmentKey(s"$HMRCCBCORG~cbcId~${testCbcId.value}")
 
@@ -352,7 +352,7 @@ with MockValidationService {
           testAgentDetailsDesResponse
         )
         mockFindAllPendingForClient(testPillar2Ref.value, Seq(HMRCPILLAR2ORG))(Seq(pillar2PendingInvitation))
-        mockGetAgentRecordWithChecks(testArn)(testAgentDetailsDesResponse)
+        mockGetNonSuspendedAgentRecord(testArn)(Some(testAgentDetailsDesResponse))
         mockGetActiveRelationshipsForClient(testPillar2Ref, Pillar2)(
           Future.successful(
             Some(
@@ -364,7 +364,7 @@ with MockValidationService {
             )
           )
         )
-        mockGetAgentRecordWithChecks(testArn2)(testAgentDetailsDesResponse)
+        mockGetAgentRecord(testArn2)(testAgentDetailsDesResponse)
 
         val testEk = EnrolmentKey(s"$HMRCPILLAR2ORG~PLRID~${testPillar2Ref.value}")
 
@@ -393,7 +393,7 @@ with MockValidationService {
           testAgentDetailsDesResponse
         )
         mockFindAllPendingForClient(testPptRef.value, Seq(HMRCPPTORG))(Seq(pptPendingInvitation))
-        mockGetAgentRecordWithChecks(testArn)(testAgentDetailsDesResponse)
+        mockGetNonSuspendedAgentRecord(testArn)(Some(testAgentDetailsDesResponse))
         mockGetActiveRelationshipsForClient(testPptRef, Ppt)(
           Future.successful(
             Some(
@@ -405,7 +405,7 @@ with MockValidationService {
             )
           )
         )
-        mockGetAgentRecordWithChecks(testArn2)(testAgentDetailsDesResponse)
+        mockGetAgentRecord(testArn2)(testAgentDetailsDesResponse)
 
         val testEk = EnrolmentKey(s"$HMRCPPTORG~EtmpRegistrationNumber~${testPptRef.value}")
 

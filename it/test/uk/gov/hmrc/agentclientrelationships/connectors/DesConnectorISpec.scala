@@ -24,7 +24,6 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.helpers.CorrelationIdGenerator
-import uk.gov.hmrc.agentclientrelationships.model.AgentRecord
 import uk.gov.hmrc.agentclientrelationships.stubs.DataStreamStub
 import uk.gov.hmrc.agentclientrelationships.stubs.DesStubs
 import uk.gov.hmrc.agentclientrelationships.stubs.DesStubsGet
@@ -35,8 +34,6 @@ import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.domain.SaAgentReference
 import uk.gov.hmrc.http.client.HttpClientV2
-import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.http.HttpClient
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import scala.concurrent.ExecutionContext
@@ -178,23 +175,6 @@ with IfStub {
       givenAuditConnector()
       await(desConnector.getClientSaAgentSaReferences(nino)) shouldBe empty
     }
-  }
-
-  "DesConnector GetAgentRecord" should {
-
-    "get agentRecord detail should retrieve agent record from DES" in {
-      givenAuditConnector()
-      getAgentRecordForClient(agentARN)
-
-      await(desConnector.getAgentRecord(agentARN)) should be(
-        Some(AgentRecord(Some(SuspensionDetails(suspensionStatus = false, Some(Set.empty)))))
-      )
-    }
-
-    "throw an IllegalArgumentException when the tax identifier is not supported" in {
-      an[Exception] should be thrownBy await(desConnector.getAgentRecord(Eori("foo")))
-    }
-
   }
 
   "Des Connector vrnIsKnownInETMP" should {
