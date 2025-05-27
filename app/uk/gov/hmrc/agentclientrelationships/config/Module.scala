@@ -34,6 +34,7 @@ extends AbstractModule {
 
     bind(classOf[Clock]).toInstance(Clock.system(ZoneId.systemDefault()))
     bind(classOf[EmailScheduler]).asEagerSingleton()
+    bind(classOf[InternalAuthTokenInitialiser]).asEagerSingleton()
 
   }
 }
