@@ -20,7 +20,6 @@ import cats.data.EitherT
 import cats.implicits._
 import org.apache.commons.lang3.RandomStringUtils
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
-import uk.gov.hmrc.agentclientrelationships.connectors.AgentAssuranceConnector
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink._
 import uk.gov.hmrc.agentclientrelationships.repository.AgentReferenceRepository
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
@@ -35,7 +34,7 @@ import scala.concurrent.Future
 @Singleton
 class InvitationLinkService @Inject() (
   agentReferenceRepository: AgentReferenceRepository,
-  agentAssuranceConnector: AgentAssuranceConnector
+  agentAssuranceService: AgentAssuranceService
 )(implicit ec: ExecutionContext)
 extends RequestAwareLogging {
 
@@ -56,8 +55,7 @@ extends RequestAwareLogging {
         _ <- EitherT.fromEither[Future](
           validateNormalizedAgentName(agentReferenceRecord.normalisedAgentNames, normalizedAgentName)
         )
-        agentDetailsResponse <- EitherT.right(getAgentDetails(agentReferenceRecord.arn))
-        _ <- EitherT.fromEither[Future](checkSuspensionDetails(agentDetailsResponse))
+        agentDetailsResponse <- getNonSuspendedAgentRecord(agentReferenceRecord.arn)
         agencyName <- EitherT(getAgencyName(agentDetailsResponse))
       } yield ValidateLinkResponse(agentReferenceRecord.arn, agencyName)
 
@@ -67,7 +65,7 @@ extends RequestAwareLogging {
 
   def createLink(arn: Arn)(implicit request: RequestHeader): Future[CreateLinkResponse] =
     for {
-      agentDetailsResponse <- getAgentDetails(arn)
+      agentDetailsResponse <- agentAssuranceService.getAgentRecord(arn)
       newNormaliseAgentName = normaliseAgentName(agentDetailsResponse.agencyDetails.agencyName)
 
       agentReferenceRecord <- getAgentReferenceRecordByArn(arn, newNormaliseAgentName)
@@ -86,8 +84,7 @@ extends RequestAwareLogging {
     val responseT =
       for {
         agentReferenceRecord <- EitherT(getAgentReferenceRecord(uid))
-        agentDetailsResponse <- EitherT.right(getAgentDetails(agentReferenceRecord.arn))
-        _ <- EitherT.fromEither[Future](checkSuspensionDetails(agentDetailsResponse))
+        agentDetailsResponse <- getNonSuspendedAgentRecord(agentReferenceRecord.arn)
         agencyName <- EitherT(getAgencyName(agentDetailsResponse))
       } yield ValidateLinkResponse(agentReferenceRecord.arn, agencyName)
 
@@ -141,17 +138,15 @@ extends RequestAwareLogging {
     else
       Left(InvitationLinkFailureResponse.NormalizedAgentNameNotMatched)
 
-  private def getAgentDetails(
+  private def getNonSuspendedAgentRecord(
     arn: Arn
-  )(implicit request: RequestHeader): Future[AgentDetailsDesResponse] = agentAssuranceConnector.getAgentRecordWithChecks(arn)
-
-  private def checkSuspensionDetails(
-    agentDetailsDesResponse: AgentDetailsDesResponse
-  ): Either[InvitationLinkFailureResponse, Boolean] =
-    if (agentDetailsDesResponse.suspensionDetails.exists(_.suspensionStatus))
-      Left(InvitationLinkFailureResponse.AgentSuspended)
-    else
-      Right(false)
+  )(implicit
+    request: RequestHeader
+  ): EitherT[
+    Future,
+    InvitationLinkFailureResponse,
+    AgentDetailsDesResponse
+  ] = EitherT.fromOptionF(agentAssuranceService.getNonSuspendedAgentRecord(arn), InvitationLinkFailureResponse.AgentSuspended)
 
   private def getAgencyName(
     agentDetailsDesResponse: AgentDetailsDesResponse

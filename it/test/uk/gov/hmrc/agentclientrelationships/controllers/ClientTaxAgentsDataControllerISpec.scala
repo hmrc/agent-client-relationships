@@ -1028,7 +1028,7 @@ with TestData {
 
     }
 
-    "ServiceUnavailable 503 if agentDetails check returns any error 404 for one of the agents" in {
+    "Internal Error 500 if agentDetails check returns any error for one of the agents" in {
       givenAuthorisedAsClient(
         fakeRequest,
         mtdItId,
@@ -1075,7 +1075,7 @@ with TestData {
       givenAgentDetailsErrorResponse(arn, 404)
 
       val result = doGetRequest(testEndpoint)
-      result.status shouldBe 503
+      result.status shouldBe 500
 
     }
 

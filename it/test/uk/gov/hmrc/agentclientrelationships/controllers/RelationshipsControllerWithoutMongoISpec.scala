@@ -31,6 +31,7 @@ import uk.gov.hmrc.agentclientrelationships.repository.RelationshipCopyRecord
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipCopyRecordRepository
 import uk.gov.hmrc.agentclientrelationships.stubs._
 import uk.gov.hmrc.agentclientrelationships.support.Resource
+import uk.gov.hmrc.agentclientrelationships.support.TestData
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 import uk.gov.hmrc.agentclientrelationships.support.WireMockSupport
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDIT
@@ -67,6 +68,7 @@ with HipStub
 with DesStubsGet
 with MappingStubs
 with DataStreamStub
+with AgentAssuranceStubs
 with AuthStub {
 
   override implicit lazy val app: Application = appBuilder.build()
@@ -82,6 +84,8 @@ with AuthStub {
       "microservice.services.auth.port" -> wireMockPort,
       "microservice.services.agent-mapping.port" -> wireMockPort,
       "microservice.services.agent-client-authorisation.port" -> wireMockPort,
+      "microservice.services.agent-assurance.port" -> wireMockPort,
+      "internal-auth.token" -> "internalAuthToken",
       "auditing.consumer.baseUri.host" -> wireMockHost,
       "auditing.consumer.baseUri.port" -> wireMockPort,
       "features.copy-relationship.mtd-vat" -> true,
@@ -232,7 +236,7 @@ with AuthStub {
     val enrolmentKey: EnrolmentKey = EnrolmentKey("IR-SA", Seq(Identifier("NINO", nino.value)))
 
     "return 200 when relationship exists only in cesa and relationship copy is never attempted" in {
-      getAgentRecordForClient(arn)
+      givenAgentRecordFound(arn, agentRecordResponse)
       givenArnIsKnownFor(arn, SaAgentReference("foo"))
       givenClientHasRelationshipWithAgentInCESA(nino, "foo")
       givenAuditConnector()
@@ -260,7 +264,7 @@ with AuthStub {
     }
 
     "return 200 when relationship does not exist in CESA but there is a PartialAuth for main agent type" in {
-      getAgentRecordForClient(arn)
+      givenAgentRecordFound(arn, agentRecordResponse)
       givenClientHasNoActiveRelationshipWithAgentInCESA(nino)
       givenAuditConnector()
       await(partialAuthRepo.collection.insertOne(partialAuthRelationship(HMRCMTDIT)).toFuture())
@@ -288,7 +292,7 @@ with AuthStub {
     }
 
     "return 200 when relationship does not exist in CESA but there is a PartialAuth for supporting agent type" in {
-      getAgentRecordForClient(arn)
+      givenAgentRecordFound(arn, agentRecordResponse)
       givenClientHasNoActiveRelationshipWithAgentInCESA(nino)
       givenAuditConnector()
       await(partialAuthRepo.collection.insertOne(partialAuthRelationship(HMRCMTDITSUPP)).toFuture())
@@ -316,7 +320,7 @@ with AuthStub {
     }
 
     "return 404 when relationship does not exist in CESA and there is no PartialAuth" in {
-      getAgentRecordForClient(arn)
+      givenAgentRecordFound(arn, agentRecordResponse)
       givenClientHasNoActiveRelationshipWithAgentInCESA(nino)
       givenAuditConnector()
 

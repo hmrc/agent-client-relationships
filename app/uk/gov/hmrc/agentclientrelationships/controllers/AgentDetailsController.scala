@@ -22,8 +22,8 @@ import play.api.mvc.AnyContent
 import play.api.mvc.ControllerComponents
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.connectors.AgentAssuranceConnector
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentDetailsDesResponse
+import uk.gov.hmrc.agentclientrelationships.services.AgentAssuranceService
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.agentmtdidentifiers.model.Service
 import uk.gov.hmrc.auth.core.AuthConnector
@@ -35,7 +35,7 @@ import scala.concurrent.ExecutionContext
 
 @Singleton
 class AgentDetailsController @Inject() (
-  agentAssuranceConnector: AgentAssuranceConnector,
+  agentAssuranceService: AgentAssuranceService,
   val authConnector: AuthConnector,
   val appConfig: AppConfig,
   cc: ControllerComponents
@@ -47,8 +47,8 @@ with AuthActions {
 
   def getAgentDetails(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
     withAuthorisedAsAgent { _ =>
-      agentAssuranceConnector
-        .getAgentRecordWithChecks(arn)
+      agentAssuranceService
+        .getAgentRecord(arn)
         .map { agent =>
           Ok(Json.toJson[AgentDetailsDesResponse](agent))
         }

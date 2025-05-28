@@ -21,49 +21,10 @@ import com.github.tomakehurst.wiremock.stubbing.StubMapping
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentclientrelationships.support.WireMockSupport
 import uk.gov.hmrc.agentmtdidentifiers.model._
-import uk.gov.hmrc.domain.TaxIdentifier
 
 trait DesStubsGet {
 
   me: WireMockSupport =>
-
-  // Via Client
-
-  private val agentRecordUrl: TaxIdentifier => String = {
-    case Arn(arn) => s"/registration/personal-details/arn/$arn"
-    case Utr(utr) => s"/registration/personal-details/utr/$utr"
-    case x => throw new IllegalArgumentException(s"Tax identifier not supported $x")
-  }
-
-  def getAgentRecordForClient(taxIdentifier: TaxIdentifier): StubMapping = stubFor(
-    get(urlEqualTo(agentRecordUrl(taxIdentifier))).willReturn(
-      aResponse()
-        .withStatus(200)
-        .withBody(s"""
-                     | {
-                     |  "suspensionDetails" : {
-                     |    "suspensionStatus": false,
-                     |    "regimes": []
-                     |  }
-                     | }
-                     |""".stripMargin)
-    )
-  )
-
-  def getSuspendedAgentRecordForClient(taxIdentifier: TaxIdentifier): StubMapping = stubFor(
-    get(urlEqualTo(agentRecordUrl(taxIdentifier))).willReturn(
-      aResponse()
-        .withStatus(200)
-        .withBody(s"""
-                     | {
-                     |  "suspensionDetails" : {
-                     |    "suspensionStatus": true,
-                     |    "regimes": ["ITSA"]
-                     |  }
-                     | }
-                     |""".stripMargin)
-    )
-  )
 
   def getVrnIsKnownInETMPFor(vrn: Vrn): StubMapping = stubFor(
     get(urlEqualTo(s"/vat/customer/vrn/${vrn.value}/information"))

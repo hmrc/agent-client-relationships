@@ -44,7 +44,7 @@ import scala.concurrent.Future
 class CheckRelationshipsService @Inject() (
   es: EnrolmentStoreProxyConnector,
   ap: AgentPermissionsConnector,
-  agentAssuranceConnector: AgentAssuranceConnector,
+  agentAssuranceService: AgentAssuranceService,
   ifOrHipConnector: IfOrHipConnector,
   groupSearch: UsersGroupsSearchConnector,
   partialAuthRepository: PartialAuthRepository,
@@ -138,8 +138,8 @@ with RequestAwareLogging {
     .findMainAgent(invitation.clientId)
     .flatMap {
       case Some(p) =>
-        agentAssuranceConnector
-          .getAgentRecordWithChecks(Arn(p.arn))
+        agentAssuranceService
+          .getAgentRecord(Arn(p.arn))
           .map(agent =>
             Some(ExistingMainAgent(agencyName = agent.agencyDetails.agencyName, sameAgent = p.arn == invitation.arn))
           )
@@ -159,8 +159,8 @@ with RequestAwareLogging {
   private def returnExistingMainAgentFromArn(
     arn: String,
     sameAgent: Boolean
-  )(implicit request: RequestHeader): Future[Some[ExistingMainAgent]] = agentAssuranceConnector
-    .getAgentRecordWithChecks(Arn(arn))
+  )(implicit request: RequestHeader): Future[Some[ExistingMainAgent]] = agentAssuranceService
+    .getAgentRecord(Arn(arn))
     .map(agent => Some(ExistingMainAgent(agencyName = agent.agencyDetails.agencyName, sameAgent = sameAgent)))
 
   def findCurrentMainAgent(

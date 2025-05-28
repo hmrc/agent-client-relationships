@@ -25,13 +25,13 @@ import play.api.libs.json.Json
 import play.api.libs.json.Json.toJson
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.connectors.AgentAssuranceConnector
 import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiFailureResponse.ErrorBody
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentReferenceRecord
 import uk.gov.hmrc.agentclientrelationships.repository.AgentReferenceRepository
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
 import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
+import uk.gov.hmrc.agentclientrelationships.services.AgentAssuranceService
 import uk.gov.hmrc.agentclientrelationships.services.InvitationLinkService
 import uk.gov.hmrc.agentclientrelationships.stubs._
 import uk.gov.hmrc.agentclientrelationships.support.TestData
@@ -64,7 +64,7 @@ with TestData {
   implicit val lang: Lang = langs.availables.head
 
   val invitationLinkService: InvitationLinkService = app.injector.instanceOf[InvitationLinkService]
-  val agentAssuranceConnector: AgentAssuranceConnector = app.injector.instanceOf[AgentAssuranceConnector]
+  val agentAssuranceService: AgentAssuranceService = app.injector.instanceOf[AgentAssuranceService]
 
   val invitationRepo: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
   val partialAuthRepository: PartialAuthRepository = app.injector.instanceOf[PartialAuthRepository]
@@ -73,7 +73,7 @@ with TestData {
   val controller =
     new ApiGetInvitationsController(
       invitationLinkService,
-      agentAssuranceConnector,
+      agentAssuranceService,
       invitationRepo,
       appConfig,
       stubControllerComponents()

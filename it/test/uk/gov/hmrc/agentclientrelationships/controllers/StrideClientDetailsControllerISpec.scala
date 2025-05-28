@@ -109,7 +109,7 @@ with AfiRelationshipStub {
 
   def agentDetailsDesResponse(suspended: Boolean = false) = AgentDetailsDesResponse(
     agencyDetails = AgencyDetails("ABC Ltd", ""),
-    suspensionDetails = Option(SuspensionDetails(suspended, Some(Set("AGSV"))))
+    suspensionDetails = Some(SuspensionDetails(suspended, Some(Set("AGSV"))))
   )
 
   def invitationWithAgentName(

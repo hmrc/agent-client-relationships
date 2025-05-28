@@ -23,11 +23,10 @@ import play.api.mvc.AnyContent
 import play.api.mvc.ControllerComponents
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.connectors.AgentAssuranceConnector
 import uk.gov.hmrc.agentclientrelationships.model.Invitation
 import uk.gov.hmrc.agentclientrelationships.model.invitation._
-import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentDetailsDesResponse
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
+import uk.gov.hmrc.agentclientrelationships.services.AgentAssuranceService
 import uk.gov.hmrc.agentclientrelationships.services.InvitationLinkService
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
@@ -40,7 +39,7 @@ import scala.concurrent.Future
 @Singleton
 class ApiGetInvitationsController @Inject() (
   invitationLinkService: InvitationLinkService,
-  agentAssuranceConnector: AgentAssuranceConnector,
+  agentAssuranceService: AgentAssuranceService,
   invitationsRepository: InvitationsRepository,
   val appConfig: AppConfig,
   cc: ControllerComponents
@@ -65,7 +64,7 @@ extends BackendController(cc) {
     request: RequestHeader
   ): Future[Either[ApiFailureResponse, ApiBulkInvitationsResponse]] =
     (for {
-      agentRecord <- EitherT(getAgentDetailsByArn(arn))
+      agentRecord <- EitherT.fromOptionF(agentAssuranceService.getNonSuspendedAgentRecord(arn), ApiFailureResponse.AgentSuspended)
       newNormaliseAgentName = invitationLinkService.normaliseAgentName(agentRecord.agencyDetails.agencyName)
       agentReferenceRecord <- EitherT.right[ApiFailureResponse](
         invitationLinkService.getAgentReferenceRecordByArn(arn = arn, newNormaliseAgentName = newNormaliseAgentName)
@@ -82,19 +81,5 @@ extends BackendController(cc) {
     supportedServices: Seq[Service]
   ): Future[Seq[Invitation]] = invitationsRepository
     .findAllForAgentService(arn = arn.value, services = supportedServices.map(_.id))
-
-  private def getAgentDetailsByArn(arn: Arn)(implicit
-    requestHeader: RequestHeader
-  ): Future[Either[ApiFailureResponse, AgentDetailsDesResponse]] = agentAssuranceConnector
-    .getAgentRecordWithChecks(arn)
-    .map { agentRecord =>
-      if (agentIsSuspended(agentRecord))
-        Left(ApiFailureResponse.AgentSuspended)
-      else
-        Right(agentRecord)
-    }
-    .recover { case ex: Throwable => Left(ApiFailureResponse.ApiInternalServerError(ex.getMessage)) }
-
-  private def agentIsSuspended(agentRecord: AgentDetailsDesResponse): Boolean = agentRecord.suspensionDetails.exists(_.suspensionStatus)
 
 }
