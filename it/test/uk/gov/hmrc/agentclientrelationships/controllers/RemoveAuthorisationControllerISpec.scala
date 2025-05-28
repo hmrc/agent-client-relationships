@@ -487,7 +487,9 @@ with TestData {
         agentCode = None
       )
 
-      await(invitationRepo.findOneById(pirInvitation.invitationId)).get.status shouldBe DeAuthorised
+      eventually {
+        await(invitationRepo.findOneById(pirInvitation.invitationId)).get.status shouldBe DeAuthorised
+      }
     }
 
     "return 404 when AFI returns 404" in new StubsForThisScenario {
