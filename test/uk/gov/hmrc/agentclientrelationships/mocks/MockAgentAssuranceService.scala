@@ -20,12 +20,11 @@ import org.mockito.ArgumentMatchers.any
 import org.mockito.ArgumentMatchers.{eq => eqs}
 import org.mockito.Mockito.when
 import org.mockito.stubbing.OngoingStubbing
-import uk.gov.hmrc.agentclientrelationships.connectors.AgentAssuranceConnector
+import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentDetailsDesResponse
+import uk.gov.hmrc.agentclientrelationships.services.AgentAssuranceService
 import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import play.api.mvc.RequestHeader
-import uk.gov.hmrc.agentclientrelationships.services.AgentAssuranceService
 
 import scala.concurrent.Future
 
@@ -45,5 +44,9 @@ trait MockAgentAssuranceService {
   )(response: Option[AgentDetailsDesResponse]): OngoingStubbing[Future[Option[AgentDetailsDesResponse]]] = when(
     mockAgentAssuranceService.getNonSuspendedAgentRecord(eqs(arn))(any[RequestHeader])
   ).thenReturn(Future.successful(response))
+
+  def mockFailedGetAgentRecord(arn: Arn): OngoingStubbing[Future[AgentDetailsDesResponse]] = when(
+    mockAgentAssuranceService.getAgentRecord(eqs(arn))(any[RequestHeader])
+  ).thenReturn(Future.failed(new Exception("something went wrong")))
 
 }

@@ -25,6 +25,7 @@ import uk.gov.hmrc.agentclientrelationships.model.stride.ClientRelationship
 import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import play.api.mvc.RequestHeader
+import uk.gov.hmrc.agentclientrelationships.model.RelationshipFailureResponse
 
 import java.time.LocalDateTime
 import scala.concurrent.Future
@@ -47,10 +48,11 @@ trait MockAgentFiRelationshipConnector {
     )(any[RequestHeader])
   ).thenReturn(Future.unit)
 
-  def mockFindRelationshipForClient(
-    clientId: String
-  )(response: Option[ClientRelationship]): OngoingStubbing[Future[Option[ClientRelationship]]] = when(
-    mockAgentFiRelationshipConnector.findIrvRelationshipForClient(eqs(clientId))(any[RequestHeader])
+  def mockFindRelationshipForClient(clientId: String)(response: Either[
+    RelationshipFailureResponse,
+    Seq[ClientRelationship]
+  ]): OngoingStubbing[Future[Either[RelationshipFailureResponse, Seq[ClientRelationship]]]] = when(
+    mockAgentFiRelationshipConnector.findIrvActiveRelationshipForClient(eqs(clientId))(any[RequestHeader])
   ).thenReturn(Future.successful(response))
 
 }

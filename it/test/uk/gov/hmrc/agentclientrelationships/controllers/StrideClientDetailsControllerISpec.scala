@@ -17,6 +17,7 @@
 package uk.gov.hmrc.agentclientrelationships.controllers
 
 import play.api.libs.json.Json
+import play.api.mvc.AnyContentAsEmpty
 import play.api.test.FakeRequest
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ActiveMainAgent
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsStrideResponse
@@ -50,6 +51,8 @@ with AfiRelationshipStub {
 
   val partialAuthRepo: PartialAuthRepository = app.injector.instanceOf[PartialAuthRepository]
   val invitationsRepo: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
+
+  val req: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
 
   val testAgentRecord: TestAgentDetailsDesResponse = TestAgentDetailsDesResponse(
     uniqueTaxReference = None,
@@ -107,7 +110,7 @@ with AfiRelationshipStub {
     lastUpdated = Instant.now().truncatedTo(ChronoUnit.SECONDS)
   )
 
-  def agentDetailsDesResponse(suspended: Boolean = false) = AgentDetailsDesResponse(
+  def agentDetailsDesResponse(suspended: Boolean = false): AgentDetailsDesResponse = AgentDetailsDesResponse(
     agencyDetails = AgencyDetails("ABC Ltd", ""),
     suspensionDetails = Some(SuspensionDetails(suspended, Some(Set("AGSV"))))
   )
@@ -115,7 +118,7 @@ with AfiRelationshipStub {
   def invitationWithAgentName(
     invitation: Invitation,
     suspended: Boolean = false
-  ) = InvitationWithAgentName
+  ): InvitationWithAgentName = InvitationWithAgentName
     .fromInvitationAndAgentRecord(invitation, agentDetailsDesResponse(suspended))
 
   val testEndpoint = "/agent-client-relationships/stride/client-details/service/"
@@ -161,7 +164,6 @@ with AfiRelationshipStub {
 
     "return Not Found" when {
       "no invitations exist for HMRC-MTD-VAT and client unknown in HOD" in {
-        val req = FakeRequest()
         givenAuthorisedAsStrideUser(req, "user-123")
         givenAuditConnector()
 
@@ -181,7 +183,6 @@ with AfiRelationshipStub {
 
     "return OK" when {
       "no invitations exist for HMRC-MTD-VAT but client is known in HOD" in {
-        val req = FakeRequest()
         givenAuthorisedAsStrideUser(req, "user-123")
         givenAuditConnector()
 
@@ -203,7 +204,6 @@ with AfiRelationshipStub {
 
     "return OK" when {
       "no invitations exist for HMRC-MTD-VAT but client is known in HOD and no existing main agent" in {
-        val req = FakeRequest()
         givenAuthorisedAsStrideUser(req, "user-123")
         givenAuditConnector()
 
@@ -223,7 +223,6 @@ with AfiRelationshipStub {
       }
 
       "pending invitations exist for HMRC-MTD-VAT and no active relationships" in {
-        val req = FakeRequest()
         givenAuthorisedAsStrideUser(req, "user-123")
         givenAuditConnector()
 
@@ -252,7 +251,6 @@ with AfiRelationshipStub {
       }
 
       "pending invitations exist for HMRC-MTD-VAT and there is an active relationship" in {
-        val req = FakeRequest()
         givenAuthorisedAsStrideUser(req, "user-123")
         givenAuditConnector()
 
@@ -291,7 +289,6 @@ with AfiRelationshipStub {
       }
 
       "pending invitations exist for HMRC-MTD-VAT from a suspended agent and there is an active relationship" in {
-        val req = FakeRequest()
         givenAuthorisedAsStrideUser(req, "user-123")
         givenAuditConnector()
 
@@ -336,7 +333,6 @@ with AfiRelationshipStub {
       }
 
       "pending invitations exist for HMRC-MTD-IT and there is an active partial-auth relationship" in {
-        val req = FakeRequest()
         givenAuthorisedAsStrideUser(req, "user-123")
         givenAuditConnector()
 
@@ -382,7 +378,6 @@ with AfiRelationshipStub {
       }
 
       "pending invitations exist for HMRC-MTD-IT and there is a MTD relationship" in {
-        val req = FakeRequest()
         givenAuthorisedAsStrideUser(req, "user-123")
         givenAuditConnector()
 
@@ -429,7 +424,6 @@ with AfiRelationshipStub {
       }
 
       "pending invitations exist for PERSONAL-INCOME-RECORD and there is an IRV relationship" in {
-        val req = FakeRequest()
         givenAuthorisedAsStrideUser(req, "user-123")
         givenAuditConnector()
 
@@ -480,7 +474,6 @@ with AfiRelationshipStub {
       }
 
       "pending invitations exist for HMRC-CBC-ORG and there is an active CBC relationship" in {
-        val req = FakeRequest()
         givenAuthorisedAsStrideUser(req, "user-123")
         givenAuditConnector()
 
@@ -532,7 +525,6 @@ with AfiRelationshipStub {
       }
 
       "pending invitations exist for HMRC-CBC-NONUK-ORG and there is an active CBC relationship" in {
-        val req = FakeRequest()
         givenAuthorisedAsStrideUser(req, "user-123")
         givenAuditConnector()
 
@@ -589,8 +581,6 @@ with AfiRelationshipStub {
   s"POST /stride/active-relationships" should {
 
     val requestPath: String = s"/agent-client-relationships/stride/active-relationships"
-
-    val req = FakeRequest()
 
     "find relationships for all clientTypes and send back Json" in {
 
@@ -1148,6 +1138,102 @@ with AfiRelationshipStub {
       result.status shouldBe 404
     }
 
+  }
+
+  "GET /stride/irv-relationships/:nino" should {
+
+    def requestPath(nino: String) = s"/agent-client-relationships/stride/irv-relationships/$nino"
+
+    "return 200 with expected JSON body when all calls are successful" in {
+      givenAuthorisedAsStrideUser(req, "user-123")
+      givenAuditConnector()
+      givenAfiRelationshipForClientIsActive(
+        arn,
+        "PERSONAL-INCOME-RECORD",
+        nino.value,
+        fromCesa = true
+      )
+      givenItsaCitizenDetailsExists(nino.value)
+      givenAgentRecordFound(arn, testAgentRecord)
+
+      val expectedJsonBody = Json.obj(
+        "clientName" -> "Matthew Kovacic",
+        "nino" -> "AB123456C",
+        "agents" -> Json.arr(Json.obj("name" -> "ABC Ltd", "arn" -> "AARN0000002"))
+      )
+
+      val result = doGetRequest(requestPath(nino.value))
+      result.status shouldBe 200
+      result.json shouldBe expectedJsonBody
+    }
+
+    "return 400 when there is an error validating the NINO" in {
+      givenAuthorisedAsStrideUser(req, "user-123")
+      givenAuditConnector()
+
+      val result = doGetRequest(requestPath("INVALID_NINO"))
+      result.status shouldBe 400
+    }
+
+    "return 401 when the request is unauthorised" in {
+      requestIsNotAuthenticated()
+      givenAuditConnector()
+
+      val result = doGetRequest(requestPath(nino.value))
+      result.status shouldBe 401
+    }
+
+    "return 404 when no client details were found for the given NINO" in {
+      givenAuthorisedAsStrideUser(req, "user-123")
+      givenAuditConnector()
+      givenAfiRelationshipForClientNotFound(nino.value)
+      givenItsaCitizenDetailsError(nino.value, 404)
+
+      val result = doGetRequest(requestPath(nino.value))
+      result.status shouldBe 404
+    }
+
+    "return 500" when {
+
+      "there is an error retrieving client details" in {
+        givenAuthorisedAsStrideUser(req, "user-123")
+        givenAuditConnector()
+        givenAfiRelationshipForClientNotFound(nino.value)
+        givenItsaCitizenDetailsError(nino.value, 500)
+
+        val result = doGetRequest(requestPath(nino.value))
+        result.status shouldBe 500
+        result.body shouldBe "Unexpected error during 'getItsaCitizenDetails'"
+      }
+
+      "there is an error retrieving agent details" in {
+        givenAuthorisedAsStrideUser(req, "user-123")
+        givenAuditConnector()
+        givenAfiRelationshipForClientIsActive(
+          arn,
+          "PERSONAL-INCOME-RECORD",
+          nino.value,
+          fromCesa = true
+        )
+        givenItsaCitizenDetailsExists(nino.value)
+        givenAgentDetailsErrorResponse(arn, 500)
+
+        val result = doGetRequest(requestPath(nino.value))
+        result.status shouldBe 500
+        result.body should include("Unexpected error retrieving agent record")
+      }
+
+      "there is an error retrieving relationship details" in {
+        givenAuthorisedAsStrideUser(req, "user-123")
+        givenAuditConnector()
+        givenAfiRelationshipForClientNotFound(nino.value, 500)
+        givenItsaCitizenDetailsExists(nino.value)
+
+        val result = doGetRequest(requestPath(nino.value))
+        result.status shouldBe 500
+        result.body shouldBe "Unexpected status 500 received from AFI get active relationship for client"
+      }
+    }
   }
 
 }

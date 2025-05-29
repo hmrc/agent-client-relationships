@@ -98,4 +98,21 @@ with AuthActions {
       }
     }
 
+  def getIrvRelationships(nino: String): Action[AnyContent] = Action.async { implicit request =>
+    authorisedWithStride(appConfig.oldAuthStrideRole, appConfig.newAuthStrideRole) { _ =>
+      strideClientDetailsService.findActiveIrvRelationships(nino).map {
+        case Right(irvRelationships) => Ok(Json.toJson(irvRelationships))
+        case Left(error) =>
+          error match {
+            case RelationshipFailureResponse.TaxIdentifierError => BadRequest
+            case RelationshipFailureResponse.ClientDetailsNotFound => NotFound
+            case RelationshipFailureResponse.ErrorRetrievingClientDetails(_, message) => InternalServerError(message)
+            case RelationshipFailureResponse.ErrorRetrievingAgentDetails(message) => InternalServerError(message)
+            case RelationshipFailureResponse.ErrorRetrievingRelationship(_, message) => InternalServerError(message)
+            case _ => InternalServerError
+          }
+      }
+    }
+  }
+
 }

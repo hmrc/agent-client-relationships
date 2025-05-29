@@ -228,7 +228,7 @@ class ClientTaxAgentsDataService @Inject() (
         for {
           irvActiveRelationship <- EitherT(
             agentFiRelationshipConnector.findIrvActiveRelationshipForClient(taxIdentifier.value)
-          ).map(Seq(_)).leftFlatMap(recoverNotFoundRelationship)
+          ).leftFlatMap(recoverNotFoundRelationship)
           irvInactiveRelationship <- EitherT(agentFiRelationshipConnector.findIrvInactiveRelationshipForClient)
             .leftFlatMap(recoverNotFoundRelationship)
           irvAllRelationship = irvActiveRelationship ++ irvInactiveRelationship

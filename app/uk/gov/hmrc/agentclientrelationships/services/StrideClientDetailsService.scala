@@ -18,32 +18,30 @@ package uk.gov.hmrc.agentclientrelationships.services
 
 import cats.data.EitherT
 import cats.implicits._
-import uk.gov.hmrc.agentclientrelationships.connectors.AgentAssuranceConnector
+import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.connectors.AgentFiRelationshipConnector
-import uk.gov.hmrc.agentclientrelationships.model.clientDetails._
-import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentDetailsDesResponse
-import uk.gov.hmrc.agentclientrelationships.model.stride._
 import uk.gov.hmrc.agentclientrelationships.model.ActiveRelationship
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.RelationshipFailureResponse
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails._
+import uk.gov.hmrc.agentclientrelationships.model.stride._
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
 import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentmtdidentifiers.model.NinoType
+import uk.gov.hmrc.agentmtdidentifiers.model.Service
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDIT
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDITSUPP
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.MtdIt
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.PersonalIncomeRecord
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.agentmtdidentifiers.model.Service
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.domain.TaxIdentifier
-import play.api.mvc.RequestHeader
 
 import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import scala.util.Try
 
 @Singleton
 class StrideClientDetailsService @Inject() (
@@ -112,6 +110,26 @@ class StrideClientDetailsService @Inject() (
       .map(_.flatten)
       .value
 
+  def findActiveIrvRelationships(
+    nino: String
+  )(implicit request: RequestHeader): Future[Either[RelationshipFailureResponse, IrvRelationships]] =
+    (for {
+      taxIdentifier <- EitherT.fromEither[Future](validationService.validateForTaxIdentifier(NinoType.id, nino))
+      activeRelationships <- EitherT(agentFiRelationshipConnector.findIrvActiveRelationshipForClient(taxIdentifier.value))
+        .leftFlatMap(recoverNotFoundRelationship)
+      agentDetails <- findAgentNameForActiveRelationships(activeRelationships, taxIdentifier)
+      clientDetails <- EitherT(clientDetailsService.findClientDetails("PERSONAL-INCOME-RECORD", nino))
+        .leftFlatMap(convertClientDetailsError)
+    } yield {
+      IrvRelationships(
+        clientDetails.name,
+        nino,
+        agentDetails.map { agent =>
+          IrvAgent(agent.agentName, agent.arn.value)
+        }
+      )
+    }).value
+
   private def findAgentClientDataForRelationships(
     taxIdentifier: TaxIdentifier,
     activeRelationships: Seq[ClientRelationship]
@@ -148,7 +166,7 @@ class StrideClientDetailsService @Inject() (
 
               irvActiveRelationship <- EitherT(
                 agentFiRelationshipConnector.findIrvActiveRelationshipForClient(taxIdentifier.value)
-              ).map(Seq(_)).leftFlatMap(recoverNotFoundRelationship)
+              ).leftFlatMap(recoverNotFoundRelationship)
 
               partialAuthAuthorisations <- EitherT.right[RelationshipFailureResponse](
                 getPartialAuthAuthorisations(taxIdentifier)
@@ -174,6 +192,17 @@ class StrideClientDetailsService @Inject() (
         EitherT.rightT[Future, RelationshipFailureResponse](Seq.empty[ClientRelationship])
       case otherError => EitherT.leftT[Future, Seq[ClientRelationship]](otherError)
 
+    }
+
+  private def convertClientDetailsError(failureResponse: ClientDetailsFailureResponse): EitherT[
+    Future,
+    RelationshipFailureResponse,
+    ClientDetailsResponse
+  ] =
+    failureResponse match {
+      case ClientDetailsNotFound => EitherT.leftT[Future, ClientDetailsResponse](RelationshipFailureResponse.ClientDetailsNotFound)
+      case ErrorRetrievingClientDetails(status, msg) =>
+        EitherT.leftT[Future, ClientDetailsResponse](RelationshipFailureResponse.ErrorRetrievingClientDetails(status, msg))
     }
 
   private def getPartialAuthAuthorisations(taxIdentifier: TaxIdentifier): Future[Seq[ClientRelationship]] =
@@ -209,7 +238,8 @@ class StrideClientDetailsService @Inject() (
   ] =
     activeRelationships.map { ar =>
       for {
-        agentDetails <- EitherT.right(agentAssuranceService.getAgentRecord(ar.arn))
+        agentDetails <- agentAssuranceService.getAgentRecord(ar.arn).attemptT
+          .leftMap(ex => RelationshipFailureResponse.ErrorRetrievingAgentDetails(ex.getMessage))
         service <- EitherT(
           validationService.validateAuthProfileToService(
             taxIdentifier,
@@ -284,8 +314,8 @@ class StrideClientDetailsService @Inject() (
 
       case (_: Nino, PersonalIncomeRecord) =>
         for {
-          irv <- agentFiRelationshipConnector.findIrvRelationshipForClient(taxIdentifier.value)
-          activeRel = irv.map(r => ActiveMainAgentRelationship(r.arn.value, service.id))
+          irv <- agentFiRelationshipConnector.findIrvActiveRelationshipForClient(taxIdentifier.value).map(_.toOption)
+          activeRel = irv.flatMap(_.headOption.map(r => ActiveMainAgentRelationship(r.arn.value, service.id)))
         } yield activeRel
 
       case _ =>

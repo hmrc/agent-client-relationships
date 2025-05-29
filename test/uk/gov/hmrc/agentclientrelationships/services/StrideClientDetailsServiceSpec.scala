@@ -20,6 +20,8 @@ import play.api.test.Helpers.await
 import play.api.test.Helpers.defaultAwaitTimeout
 import uk.gov.hmrc.agentclientrelationships.mocks._
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ActiveMainAgent
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsNotFound
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsResponse
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsStrideResponse
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgencyDetails
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentDetailsDesResponse
@@ -27,19 +29,28 @@ import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentclientrelationships.model.stride.RelationshipSource.AfrRelationshipRepo
 import uk.gov.hmrc.agentclientrelationships.model.stride.ClientRelationship
 import uk.gov.hmrc.agentclientrelationships.model.stride.InvitationWithAgentName
+import uk.gov.hmrc.agentclientrelationships.model.stride.IrvAgent
+import uk.gov.hmrc.agentclientrelationships.model.stride.IrvRelationships
 import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.agentmtdidentifiers.model.CbcId
 import uk.gov.hmrc.agentmtdidentifiers.model.CgtRef
 import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
+import uk.gov.hmrc.agentmtdidentifiers.model.NinoType
 import uk.gov.hmrc.agentmtdidentifiers.model.PlrId
 import uk.gov.hmrc.agentmtdidentifiers.model.PptRef
+import uk.gov.hmrc.agentmtdidentifiers.model.Service
 import uk.gov.hmrc.agentmtdidentifiers.model.Vrn
 import uk.gov.hmrc.agentmtdidentifiers.model.Service._
 import uk.gov.hmrc.domain.Nino
 import play.api.mvc.RequestHeader
 import play.api.test.FakeRequest
+import uk.gov.hmrc.agentclientrelationships.model.RelationshipFailureResponse.ErrorRetrievingAgentDetails
+import uk.gov.hmrc.agentclientrelationships.model.RelationshipFailureResponse.ErrorRetrievingRelationship
+import uk.gov.hmrc.agentclientrelationships.model.RelationshipFailureResponse.RelationshipNotFound
+import uk.gov.hmrc.agentclientrelationships.model.RelationshipFailureResponse.TaxIdentifierError
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.KnownFactType.PostalCode
 
 import java.time.Instant
 import java.time.LocalDate
@@ -80,9 +91,9 @@ with MockValidationService {
 
   val testVrn: Vrn = Vrn("1234567890")
   val testCbcId: CbcId = CbcId("XXCBC9872173612")
-  val testCgtPdRef = CgtRef("XMCGTP123179159")
-  val testPillar2Ref = PlrId("XQPLR0799747149")
-  val testPptRef = PptRef("XKPPT0006812629")
+  val testCgtPdRef: CgtRef = CgtRef("XMCGTP123179159")
+  val testPillar2Ref: PlrId = PlrId("XQPLR0799747149")
+  val testPptRef: PptRef = PptRef("XKPPT0006812629")
 
   val itsaEnrolment: EnrolmentKey = EnrolmentKey(MtdIt, testMtdItId)
   val itsaSuppEnrolment: EnrolmentKey = EnrolmentKey(MtdItSupp, testMtdItId)
@@ -90,6 +101,24 @@ with MockValidationService {
   val testAgentDetailsDesResponse: AgentDetailsDesResponse = AgentDetailsDesResponse(
     agencyDetails = AgencyDetails("ABC Ltd", ""),
     suspensionDetails = None
+  )
+
+  val testClientDetailsResponse: ClientDetailsResponse = ClientDetailsResponse(
+    testName,
+    None,
+    isOverseas = Some(false),
+    Seq("AA11AA"),
+    Some(PostalCode)
+  )
+
+  val testClientRelationship: ClientRelationship = ClientRelationship(
+    arn = testArn,
+    dateTo = None,
+    dateFrom = None,
+    authProfile = None,
+    isActive = true,
+    relationshipSource = AfrRelationshipRepo,
+    service = None
   )
 
   val itsaInvitation: Invitation = Invitation.createNew(
@@ -188,20 +217,8 @@ with MockValidationService {
         )
         mockFindAllPendingForClient(testNino.value, Seq(PersonalIncomeRecord.id))(Seq(irvPendingInvitation))
         mockGetNonSuspendedAgentRecord(testArn)(Some(testAgentDetailsDesResponse))
-        mockFindRelationshipForClient(testNino.value)(
-          Some(
-            ClientRelationship(
-              arn = testArn2,
-              dateTo = None,
-              dateFrom = None,
-              authProfile = None,
-              isActive = true,
-              relationshipSource = AfrRelationshipRepo,
-              service = None
-            )
-          )
-        )
-        mockGetAgentRecord(testArn2)(testAgentDetailsDesResponse)
+        mockFindRelationshipForClient(testNino.value)(Right(List(testClientRelationship)))
+        mockGetAgentRecord(testArn)(testAgentDetailsDesResponse)
 
         val testEk = EnrolmentKey(s"PERSONAL-INCOME-RECORD~NINO~${testNino.value}")
 
@@ -213,7 +230,7 @@ with MockValidationService {
               Some(
                 ActiveMainAgent(
                   "ABC Ltd",
-                  testArn2.value,
+                  testArn.value,
                   "PERSONAL-INCOME-RECORD"
                 )
               )
@@ -423,6 +440,96 @@ with MockValidationService {
               )
             )
           )
+      }
+    }
+  }
+
+  ".findActiveIrvRelationships" should {
+
+    "return an IrvRelationships model" when {
+
+      "there are no active relationships" in {
+        mockValidateForTaxIdentifier(NinoType.id, testNino.value)(Right(NinoType.createUnderlying(testNino.value)))
+        mockFindRelationshipForClient(testNino.value)(Left(RelationshipNotFound))
+        mockFindClientDetails("PERSONAL-INCOME-RECORD", testNino.value)(Right(testClientDetailsResponse))
+        val expectedResult = Right(IrvRelationships(
+          testName,
+          testNino.value,
+          Seq()
+        ))
+
+        await(TestService.findActiveIrvRelationships(testNino.value)) shouldBe expectedResult
+      }
+
+      "there is one active relationship" in {
+        mockValidateForTaxIdentifier(NinoType.id, testNino.value)(Right(NinoType.createUnderlying(testNino.value)))
+        mockFindRelationshipForClient(testNino.value)(Right(Seq(testClientRelationship)))
+        mockGetAgentRecord(testArn)(testAgentDetailsDesResponse)
+        mockValidateAuthProfileToService(testNino)(Right(Service.PersonalIncomeRecord))
+        mockFindClientDetails("PERSONAL-INCOME-RECORD", testNino.value)(Right(testClientDetailsResponse))
+        val expectedResult = Right(IrvRelationships(
+          testName,
+          testNino.value,
+          Seq(IrvAgent("ABC Ltd", testArn.value))
+        ))
+
+        await(TestService.findActiveIrvRelationships(testNino.value)) shouldBe expectedResult
+      }
+
+      "there are multiple active relationships" in {
+        mockValidateForTaxIdentifier(NinoType.id, testNino.value)(Right(NinoType.createUnderlying(testNino.value)))
+        mockFindRelationshipForClient(testNino.value)(Right(Seq(testClientRelationship, testClientRelationship.copy(arn = testArn2))))
+        mockGetAgentRecord(testArn)(testAgentDetailsDesResponse)
+        mockGetAgentRecord(testArn2)(testAgentDetailsDesResponse.copy(agencyDetails = AgencyDetails("XYZ Ltd", "")))
+        mockValidateAuthProfileToService(testNino)(Right(Service.PersonalIncomeRecord))
+        mockFindClientDetails("PERSONAL-INCOME-RECORD", testNino.value)(Right(testClientDetailsResponse))
+        val expectedResult = Right(IrvRelationships(
+          testName,
+          testNino.value,
+          Seq(IrvAgent("ABC Ltd", testArn.value), IrvAgent("XYZ Ltd", testArn2.value))
+        ))
+
+        await(TestService.findActiveIrvRelationships(testNino.value)) shouldBe expectedResult
+      }
+    }
+
+    "return an error (Left)" when {
+
+      "there was an issue validating the NINO" in {
+        mockValidateForTaxIdentifier(NinoType.id, testNino.value)(Left(TaxIdentifierError))
+        mockFindRelationshipForClient(testNino.value)(Left(RelationshipNotFound))
+        mockFindClientDetails("PERSONAL-INCOME-RECORD", testNino.value)(Right(testClientDetailsResponse))
+        val expectedResult = Left(TaxIdentifierError)
+
+        await(TestService.findActiveIrvRelationships(testNino.value)) shouldBe expectedResult
+      }
+
+      "there was an unexpected error calling agent-fi-relationship to get relationship details" in {
+        mockValidateForTaxIdentifier(NinoType.id, testNino.value)(Right(NinoType.createUnderlying(testNino.value)))
+        mockFindRelationshipForClient(testNino.value)(Left(ErrorRetrievingRelationship(500, "oops")))
+        mockFindClientDetails("PERSONAL-INCOME-RECORD", testNino.value)(Right(testClientDetailsResponse))
+        val expectedResult = Left(ErrorRetrievingRelationship(500, "oops"))
+
+        await(TestService.findActiveIrvRelationships(testNino.value)) shouldBe expectedResult
+      }
+
+      "there was an unexpected error calling agent-assurance to get agent details" in {
+        mockValidateForTaxIdentifier(NinoType.id, testNino.value)(Right(NinoType.createUnderlying(testNino.value)))
+        mockFindRelationshipForClient(testNino.value)(Right(Seq(testClientRelationship)))
+        mockFailedGetAgentRecord(testArn)
+        mockFindClientDetails("PERSONAL-INCOME-RECORD", testNino.value)(Right(testClientDetailsResponse))
+        val expectedResult = Left(ErrorRetrievingAgentDetails("something went wrong"))
+
+        await(TestService.findActiveIrvRelationships(testNino.value)) shouldBe expectedResult
+      }
+
+      "there was an unexpected error calling citizen-details to get client details" in {
+        mockValidateForTaxIdentifier(NinoType.id, testNino.value)(Right(NinoType.createUnderlying(testNino.value)))
+        mockFindRelationshipForClient(testNino.value)(Left(RelationshipNotFound))
+        mockFindClientDetails("PERSONAL-INCOME-RECORD", testNino.value)(Left(ClientDetailsNotFound))
+        val expectedResult = Left(RelationshipFailureResponse.ClientDetailsNotFound)
+
+        await(TestService.findActiveIrvRelationships(testNino.value)) shouldBe expectedResult
       }
     }
   }

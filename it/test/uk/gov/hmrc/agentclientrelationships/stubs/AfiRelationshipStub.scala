@@ -68,18 +68,12 @@ trait AfiRelationshipStub {
       )
   )
 
-  def givenAfiRelationshipForClientNotFound(clientId: String): StubMapping = stubFor(
+  def givenAfiRelationshipForClientNotFound(
+    clientId: String,
+    status: Int = 404
+  ): StubMapping = stubFor(
     get(urlEqualTo(s"/agent-fi-relationship/relationships/service/PERSONAL-INCOME-RECORD/clientId/$clientId"))
-      .willReturn(aResponse().withStatus(404))
-  )
-
-  def givenAfiRelationshipNotFound(
-    arn: Arn,
-    service: String,
-    clientId: String
-  ) = stubFor(
-    get(urlEqualTo(s"/agent-fi-relationship/relationships/agent/${arn.value}/service/$service/client/$clientId"))
-      .willReturn(aResponse().withStatus(404))
+      .willReturn(aResponse().withStatus(status))
   )
 
   def givenTerminateAfiRelationshipSucceeds(
