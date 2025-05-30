@@ -171,10 +171,10 @@ with RequestAwareLogging {
       case HMRCMTDIT | HMRCMTDITSUPP if Nino.isValid(invitation.clientId) => findMainAgentForNino(invitation)
       case HMRCPIR =>
         agentFiRelationshipConnector
-          .findIrvRelationshipForClient(invitation.clientId)
+          .findIrvActiveRelationshipForClient(invitation.clientId)
           .flatMap {
-            case Some(r) => returnExistingMainAgentFromArn(r.arn.value, invitation.arn == r.arn.value)
-            case None => Future.successful(None)
+            case Right(r :: _) => returnExistingMainAgentFromArn(r.arn.value, invitation.arn == r.arn.value)
+            case _ => Future.successful(None)
           }
       case HMRCCBCORG if enrolment.isDefined =>
         getArnForDelegatedEnrolmentKey(enrolment.get).flatMap {

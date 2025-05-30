@@ -67,7 +67,9 @@ with AuthActions {
           }
         irvRelationshipExists <-
           authResponse.getNino match {
-            case Some(nino) => agentFiRelationshipConnector.findIrvRelationshipForClient(nino).map(_.nonEmpty)
+            case Some(nino) =>
+              agentFiRelationshipConnector.findIrvActiveRelationshipForClient(nino)
+                .map(_.fold(_ => false, rel => rel.nonEmpty))
             case None => Future.successful(false)
           }
         existingRelationships <-

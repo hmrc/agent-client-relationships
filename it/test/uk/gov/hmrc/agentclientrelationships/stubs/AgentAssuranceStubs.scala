@@ -41,7 +41,7 @@ extends TestData {
   def verifyAgentRecordFoundSent(
     arn: Arn,
     count: Int = 1
-  ) = eventually {
+  ): Unit = eventually {
     verify(count, getRequestedFor(urlPathEqualTo(s"/agent-assurance/agent-record-with-checks/arn/${arn.value}")))
   }
 
@@ -52,13 +52,7 @@ extends TestData {
     get(urlEqualTo(s"/agent-assurance/agent-record-with-checks/arn/${arn.value}"))
       .withHeader(AUTHORIZATION, equalTo("internalAuthToken"))
       .withHeader(USER_AGENT, equalTo("agent-client-relationships"))
-      .willReturn(aResponse().withStatus(status))
-  )
-
-  private def similarToJson(value: String) = equalToJson(
-    value.stripMargin,
-    true,
-    true
+      .willReturn(aResponse().withStatus(status).withBody("Unexpected error retrieving agent record"))
   )
 
 }

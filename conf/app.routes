@@ -42,6 +42,7 @@ PUT           /cleanup-invitation-status                                     @uk
 GET           /relationships/service/:service/client/:clientIdType/:clientId @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getRelationships(service: String, clientIdType: String, clientId: String)
 POST          /stride/active-relationships                                   @uk.gov.hmrc.agentclientrelationships.controllers.StrideClientDetailsController.getActiveRelationships
 GET           /stride/client-details/service/:service/client/:clientIdType/:clientId       @uk.gov.hmrc.agentclientrelationships.controllers.StrideClientDetailsController.get(service: String, clientIdType: String, clientId: String)
+GET           /stride/irv-relationships/:nino                                @uk.gov.hmrc.agentclientrelationships.controllers.StrideClientDetailsController.getIrvRelationships(nino: String)
 
 # API endpoints
 POST          /api/:arn/invitation                                           @uk.gov.hmrc.agentclientrelationships.controllers.ApiCreateInvitationController.createInvitation(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)

@@ -187,11 +187,7 @@ with AfiRelationshipStub {
       )
     }
     "return None if active PersonalIncomeRecord does not exist" in {
-      givenAfiRelationshipNotFound(
-        arn,
-        service,
-        clientId
-      )
+      givenAfiRelationshipForClientNotFound(clientId)
       await(
         agentFiRelationshipConnector.getRelationship(
           arn,
