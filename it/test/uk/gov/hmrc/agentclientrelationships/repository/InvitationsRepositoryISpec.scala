@@ -161,8 +161,8 @@ with DefaultPlayMongoRepositorySupport[Invitation] {
 
     "retrieve all existing invitations for a given ARN, filtered on the target services and clientIds" in {
       val listOfInvitations = Seq(
-        pendingInvitation(clientId = Vrn("123456789")),
         pendingInvitation(clientId = Vrn("123456788")),
+        pendingInvitation(clientId = Vrn("123456789")),
         pendingInvitation(clientId = Vrn("123456787"))
       )
       await(repository.collection.insertMany(listOfInvitations).toFuture())
