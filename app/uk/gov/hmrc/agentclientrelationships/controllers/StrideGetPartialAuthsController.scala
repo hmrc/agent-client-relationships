@@ -53,7 +53,7 @@ with AuthActions {
   val supportedServices: Seq[Service] = appConfig.supportedServicesWithoutPir
 
   def getPartialAuths(nino: String): Action[AnyContent] = Action.async { implicit request =>
-    authorisedWithStride(appConfig.oldAuthStrideRole, appConfig.newAuthStrideRole) { _ =>
+    authorisedWithStride(appConfig.partialAuthStrideRole) { _ =>
       for {
         partialAuthsWithoutAgentName <- strideClientDetailsService.getPartialAuthAuthorisations(Nino(nino))
         citizenDetails <- citizenDetailsService.getCitizenDetails(nino)

@@ -226,6 +226,15 @@ with RequestAwareLogging {
         case _ => Future.successful(NoPermissionToPerformOperation)
       }
 
+  protected def authorisedWithStride(
+    strideRole: String
+  )(body: String => Future[Result])(implicit request: RequestHeader): Future[Result] =
+    authorised((Enrolment(strideRole)) and AuthProviders(PrivilegedApplication))
+      .retrieve(credentials) {
+        case Some(Credentials(strideId, _)) => body(strideId)
+        case _ => Future.successful(NoPermissionToPerformOperation)
+      }
+
   val basicAuthHeader: Regex = "Basic (.+)".r
   val decodedAuth: Regex = "(.+):(.+)".r
 
