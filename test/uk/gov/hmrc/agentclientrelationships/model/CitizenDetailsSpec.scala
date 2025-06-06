@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa
+package uk.gov.hmrc.agentclientrelationships.model
 
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 
 import java.time.LocalDate
 
-class ItsaCitizenDetailsSpec
+class CitizenDetailsSpec
 extends UnitSpec {
 
-  "ItsaCitizenDetails" should {
+  "CitizenDetails" should {
 
     "read from JSON" when {
 
@@ -35,8 +35,8 @@ extends UnitSpec {
           "ids" -> Json.obj("sautr" -> "11223344")
         )
 
-        json.as[ItsaCitizenDetails] shouldBe
-          ItsaCitizenDetails(
+        json.as[CitizenDetails] shouldBe
+          CitizenDetails(
             Some("Matthew"),
             Some("Kovacic"),
             Some(LocalDate.parse("2000-01-01")),
@@ -47,8 +47,8 @@ extends UnitSpec {
       "optional fields are not present" in {
         val json = Json.obj("name" -> Json.obj("current" -> Json.obj()))
 
-        json.as[ItsaCitizenDetails] shouldBe
-          ItsaCitizenDetails(
+        json.as[CitizenDetails] shouldBe
+          CitizenDetails(
             None,
             None,
             None,

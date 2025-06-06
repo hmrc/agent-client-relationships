@@ -205,7 +205,7 @@ class StrideClientDetailsService @Inject() (
         EitherT.leftT[Future, ClientDetailsResponse](RelationshipFailureResponse.ErrorRetrievingClientDetails(status, msg))
     }
 
-  private def getPartialAuthAuthorisations(taxIdentifier: TaxIdentifier): Future[Seq[ClientRelationship]] =
+  def getPartialAuthAuthorisations(taxIdentifier: TaxIdentifier): Future[Seq[ClientRelationship]] =
     taxIdentifier match {
       case nino @ Nino(_) =>
         partialAuthRepository
