@@ -16,16 +16,9 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
-import cats.data.EitherT
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.connectors.CitizenDetailsConnector
 import uk.gov.hmrc.agentclientrelationships.model.CitizenDetails
-import uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa.ItsaDesignatoryDetails
-import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsFailureResponse
-import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsNotFound
-import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentDetailsDesResponse
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.agentmtdidentifiers.model.SuspensionDetails
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext

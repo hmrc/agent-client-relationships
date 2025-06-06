@@ -80,9 +80,9 @@ with AuthActions {
           }
         )
       } yield {
-        if (partialAuths.collect { case Some(x) => x }.nonEmpty && citizenDetails.name.nonEmpty) {
+        if (partialAuths.collect { case Some(x) => x }.nonEmpty) {
           Ok(Json.toJson(PartialAuthRelationships(
-            clientName = citizenDetails.name.get,
+            clientName = citizenDetails.name.getOrElse(throw new RuntimeException("[StrideGetPartialAuths] Required name is missing from Citizen Details")),
             nino = nino,
             partialAuths = partialAuths.collect { case Some(x) => x }
           )))

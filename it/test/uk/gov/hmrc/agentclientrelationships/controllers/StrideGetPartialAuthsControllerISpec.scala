@@ -20,17 +20,11 @@ import play.api.libs.json.Json
 import play.api.mvc.AnyContentAsEmpty
 import play.api.test.FakeRequest
 import uk.gov.hmrc.agentclientrelationships.model.PartialAuthRelationship
-import uk.gov.hmrc.agentclientrelationships.model.stride.PartialAuthRelationships
 import uk.gov.hmrc.agentclientrelationships.model.stride.PartialAuth
-import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgencyDetails
-import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentDetailsDesResponse
 import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
 import uk.gov.hmrc.agentclientrelationships.stubs.CitizenDetailsStub
-import uk.gov.hmrc.agentmtdidentifiers.model._
 
-import java.time.Instant
-import java.time.LocalDate
-import java.time.ZoneId
+import java.time.{Instant, LocalDate, ZoneId}
 import java.time.temporal.ChronoUnit
 
 class StrideGetPartialAuthsControllerISpec
@@ -54,21 +48,8 @@ with CitizenDetailsStub {
     suspensionDetails = None
   )
 
-  val testAgentRecord2: TestAgentDetailsDesResponse = TestAgentDetailsDesResponse(
-    uniqueTaxReference = None,
-    agencyDetails = Some(
-      TestAgencyDetails(
-        agencyName = Some("DEF Ltd"),
-        agencyEmail = None,
-        agencyTelephone = None,
-        agencyAddress = None
-      )
-    ),
-    suspensionDetails = None
-  )
-
   val partialAuthStartInstant: Instant = Instant.now().truncatedTo(ChronoUnit.SECONDS)
-  val partialAuthStartDate: LocalDate = partialAuthStartInstant.atZone(ZoneId.systemDefault()).toLocalDate
+  val partialAuthStartDate: LocalDate = partialAuthStartInstant.atZone(ZoneId.of("UTC")).toLocalDate
 
   val partialAuth: PartialAuth = PartialAuth(
     agentName = "ABC Ltd",
@@ -84,11 +65,6 @@ with CitizenDetailsStub {
     nino.value,
     active = true,
     lastUpdated = partialAuthStartInstant
-  )
-
-  def agentDetailsDesResponse(suspended: Boolean = false): AgentDetailsDesResponse = AgentDetailsDesResponse(
-    agencyDetails = AgencyDetails("ABC Ltd", ""),
-    suspensionDetails = None
   )
 
   "GET /stride/partial-auths/nino/:nino" should {
@@ -120,7 +96,6 @@ with CitizenDetailsStub {
       givenAuditConnector()
       givenCitizenDetailsExists(nino.value)
       givenAgentRecordFound(arn, testAgentRecord)
-
       val result = doGetRequest(requestPath(nino.value))
       result.status shouldBe 422
       result.json shouldBe Json.obj(

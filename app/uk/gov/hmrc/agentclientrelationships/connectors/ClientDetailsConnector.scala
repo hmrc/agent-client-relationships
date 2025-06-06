@@ -16,12 +16,12 @@
 
 package uk.gov.hmrc.agentclientrelationships.connectors
 
-import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import play.api.http.Status.NOT_FOUND
 import play.api.http.Status.OK
 import play.api.libs.json.Json
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
+import uk.gov.hmrc.agentclientrelationships.model.CitizenDetails
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails._
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.cbc._
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.cgt.CgtSubscriptionDetails
@@ -30,12 +30,13 @@ import uk.gov.hmrc.agentclientrelationships.model.clientDetails.pillar2.Pillar2R
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ppt.PptSubscriptionDetails
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.vat.VatCustomerDetails
 import uk.gov.hmrc.agentclientrelationships.util.HttpApiMonitor
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.agentclientrelationships.util.RequestSupport.hc
 import uk.gov.hmrc.http.HttpReads.Implicits._
-import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.HeaderNames
 import uk.gov.hmrc.http.HttpResponse
 import uk.gov.hmrc.http.StringContextOps
+import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import java.time.ZonedDateTime
@@ -90,14 +91,14 @@ with RequestAwareLogging {
 
   def getItsaCitizenDetails(
     nino: String
-  )(implicit rh: RequestHeader): Future[Either[ClientDetailsFailureResponse, ItsaCitizenDetails]] =
+  )(implicit rh: RequestHeader): Future[Either[ClientDetailsFailureResponse, CitizenDetails]] =
     monitor(s"ConsumedAPI-CitizenDetails-GET") {
       httpClient
         .get(url"${appConfig.citizenDetailsBaseUrl}/citizen-details/nino/$nino")
         .execute[HttpResponse]
         .map { response =>
           response.status match {
-            case OK => Right(response.json.as[ItsaCitizenDetails])
+            case OK => Right(response.json.as[CitizenDetails])
             case NOT_FOUND => Left(ClientDetailsNotFound)
             case status =>
               logger.warn(s"Unexpected error during 'getItsaCitizenDetails', statusCode=$status")

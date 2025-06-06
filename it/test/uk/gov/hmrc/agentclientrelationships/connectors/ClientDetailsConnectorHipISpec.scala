@@ -25,10 +25,10 @@ import play.api.mvc.RequestHeader
 import play.api.test.FakeRequest
 import play.api.test.Helpers.await
 import play.api.test.Helpers.defaultAwaitTimeout
+import uk.gov.hmrc.agentclientrelationships.model.CitizenDetails
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.cbc.SimpleCbcSubscription
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.cgt.CgtSubscriptionDetails
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa.ItsaBusinessDetails
-import uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa.ItsaCitizenDetails
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa.ItsaDesignatoryDetails
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.pillar2.Pillar2Record
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ppt.PptSubscriptionDetails
@@ -99,7 +99,7 @@ with HipStub {
     "return citizen details when receiving a 200 status" in {
       givenAuditConnector()
       givenItsaCitizenDetailsExists("AA000001B")
-      val expectedModel = ItsaCitizenDetails(
+      val expectedModel = CitizenDetails(
         Some("Matthew"),
         Some("Kovacic"),
         Some(LocalDate.parse("2000-01-01")),

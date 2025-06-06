@@ -112,7 +112,7 @@ class AppConfig @Inject() (
 
   val newAuthStrideRole = servicesConfig.getString("new.auth.stride.role")
 
-  val partialAuthStrideRole: String = servicesConfig.getString("partial-auth.stride-role")
+  val partialAuthStrideRole: String = servicesConfig.getString("partial-auth.stride.role")
 
   val copyMtdItRelationshipFlag = servicesConfig.getBoolean("features.copy-relationship.mtd-it")
 
