@@ -42,6 +42,21 @@ trait CitizenDetailsStub {
       )
   )
 
+  def givenCitizenDetailsHasNoName(nino: String): StubMapping = stubFor(
+    get(urlEqualTo(s"/citizen-details/nino/$nino"))
+      .willReturn(
+        aResponse()
+          .withBody(s"""
+                       |{
+                       |  "dateOfBirth": "01012000",
+                       |  "ids": {
+                       |    "sautr": "11223344"
+                       |  }
+                       |}
+          """.stripMargin)
+      )
+  )
+
   def givenCitizenDetailsError(
     nino: String,
     status: Int

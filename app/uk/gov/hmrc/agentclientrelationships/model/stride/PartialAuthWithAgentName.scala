@@ -21,13 +21,13 @@ import play.api.libs.json.OWrites
 
 import java.time.LocalDate
 
-case class PartialAuth(
+case class PartialAuthWithAgentName(
   agentName: String,
   arn: String,
   startDate: LocalDate,
   service: String
 )
 
-object PartialAuth {
-  implicit val writes: OWrites[PartialAuth] = Json.writes[PartialAuth]
+object PartialAuthWithAgentName {
+  implicit val writes: OWrites[PartialAuthWithAgentName] = Json.writes[PartialAuthWithAgentName]
 }

@@ -22,7 +22,7 @@ import play.api.libs.json.OWrites
 case class PartialAuthRelationships(
   clientName: String,
   nino: String,
-  partialAuths: Seq[PartialAuth]
+  partialAuths: Seq[PartialAuthWithAgentName]
 )
 
 object PartialAuthRelationships {

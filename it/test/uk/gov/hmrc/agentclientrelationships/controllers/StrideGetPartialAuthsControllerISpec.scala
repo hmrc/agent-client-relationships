@@ -16,15 +16,22 @@
 
 package uk.gov.hmrc.agentclientrelationships.controllers
 
+import play.api.http.Status.BAD_GATEWAY
+import play.api.http.Status.INTERNAL_SERVER_ERROR
+import play.api.http.Status.OK
+import play.api.http.Status.SERVICE_UNAVAILABLE
+import play.api.http.Status.UNPROCESSABLE_ENTITY
 import play.api.libs.json.Json
 import play.api.mvc.AnyContentAsEmpty
 import play.api.test.FakeRequest
 import uk.gov.hmrc.agentclientrelationships.model.PartialAuthRelationship
-import uk.gov.hmrc.agentclientrelationships.model.stride.PartialAuth
+import uk.gov.hmrc.agentclientrelationships.model.stride.PartialAuthWithAgentName
 import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
 import uk.gov.hmrc.agentclientrelationships.stubs.CitizenDetailsStub
 
-import java.time.{Instant, LocalDate, ZoneId}
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 
 class StrideGetPartialAuthsControllerISpec
@@ -51,7 +58,7 @@ with CitizenDetailsStub {
   val partialAuthStartInstant: Instant = Instant.now().truncatedTo(ChronoUnit.SECONDS)
   val partialAuthStartDate: LocalDate = partialAuthStartInstant.atZone(ZoneId.of("UTC")).toLocalDate
 
-  val partialAuth: PartialAuth = PartialAuth(
+  val partialAuth: PartialAuthWithAgentName = PartialAuthWithAgentName(
     agentName = "ABC Ltd",
     arn = arn.value,
     startDate = partialAuthStartDate,
@@ -87,7 +94,7 @@ with CitizenDetailsStub {
       )
 
       val result = doGetRequest(requestPath(nino.value))
-      result.status shouldBe 200
+      result.status shouldBe OK
       result.json shouldBe expectedJsonBody
     }
 
@@ -97,11 +104,30 @@ with CitizenDetailsStub {
       givenCitizenDetailsExists(nino.value)
       givenAgentRecordFound(arn, testAgentRecord)
       val result = doGetRequest(requestPath(nino.value))
-      result.status shouldBe 422
+      result.status shouldBe UNPROCESSABLE_ENTITY
       result.json shouldBe Json.obj(
         "code" -> "NOT_FOUND",
         "message" -> "No partial authorisations for Making Tax Digital for Income Tax were found for this client id"
       )
+    }
+
+    "throw a bad gateway error when citizen details throws an error" in {
+      givenAuthorisedAsStrideUser(req, "user-123")
+      givenAuditConnector()
+      partialAuthRepo.collection.insertOne(partialAuthRelationship).toFuture().futureValue
+      givenCitizenDetailsError(nino.value, SERVICE_UNAVAILABLE)
+      val result = doGetRequest(requestPath(nino.value))
+      result.status shouldBe BAD_GATEWAY
+    }
+
+    "throw a runtime exception when a citizen record contains no name" in {
+      givenAuthorisedAsStrideUser(req, "user-123")
+      givenAuditConnector()
+      partialAuthRepo.collection.insertOne(partialAuthRelationship).toFuture().futureValue
+      givenCitizenDetailsHasNoName(nino.value)
+      givenAgentRecordFound(arn, testAgentRecord)
+      val result = doGetRequest(requestPath(nino.value))
+      result.status shouldBe INTERNAL_SERVER_ERROR
     }
 
   }

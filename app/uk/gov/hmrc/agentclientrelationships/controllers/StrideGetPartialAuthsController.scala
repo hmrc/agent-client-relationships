@@ -23,16 +23,18 @@ import play.api.mvc.ControllerComponents
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.controllers.ErrorResults.ErrorBody
-import uk.gov.hmrc.agentclientrelationships.model.stride.PartialAuth
+import uk.gov.hmrc.agentclientrelationships.model.stride.PartialAuthWithAgentName
 import uk.gov.hmrc.agentclientrelationships.model.stride.PartialAuthRelationships
 import uk.gov.hmrc.agentclientrelationships.services.AgentAssuranceService
 import uk.gov.hmrc.agentclientrelationships.services.CitizenDetailsService
 import uk.gov.hmrc.agentclientrelationships.services.StrideClientDetailsService
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.agentmtdidentifiers.model.Service
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
+import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
 import scala.concurrent.ExecutionContext
@@ -55,23 +57,23 @@ with AuthActions {
   def getPartialAuths(nino: String): Action[AnyContent] = Action.async { implicit request =>
     authorisedWithStride(appConfig.partialAuthStrideRole) { _ =>
       for {
-        partialAuthsWithoutAgentName <- strideClientDetailsService.getPartialAuthAuthorisations(Nino(nino))
+        partialAuthsWithoutAgentName <- strideClientDetailsService.getPartialAuthsForNino(Nino(nino))
         citizenDetails <- citizenDetailsService.getCitizenDetails(nino)
         partialAuths <- Future.sequence(
           partialAuthsWithoutAgentName.map { partialAuth =>
             for {
-              agentDetails <- agentAssuranceService.getAgentRecord(partialAuth.arn)
+              agentDetails <- agentAssuranceService.getAgentRecord(Arn(partialAuth.arn))
             } yield {
               if (agentDetails.suspensionDetails.exists(_.suspensionStatus)) {
                 None
               }
               else {
                 Some(
-                  PartialAuth(
-                    arn = partialAuth.arn.value,
-                    service = partialAuth.service.get.id,
+                  PartialAuthWithAgentName(
+                    arn = partialAuth.arn,
+                    service = partialAuth.service,
                     agentName = agentDetails.agencyDetails.agencyName,
-                    startDate = partialAuth.dateFrom.get
+                    startDate = partialAuth.lastUpdated.atZone(ZoneId.of("UTC")).toLocalDate
                   )
                 )
               }
