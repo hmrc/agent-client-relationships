@@ -186,7 +186,7 @@ with RequestAwareLogging {
                       arn,
                       ek,
                       currentUser.affinityGroup
-                    )
+                    ).map(_ => ())
                   }
               } yield NoContent
             ).recover {

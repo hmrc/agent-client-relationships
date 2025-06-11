@@ -56,6 +56,7 @@ import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.HttpResponse
+import uk.gov.hmrc.mongo.lock.Lock
 
 import java.time.Instant
 import java.time.LocalDate
@@ -295,6 +296,25 @@ with TestData {
             verifyDeleteRecordNotExists
           }
 
+          "return 423 when relationship deletion is already in progress" in new StubsForThisScenario {
+            await(
+              mongoLockRepository.collection
+                .insertOne(
+                  Lock(
+                    id = s"recovery-${arn.value}-${enrolmentKey.tag}",
+                    owner = "86515a24-1a37-4a40-9117-4a117d8dd42e",
+                    expiryTime = Instant.now().plusSeconds(2),
+                    timeCreated = Instant.now().minusMillis(500)
+                  )
+                )
+                .toFuture()
+            )
+
+            doAgentPostRequest(
+              requestPath,
+              Json.toJson(RemoveAuthorisationRequest(clientId = suppliedClientId.value, service = service.id)).toString()
+            ).status shouldBe LOCKED
+          }
         }
       }
     )
@@ -524,8 +544,8 @@ with TestData {
     }
   }
 
-  "handle errors" should {
-    "when request data are incorrect" should {
+  "handle errors" when {
+    "request data is incorrect" should {
       "return BadRequest 400 status when clientId is not valid for service" in {
         val result = doAgentPostRequest(
           requestPath,
@@ -552,7 +572,7 @@ with TestData {
       }
     }
 
-    "when MtdId business details errors" should {
+    "MtdId business details errors" should {
       "return Forbidden 403 status and JSON Error when MtdId business details record is empty " in {
         givenEmptyItsaBusinessDetailsExists(nino.value)
         val result = doAgentPostRequest(

@@ -24,6 +24,7 @@ import play.api.mvc.Result
 import play.api.mvc.Results.BadRequest
 import play.api.mvc.Results.Forbidden
 import play.api.mvc.Results.InternalServerError
+import play.api.mvc.Results.Locked
 import play.api.mvc.Results.NotFound
 import play.api.mvc.Results.NotImplemented
 
@@ -124,6 +125,11 @@ object InvitationFailureResponse {
   case object InvitationNotFound
   extends InvitationFailureResponse {
     def getResult(message: String): Result = NotFound
+  }
+
+  case object RelationshipDeletionInProgress
+  extends InvitationFailureResponse {
+    def getResult(message: String): Result = Locked
   }
 
 }
