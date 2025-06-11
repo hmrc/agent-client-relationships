@@ -25,20 +25,23 @@ trait CitizenDetailsStub {
     get(urlEqualTo(s"/citizen-details/nino/$nino"))
       .willReturn(
         aResponse()
-          .withBody(s"""
-                       |{
-                       |  "name": {
-                       |    "current": {
-                       |      "firstName": "Matthew",
-                       |      "lastName": "Kovacic"
-                       |    }
-                       |  },
-                       |  "dateOfBirth": "01012000",
-                       |  "ids": {
-                       |    "sautr": "11223344"
-                       |  }
-                       |}
-          """.stripMargin)
+          .withBody(
+            // language=JSON
+            s"""
+             {
+               "name": {
+                 "current": {
+                   "firstName": "Matthew",
+                   "lastName": "Kovacic"
+                 }
+               },
+               "dateOfBirth": "01012000",
+               "ids": {
+                 "sautr": "11223344"
+               }
+             }
+            """.stripMargin
+          )
       )
   )
 
@@ -46,14 +49,17 @@ trait CitizenDetailsStub {
     get(urlEqualTo(s"/citizen-details/nino/$nino"))
       .willReturn(
         aResponse()
-          .withBody(s"""
-                       |{
-                       |  "dateOfBirth": "01012000",
-                       |  "ids": {
-                       |    "sautr": "11223344"
-                       |  }
-                       |}
-          """.stripMargin)
+          .withBody(
+            // language=JSON
+            s"""
+            {
+              "dateOfBirth": "01012000",
+              "ids": {
+                "sautr": "11223344"
+              }
+            }
+            """.stripMargin
+          )
       )
   )
 

@@ -62,14 +62,14 @@ with CitizenDetailsStub {
     agentName = "ABC Ltd",
     arn = arn.value,
     startDate = partialAuthStartDate,
-    "HMRC-MTD-IT"
+    service = "HMRC-MTD-IT"
   )
 
   val partialAuthRelationship: PartialAuthRelationship = PartialAuthRelationship(
-    partialAuthStartInstant,
-    arn.value,
-    "HMRC-MTD-IT",
-    nino.value,
+    created = partialAuthStartInstant,
+    arn = arn.value,
+    service = "HMRC-MTD-IT",
+    nino = nino.value,
     active = true,
     lastUpdated = partialAuthStartInstant
   )
@@ -118,6 +118,10 @@ with CitizenDetailsStub {
       givenCitizenDetailsError(nino.value, SERVICE_UNAVAILABLE)
       val result = doGetRequest(requestPath(nino.value))
       result.status shouldBe BAD_GATEWAY
+      result.json shouldBe Json.obj(
+        "statusCode" -> 502,
+        "message" -> s"GET of 'http://localhost:${wireMockPort.toString}/citizen-details/nino/AB123456C' returned 503. Response body: ''"
+      )
     }
 
     "throw a runtime exception when a citizen record contains no name" in {
@@ -128,6 +132,10 @@ with CitizenDetailsStub {
       givenAgentRecordFound(arn, testAgentRecord)
       val result = doGetRequest(requestPath(nino.value))
       result.status shouldBe INTERNAL_SERVER_ERROR
+      result.json shouldBe Json.obj(
+        "statusCode" -> 500,
+        "message" -> "[StrideGetPartialAuths] Required name is missing from Citizen Details"
+      )
     }
 
   }
