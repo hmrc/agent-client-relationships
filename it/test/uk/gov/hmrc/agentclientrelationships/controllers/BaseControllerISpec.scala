@@ -42,12 +42,11 @@ import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.auth.core.PlayAuthConnector
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.domain.TaxIdentifier
-import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.HttpResponse
-import uk.gov.hmrc.mongo.lock.MongoLockRepository
-import uk.gov.hmrc.mongo.test.MongoSupport
 import uk.gov.hmrc.mongo.CurrentTimestampSupport
 import uk.gov.hmrc.mongo.MongoComponent
+import uk.gov.hmrc.mongo.lock.MongoLockRepository
+import uk.gov.hmrc.mongo.test.MongoSupport
 
 trait BaseControllerISpec
 extends UnitSpec
@@ -76,7 +75,7 @@ with IntegrationPatience {
   lazy val mongoRecoveryLockService: MongoLockService = new MongoLockServiceImpl(mongoLockRepository)
   def mongoLockRepository = new MongoLockRepository(mongoComponent, new CurrentTimestampSupport)
 
-  lazy val moduleWithOverrides =
+  lazy val moduleWithOverrides: AbstractModule =
     new AbstractModule {
       override def configure(): Unit = {
         bind(classOf[MongoComponent]).toInstance(mongoComponent)
@@ -114,7 +113,8 @@ with IntegrationPatience {
       "mongodb.uri" -> mongoUri,
       "internal-auth.token" -> "internalAuthToken",
       "new.auth.stride.role" -> NEW_STRIDE_ROLE,
-      "old.auth.stride.role" -> STRIDE_ROLE
+      "old.auth.stride.role" -> STRIDE_ROLE,
+      "play.http.router" -> "testOnlyDoNotUseInAppConf.Routes"
     )
     .overrides(moduleWithOverrides)
     .configure(additionalConfig)
