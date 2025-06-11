@@ -17,19 +17,25 @@
 package uk.gov.hmrc.agentclientrelationships.testOnly.controllers
 
 import play.api.libs.json.Json
-import play.api.mvc.{Action, AnyContent, ControllerComponents}
+import play.api.mvc.Action
+import play.api.mvc.AnyContent
+import play.api.mvc.ControllerComponents
 import uk.gov.hmrc.agentclientrelationships.services.InvitationService
-import uk.gov.hmrc.auth.core.{AuthConnector, AuthorisedFunctions}
+import uk.gov.hmrc.auth.core.AuthConnector
+import uk.gov.hmrc.auth.core.AuthorisedFunctions
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.Inject
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
-class TestOnlyInvitationsController @Inject()(controllerComponents: ControllerComponents,
-                                              invitationService: InvitationService,
-                                              val authConnector: AuthConnector)
-                                             (implicit ec: ExecutionContext)
-  extends BackendController(controllerComponents) with AuthorisedFunctions {
+class TestOnlyInvitationsController @Inject() (
+  controllerComponents: ControllerComponents,
+  invitationService: InvitationService,
+  val authConnector: AuthConnector
+)(implicit ec: ExecutionContext)
+extends BackendController(controllerComponents)
+with AuthorisedFunctions {
 
   private val invitationIdRegex = "^[A-Z0-9]{13}$".r
 
@@ -40,9 +46,11 @@ class TestOnlyInvitationsController @Inject()(controllerComponents: ControllerCo
           case Some(invitation) => Ok(Json.toJson(invitation))
           case None => NotFound
         }
-      } else {
+      }
+      else {
         Future.successful(BadRequest("Invalid invitation ID format"))
       }
     }
   }
+
 }

@@ -17,15 +17,19 @@
 package uk.gov.hmrc.agentclientrelationships.testOnly.controllers
 
 import play.api.libs.json.Json
-import play.api.test.Helpers.{await, defaultAwaitTimeout}
+import play.api.test.Helpers.await
+import play.api.test.Helpers.defaultAwaitTimeout
 import uk.gov.hmrc.agentclientrelationships.controllers.BaseControllerISpec
-import uk.gov.hmrc.agentclientrelationships.model.{Invitation, Pending}
+import uk.gov.hmrc.agentclientrelationships.model.Invitation
+import uk.gov.hmrc.agentclientrelationships.model.Pending
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
 
 import java.time.temporal.ChronoUnit
-import java.time.{Instant, LocalDate}
+import java.time.Instant
+import java.time.LocalDate
 
-class TestOnlyInvitationsControllerISpec extends BaseControllerISpec {
+class TestOnlyInvitationsControllerISpec
+extends BaseControllerISpec {
 
   val invitationsRepository: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
   val validInvitationId = "QWERTYUIOP123"
@@ -81,4 +85,5 @@ class TestOnlyInvitationsControllerISpec extends BaseControllerISpec {
       result.status shouldBe 404
     }
   }
+
 }
