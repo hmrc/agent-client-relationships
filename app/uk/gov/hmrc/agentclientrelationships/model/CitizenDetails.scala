@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa
+package uk.gov.hmrc.agentclientrelationships.model
 
 import play.api.libs.json.JsPath
 import play.api.libs.json.Reads
@@ -22,7 +22,7 @@ import play.api.libs.json.Reads
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
-case class ItsaCitizenDetails(
+case class CitizenDetails(
   firstName: Option[String],
   lastName: Option[String],
   dateOfBirth: Option[LocalDate],
@@ -39,11 +39,11 @@ case class ItsaCitizenDetails(
   }
 }
 
-object ItsaCitizenDetails {
+object CitizenDetails {
 
   val citizenDateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("ddMMyyyy")
 
-  implicit val reads: Reads[ItsaCitizenDetails] =
+  implicit val reads: Reads[CitizenDetails] =
     for {
       firstName <- (JsPath \ "name" \ "current" \ "firstName").readNullable[String]
       lastName <- (JsPath \ "name" \ "current" \ "lastName").readNullable[String]
@@ -51,7 +51,7 @@ object ItsaCitizenDetails {
         .readNullable[String]
         .map(_.map(date => LocalDate.parse(date, citizenDateFormatter)))
       saUtr <- (JsPath \ "ids" \ "sautr").readNullable[String]
-    } yield ItsaCitizenDetails(
+    } yield CitizenDetails(
       firstName,
       lastName,
       dateOfBirth,

@@ -22,6 +22,7 @@ import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.connectors.AgentFiRelationshipConnector
 import uk.gov.hmrc.agentclientrelationships.model.ActiveRelationship
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
+import uk.gov.hmrc.agentclientrelationships.model.PartialAuthRelationship
 import uk.gov.hmrc.agentclientrelationships.model.RelationshipFailureResponse
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails._
 import uk.gov.hmrc.agentclientrelationships.model.stride._
@@ -205,7 +206,7 @@ class StrideClientDetailsService @Inject() (
         EitherT.leftT[Future, ClientDetailsResponse](RelationshipFailureResponse.ErrorRetrievingClientDetails(status, msg))
     }
 
-  private def getPartialAuthAuthorisations(taxIdentifier: TaxIdentifier): Future[Seq[ClientRelationship]] =
+  def getPartialAuthAuthorisations(taxIdentifier: TaxIdentifier): Future[Seq[ClientRelationship]] =
     taxIdentifier match {
       case nino @ Nino(_) =>
         partialAuthRepository
@@ -225,6 +226,9 @@ class StrideClientDetailsService @Inject() (
           )
       case _ => Future.successful(Seq.empty[ClientRelationship])
     }
+
+  def getPartialAuthsForNino(nino: Nino): Future[Seq[PartialAuthRelationship]] = partialAuthRepository
+    .findActiveByNino(nino)
 
   private def findAgentNameForActiveRelationships(
     activeRelationships: Seq[ClientRelationship],

@@ -17,20 +17,20 @@
 package uk.gov.hmrc.agentclientrelationships.services
 
 import cats.data.EitherT
-import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
+import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.connectors.ClientDetailsConnector
 import uk.gov.hmrc.agentclientrelationships.connectors.IfOrHipConnector
+import uk.gov.hmrc.agentclientrelationships.model.CitizenDetails
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientStatus._
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.KnownFactType._
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails._
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.cgt.CgtSubscriptionDetails
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa.ItsaBusinessDetails
-import uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa.ItsaCitizenDetails
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.vat.VatCustomerDetails
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.domain.TaxIdentifier
-import play.api.mvc.RequestHeader
 
 import java.time.LocalDate
 import javax.inject.Inject
@@ -196,7 +196,7 @@ extends RequestAwareLogging {
     .getItsaCitizenDetails(nino)
     .map {
       case Right(
-            details @ ItsaCitizenDetails(
+            details @ CitizenDetails(
               _,
               _,
               Some(dateOfBirth),

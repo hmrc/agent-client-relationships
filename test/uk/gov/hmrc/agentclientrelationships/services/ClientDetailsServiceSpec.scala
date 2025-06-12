@@ -24,6 +24,7 @@ import play.api.test.Helpers.await
 import play.api.test.Helpers.defaultAwaitTimeout
 import uk.gov.hmrc.agentclientrelationships.connectors.ClientDetailsConnector
 import uk.gov.hmrc.agentclientrelationships.connectors.IfOrHipConnector
+import uk.gov.hmrc.agentclientrelationships.model.CitizenDetails
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientStatus.Deregistered
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientStatus.Inactive
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientStatus.Insolvent
@@ -32,7 +33,6 @@ import uk.gov.hmrc.agentclientrelationships.model.clientDetails._
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.cbc.SimpleCbcSubscription
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.cgt.CgtSubscriptionDetails
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa.ItsaBusinessDetails
-import uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa.ItsaCitizenDetails
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa.ItsaDesignatoryDetails
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.pillar2.Pillar2Record
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ppt.PptSubscriptionDetails
@@ -116,7 +116,7 @@ extends UnitSpec {
             when(mockConnector.getItsaCitizenDetails(eqTo[String]("AA000001B"))(any[RequestHeader])).thenReturn(
               Future.successful(
                 Right(
-                  ItsaCitizenDetails(
+                  CitizenDetails(
                     Some("John"),
                     Some("Rocks"),
                     None,
@@ -147,7 +147,7 @@ extends UnitSpec {
             when(mockConnector.getItsaCitizenDetails(eqTo[String]("AA000001B"))(any[RequestHeader])).thenReturn(
               Future.successful(
                 Right(
-                  ItsaCitizenDetails(
+                  CitizenDetails(
                     Some("John"),
                     Some("Rocks"),
                     None,
@@ -170,7 +170,7 @@ extends UnitSpec {
             when(mockConnector.getItsaCitizenDetails(eqTo[String]("AA000001B"))(any[RequestHeader])).thenReturn(
               Future.successful(
                 Right(
-                  ItsaCitizenDetails(
+                  CitizenDetails(
                     None,
                     None,
                     None,
@@ -193,7 +193,7 @@ extends UnitSpec {
             when(mockConnector.getItsaCitizenDetails(eqTo[String]("AA000001B"))(any[RequestHeader])).thenReturn(
               Future.successful(
                 Right(
-                  ItsaCitizenDetails(
+                  CitizenDetails(
                     Some("John"),
                     Some("Rocks"),
                     None,
@@ -342,7 +342,7 @@ extends UnitSpec {
           when(mockConnector.getItsaCitizenDetails(eqTo[String]("AA000001B"))(any[RequestHeader])).thenReturn(
             Future.successful(
               Right(
-                ItsaCitizenDetails(
+                CitizenDetails(
                   Some("John"),
                   Some("Rocks"),
                   Some(LocalDate.parse("2000-01-01")),
@@ -367,7 +367,7 @@ extends UnitSpec {
           when(mockConnector.getItsaCitizenDetails(eqTo[String]("AA000001B"))(any[RequestHeader])).thenReturn(
             Future.successful(
               Right(
-                ItsaCitizenDetails(
+                CitizenDetails(
                   Some("John"),
                   Some("Rocks"),
                   None,
@@ -384,7 +384,7 @@ extends UnitSpec {
           when(mockConnector.getItsaCitizenDetails(eqTo[String]("AA000001B"))(any[RequestHeader])).thenReturn(
             Future.successful(
               Right(
-                ItsaCitizenDetails(
+                CitizenDetails(
                   None,
                   None,
                   Some(LocalDate.parse("2000-01-01")),
