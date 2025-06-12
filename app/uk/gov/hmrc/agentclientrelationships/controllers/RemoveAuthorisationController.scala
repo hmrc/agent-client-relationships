@@ -221,7 +221,12 @@ with AuthActions {
       enrolmentKey,
       currentUser.affinityGroup
     )
-    .map(_ => Right(true))
+    .map(result =>
+      if (result)
+        Right(true)
+      else
+        Left(RelationshipDeletionInProgress)
+    )
     .recover {
       case RelationshipNotFoundEx(_) => Left(RelationshipNotFound)
       case upS: UpstreamErrorResponse => Left(RelationshipDeleteFailed(upS.getMessage))
@@ -257,6 +262,8 @@ with AuthActions {
         relationshipDeleteFailed.getResult("")
 
       case RelationshipNotFound => RelationshipNotFound.getResult("")
+
+      case RelationshipDeletionInProgress => RelationshipDeletionInProgress.getResult("")
 
       case _ => BadRequest
     }

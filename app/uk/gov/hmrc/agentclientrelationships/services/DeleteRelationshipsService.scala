@@ -74,7 +74,7 @@ with Logging {
     request: RequestHeader,
     currentUser: CurrentUser,
     auditData: AuditData = new AuditData
-  ): Future[Unit] = {
+  ): Future[Boolean] = {
 
     auditService.setAuditDataForTermination(arn, enrolmentKey)
 
@@ -88,34 +88,35 @@ with Logging {
         Future.failed(new Exception("RELATIONSHIP_DELETE_FAILED_DB"))
       }
 
-    def delete: Future[Unit] = {
-      val endedBy = determineUserTypeFromAG(affinityGroup)
-      val record = DeleteRecord(
-        arn.value,
-        Some(enrolmentKey),
-        headerCarrier = Some(hc),
-        relationshipEndedBy = endedBy
-      )
-      for {
-        recordDeletionStatus <- createDeleteRecord(record)
-        if recordDeletionStatus == DbUpdateSucceeded
-        esRecordDeletionStatus <- deleteEsRecord(arn, enrolmentKey)
-        if esRecordDeletionStatus == DbUpdateSucceeded
-        etmpRecordDeletionStatus <- deleteEtmpRecord(arn, enrolmentKey)
-        if etmpRecordDeletionStatus == DbUpdateSucceeded
-        removed <- removeDeleteRecord(arn, enrolmentKey)
-        if removed
-        _ <- setRelationshipEnded(
-          arn,
-          enrolmentKey,
-          endedBy.getOrElse("HMRC")
+    def delete: Future[Boolean] = lockService
+      .recoveryLock(arn, enrolmentKey) {
+        val endedBy = determineUserTypeFromAG(affinityGroup)
+        val record = DeleteRecord(
+          arn.value,
+          Some(enrolmentKey),
+          headerCarrier = Some(hc),
+          relationshipEndedBy = endedBy
         )
-      } yield ()
-    }
+        for {
+          recordDeletionStatus <- createDeleteRecord(record)
+          if recordDeletionStatus == DbUpdateSucceeded
+          esRecordDeletionStatus <- deleteEsRecord(arn, enrolmentKey)
+          if esRecordDeletionStatus == DbUpdateSucceeded
+          etmpRecordDeletionStatus <- deleteEtmpRecord(arn, enrolmentKey)
+          if etmpRecordDeletionStatus == DbUpdateSucceeded
+          removed <- removeDeleteRecord(arn, enrolmentKey)
+          if removed
+          _ <- setRelationshipEnded(
+            arn,
+            enrolmentKey,
+            endedBy.getOrElse("HMRC")
+          )
+        } yield true
+      }.map(_.getOrElse(false))
 
     for {
       recordOpt <- deleteRecordRepository.findBy(arn, enrolmentKey)
-      _ <-
+      result <-
         recordOpt match {
           case Some(record) =>
             for {
@@ -131,10 +132,12 @@ with Logging {
           case None =>
             for {
               result <- delete
-              _ = auditService.sendTerminateRelationshipAuditEvent()
+              _ =
+                if (result)
+                  auditService.sendTerminateRelationshipAuditEvent()
             } yield result
         }
-    } yield ()
+    } yield result
   }
 
   private def deleteEtmpRecord(
@@ -181,7 +184,7 @@ with Logging {
             _,
             _,
             _
-          ) if e.getMessage().contains("No active relationship found") =>
+          ) if e.getMessage.contains("No active relationship found") =>
         logger.warn(
           s"De-authorising ETMP record failed for ${arn.value}, $enrolmentKey due to: No active relationship found"
         )
