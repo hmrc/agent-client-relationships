@@ -22,6 +22,7 @@ import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.mongo.lock.LockService
 import uk.gov.hmrc.mongo.lock.MongoLockRepository
+import uk.gov.hmrc.play.http.logging.Mdc
 
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -57,7 +58,9 @@ extends MongoLockService {
       lockId = s"recovery-${arn.value}-${enrolmentKey.tag}",
       ttl = 5.minutes
     )
-    recoveryLock.withLock(body)
+    Mdc.preservingMdc {
+      recoveryLock.withLock(body)
+    }
   }
 
   def schedulerLock[T](jobName: String)(body: => Future[T])(implicit
@@ -69,7 +72,9 @@ extends MongoLockService {
       lockId = s"scheduler-lock-$jobName",
       ttl = appConfig.emailSchedulerLockTTL.seconds
     )
-    lockService.withLock(body)
+    Mdc.preservingMdc {
+      lockService.withLock(body)
+    }
   }
 
 }
