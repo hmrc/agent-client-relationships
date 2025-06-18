@@ -64,20 +64,22 @@ with HipStub {
     "microservice.services.des.port" -> wireMockPort,
     "auditing.consumer.baseUri.host" -> wireMockHost,
     "auditing.consumer.baseUri.port" -> wireMockPort,
-    "hip.BusinessDetails.enabled" -> true
+    "hip.BusinessDetails.enabled" -> true,
+    "features.overseas-itsa-enabled" -> true
   )
 
   implicit val request: RequestHeader = FakeRequest()
 
   val connector: ClientDetailsConnector = app.injector.instanceOf[ClientDetailsConnector]
   val ifOrHipConnector: IfOrHipConnector = app.injector.instanceOf[IfOrHipConnector]
+  private val greatBritain: String = "GREAT BRITAIN"
 
   ".getItsaDesignatoryDetails" should {
 
     "return designatory details when receiving a 200 status" in {
       givenAuditConnector()
       givenItsaDesignatoryDetailsExists("AA000001B")
-      await(connector.getItsaDesignatoryDetails("AA000001B")) shouldBe Right(ItsaDesignatoryDetails(Some("AA1 1AA")))
+      await(connector.getItsaDesignatoryDetails("AA000001B")) shouldBe Right(ItsaDesignatoryDetails(Some("AA1 1AA"), Some(greatBritain)))
     }
 
     "return a ClientDetailsNotFound error when receiving a 404 status" in {

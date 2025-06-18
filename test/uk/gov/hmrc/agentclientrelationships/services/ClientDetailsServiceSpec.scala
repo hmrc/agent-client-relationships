@@ -20,8 +20,11 @@ import org.mockito.ArgumentMatchers.any
 import org.mockito.ArgumentMatchers.{eq => eqTo}
 import org.mockito.Mockito.when
 import org.scalatestplus.mockito.MockitoSugar.mock
+import play.api.mvc.RequestHeader
+import play.api.test.FakeRequest
 import play.api.test.Helpers.await
 import play.api.test.Helpers.defaultAwaitTimeout
+import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.ClientDetailsConnector
 import uk.gov.hmrc.agentclientrelationships.connectors.IfOrHipConnector
 import uk.gov.hmrc.agentclientrelationships.model.CitizenDetails
@@ -39,8 +42,6 @@ import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ppt.PptSubscript
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.vat.VatCustomerDetails
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.vat.VatIndividual
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
-import play.api.mvc.RequestHeader
-import play.api.test.FakeRequest
 
 import java.time.LocalDate
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -51,10 +52,12 @@ extends UnitSpec {
 
   val mockConnector: ClientDetailsConnector = mock[ClientDetailsConnector]
   val mockIfOrHipConnector: IfOrHipConnector = mock[IfOrHipConnector]
+  val mockAppConfig: AppConfig = mock[AppConfig]
   val service =
     new ClientDetailsService(
       mockConnector,
-      mockIfOrHipConnector
+      mockIfOrHipConnector,
+      mockAppConfig
     )
   implicit val request: RequestHeader = FakeRequest()
 
@@ -126,13 +129,13 @@ extends UnitSpec {
               )
             )
             when(mockConnector.getItsaDesignatoryDetails(eqTo[String]("AA000001B"))(any[RequestHeader])).thenReturn(
-              Future.successful(Right(ItsaDesignatoryDetails(Some("AA1 1AA"))))
+              Future.successful(Right(ItsaDesignatoryDetails(Some("AA1 1AA"), Some("GREAT BRITAIN"))))
             )
 
             val resultModel = ClientDetailsResponse(
               "John Rocks",
               None,
-              isOverseas = None,
+              isOverseas = Some(false),
               Seq("AA11AA"),
               Some(PostalCode)
             )
@@ -157,7 +160,7 @@ extends UnitSpec {
               )
             )
             when(mockConnector.getItsaDesignatoryDetails(eqTo[String]("AA000001B"))(any[RequestHeader])).thenReturn(
-              Future.successful(Right(ItsaDesignatoryDetails(None)))
+              Future.successful(Right(ItsaDesignatoryDetails(None, None)))
             )
 
             await(service.findClientDetails("HMRC-MTD-IT", "AA000001B")) shouldBe Left(ClientDetailsNotFound)
@@ -180,7 +183,7 @@ extends UnitSpec {
               )
             )
             when(mockConnector.getItsaDesignatoryDetails(eqTo[String]("AA000001B"))(any[RequestHeader])).thenReturn(
-              Future.successful(Right(ItsaDesignatoryDetails(Some("AA1 1AA"))))
+              Future.successful(Right(ItsaDesignatoryDetails(Some("AA1 1AA"), Some("GREAT BRITAIN"))))
             )
 
             await(service.findClientDetails("HMRC-MTD-IT", "AA000001B")) shouldBe Left(ClientDetailsNotFound)
@@ -203,7 +206,7 @@ extends UnitSpec {
               )
             )
             when(mockConnector.getItsaDesignatoryDetails(eqTo[String]("AA000001B"))(any[RequestHeader])).thenReturn(
-              Future.successful(Right(ItsaDesignatoryDetails(Some("AA1 1AA"))))
+              Future.successful(Right(ItsaDesignatoryDetails(Some("AA1 1AA"), Some("GREAT BRITAIN"))))
             )
 
             await(service.findClientDetails("HMRC-MTD-IT", "AA000001B")) shouldBe Left(ClientDetailsNotFound)

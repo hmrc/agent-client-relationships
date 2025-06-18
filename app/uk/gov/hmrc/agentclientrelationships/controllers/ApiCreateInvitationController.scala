@@ -59,7 +59,7 @@ import scala.concurrent.Future
 class ApiCreateInvitationController @Inject() (
   ifOrHipConnector: IfOrHipConnector,
   clientDetailsService: ClientDetailsService,
-  knowFactsCheckService: KnowFactsCheckService,
+  apiKnownFactsCheckService: ApiKnownFactsCheckService,
   checkRelationshipsService: CheckRelationshipsOrchestratorService,
   agentAssuranceService: AgentAssuranceService,
   invitationsRepository: InvitationsRepository,
@@ -138,7 +138,7 @@ with AuthActions {
               EitherT.rightT[Future, ApiFailureResponse](clientDetailsResponse)
           }
 
-        _ <- EitherT.fromEither[Future](knowFactsCheckService.checkKnowFacts(apiCreateInvitationInputData.knownFact, clientDetails))
+        _ <- EitherT.fromEither[Future](apiKnownFactsCheckService.checkKnownFacts(apiCreateInvitationInputData.knownFact, clientDetails))
           .leftMap {
             case KnowFactsFailure.UnsupportedKnowFacts => ApiFailureResponse.InvalidPayload
             case KnowFactsFailure.PostcodeFormatInvalid => ApiFailureResponse.PostcodeFormatInvalid

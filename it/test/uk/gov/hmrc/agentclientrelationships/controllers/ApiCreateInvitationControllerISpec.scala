@@ -36,7 +36,7 @@ import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
 import uk.gov.hmrc.agentclientrelationships.services.AgentAssuranceService
 import uk.gov.hmrc.agentclientrelationships.services.CheckRelationshipsOrchestratorService
 import uk.gov.hmrc.agentclientrelationships.services.ClientDetailsService
-import uk.gov.hmrc.agentclientrelationships.services.KnowFactsCheckService
+import uk.gov.hmrc.agentclientrelationships.services.ApiKnownFactsCheckService
 import uk.gov.hmrc.agentclientrelationships.stubs._
 import uk.gov.hmrc.agentclientrelationships.support.TestData
 import uk.gov.hmrc.agentmtdidentifiers.model.Service._
@@ -63,7 +63,7 @@ with TestData {
   val authConnector: AuthConnector = app.injector.instanceOf[AuthConnector]
   val ifOrHipConnector: IfOrHipConnector = app.injector.instanceOf[IfOrHipConnector]
   val clientDetailsService: ClientDetailsService = app.injector.instanceOf[ClientDetailsService]
-  val knowFactsCheckService: KnowFactsCheckService = app.injector.instanceOf[KnowFactsCheckService]
+  val knowFactsCheckService: ApiKnownFactsCheckService = app.injector.instanceOf[ApiKnownFactsCheckService]
   val checkRelationshipsService: CheckRelationshipsOrchestratorService = app.injector.instanceOf[CheckRelationshipsOrchestratorService]
   val agentAssuranceService: AgentAssuranceService = app.injector.instanceOf[AgentAssuranceService]
   val invitationRepo: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
@@ -833,7 +833,7 @@ with TestData {
 
     }
 
-    s"return UNPROCESSABLE_ENTITY status and valid JSON POSTCODE_DOES_NOT_MATCH when ITSA client is oversea" in {
+    s"return UNPROCESSABLE_ENTITY status and valid JSON INVALID_PAYLOAD when ITSA country is not valid" in {
       val inputData: ApiCreateInvitationRequest = baseInvitationInputData
 
       getStandardStubForCreateInvitation(HMRCMTDIT)
@@ -853,7 +853,7 @@ with TestData {
       val expectedJson: JsValue = Json.toJson(
         toJson(
           ErrorBody(
-            "POSTCODE_DOES_NOT_MATCH"
+            "INVALID_PAYLOAD"
           )
         )
       )
