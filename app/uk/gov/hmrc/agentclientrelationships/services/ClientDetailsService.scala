@@ -18,6 +18,7 @@ package uk.gov.hmrc.agentclientrelationships.services
 
 import cats.data.EitherT
 import play.api.mvc.RequestHeader
+import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.ClientDetailsConnector
 import uk.gov.hmrc.agentclientrelationships.connectors.IfOrHipConnector
 import uk.gov.hmrc.agentclientrelationships.model.CitizenDetails
@@ -41,7 +42,8 @@ import scala.concurrent.Future
 @Singleton
 class ClientDetailsService @Inject() (
   clientDetailsConnector: ClientDetailsConnector,
-  ifOrHipConnector: IfOrHipConnector
+  ifOrHipConnector: IfOrHipConnector,
+  appConfig: AppConfig
 )(implicit ec: ExecutionContext)
 extends RequestAwareLogging {
 
@@ -75,54 +77,89 @@ extends RequestAwareLogging {
       case "HMRC-PILLAR2-ORG" => getPillar2ClientDetails(clientId)
     }
 
+  private def makeItsaOverseasResponse(
+    country: String,
+    name: String,
+    factType: KnownFactType
+  ): ClientDetailsResponse = ClientDetailsResponse(
+    name = name,
+    status = None,
+    isOverseas = Some(true),
+    knownFacts = Seq(country),
+    knownFactType = Some(factType)
+  )
+
+  private def makeItsaUkResponse(
+    postcode: String,
+    name: String
+  ): ClientDetailsResponse = ClientDetailsResponse(
+    name = name,
+    status = None,
+    isOverseas = Some(false),
+    knownFacts = Seq(postcode.replaceAll("\\s", "")),
+    knownFactType = Some(PostalCode)
+  )
+
+  // using Citizen Details designatory details service returns country names
+  // that includes UK countries
+  // https://github.com/hmrc/citizen-details/blob/main/app/uk/gov/hmrc/citizendetails/model/nps/Address.scala#L17
+  private def isUk(countryName: String) = List(
+    "GREAT BRITAIN",
+    "ENGLAND",
+    "WALES",
+    "NORTHERN IRELAND",
+    "SCOTLAND"
+  ).contains(countryName)
+
+  private def checkCitizenDetails(nino: String)(implicit rh: RequestHeader): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] =
+    (
+      for {
+        citizenDetails <- EitherT(clientDetailsConnector.getItsaCitizenDetails(nino))
+        designatoryDetails <- EitherT(clientDetailsConnector.getItsaDesignatoryDetails(nino))
+      } yield (citizenDetails.name, citizenDetails.saUtr, designatoryDetails.postCode, designatoryDetails.country)
+    ).subflatMap {
+      case (Some(name), Some(_), Some(postcode), Some(country)) if isUk(country) =>
+        Right(makeItsaUkResponse(
+          postcode = postcode,
+          name = name
+        ))
+      case (Some(name), Some(_), _, Some(country)) if appConfig.overseasItsaEnabled =>
+        Right(makeItsaOverseasResponse(
+          country = country,
+          name = name,
+          factType = Country
+        ))
+      case _ => Left(ClientDetailsNotFound)
+    }.value
+
   private def getItsaClientDetails(nino: String)(implicit
     request: RequestHeader
   ): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] = ifOrHipConnector
     .getItsaBusinessDetails(nino)
     .flatMap {
-      case Right(
-            details @ ItsaBusinessDetails(
-              name,
-              Some(postcode),
-              _
-            )
-          ) =>
-        Future.successful(
-          Right(
-            ClientDetailsResponse(
-              name,
-              None,
-              Some(details.isOverseas),
-              Seq(postcode.replaceAll("\\s", "")),
-              Some(PostalCode)
-            )
-          )
-        )
+      case Right(details @ ItsaBusinessDetails(
+            _,
+            Some(postcode),
+            _
+          )) if !details.isOverseas =>
+        Future.successful(Right(makeItsaUkResponse(
+          postcode = postcode,
+          name = details.name
+        )))
+      case Right(details @ ItsaBusinessDetails(
+            _,
+            _,
+            countryCode
+          )) if appConfig.overseasItsaEnabled =>
+        Future.successful(Right(makeItsaOverseasResponse(
+          country = countryCode,
+          name = details.name,
+          factType = CountryCode
+        )))
       case Right(_) =>
-        logger.warn("[getItsaClientDetails] - No postcode was returned by the API")
+        logger.warn(s"[getItsaClientDetails] - Valid business details not found in ETMP for $nino")
         Future.successful(Left(ClientDetailsNotFound))
-      case Left(ClientDetailsNotFound) =>
-        (
-          for {
-            citizenDetails <- EitherT(clientDetailsConnector.getItsaCitizenDetails(nino))
-            designatoryDetails <- EitherT(clientDetailsConnector.getItsaDesignatoryDetails(nino))
-            optName = citizenDetails.name
-            optSaUtr = citizenDetails.saUtr
-            optPostcode = designatoryDetails.postCode
-          } yield (optName, optSaUtr, optPostcode)
-        ).subflatMap {
-          case (Some(name), Some(_), Some(postcode)) =>
-            Right(
-              ClientDetailsResponse(
-                name,
-                None,
-                None,
-                Seq(postcode.replaceAll("\\s", "")),
-                Some(PostalCode)
-              )
-            )
-          case _ => Left(ClientDetailsNotFound)
-        }.value
+      case Left(ClientDetailsNotFound) => checkCitizenDetails(nino)
       case Left(err) => Future.successful(Left(err))
     }
 

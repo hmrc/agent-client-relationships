@@ -25,13 +25,17 @@ trait ClientDetailsStub {
     get(urlEqualTo(s"/citizen-details/$nino/designatory-details"))
       .willReturn(
         aResponse()
-          .withBody(s"""
-                       |{
-                       |  "address": {
-                       |    "postcode": "AA1 1AA"
-                       |  }
-                       |}
-          """.stripMargin)
+          .withBody(
+            // language=JSON
+            s"""
+                       {
+                         "address": {
+                           "postcode": "AA1 1AA",
+                           "country": "GREAT BRITAIN"
+                         }
+                       }
+          """.stripMargin
+          )
       )
   )
 

@@ -19,11 +19,17 @@ package uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa
 import play.api.libs.json.JsPath
 import play.api.libs.json.Reads
 
-case class ItsaDesignatoryDetails(postCode: Option[String])
+case class ItsaDesignatoryDetails(
+  postCode: Option[String],
+  country: Option[String]
+)
 
 object ItsaDesignatoryDetails {
+
   implicit val reads: Reads[ItsaDesignatoryDetails] =
     for {
       postCode <- (JsPath \ "address" \ "postcode").readNullable[String]
-    } yield ItsaDesignatoryDetails(postCode)
+      country <- (JsPath \ "address" \ "country").readNullable[String]
+    } yield ItsaDesignatoryDetails(postCode, country)
+
 }

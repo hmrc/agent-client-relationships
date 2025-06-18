@@ -26,6 +26,7 @@ extends Enumeration {
 
   val PostalCode: KnownFactType = Value("PostalCode")
   val CountryCode: KnownFactType = Value("CountryCode")
+  val Country: KnownFactType = Value("Country")
   val Email: KnownFactType = Value("Email")
   val Date: KnownFactType = Value("Date")
 

@@ -27,15 +27,15 @@ extends UnitSpec {
     "read from JSON" when {
 
       "optional fields are present" in {
-        val json = Json.obj("address" -> Json.obj("postcode" -> "AA1 1AA"))
+        val json = Json.obj("address" -> Json.obj("postcode" -> "AA1 1AA", "country" -> "GREAT BRITAIN"))
 
-        json.as[ItsaDesignatoryDetails] shouldBe ItsaDesignatoryDetails(Some("AA1 1AA"))
+        json.as[ItsaDesignatoryDetails] shouldBe ItsaDesignatoryDetails(Some("AA1 1AA"), Some("GREAT BRITAIN"))
       }
 
       "optional fields are not present" in {
         val json = Json.obj()
 
-        json.as[ItsaDesignatoryDetails] shouldBe ItsaDesignatoryDetails(None)
+        json.as[ItsaDesignatoryDetails] shouldBe ItsaDesignatoryDetails(None, None)
       }
     }
   }
