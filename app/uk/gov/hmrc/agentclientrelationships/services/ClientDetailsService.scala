@@ -101,6 +101,17 @@ extends RequestAwareLogging {
     knownFactType = Some(PostalCode)
   )
 
+  // using Citizen Details designatory details service returns country names
+  // that includes UK countries
+  // https://github.com/hmrc/citizen-details/blob/main/app/uk/gov/hmrc/citizendetails/model/nps/Address.scala#L17
+  private def isUk(countryName: String) = List(
+    "GREAT BRITAIN",
+    "ENGLAND",
+    "WALES",
+    "NORTHERN IRELAND",
+    "SCOTLAND"
+  ).contains(countryName)
+
   private def checkCitizenDetails(nino: String)(implicit rh: RequestHeader): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] =
     (
       for {
@@ -108,7 +119,7 @@ extends RequestAwareLogging {
         designatoryDetails <- EitherT(clientDetailsConnector.getItsaDesignatoryDetails(nino))
       } yield (citizenDetails.name, citizenDetails.saUtr, designatoryDetails.postCode, designatoryDetails.country)
     ).subflatMap {
-      case (Some(name), Some(_), Some(postcode), Some(country)) if country == greatBritain =>
+      case (Some(name), Some(_), Some(postcode), Some(country)) if isUk(country) =>
         Right(makeItsaUkResponse(
           postcode = postcode,
           name = name
