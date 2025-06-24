@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
+import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsResponse
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.KnownFactType
 import uk.gov.hmrc.agentclientrelationships.model.invitation.KnowFactsFailure
@@ -27,12 +28,12 @@ import javax.inject.Singleton
 import scala.util.Try
 
 @Singleton
-class KnowFactsCheckService @Inject() {
+class ApiKnownFactsCheckService @Inject() (appConfig: AppConfig) {
 
   private val postcodeWithoutSpacesRegex = "^[A-Za-z]{1,2}[0-9]{1,2}[A-Za-z]?[0-9][A-Za-z]{2}$".r
   private def normalise(postcode: String): String = postcode.replaceAll("\\s", "").toUpperCase
 
-  def checkKnowFacts(
+  def checkKnownFacts(
     knownFact: String,
     clientDetailsResponse: ClientDetailsResponse
   ): Either[KnowFactsFailure, Unit] =
@@ -46,7 +47,7 @@ class KnowFactsCheckService @Inject() {
               clientDetailsResponse.isOverseas.getOrElse(false)
             )
           case KnownFactType.Date => checkDate(knownFact, clientDetailsResponse.knownFacts.head)
-          case KnownFactType.CountryCode | KnownFactType.Email => Left(KnowFactsFailure.UnsupportedKnowFacts)
+          case _ => Left(KnowFactsFailure.UnsupportedKnowFacts)
         }
       case None => Left(KnowFactsFailure.UnsupportedKnowFacts)
     }
@@ -73,13 +74,13 @@ class KnowFactsCheckService @Inject() {
     postcode: String,
     isOverseas: Boolean
   ): Either[KnowFactsFailure, Unit] =
-    if (suppliedPostCode.isEmpty)
+    if (suppliedPostCode.isEmpty && !isOverseas)
       Left(KnowFactsFailure.PostcodeFormatInvalid)
     else {
       postcodeWithoutSpacesRegex
         .findFirstIn(normalise(suppliedPostCode))
         .map { _ =>
-          if (isOverseas) {
+          if (isOverseas && !appConfig.overseasItsaEnabled) {
             Left(KnowFactsFailure.PostcodeDoesNotMatch)
           }
           else {

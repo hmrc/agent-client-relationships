@@ -61,7 +61,8 @@ with IfStub {
     "microservice.services.des.port" -> wireMockPort,
     "auditing.consumer.baseUri.host" -> wireMockHost,
     "auditing.consumer.baseUri.port" -> wireMockPort,
-    "hip.BusinessDetails.enabled" -> false
+    "hip.BusinessDetails.enabled" -> false,
+    "features.overseas-itsa-enabled" -> true
   )
 
   implicit val request: RequestHeader = FakeRequest()
@@ -74,7 +75,7 @@ with IfStub {
     "return designatory details when receiving a 200 status" in {
       givenAuditConnector()
       givenItsaDesignatoryDetailsExists("AA000001B")
-      await(connector.getItsaDesignatoryDetails("AA000001B")) shouldBe Right(ItsaDesignatoryDetails(Some("AA1 1AA")))
+      await(connector.getItsaDesignatoryDetails("AA000001B")) shouldBe Right(ItsaDesignatoryDetails(Some("AA1 1AA"), Some("GREAT BRITAIN")))
     }
 
     "return a ClientDetailsNotFound error when receiving a 404 status" in {
