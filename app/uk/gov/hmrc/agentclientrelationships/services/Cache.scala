@@ -34,6 +34,7 @@ import uk.gov.hmrc.mongo.cache.DataKey
 import uk.gov.hmrc.mongo.cache.MongoCacheRepository
 import uk.gov.hmrc.mongo.CurrentTimestampSupport
 import uk.gov.hmrc.mongo.MongoComponent
+import uk.gov.hmrc.play.http.logging.Mdc
 
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext
@@ -98,19 +99,21 @@ with Cache[T] {
   def apply(cacheId: String)(body: => Future[T])(implicit request: RequestHeader): Future[T] = {
     val dataKey: DataKey[T] = DataKey[T](cacheId)
 
-    cacheRepository
-      .get(cacheId)(dataKey)
-      .flatMap {
-        case Some(cachedValue) =>
-          record(s"Count-$collectionName-from-cache")
-          Future.successful(cachedValue)
-        case None =>
-          body.andThen { case Success(newValue) =>
-            logger.info(s"Missing $collectionName cache hit, storing new value.")
-            record(s"Count-$collectionName-from-source")
-            cacheRepository.put(cacheId)(dataKey, newValue).map(_ => newValue)
-          }
-      }
+    Mdc.preservingMdc {
+      cacheRepository
+        .get(cacheId)(dataKey)
+        .flatMap {
+          case Some(cachedValue) =>
+            record(s"Count-$collectionName-from-cache")
+            Future.successful(cachedValue)
+          case None =>
+            body.andThen { case Success(newValue) =>
+              logger.info(s"Missing $collectionName cache hit, storing new value.")
+              record(s"Count-$collectionName-from-source")
+              cacheRepository.put(cacheId)(dataKey, newValue).map(_ => newValue)
+            }
+        }
+    }
   }
 
 }
