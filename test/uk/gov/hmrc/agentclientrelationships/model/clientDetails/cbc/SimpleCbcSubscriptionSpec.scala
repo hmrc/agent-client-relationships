@@ -64,6 +64,36 @@ extends UnitSpec {
           )
       }
 
+      "Secondary fields are is present" in {
+
+        val json = Json.obj(
+          "displaySubscriptionForCBCResponse" ->
+            Json.obj(
+              "responseDetail" ->
+                Json.obj(
+                  "isGBUser" -> true,
+                  "tradingName" -> "CFG Solutions",
+                  "primaryContact" ->
+                    Json.arr(
+                      Json.obj(
+                        "email" -> "test@email.com",
+                        "individual" -> Json.obj("firstName" -> "Erling", "lastName" -> "Haal"),
+                        "organisation" -> Json.obj("organisationName" -> "CFG")
+                      )
+                    )
+                )
+            )
+        )
+
+        json.as[SimpleCbcSubscription] shouldBe
+          SimpleCbcSubscription(
+            Some("CFG Solutions"),
+            Seq("Erling Haal"),
+            isGBUser = true,
+            Seq("test@email.com")
+          )
+      }
+
       "optional fields are not present" in {
 
         val json = Json.obj(
@@ -72,8 +102,7 @@ extends UnitSpec {
               "responseDetail" ->
                 Json.obj(
                   "isGBUser" -> true,
-                  "primaryContact" -> Json.arr(),
-                  "secondaryContact" -> Json.arr()
+                  "primaryContact" -> Json.arr()
                 )
             )
         )

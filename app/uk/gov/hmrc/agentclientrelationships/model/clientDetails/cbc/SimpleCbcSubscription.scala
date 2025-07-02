@@ -38,10 +38,10 @@ object SimpleCbcSubscription {
     val primaryContact = (json \ "displaySubscriptionForCBCResponse" \ "responseDetail" \ "primaryContact").as[Seq[
       CbcContact
     ]]
-    val secondaryContact = (json \ "displaySubscriptionForCBCResponse" \ "responseDetail" \ "secondaryContact").as[Seq[
+    val secondaryContact = (json \ "displaySubscriptionForCBCResponse" \ "responseDetail" \ "secondaryContact").asOpt[Seq[
       CbcContact
     ]]
-    val contacts = primaryContact ++ secondaryContact
+    val contacts = primaryContact ++ secondaryContact.getOrElse(Seq())
 
     val otherNames: Seq[String] = contacts.collect {
       case CbcContact(
