@@ -130,9 +130,16 @@ class AppConfig @Inject() (
     "inactive-relationships-client.record-start-date"
   )
 
+  val supportedServices: Seq[Service] =
+    if (cbcEnabled) {
+      Service.supportedServices
+    }
+    else
+      Service.supportedServices.filterNot(service => service == Service.Cbc || service == Service.CbcNonUk)
+
   // Note: Personal Income Record is not handled through agent-client-relationships for many of the endpoints
-  val supportedServicesWithoutPir: Seq[Service] = Service.supportedServices.filterNot(_ == Service.PersonalIncomeRecord)
-  val supportedServices: Seq[Service] = Service.supportedServices
+  val supportedServicesWithoutPir: Seq[Service] = supportedServices.filterNot(_ == Service.PersonalIncomeRecord)
+
   val apiSupportedServices: Seq[Service] = Seq(
     Service.MtdIt,
     Service.MtdItSupp,
@@ -151,5 +158,6 @@ class AppConfig @Inject() (
   val emailSchedulerLockTTL: Int = servicesConfig.getInt("emailScheduler.lockDurationInSeconds")
 
   val overseasItsaEnabled: Boolean = servicesConfig.getBoolean("features.overseas-itsa-enabled")
+  val cbcEnabled: Boolean = servicesConfig.getBoolean("features.cbc-enabled")
 
 }
