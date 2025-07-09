@@ -27,14 +27,13 @@ import uk.gov.hmrc.agentclientrelationships.audit.AuditService
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.IfOrHipConnector
+import uk.gov.hmrc.agentclientrelationships.model.Invitation
+import uk.gov.hmrc.agentclientrelationships.model.Pending
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsNotFound
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsResponse
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ErrorRetrievingClientDetails
 import uk.gov.hmrc.agentclientrelationships.model.invitation._
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgencyDetails
-import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentDetailsDesResponse
-import uk.gov.hmrc.agentclientrelationships.model.Invitation
-import uk.gov.hmrc.agentclientrelationships.model.Pending
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
 import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
 import uk.gov.hmrc.agentclientrelationships.services._
@@ -280,7 +279,7 @@ with AuthActions {
     .map {
       case CheckRelationshipFound => Left(ApiFailureResponse.AlreadyAuthorised)
       case CheckRelationshipNotFound(_) => Right(false)
-      case CheckRelationshipInvalidRequest => Left(ApiFailureResponse.ApiInternalServerError(""))
+      case CheckRelationshipInvalidRequest => Left(ApiFailureResponse.ApiInternalServerError)
     }
     .flatMap {
       case Right(false) if ItsaServices.contains(service) =>

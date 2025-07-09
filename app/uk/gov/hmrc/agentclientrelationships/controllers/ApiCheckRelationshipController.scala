@@ -67,7 +67,7 @@ with AuthActions {
               ).map {
                 case CheckRelationshipFound => NoContent
                 case CheckRelationshipNotFound(_) => RelationshipNotFound.getResult
-                case _ => ApiInternalServerError("Unsupported error during relationship check").getResult
+                case _ => ApiInternalServerError.getResult
               }
           }
       }
