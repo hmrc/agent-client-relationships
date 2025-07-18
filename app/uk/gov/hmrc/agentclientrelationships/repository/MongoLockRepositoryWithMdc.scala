@@ -52,7 +52,7 @@ extends MongoLockRepository(mongoComponent, timestampSupport)(ec) {
     lockId: String,
     owner: String
   ): Future[Unit] = Mdc.preservingMdc {
-    super.releaseLock(lockId, owner)
+    super.releaseLock(lockId = lockId, owner = owner)
   }
 
   override def disownLock(
@@ -61,9 +61,9 @@ extends MongoLockRepository(mongoComponent, timestampSupport)(ec) {
     expiry: Option[Instant]
   ): Future[Unit] = Mdc.preservingMdc {
     super.disownLock(
-      lockId,
-      owner,
-      expiry
+      lockId = lockId,
+      owner = owner,
+      updatedExpiry = expiry
     )
   }
 
@@ -73,9 +73,9 @@ extends MongoLockRepository(mongoComponent, timestampSupport)(ec) {
     ttl: Duration
   ): Future[Boolean] = Mdc.preservingMdc {
     super.refreshExpiry(
-      lockId,
-      owner,
-      ttl
+      lockId = lockId,
+      owner = owner,
+      ttl = ttl
     )
   }
 
@@ -83,7 +83,7 @@ extends MongoLockRepository(mongoComponent, timestampSupport)(ec) {
     lockId: String,
     owner: String
   ): Future[Boolean] = Mdc.preservingMdc {
-    super.isLocked(lockId, owner)
+    super.isLocked(lockId = lockId, owner = owner)
   }
 
 }
