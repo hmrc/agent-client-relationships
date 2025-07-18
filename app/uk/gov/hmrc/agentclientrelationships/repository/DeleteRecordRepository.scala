@@ -114,19 +114,6 @@ extends PlayMongoRepository[DeleteRecord](
   collectionName = "delete-record",
   domainFormat = formats,
   indexes = Seq(
-    // Note: these are *partial* indexes as sometimes we index on clientIdentifier, other times on enrolmentKey.
-    // The situation will be simplified after a migration of the legacy documents.
-    IndexModel(
-      Indexes.ascending(
-        "arn",
-        "clientIdentifier",
-        "clientIdentifierType"
-      ),
-      IndexOptions()
-        .partialFilterExpression(Filters.exists("clientIdentifier"))
-        .unique(true)
-        .name("arnAndAgentReferencePartial")
-    ),
     IndexModel(
       Indexes.ascending("arn", "enrolmentKey"),
       IndexOptions()
