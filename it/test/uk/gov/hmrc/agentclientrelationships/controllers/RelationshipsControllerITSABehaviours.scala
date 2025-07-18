@@ -753,7 +753,7 @@ trait RelationshipsControllerITSABehaviours {
             deleteRecordRepository.create(
               DeleteRecord(
                 arn.value,
-                Some(mtdItEnrolmentKey),
+                mtdItEnrolmentKey,
                 dateTime = LocalDateTime.now.minusMinutes(1),
                 syncToETMPStatus = Some(SyncStatus.Success),
                 syncToESStatus = Some(SyncStatus.Failed)
@@ -769,7 +769,7 @@ trait RelationshipsControllerITSABehaviours {
             deleteRecordRepository.create(
               DeleteRecord(
                 arn.value,
-                Some(mtdItEnrolmentKey),
+                mtdItEnrolmentKey,
                 dateTime = LocalDateTime.now.minusMinutes(1),
                 syncToETMPStatus = Some(SyncStatus.Failed)
               )
@@ -785,7 +785,7 @@ trait RelationshipsControllerITSABehaviours {
               .create(
                 DeleteRecord(
                   arn.value,
-                  Some(mtdItEnrolmentKey),
+                  mtdItEnrolmentKey,
                   dateTime = LocalDateTime.now.minusMinutes(1)
                 )
               )
@@ -817,7 +817,7 @@ trait RelationshipsControllerITSABehaviours {
               .create(
                 DeleteRecord(
                   arn.value,
-                  Some(mtdItEnrolmentKey),
+                  mtdItEnrolmentKey,
                   dateTime = LocalDateTime.now.minusMinutes(1)
                 )
               )

@@ -49,9 +49,7 @@ import uk.gov.hmrc.play.http.logging.Mdc
 
 case class DeleteRecord(
   arn: String,
-  enrolmentKey: Option[EnrolmentKey], // APB-7215 - added to accommodate multiple identifiers (cbc)
-  clientIdentifier: Option[String] = None, // Deprecated - for legacy use only. Use the enrolment key instead.
-  clientIdentifierType: Option[String] = None, // Deprecated - for legacy use only. Use the enrolment key instead.
+  enrolmentKey: EnrolmentKey,
   dateTime: LocalDateTime = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime.truncatedTo(MILLIS),
   syncToETMPStatus: Option[SyncStatus] = None,
   syncToESStatus: Option[SyncStatus] = None,
@@ -60,9 +58,6 @@ case class DeleteRecord(
   headerCarrier: Option[HeaderCarrier] = None,
   relationshipEndedBy: Option[String] = None
 ) {
-
-  // Legacy records use client id & client id type. Newer records use enrolment key.
-  require(enrolmentKey.isDefined || (clientIdentifier.isDefined && clientIdentifierType.isDefined))
 
   def actionRequired: Boolean = needToDeleteEtmpRecord || needToDeleteEsRecord
 
@@ -154,7 +149,7 @@ with RequestAwareLogging {
         if (insertResult.wasAcknowledged())
           1
         else {
-          logger.warn("Creating DeleteRecord failed.")
+          logger.warn(s"[DeleteRecordRepository] Creating DeleteRecord failed for record: ${record.arn}, ${record.enrolmentKey}")
           INDICATE_ERROR_DURING_DB_UPDATE
         }
       )

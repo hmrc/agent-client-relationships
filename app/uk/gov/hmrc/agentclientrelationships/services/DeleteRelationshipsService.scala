@@ -20,8 +20,7 @@ import org.apache.pekko.Done
 import play.api.Logging
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys._
-import uk.gov.hmrc.agentclientrelationships.audit.AuditData
-import uk.gov.hmrc.agentclientrelationships.audit.AuditService
+import uk.gov.hmrc.agentclientrelationships.audit.{AuditData, AuditService}
 import uk.gov.hmrc.agentclientrelationships.auth.CurrentUser
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors._
@@ -29,21 +28,16 @@ import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.repository.DbUpdateStatus.convertDbUpdateStatus
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
 import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _, _}
-import uk.gov.hmrc.agentclientrelationships.support.Monitoring
-import uk.gov.hmrc.agentclientrelationships.support.NoRequest
-import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
+import uk.gov.hmrc.agentclientrelationships.support.{Monitoring, NoRequest, RelationshipNotFound}
 import uk.gov.hmrc.agentclientrelationships.util.RequestSupport._
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.auth.core.AffinityGroup
 import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
-import java.time.Instant
-import java.time.ZoneOffset
-import javax.inject.Inject
-import javax.inject.Singleton
-import scala.concurrent.ExecutionContext
-import scala.concurrent.Future
+import java.time.{Instant, ZoneOffset}
+import javax.inject.{Inject, Singleton}
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 
 @Singleton
@@ -93,7 +87,7 @@ with Logging {
         val endedBy = determineUserTypeFromAG(affinityGroup)
         val record = DeleteRecord(
           arn.value,
-          Some(enrolmentKey),
+          enrolmentKey,
           headerCarrier = Some(hc),
           relationshipEndedBy = endedBy
         )
@@ -314,7 +308,7 @@ with Logging {
     .selectNextToRecover()
     .flatMap {
       case Some(record) =>
-        val enrolmentKey = record.enrolmentKey.getOrElse(enrolmentKeyFallback(record))
+        val enrolmentKey = record.enrolmentKey
         checkDeleteRecordAndEventuallyResume(Arn(record.arn), enrolmentKey)(NoRequest, auditData)
 
       case None =>
@@ -376,7 +370,7 @@ with Logging {
     auditData: AuditData
   ): Future[Boolean] = {
     val arn = Arn(deleteRecord.arn)
-    val enrolmentKey: EnrolmentKey = deleteRecord.enrolmentKey.getOrElse(enrolmentKeyFallback(deleteRecord))
+    val enrolmentKey: EnrolmentKey = deleteRecord.enrolmentKey
     lockService
       .recoveryLock(arn, enrolmentKey) {
         logger.info(
@@ -426,22 +420,6 @@ with Logging {
         }
       }
       .map(_.getOrElse(false))
-  }
-
-  private[services] def enrolmentKeyFallback(deleteRecord: DeleteRecord): EnrolmentKey = {
-    logger.warn("DeleteRecord did not store the whole enrolment key. Performing fallback determination of service.")
-    // if the enrolment key wasn't stored, assume single identifier and make a best guess based on identifier type
-    (
-      for {
-        clientIdTypeStr <- deleteRecord.clientIdentifierType
-        clientIdStr <- deleteRecord.clientIdentifier
-        service <- appConfig.supportedServicesWithoutPir.find(_.supportedClientIdType.enrolmentId == clientIdTypeStr)
-      } yield EnrolmentKey(service.id, Seq(Identifier(clientIdTypeStr, clientIdStr)))
-    ).getOrElse(
-      throw new RuntimeException(
-        s"Fallback determination of enrolment key failed for ${deleteRecord.clientIdentifierType}"
-      )
-    )
   }
 
   def determineUserTypeFromAG(maybeGroup: Option[AffinityGroup]): Option[String] =
