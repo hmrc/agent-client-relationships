@@ -31,6 +31,7 @@ import play.utils.UriEncoding
 import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey => LocalEnrolmentKey}
 import uk.gov.hmrc.agentclientrelationships.repository.DeleteRecord
 import uk.gov.hmrc.agentclientrelationships.repository.DeleteRecordRepository
+import uk.gov.hmrc.agentclientrelationships.repository.MongoLockRepositoryWithMdc
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipCopyRecordRepository
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus
 import uk.gov.hmrc.agentclientrelationships.services.MongoLockService
@@ -45,7 +46,6 @@ import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.HttpResponse
 import uk.gov.hmrc.mongo.CurrentTimestampSupport
 import uk.gov.hmrc.mongo.MongoComponent
-import uk.gov.hmrc.mongo.lock.MongoLockRepository
 import uk.gov.hmrc.mongo.test.MongoSupport
 
 trait BaseControllerISpec
@@ -73,7 +73,7 @@ with IntegrationPatience {
   def additionalConfig: Map[String, Any] = Map.empty
 
   lazy val mongoRecoveryLockService: MongoLockService = new MongoLockServiceImpl(mongoLockRepository)
-  def mongoLockRepository = new MongoLockRepository(mongoComponent, new CurrentTimestampSupport)
+  def mongoLockRepository = new MongoLockRepositoryWithMdc(mongoComponent, new CurrentTimestampSupport)
 
   lazy val moduleWithOverrides: AbstractModule =
     new AbstractModule {

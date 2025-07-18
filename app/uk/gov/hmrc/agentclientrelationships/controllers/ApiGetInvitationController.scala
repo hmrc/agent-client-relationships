@@ -23,10 +23,8 @@ import play.api.mvc.AnyContent
 import play.api.mvc.ControllerComponents
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.connectors.AgentAssuranceConnector
 import uk.gov.hmrc.agentclientrelationships.model.Invitation
 import uk.gov.hmrc.agentclientrelationships.model.invitation._
-import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentDetailsDesResponse
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
 import uk.gov.hmrc.agentclientrelationships.services.AgentAssuranceService
 import uk.gov.hmrc.agentclientrelationships.services.InvitationLinkService

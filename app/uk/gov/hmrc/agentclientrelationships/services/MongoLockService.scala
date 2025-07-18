@@ -19,9 +19,9 @@ package uk.gov.hmrc.agentclientrelationships.services
 import com.google.inject.ImplementedBy
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
+import uk.gov.hmrc.agentclientrelationships.repository.MongoLockRepositoryWithMdc
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.mongo.lock.LockService
-import uk.gov.hmrc.mongo.lock.MongoLockRepository
 import uk.gov.hmrc.play.http.logging.Mdc
 
 import javax.inject.Inject
@@ -46,7 +46,7 @@ trait MongoLockService {
 }
 
 @Singleton
-class MongoLockServiceImpl @Inject() (lockRepository: MongoLockRepository)
+class MongoLockServiceImpl @Inject() (lockRepository: MongoLockRepositoryWithMdc)
 extends MongoLockService {
 
   def recoveryLock[T](

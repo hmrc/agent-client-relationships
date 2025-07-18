@@ -63,7 +63,7 @@ class ApiKnownFactsCheckService @Inject() (appConfig: AppConfig) {
       suppliedDate <- getLocalDate(suppliedDateStr)
       knowFactDate <- getLocalDate(knowFactDateStr)
     } yield suppliedDate == knowFactDate) match {
-      case Right(true) => Right()
+      case Right(true) => Right(())
       case Right(false) => Left(KnowFactsFailure.VatRegDateDoesNotMatch)
       case Left(err) => Left(err)
     }
@@ -85,7 +85,7 @@ class ApiKnownFactsCheckService @Inject() (appConfig: AppConfig) {
           }
           else {
             if (normalise(postcode).contains(normalise(suppliedPostCode))) {
-              Right()
+              Right(())
             }
             else {
               Left(KnowFactsFailure.PostcodeDoesNotMatch)
