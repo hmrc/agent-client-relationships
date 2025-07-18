@@ -231,17 +231,9 @@ with RequestAwareLogging {
   private def filter(
     arn: Arn,
     enrolmentKey: EnrolmentKey
-  ) = {
-    val identifierType: String = enrolmentKey.identifiers.head.key
-    val identifier: String = enrolmentKey.identifiers.head.value
-    Filters.or(
-      Filters.and(Filters.equal("arn", arn.value), Filters.equal("enrolmentKey", enrolmentKey.tag)),
-      Filters.and(
-        Filters.equal("arn", arn.value),
-        Filters.equal("clientIdentifier", identifier),
-        Filters.equal("clientIdentifierType", identifierType)
-      )
-    )
-  }
+  ) = Filters.and(
+    Filters.equal("arn", arn.value),
+    Filters.equal("enrolmentKey", enrolmentKey.tag)
+  )
 
 }
