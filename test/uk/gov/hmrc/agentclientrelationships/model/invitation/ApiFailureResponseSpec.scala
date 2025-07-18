@@ -16,12 +16,14 @@
 
 package uk.gov.hmrc.agentclientrelationships.model.invitation
 
-import play.api.http.Status.{INTERNAL_SERVER_ERROR, UNPROCESSABLE_ENTITY}
+import play.api.http.Status.INTERNAL_SERVER_ERROR
+import play.api.http.Status.UNPROCESSABLE_ENTITY
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiFailureResponse._
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 
-class ApiFailureResponseSpec extends UnitSpec {
+class ApiFailureResponseSpec
+extends UnitSpec {
 
   ".getResult" should {
 

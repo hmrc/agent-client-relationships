@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.agentclientrelationships.connectors
 
-import cats.data.EitherT
 import play.api.http.Status.CREATED
 import play.api.http.Status.NOT_FOUND
 import play.api.http.Status.OK

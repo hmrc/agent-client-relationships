@@ -16,25 +16,18 @@
 
 package uk.gov.hmrc.agentclientrelationships.connectors.helpers
 
-import play.api.http.HeaderNames
 import play.api.mvc.RequestHeader
-import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 
-import javax.inject.Inject
+object CommonHeaders {
 
-class IfHeaders @Inject() (
-  randomUuidGenerator: CorrelationIdGenerator,
-  appConfig: AppConfig
-) {
+  private val xSessionIdHeader = "X-Session-ID"
+  private val xRequestIdHeader = "X-Request-ID"
 
-  private val Environment = "Environment"
-  private val CorrelationId = "CorrelationId"
+  def apply()(implicit requestHeader: RequestHeader): Seq[(String, String)] = {
+    val maybeSessionId = requestHeader.headers.get(xSessionIdHeader).map(xSessionIdHeader -> _)
+    val maybeRequestId = requestHeader.headers.get(xRequestIdHeader).map(xRequestIdHeader -> _)
 
-  def makeHeaders(authToken: String)(implicit requestHeader: RequestHeader): Seq[(String, String)] =
-    CommonHeaders() ++ Seq(
-      Environment -> appConfig.ifEnvironment,
-      CorrelationId -> randomUuidGenerator.makeCorrelationId(),
-      HeaderNames.AUTHORIZATION -> s"Bearer $authToken"
-    )
+    Seq(maybeSessionId, maybeRequestId).flatten
+  }
 
 }

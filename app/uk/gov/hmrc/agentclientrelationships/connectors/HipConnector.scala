@@ -89,7 +89,7 @@ with RequestAwareLogging {
       "CreateAgentRelationship",
       url,
       requestBody,
-      headers.makeSubscriptionHeaders
+      () => headers.makeSubscriptionHeaders()
     ).map {
       case Right(response) => Option(response.json.as[RegistrationRelationshipResponse])
       case Left(errorResponse) =>
@@ -119,7 +119,7 @@ with RequestAwareLogging {
       "DeleteAgentRelationship",
       url,
       requestBody,
-      headers.makeSubscriptionHeaders
+      () => headers.makeSubscriptionHeaders()
     ).map {
       case Right(response) => Option(response.json.as[RegistrationRelationshipResponse])
       case Left(errorResponse) =>
@@ -145,7 +145,7 @@ with RequestAwareLogging {
     getWithHipHeaders(
       s"GetActiveClientRelationships",
       url,
-      headers.makeSubscriptionHeaders
+      () => headers.makeSubscriptionHeaders()
     ).map {
       case Right(response) => (response.json \ "relationshipDisplayResponse").as[Seq[ActiveRelationship]].find(isActive)
       case Left(errorResponse) =>
@@ -178,7 +178,7 @@ with RequestAwareLogging {
       getWithHipHeaders(
         s"GetAllActiveClientRelationships",
         url,
-        headers.makeSubscriptionHeaders
+        () => headers.makeSubscriptionHeaders()
       )
     ).map(response => (response.json \ "relationshipDisplayResponse").as[Seq[ClientRelationship]])
       .leftMap[RelationshipFailureResponse] { errorResponse =>
@@ -217,7 +217,7 @@ with RequestAwareLogging {
     getWithHipHeaders(
       s"GetInactiveClientRelationships",
       url,
-      headers.makeSubscriptionHeaders
+      () => headers.makeSubscriptionHeaders()
     ).map {
       case Right(response) => (response.json \ "relationshipDisplayResponse").as[Seq[InactiveRelationship]].filter(isNotActive)
       case Left(errorResponse) =>
@@ -250,7 +250,7 @@ with RequestAwareLogging {
       getWithHipHeaders(
         s"GetInactiveRelationships",
         url,
-        headers.makeSubscriptionHeaders
+        () => headers.makeSubscriptionHeaders()
       ).map {
         case Right(response) => (response.json \ "relationshipDisplayResponse").as[Seq[InactiveRelationship]].filter(isNotActive)
         case Left(errorResponse) =>
@@ -275,7 +275,7 @@ with RequestAwareLogging {
     getWithHipHeaders(
       s"GetBusinessDetailsByMtdId",
       url,
-      headers.makeSubscriptionBusinessDetailsHeaders
+      () => headers.makeSubscriptionBusinessDetailsHeaders()
     ).map {
       case Right(response) => Option((response.json \ "success" \ "taxPayerDisplayResponse" \ "nino").as[Nino])
       case Left(errorResponse) =>
@@ -300,7 +300,7 @@ with RequestAwareLogging {
     getWithHipHeaders(
       s"GetBusinessDetailsByNino",
       url,
-      headers.makeSubscriptionBusinessDetailsHeaders
+      () => headers.makeSubscriptionBusinessDetailsHeaders()
     ).map {
       case Right(response) => Option((response.json \ "success" \ "taxPayerDisplayResponse" \ "mtdId").as[MtdItId])
       case Left(errorResponse) =>
@@ -328,7 +328,7 @@ with RequestAwareLogging {
     getWithHipHeaders(
       s"ConsumedAPI-IF-GetBusinessDetails-GET",
       url,
-      headers.makeSubscriptionBusinessDetailsHeaders
+      () => headers.makeSubscriptionBusinessDetailsHeaders()
     ).map {
       case Right(response) =>
         Try(response.json \ "success" \ "taxPayerDisplayResponse" \ "businessData")

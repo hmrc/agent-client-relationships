@@ -42,22 +42,24 @@ class HipHeaders @Inject() (
   private val hip = "HIP"
   private val itsa = "ITSA"
 
-  def makeSubscriptionHeaders()(implicit requestHeader: RequestHeader): Seq[(String, String)] = Seq(
-    (HeaderNames.AUTHORIZATION, s"Basic ${appConfig.hipAuthToken}"),
-    (correlationIdHeader, correlationIdGenerator.makeCorrelationId()),
-    (xOriginatingSystemHeader, mdtp),
-    (xReceiptDateHeader, DateTimeHelper.formatISOInstantSeconds(Instant.now(clock))),
-    (xTransmittingSystemHeader, hip)
-  )
+  def makeSubscriptionHeaders()(implicit requestHeader: RequestHeader): Seq[(String, String)] =
+    CommonHeaders() ++ Seq(
+      (HeaderNames.AUTHORIZATION, s"Basic ${appConfig.hipAuthToken}"),
+      (correlationIdHeader, correlationIdGenerator.makeCorrelationId()),
+      (xOriginatingSystemHeader, mdtp),
+      (xReceiptDateHeader, DateTimeHelper.formatISOInstantSeconds(Instant.now(clock))),
+      (xTransmittingSystemHeader, hip)
+    )
 
-  def makeSubscriptionBusinessDetailsHeaders()(implicit requestHeader: RequestHeader): Seq[(String, String)] = Seq(
-    (HeaderNames.AUTHORIZATION, s"Basic ${appConfig.hipAuthToken}"),
-    (correlationIdHeader, correlationIdGenerator.makeCorrelationId()),
-    (xOriginatingSystemHeader, mdtp),
-    (xReceiptDateHeader, DateTimeHelper.formatISOInstantSeconds(Instant.now(clock))),
-    (xTransmittingSystemHeader, hip),
-    (xMessageType, "TaxpayerDisplay"),
-    (xRegimeType, itsa)
-  )
+  def makeSubscriptionBusinessDetailsHeaders()(implicit requestHeader: RequestHeader): Seq[(String, String)] =
+    CommonHeaders() ++ Seq(
+      (HeaderNames.AUTHORIZATION, s"Basic ${appConfig.hipAuthToken}"),
+      (correlationIdHeader, correlationIdGenerator.makeCorrelationId()),
+      (xOriginatingSystemHeader, mdtp),
+      (xReceiptDateHeader, DateTimeHelper.formatISOInstantSeconds(Instant.now(clock))),
+      (xTransmittingSystemHeader, hip),
+      (xMessageType, "TaxpayerDisplay"),
+      (xRegimeType, itsa)
+    )
 
 }

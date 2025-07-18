@@ -21,12 +21,11 @@ import uk.gov.hmrc.agentclientrelationships.connectors.CitizenDetailsConnector
 import uk.gov.hmrc.agentclientrelationships.model.CitizenDetails
 
 import javax.inject.Inject
-import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 class CitizenDetailsService @Inject() (
   citizenDetailsConnector: CitizenDetailsConnector
-)(implicit ec: ExecutionContext) {
+) {
 
   def getCitizenDetails(
     nino: String
