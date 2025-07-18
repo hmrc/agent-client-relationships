@@ -142,8 +142,6 @@ extends UnitSpec {
                     arn.value,
                     _,
                     _,
-                    _,
-                    _,
                     None,
                     Some(Failed),
                     None,
@@ -191,8 +189,6 @@ extends UnitSpec {
                     arn.value,
                     _,
                     _,
-                    _,
-                    _,
                     Some(Failed),
                     Some(Success),
                     None,
@@ -233,8 +229,6 @@ extends UnitSpec {
             case Some(
                   DeleteRecord(
                     arn.value,
-                    _,
-                    _,
                     _,
                     _,
                     None,
@@ -281,8 +275,6 @@ extends UnitSpec {
                     arn.value,
                     _,
                     _,
-                    _,
-                    _,
                     Some(Success),
                     Some(Success),
                     None,
@@ -299,7 +291,7 @@ extends UnitSpec {
         await(repo.remove(arn, mtdItEnrolmentKey))
         val deleteRecord: DeleteRecord = DeleteRecord(
           arn.value,
-          Some(mtdItEnrolmentKey),
+          mtdItEnrolmentKey,
           syncToETMPStatus = None,
           syncToESStatus = Some(Failed)
         )
@@ -367,7 +359,7 @@ extends UnitSpec {
       new TestFixture {
         val deleteRecord: DeleteRecord = DeleteRecord(
           arn.value,
-          Some(mtdItEnrolmentKey),
+          mtdItEnrolmentKey,
           syncToETMPStatus = Some(Success),
           syncToESStatus = Some(Success)
         )
@@ -384,7 +376,7 @@ extends UnitSpec {
       new TestFixture {
         val deleteRecord: DeleteRecord = DeleteRecord(
           arn.value,
-          Some(mtdItEnrolmentKey),
+          mtdItEnrolmentKey,
           syncToETMPStatus = Some(Failed),
           syncToESStatus = Some(Success)
         )
@@ -407,7 +399,7 @@ extends UnitSpec {
       new TestFixture {
         val deleteRecord: DeleteRecord = DeleteRecord(
           arn.value,
-          Some(mtdItEnrolmentKey),
+          mtdItEnrolmentKey,
           syncToETMPStatus = Some(InProgress),
           syncToESStatus = Some(Success)
         )
@@ -429,7 +421,7 @@ extends UnitSpec {
       new TestFixture {
         val deleteRecord: DeleteRecord = DeleteRecord(
           arn.value,
-          Some(mtdItEnrolmentKey),
+          mtdItEnrolmentKey,
           syncToETMPStatus = Some(Success),
           syncToESStatus = Some(Failed)
         )
@@ -455,7 +447,7 @@ extends UnitSpec {
       new TestFixture {
         val deleteRecord: DeleteRecord = DeleteRecord(
           arn.value,
-          Some(mtdItEnrolmentKey),
+          mtdItEnrolmentKey,
           syncToETMPStatus = Some(Success),
           syncToESStatus = Some(InProgress)
         )
@@ -479,7 +471,7 @@ extends UnitSpec {
       new TestFixture {
         val deleteRecord: DeleteRecord = DeleteRecord(
           arn.value,
-          Some(mtdItEnrolmentKey),
+          mtdItEnrolmentKey,
           syncToETMPStatus = Some(Failed),
           syncToESStatus = Some(Failed)
         )
@@ -508,7 +500,7 @@ extends UnitSpec {
       new TestFixture {
         val deleteRecord: DeleteRecord = DeleteRecord(
           arn.value,
-          Some(mtdItEnrolmentKey),
+          mtdItEnrolmentKey,
           syncToETMPStatus = Some(Failed),
           syncToESStatus = Some(Success)
         )
@@ -530,7 +522,7 @@ extends UnitSpec {
       new TestFixture {
         val deleteRecord: DeleteRecord = DeleteRecord(
           arn.value,
-          Some(mtdItEnrolmentKey),
+          mtdItEnrolmentKey,
           syncToETMPStatus = Some(Success),
           syncToESStatus = Some(Failed)
         )
@@ -563,7 +555,7 @@ extends UnitSpec {
       new TestFixture {
         val deleteRecord: DeleteRecord = DeleteRecord(
           arn.value,
-          Some(mtdItEnrolmentKey),
+          mtdItEnrolmentKey,
           syncToETMPStatus = Some(Success),
           syncToESStatus = Some(Failed)
         )
@@ -583,7 +575,7 @@ extends UnitSpec {
       new TestFixture {
         val deleteRecord: DeleteRecord = DeleteRecord(
           arn.value,
-          Some(mtdItEnrolmentKey),
+          mtdItEnrolmentKey,
           syncToETMPStatus = Some(Success),
           syncToESStatus = Some(Failed)
         )
@@ -602,8 +594,6 @@ extends UnitSpec {
                     arn.value,
                     _,
                     _,
-                    _,
-                    _,
                     Some(Success),
                     Some(Failed),
                     Some(_),
@@ -618,7 +608,7 @@ extends UnitSpec {
       new TestFixture {
         val deleteRecord: DeleteRecord = DeleteRecord(
           arn.value,
-          Some(mtdItEnrolmentKey),
+          mtdItEnrolmentKey,
           syncToETMPStatus = Some(Failed),
           syncToESStatus = Some(Success)
         )
@@ -640,14 +630,14 @@ extends UnitSpec {
       new TestFixture {
         val deleteRecord1: DeleteRecord = DeleteRecord(
           arn.value + "1",
-          Some(EnrolmentKey(Service.MtdIt, MtdItId("ABCDEF0000000001"))),
+          EnrolmentKey(Service.MtdIt, MtdItId("ABCDEF0000000001")),
           syncToETMPStatus = None,
           syncToESStatus = Some(Failed),
           lastRecoveryAttempt = Some(now.minusMinutes(1))
         )
         val deleteRecord2: DeleteRecord = DeleteRecord(
           arn.value,
-          Some(mtdItEnrolmentKey),
+          mtdItEnrolmentKey,
           syncToETMPStatus = Some(Failed),
           syncToESStatus = Some(Success),
           lastRecoveryAttempt = None,
@@ -655,7 +645,7 @@ extends UnitSpec {
         )
         val deleteRecord3: DeleteRecord = DeleteRecord(
           arn.value + "3",
-          Some(EnrolmentKey(Service.MtdIt, MtdItId("ABCDEF0000000001"))),
+          EnrolmentKey(Service.MtdIt, MtdItId("ABCDEF0000000001")),
           syncToETMPStatus = Some(Success),
           syncToESStatus = Some(Failed),
           lastRecoveryAttempt = Some(now.minusMinutes(5))
@@ -682,21 +672,21 @@ extends UnitSpec {
       new TestFixture {
         val deleteRecord1: DeleteRecord = DeleteRecord(
           arn.value + "1",
-          Some(EnrolmentKey(Service.MtdIt, MtdItId("ABCDEF0000000001"))),
+          EnrolmentKey(Service.MtdIt, MtdItId("ABCDEF0000000001")),
           syncToETMPStatus = Some(Success),
           syncToESStatus = Some(Failed),
           lastRecoveryAttempt = Some(now.minusMinutes(1))
         )
         val deleteRecord2: DeleteRecord = DeleteRecord(
           arn.value,
-          Some(mtdItEnrolmentKey),
+          mtdItEnrolmentKey,
           syncToETMPStatus = Some(Success),
           syncToESStatus = Some(Failed),
           lastRecoveryAttempt = Some(now.minusMinutes(13))
         )
         val deleteRecord3: DeleteRecord = DeleteRecord(
           arn.value + "3",
-          Some(EnrolmentKey(Service.MtdIt, MtdItId("ABCDEF0000000001"))),
+          EnrolmentKey(Service.MtdIt, MtdItId("ABCDEF0000000001")),
           syncToETMPStatus = Some(Success),
           syncToESStatus = Some(Failed),
           lastRecoveryAttempt = Some(now.minusMinutes(5))

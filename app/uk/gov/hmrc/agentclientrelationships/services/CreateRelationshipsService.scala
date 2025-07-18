@@ -266,7 +266,7 @@ with RequestAwareLogging {
                   case Some(arnToRemove) =>
                     val deleteRecord = DeleteRecord(
                       arnToRemove.value,
-                      Some(enrolmentKey),
+                      enrolmentKey,
                       syncToETMPStatus = Some(Success),
                       headerCarrier = Some(hc)
                     )

@@ -553,7 +553,7 @@ with HipStub {
         deleteRecordRepository.create(
           DeleteRecord(
             arn.value,
-            Some(EnrolmentKey(Service.MtdIt, MtdItId("ABCDEF0000000001"))),
+            EnrolmentKey(Service.MtdIt, MtdItId("ABCDEF0000000001")),
             dateTime = LocalDateTime.now.minusMinutes(1),
             syncToETMPStatus = Some(SyncStatus.Success),
             syncToESStatus = Some(SyncStatus.Failed)

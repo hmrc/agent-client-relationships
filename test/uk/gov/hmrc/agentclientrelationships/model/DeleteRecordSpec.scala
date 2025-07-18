@@ -37,9 +37,7 @@ with Inside {
     "serialize and deserialize from and to json" in {
       val deleteRecord = DeleteRecord(
         "TARN0000001",
-        Some(EnrolmentKey(s"${Service.Vat.id}~VRN~101747696")),
-        Some("101747696"),
-        Some("VRN"),
+        EnrolmentKey(s"${Service.Vat.id}~VRN~101747696"),
         Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime,
         Some(SyncStatus.Failed),
         Some(SyncStatus.Failed),
@@ -57,8 +55,6 @@ with Inside {
       val result = json.as[DeleteRecord]
 
       result.enrolmentKey shouldBe deleteRecord.enrolmentKey
-      result.clientIdentifier shouldBe deleteRecord.clientIdentifier
-      result.clientIdentifierType shouldBe deleteRecord.clientIdentifierType
       result.syncToESStatus shouldBe deleteRecord.syncToESStatus
       result.syncToETMPStatus shouldBe deleteRecord.syncToETMPStatus
       result.syncToETMPStatus shouldBe deleteRecord.syncToETMPStatus

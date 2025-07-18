@@ -213,9 +213,7 @@ with IntegrationPatience {
       case Some(
             DeleteRecord(
               arn.value,
-              Some(ek),
-              _,
-              _,
+              enrolmentKey,
               _,
               `etmpStatus`,
               `esStatus`,
@@ -224,7 +222,7 @@ with IntegrationPatience {
               _,
               _
             )
-          ) if ek == LocalEnrolmentKey(Service.MtdIt, MtdItId("ABCDEF123456789")) =>
+          ) if enrolmentKey == LocalEnrolmentKey(Service.MtdIt, MtdItId("ABCDEF123456789")) =>
     }
 
   protected def verifyDeleteRecordNotExists = await(deleteRecordRepository.findBy(arn, mtdItEnrolmentKey)) shouldBe None

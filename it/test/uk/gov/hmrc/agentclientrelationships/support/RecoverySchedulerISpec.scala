@@ -128,7 +128,7 @@ with BeforeAndAfterEach {
 
       val deleteRecord = DeleteRecord(
         arn.value,
-        Some(mtdItEnrolmentKey),
+        mtdItEnrolmentKey,
         dateTime = LocalDateTime.now().atZone(ZoneOffset.UTC).toLocalDateTime.minusSeconds(10),
         syncToESStatus = Some(SyncStatus.Success),
         syncToETMPStatus = Some(SyncStatus.Failed)
@@ -157,7 +157,7 @@ with BeforeAndAfterEach {
 
       val deleteRecord = DeleteRecord(
         arn.value,
-        Some(mtdItEnrolmentKey),
+        mtdItEnrolmentKey,
         dateTime = LocalDateTime.now().atZone(ZoneOffset.UTC).toLocalDateTime.minusSeconds(10),
         syncToESStatus = Some(SyncStatus.Failed),
         syncToETMPStatus = Some(SyncStatus.Failed)
@@ -186,7 +186,7 @@ with BeforeAndAfterEach {
 
       val deleteRecord = DeleteRecord(
         arn.value,
-        Some(mtdItEnrolmentKey),
+        mtdItEnrolmentKey,
         dateTime = LocalDateTime.now().atZone(ZoneOffset.UTC).toLocalDateTime.minusSeconds(10),
         syncToESStatus = Some(SyncStatus.Failed),
         syncToETMPStatus = Some(SyncStatus.Failed)
@@ -211,7 +211,7 @@ with BeforeAndAfterEach {
 
         val deleteRecord = DeleteRecord(
           arn.value,
-          Some(EnrolmentKey(Service.MtdIt, iMtdItId)),
+          EnrolmentKey(Service.MtdIt, iMtdItId),
           dateTime = LocalDateTime.now().atZone(ZoneOffset.UTC).toLocalDateTime.minusSeconds(index),
           syncToESStatus = Some(SyncStatus.Success),
           syncToETMPStatus = Some(SyncStatus.Failed)
@@ -240,7 +240,7 @@ with BeforeAndAfterEach {
 
         val deleteRecord = DeleteRecord(
           arn.value,
-          Some(EnrolmentKey(Service.MtdIt, iMtdItId)),
+          EnrolmentKey(Service.MtdIt, iMtdItId),
           dateTime = LocalDateTime.now().atZone(ZoneOffset.UTC).toLocalDateTime.minusSeconds(index),
           syncToESStatus = Some(SyncStatus.Failed),
           syncToETMPStatus = Some(SyncStatus.Failed)
@@ -254,7 +254,7 @@ with BeforeAndAfterEach {
         givenDelegatedGroupIdsExistFor(EnrolmentKey(Service.MtdIt, iMtdItId), Set("foo"))
 
         if (index == 0)
-          givenEnrolmentDeallocationFailsWith(503)("foo", deleteRecord.enrolmentKey.get)
+          givenEnrolmentDeallocationFailsWith(503)("foo", deleteRecord.enrolmentKey)
         else {
           givenAgentCanBeDeallocated(iMtdItId, arn)
           givenEnrolmentDeallocationSucceeds("foo", EnrolmentKey(Service.MtdIt, iMtdItId))
