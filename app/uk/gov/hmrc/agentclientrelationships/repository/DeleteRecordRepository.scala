@@ -117,9 +117,8 @@ extends PlayMongoRepository[DeleteRecord](
     IndexModel(
       Indexes.ascending("arn", "enrolmentKey"),
       IndexOptions()
-        .partialFilterExpression(Filters.exists("enrolmentKey"))
         .unique(true)
-        .name("arnAndEnrolmentKeyPartial")
+        .name("arnAndEnrolmentKey")
     )
   ),
   replaceIndexes = true
