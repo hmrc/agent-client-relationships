@@ -160,7 +160,7 @@ trait RelationshipsControllerGenericBehaviours {
           deleteRecordRepository.create(
             DeleteRecord(
               arn.value,
-              Some(enrolmentKey),
+              enrolmentKey,
               syncToETMPStatus = Some(SyncStatus.Success),
               syncToESStatus = Some(SyncStatus.Failed)
             )

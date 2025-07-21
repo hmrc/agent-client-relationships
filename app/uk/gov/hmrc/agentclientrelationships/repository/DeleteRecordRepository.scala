@@ -49,9 +49,7 @@ import uk.gov.hmrc.play.http.logging.Mdc
 
 case class DeleteRecord(
   arn: String,
-  enrolmentKey: Option[EnrolmentKey], // APB-7215 - added to accommodate multiple identifiers (cbc)
-  clientIdentifier: Option[String] = None, // Deprecated - for legacy use only. Use the enrolment key instead.
-  clientIdentifierType: Option[String] = None, // Deprecated - for legacy use only. Use the enrolment key instead.
+  enrolmentKey: EnrolmentKey,
   dateTime: LocalDateTime = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime.truncatedTo(MILLIS),
   syncToETMPStatus: Option[SyncStatus] = None,
   syncToESStatus: Option[SyncStatus] = None,
@@ -60,9 +58,6 @@ case class DeleteRecord(
   headerCarrier: Option[HeaderCarrier] = None,
   relationshipEndedBy: Option[String] = None
 ) {
-
-  // Legacy records use client id & client id type. Newer records use enrolment key.
-  require(enrolmentKey.isDefined || (clientIdentifier.isDefined && clientIdentifierType.isDefined))
 
   def actionRequired: Boolean = needToDeleteEtmpRecord || needToDeleteEsRecord
 
@@ -119,25 +114,11 @@ extends PlayMongoRepository[DeleteRecord](
   collectionName = "delete-record",
   domainFormat = formats,
   indexes = Seq(
-    // Note: these are *partial* indexes as sometimes we index on clientIdentifier, other times on enrolmentKey.
-    // The situation will be simplified after a migration of the legacy documents.
-    IndexModel(
-      Indexes.ascending(
-        "arn",
-        "clientIdentifier",
-        "clientIdentifierType"
-      ),
-      IndexOptions()
-        .partialFilterExpression(Filters.exists("clientIdentifier"))
-        .unique(true)
-        .name("arnAndAgentReferencePartial")
-    ),
     IndexModel(
       Indexes.ascending("arn", "enrolmentKey"),
       IndexOptions()
-        .partialFilterExpression(Filters.exists("enrolmentKey"))
         .unique(true)
-        .name("arnAndEnrolmentKeyPartial")
+        .name("arnAndEnrolmentKey")
     )
   ),
   replaceIndexes = true
@@ -154,7 +135,7 @@ with RequestAwareLogging {
         if (insertResult.wasAcknowledged())
           1
         else {
-          logger.warn("Creating DeleteRecord failed.")
+          logger.warn(s"[DeleteRecordRepository] Creating DeleteRecord failed for record: ${record.arn}, ${record.enrolmentKey}")
           INDICATE_ERROR_DURING_DB_UPDATE
         }
       )
@@ -249,17 +230,9 @@ with RequestAwareLogging {
   private def filter(
     arn: Arn,
     enrolmentKey: EnrolmentKey
-  ) = {
-    val identifierType: String = enrolmentKey.identifiers.head.key
-    val identifier: String = enrolmentKey.identifiers.head.value
-    Filters.or(
-      Filters.and(Filters.equal("arn", arn.value), Filters.equal("enrolmentKey", enrolmentKey.tag)),
-      Filters.and(
-        Filters.equal("arn", arn.value),
-        Filters.equal("clientIdentifier", identifier),
-        Filters.equal("clientIdentifierType", identifierType)
-      )
-    )
-  }
+  ) = Filters.and(
+    Filters.equal("arn", arn.value),
+    Filters.equal("enrolmentKey", enrolmentKey.tag)
+  )
 
 }

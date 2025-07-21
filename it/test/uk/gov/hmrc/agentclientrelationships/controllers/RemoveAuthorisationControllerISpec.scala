@@ -231,7 +231,7 @@ with TestData {
               deleteRecordRepository.create(
                 DeleteRecord(
                   arn = arn.value,
-                  enrolmentKey = Some(enrolmentKey),
+                  enrolmentKey = enrolmentKey,
                   dateTime = LocalDateTime.now.minusMinutes(1),
                   syncToETMPStatus = Some(SyncStatus.Success),
                   syncToESStatus = Some(SyncStatus.Failed)
@@ -262,7 +262,7 @@ with TestData {
               deleteRecordRepository.create(
                 DeleteRecord(
                   arn = arn.value,
-                  enrolmentKey = Some(enrolmentKey),
+                  enrolmentKey = enrolmentKey,
                   dateTime = LocalDateTime.now.minusMinutes(1),
                   syncToETMPStatus = Some(SyncStatus.Failed)
                 )
@@ -282,7 +282,7 @@ with TestData {
               deleteRecordRepository.create(
                 DeleteRecord(
                   arn = arn.value,
-                  enrolmentKey = Some(enrolmentKey),
+                  enrolmentKey = enrolmentKey,
                   dateTime = LocalDateTime.now.minusMinutes(1)
                 )
               )
@@ -357,7 +357,7 @@ with TestData {
         deleteRecordRepository.create(
           DeleteRecord(
             arn = arn.value,
-            enrolmentKey = Some(EnrolmentKey(service.enrolmentKey, nino)),
+            enrolmentKey = EnrolmentKey(service.enrolmentKey, nino),
             dateTime = LocalDateTime.now.minusMinutes(1),
             syncToETMPStatus = Some(SyncStatus.Success),
             syncToESStatus = Some(SyncStatus.Failed)

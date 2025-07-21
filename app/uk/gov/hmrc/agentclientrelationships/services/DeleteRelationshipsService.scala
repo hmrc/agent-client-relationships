@@ -93,7 +93,7 @@ with Logging {
         val endedBy = determineUserTypeFromAG(affinityGroup)
         val record = DeleteRecord(
           arn.value,
-          Some(enrolmentKey),
+          enrolmentKey,
           headerCarrier = Some(hc),
           relationshipEndedBy = endedBy
         )
@@ -314,7 +314,7 @@ with Logging {
     .selectNextToRecover()
     .flatMap {
       case Some(record) =>
-        val enrolmentKey = record.enrolmentKey.getOrElse(enrolmentKeyFallback(record))
+        val enrolmentKey = record.enrolmentKey
         checkDeleteRecordAndEventuallyResume(Arn(record.arn), enrolmentKey)(NoRequest, auditData)
 
       case None =>
@@ -376,7 +376,7 @@ with Logging {
     auditData: AuditData
   ): Future[Boolean] = {
     val arn = Arn(deleteRecord.arn)
-    val enrolmentKey: EnrolmentKey = deleteRecord.enrolmentKey.getOrElse(enrolmentKeyFallback(deleteRecord))
+    val enrolmentKey: EnrolmentKey = deleteRecord.enrolmentKey
     lockService
       .recoveryLock(arn, enrolmentKey) {
         logger.info(
@@ -426,22 +426,6 @@ with Logging {
         }
       }
       .map(_.getOrElse(false))
-  }
-
-  private[services] def enrolmentKeyFallback(deleteRecord: DeleteRecord): EnrolmentKey = {
-    logger.warn("DeleteRecord did not store the whole enrolment key. Performing fallback determination of service.")
-    // if the enrolment key wasn't stored, assume single identifier and make a best guess based on identifier type
-    (
-      for {
-        clientIdTypeStr <- deleteRecord.clientIdentifierType
-        clientIdStr <- deleteRecord.clientIdentifier
-        service <- appConfig.supportedServicesWithoutPir.find(_.supportedClientIdType.enrolmentId == clientIdTypeStr)
-      } yield EnrolmentKey(service.id, Seq(Identifier(clientIdTypeStr, clientIdStr)))
-    ).getOrElse(
-      throw new RuntimeException(
-        s"Fallback determination of enrolment key failed for ${deleteRecord.clientIdentifierType}"
-      )
-    )
   }
 
   def determineUserTypeFromAG(maybeGroup: Option[AffinityGroup]): Option[String] =
