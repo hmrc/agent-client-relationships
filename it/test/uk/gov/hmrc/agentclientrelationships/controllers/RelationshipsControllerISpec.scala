@@ -51,7 +51,6 @@ import uk.gov.hmrc.agentmtdidentifiers.model.Identifier
 import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
 import uk.gov.hmrc.agentmtdidentifiers.model.Service
 import uk.gov.hmrc.domain.TaxIdentifier
-import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.HeaderNames
 import uk.gov.hmrc.http.HttpResponse
 
@@ -673,7 +672,6 @@ with HipStub {
 
   "sanitising a CBC enrolment key" should {
     implicit val request: RequestHeader = FakeRequest()
-    implicit val ec: scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
     "work for a HMRC-CBC-ORG enrolment key with a UTR stored in the enrolment store" in {
       val validationService = app.injector.instanceOf[ValidationService]
       givenCbcUkExistsInES(cbcId, utr.value)

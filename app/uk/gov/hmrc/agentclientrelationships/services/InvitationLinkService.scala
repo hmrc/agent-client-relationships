@@ -40,10 +40,6 @@ extends RequestAwareLogging {
 
   private val codetable = "ABCDEFGHJKLMNOPRSTUWXYZ123456789"
 
-  def migrateAgentReferenceRecord(record: AgentReferenceRecord): Future[Unit] = agentReferenceRepository
-    .create(record)
-    .map(_ => ())
-
   def validateLink(
     uid: String,
     normalizedAgentName: String

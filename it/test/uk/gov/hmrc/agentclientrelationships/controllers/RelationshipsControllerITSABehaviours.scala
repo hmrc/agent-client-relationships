@@ -19,7 +19,6 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
-import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.Invitation
 import uk.gov.hmrc.agentclientrelationships.model.PartialAuth
@@ -37,7 +36,6 @@ import uk.gov.hmrc.domain.SaAgentReference
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
-import scala.concurrent.ExecutionContext
 
 // TODO. All of the following tests should be rewritten directly against a RelationshipsController instance (with appropriate mocks/stubs)
 // rather than instantiating a whole app and sending a real HTTP request. It makes test setup and debug very difficult.
@@ -56,9 +54,6 @@ trait RelationshipsControllerITSABehaviours {
       syncToETMPStatus = Some(SyncStatus.Success),
       syncToESStatus = Some(SyncStatus.Success)
     )
-
-    implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
-    implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
 
     val invitationRepo: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
     val partialAuthRepository: PartialAuthRepository = app.injector.instanceOf[PartialAuthRepository]

@@ -50,15 +50,3 @@ POST          /api/:arn/invitation                                           @uk
 GET           /api/:arn/invitation/:invitationId                             @uk.gov.hmrc.agentclientrelationships.controllers.ApiGetInvitationController.getInvitation(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, invitationId: String)
 GET           /api/:arn/invitations                                          @uk.gov.hmrc.agentclientrelationships.controllers.ApiGetInvitationsController.getInvitations(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
 POST          /api/:arn/relationship                                         @uk.gov.hmrc.agentclientrelationships.controllers.ApiCheckRelationshipController.checkRelationship(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
-
-# Transitional Routes
-# --------------------------------
-
-PUT          /agent-reference/:arn                                          @uk.gov.hmrc.agentclientrelationships.controllers.AgentReferenceController.fetchOrCreateRecord(arn: Arn)
-GET          /agent-reference/uid/:uid                                      @uk.gov.hmrc.agentclientrelationships.controllers.AgentReferenceController.fetchRecordByUid(uid: String)
-GET          /lookup-invitations                                            @uk.gov.hmrc.agentclientrelationships.controllers.LookupInvitationsController.lookupInvitations(arn: Option[Arn] ?= None, services: Seq[String] ?= Nil, clientIds: Seq[String] ?= Nil, status: Option[InvitationStatus] ?= None)
-GET          /lookup-invitation/:invitationId                               @uk.gov.hmrc.agentclientrelationships.controllers.LookupInvitationsController.lookupInvitation(invitationId: String)
-POST         /migrate/agent-reference-record                                @uk.gov.hmrc.agentclientrelationships.controllers.InvitationLinkController.migrateRecord
-POST         /migrate/partial-auth-record                                   @uk.gov.hmrc.agentclientrelationships.controllers.transitional.MigratePartialAuthController.migratePartialAuth
-PUT          /transitional/change-invitation-status/arn/:arn/service/:service/client/:clientId      @uk.gov.hmrc.agentclientrelationships.controllers.transitional.ChangeInvitationStatusController.changeInvitationStatus(arn: Arn, service: String, clientId: String)
-PUT          /authorisation-request/action-invitation/:invitationId/action/:action                  @uk.gov.hmrc.agentclientrelationships.controllers.transitional.ChangeInvitationStatusByIdController.changeInvitationStatusById(invitationId: String, action:String)

@@ -204,28 +204,4 @@ with RequestAwareLogging {
       .map(_.getDeletedCount == 1L)
   }
 
-  // DO NOT USE, transitional code
-  def findAllBy(
-    arn: Option[String],
-    services: Seq[String],
-    nino: Option[String],
-    isActive: Option[Boolean]
-  ): Future[Seq[PartialAuthRelationship]] = Mdc.preservingMdc {
-    collection
-      .find(
-        and(
-          Seq(
-            arn.map(equal("arn", _)),
-            if (services.nonEmpty)
-              Some(in("service", services: _*))
-            else
-              None,
-            nino.map(str => equal("nino", encryptedString(str))),
-            isActive.map(equal("active", _))
-          ).flatten: _*
-        )
-      )
-      .toFuture()
-  }
-
 }

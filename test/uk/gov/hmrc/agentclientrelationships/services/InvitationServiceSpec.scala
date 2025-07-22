@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
+import play.api.mvc.RequestHeader
+import play.api.test.FakeRequest
 import play.api.test.Helpers.await
 import play.api.test.Helpers.defaultAwaitTimeout
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
@@ -28,10 +30,7 @@ import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDVAT
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.Vat
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.agentmtdidentifiers.model.SuspensionDetails
 import uk.gov.hmrc.agentmtdidentifiers.model.Vrn
-import play.api.mvc.RequestHeader
-import play.api.test.FakeRequest
 
 import java.time.LocalDate
 import scala.concurrent.ExecutionContext
@@ -53,7 +52,6 @@ with MockEmailService {
   object TestService
   extends InvitationService(
     mockInvitationsRepository,
-    mockPartialAuthRepository,
     mockIfOrHipConnector,
     mockAgentAssuranceService,
     mockEmailService,

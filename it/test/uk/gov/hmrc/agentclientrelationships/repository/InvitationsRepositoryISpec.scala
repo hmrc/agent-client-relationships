@@ -234,48 +234,6 @@ with DefaultPlayMongoRepositorySupport[Invitation] {
       intercept[RuntimeException](await(repository.updateStatus("ABC", Accepted)))
     }
 
-    "update the status from Pending to Rejected of an invitation when a matching invitation is found" in {
-      val invitation = pendingInvitation()
-      await(repository.collection.insertOne(invitation).toFuture())
-
-      lazy val updatedInvitation =
-        await(
-          repository.updateStatusFromTo(
-            invitation.invitationId,
-            Pending,
-            Rejected
-          )
-        ).get
-      updatedInvitation.status shouldBe Rejected
-      updatedInvitation.lastUpdated.isAfter(invitation.lastUpdated)
-    }
-
-    "update the status from Accepted to DeAuthorised with relationshipEndedBy of an invitation when a matching invitation is found" in {
-      val invitation = pendingInvitation().copy(status = Accepted)
-      await(repository.collection.insertOne(invitation).toFuture())
-
-      lazy val updatedInvitation =
-        await(
-          repository.updateStatusFromTo(
-            invitationId = invitation.invitationId,
-            fromStatus = Accepted,
-            toStatus = DeAuthorised,
-            relationshipEndedBy = Some("HMRC")
-          )
-        ).get
-      updatedInvitation.relationshipEndedBy shouldBe Some("HMRC")
-    }
-
-    "fail to update fromTo the status of an invitation when a matching invitation is not found" in {
-      await(
-        repository.updateStatusFromTo(
-          "ABC",
-          Pending,
-          Rejected
-        )
-      ) shouldBe None
-    }
-
     "de-authorise and return the invitation when a matching Authorised invitation is found" in {
       val invitation = pendingInvitation(
         MtdIt,
