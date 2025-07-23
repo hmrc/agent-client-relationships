@@ -27,11 +27,11 @@ import uk.gov.hmrc.agentclientrelationships.model.PartialAuthRelationship
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.SaRef
 import uk.gov.hmrc.agentclientrelationships.repository._
 import uk.gov.hmrc.agentclientrelationships.stubs.HipStub
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDIT
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDITSUPP
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.agentmtdidentifiers.model.Identifier
 import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDIT
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDITSUPP
 import uk.gov.hmrc.domain.SaAgentReference
 
 import java.time.Instant
@@ -803,7 +803,6 @@ trait RelationshipsControllerITSABehaviours {
 
         "return 500" in new StubsForThisScenario {
           doAgentDeleteRequest(requestPath).status shouldBe 500
-          verifyDeleteRecordHasStatuses(None, Some(SyncStatus.Failed))
         }
 
         "not send the audit event TerminateRelationship" in new StubsForThisScenario {
@@ -823,7 +822,7 @@ trait RelationshipsControllerITSABehaviours {
               )
           )
           doAgentDeleteRequest(requestPath).status shouldBe 500
-          verifyDeleteRecordHasStatuses(None, Some(SyncStatus.Failed))
+          verifyDeleteRecordHasStatuses(None, None)
         }
       }
     }
@@ -929,9 +928,17 @@ trait RelationshipsControllerITSABehaviours {
           givenAdminUser("foo", "any")
         }
 
-        "return 500 and not send the audit event TerminateRelationship" in new StubsForThisScenario {
-          doAgentDeleteRequest(requestPath).status shouldBe 500
-          verifyAuditRequestNotSent(AgentClientRelationshipEvent.TerminateRelationship)
+        "return 204 and send the audit event TerminateRelationship" in new StubsForThisScenario {
+          doAgentDeleteRequest(requestPath).status shouldBe 204
+          verifyTerminateRelationshipAuditSent(
+            requestPath,
+            arn.value,
+            mtdItId.value,
+            "MTDITID",
+            "HMRC-MTD-IT",
+            "ClientLedTermination",
+            enrolmentDeallocated = false
+          )
         }
       }
 
@@ -974,7 +981,8 @@ trait RelationshipsControllerITSABehaviours {
             mtdItId.value,
             "MTDITID",
             "HMRC-MTD-IT",
-            "ClientLedTermination"
+            "ClientLedTermination",
+            etmpRelationshipRemoved = false
           )
         }
       }
@@ -1018,7 +1026,6 @@ trait RelationshipsControllerITSABehaviours {
 
         "return 500" in new StubsForThisScenario {
           doAgentDeleteRequest(requestPath).status shouldBe 500
-          verifyDeleteRecordHasStatuses(None, Some(SyncStatus.Failed))
         }
 
         "not send the audit event TerminateRelationship" in new StubsForThisScenario {

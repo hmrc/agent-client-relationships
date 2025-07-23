@@ -26,7 +26,6 @@ import uk.gov.hmrc.agentclientrelationships.auth.CurrentUser
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors._
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
-import uk.gov.hmrc.agentclientrelationships.repository.DbUpdateStatus.convertDbUpdateStatus
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
 import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _, _}
 import uk.gov.hmrc.agentclientrelationships.support.Monitoring
@@ -54,7 +53,6 @@ class DeleteRelationshipsService @Inject() (
   agentUserClientDetailsConnector: AgentUserClientDetailsConnector,
   lockService: MongoLockService,
   checkService: CheckRelationshipsService,
-  agentUserService: AgentUserService,
   auditService: AuditService,
   val metrics: Metrics,
   invitationService: InvitationService,
@@ -75,20 +73,9 @@ with Logging {
     currentUser: CurrentUser,
     auditData: AuditData = new AuditData
   ): Future[Boolean] = {
-
     auditService.setAuditDataForTermination(arn, enrolmentKey)
 
-    def createDeleteRecord(record: DeleteRecord): Future[DbUpdateStatus] = deleteRecordRepository
-      .create(record)
-      .map { count =>
-        convertDbUpdateStatus(count)
-      }
-      .recoverWith { case NonFatal(ex) =>
-        logger.warn(s"Inserting delete record into mongo failed for ${arn.value}, $enrolmentKey: ${ex.getMessage}")
-        Future.failed(new Exception("RELATIONSHIP_DELETE_FAILED_DB"))
-      }
-
-    def delete: Future[Boolean] = lockService
+    def delete(): Future[Boolean] = lockService
       .recoveryLock(arn, enrolmentKey) {
         val endedBy = determineUserTypeFromAG(affinityGroup)
         val record = DeleteRecord(
@@ -97,56 +84,55 @@ with Logging {
           headerCarrier = Some(hc),
           relationshipEndedBy = endedBy
         )
+
         for {
-          recordDeletionStatus <- createDeleteRecord(record)
-          if recordDeletionStatus == DbUpdateSucceeded
-          esRecordDeletionStatus <- deleteEsRecord(arn, enrolmentKey)
-          if esRecordDeletionStatus == DbUpdateSucceeded
-          etmpRecordDeletionStatus <- deleteEtmpRecord(arn, enrolmentKey)
-          if etmpRecordDeletionStatus == DbUpdateSucceeded
-          removed <- removeDeleteRecord(arn, enrolmentKey)
-          if removed
+          groupId <- es.getPrincipalGroupIdFor(arn)
+          _ <- createDeleteRecord(record)
+          enrolmentDeallocated <- deallocateEsEnrolment(
+            arn,
+            enrolmentKey,
+            groupId
+          )
+          etmpRelationshipRemoved <- removeEtmpRelationship(arn, enrolmentKey)
+          _ <- removeDeleteRecord(arn, enrolmentKey)
           _ <- setRelationshipEnded(
             arn,
             enrolmentKey,
             endedBy.getOrElse("HMRC")
           )
-        } yield true
+        } yield {
+          if (enrolmentDeallocated || etmpRelationshipRemoved)
+            true
+          else {
+            logger.warn(s"[DeleteRelationshipsService] did not find ES or ETMP records for ${arn.value}, $enrolmentKey")
+            throw RelationshipNotFound("RELATIONSHIP_NOT_FOUND")
+            // TODO ideally should change deleteRelationship to return a deleteStatus ADT with the calling code handling
+            // it properly, but that requires refactoring parts of the service to change current exception handling to a case match
+            // keeping it as an exception in this refactor to keep the rest of the service working as is
+          }
+        }
       }.map(_.getOrElse(false))
 
     for {
       recordOpt <- deleteRecordRepository.findBy(arn, enrolmentKey)
-      result <-
+      isDone <-
         recordOpt match {
-          case Some(record) =>
-            for {
-              isDone <- resumeRelationshipRemoval(record)
-              _ <-
-                if (isDone) {
-                  auditService.sendTerminateRelationshipAuditEvent()
-                  removeDeleteRecord(arn, enrolmentKey)
-                }
-                else
-                  Future.unit
-            } yield isDone
-          case None =>
-            for {
-              result <- delete
-              _ =
-                if (result)
-                  auditService.sendTerminateRelationshipAuditEvent()
-            } yield result
+          case Some(record) => resumeRelationshipRemoval(record)
+          case None => delete()
         }
-    } yield result
+      _ =
+        if (isDone)
+          auditService.sendTerminateRelationshipAuditEvent()
+    } yield isDone
   }
 
-  private def deleteEtmpRecord(
+  private def removeEtmpRelationship(
     arn: Arn,
     enrolmentKey: EnrolmentKey
   )(implicit
     rh: RequestHeader,
     auditData: AuditData
-  ): Future[DbUpdateStatus] = {
+  ): Future[Boolean] = {
     val updateEtmpSyncStatus =
       deleteRecordRepository
         .updateEtmpSyncStatus(
@@ -154,69 +140,36 @@ with Logging {
           enrolmentKey,
           _: SyncStatus
         )
-        .map(convertDbUpdateStatus)
-
-    val recoverFromException =
-      (
-        origExc: Throwable,
-        replacementExc: Throwable
-      ) => {
-        logger.warn(s"De-authorising ETMP record failed for ${arn.value}, $enrolmentKey due to: ${origExc.getMessage}")
-        updateEtmpSyncStatus(Failed).flatMap(_ => Future.failed(replacementExc))
-      }
 
     (
       for {
-        etmpSyncStatusInProgress <- updateEtmpSyncStatus(InProgress)
-        if etmpSyncStatusInProgress == DbUpdateSucceeded
-        maybeResponse <- hipConnector.deleteAgentRelationship(
+        _ <- updateEtmpSyncStatus(InProgress)
+        etmpRelationshipRemoved <- hipConnector.deleteAgentRelationship(
           enrolmentKey,
           arn
-        ) // TODO DG oneTaxIdentifier may not return what we want for CBC!
+        ).map(_.nonEmpty)
+        _ = auditData.set(etmpRelationshipRemovedKey, etmpRelationshipRemoved)
         _ =
-          if (maybeResponse.nonEmpty)
-            auditData.set(etmpRelationshipRemovedKey, true)
-        etmpSyncStatusSuccess <- updateEtmpSyncStatus(Success)
-      } yield etmpSyncStatusSuccess
+          if (!etmpRelationshipRemoved)
+            logger.warn(s"[DeleteRelationshipsService] ETMP record not found for ${arn.value}, $enrolmentKey")
+        _ <- updateEtmpSyncStatus(Success)
+      } yield etmpRelationshipRemoved
     ).recoverWith {
-      case e @ UpstreamErrorResponse(
-            _,
-            _,
-            _,
-            _
-          ) if e.getMessage.contains("No active relationship found") =>
-        logger.warn(
-          s"De-authorising ETMP record failed for ${arn.value}, $enrolmentKey due to: No active relationship found"
-        )
-        updateEtmpSyncStatus(Success).flatMap(_ => Future.failed(RelationshipNotFound("RELATIONSHIP_NOT_FOUND")))
-      case e @ UpstreamErrorResponse(
-            _,
-            upstreamCode,
-            reportAs,
-            _
-          ) =>
-        recoverFromException(
-          e,
-          UpstreamErrorResponse(
-            "RELATIONSHIP_DELETE_FAILED_ETMP",
-            upstreamCode,
-            reportAs
-          )
-        )
-      case NonFatal(ex) => recoverFromException(ex, new Exception("RELATIONSHIP_DELETE_FAILED_ETMP"))
+      case ex =>
+        logger.warn(s"[DeleteRelationshipsService] De-authorising ETMP record failed for ${arn.value}, $enrolmentKey due to: ${ex.getMessage}")
+        updateEtmpSyncStatus(Failed).map(_ => throw ex)
     }
 
   }
 
-  // noinspection ScalaStyle
-  def deleteEsRecord(
+  private def deallocateEsEnrolment(
     arn: Arn,
-    enrolmentKey: EnrolmentKey
+    enrolmentKey: EnrolmentKey,
+    groupId: String
   )(implicit
     request: RequestHeader,
     auditData: AuditData
-  ): Future[DbUpdateStatus] = {
-
+  ): Future[Boolean] = {
     val updateEsSyncStatus =
       deleteRecordRepository
         .updateEsSyncStatus(
@@ -224,78 +177,40 @@ with Logging {
           enrolmentKey,
           _: SyncStatus
         )
-        .map(convertDbUpdateStatus)
-
-    def logAndMaybeFail(
-      origExc: Throwable,
-      replacementExc: Throwable
-    ): Future[DbUpdateStatus] = {
-      logger.warn(s"De-allocating ES record failed for ${arn.value}, ${enrolmentKey.tag}: ${origExc.getMessage}")
-      updateEsSyncStatus(Failed)
-      Future.failed(replacementExc)
-    }
-
-    lazy val recoverAgentUserRelationshipNotFound: PartialFunction[Throwable, Future[DbUpdateStatus]] = {
-      case RelationshipNotFound(errorCode) =>
-        logger.warn(
-          s"De-allocating ES record for ${arn.value}, ${enrolmentKey.tag} " +
-            s"was not possible because a relationship between the Agent and Client was not found: $errorCode"
-        )
-        updateEsSyncStatus(Success).flatMap(_ => Future.failed(RelationshipNotFound(errorCode)))
-    }
-
-    lazy val recoverUpstream5xx: PartialFunction[Throwable, Future[DbUpdateStatus]] = {
-      case e @ UpstreamErrorResponse(
-            _,
-            upstreamCode,
-            reportAs,
-            _
-          ) if e.statusCode >= 500 && e.statusCode < 600 =>
-        logAndMaybeFail(
-          e,
-          UpstreamErrorResponse(
-            "RELATIONSHIP_DELETE_FAILED_ES",
-            upstreamCode,
-            reportAs
-          )
-        )
-    }
-
-    lazy val recoverUnauthorized: PartialFunction[Throwable, Future[DbUpdateStatus]] = {
-      case ex: UpstreamErrorResponse if ex.statusCode == 401 => logAndMaybeFail(ex, ex)
-    }
-
-    lazy val recoverNonFatal: PartialFunction[Throwable, Future[DbUpdateStatus]] = { case NonFatal(ex) =>
-      logAndMaybeFail(ex, new Exception("RELATIONSHIP_DELETE_FAILED_ES"))
-    }
 
     (
       for {
-        esSyncStatusInProgress <- updateEsSyncStatus(InProgress)
-        if esSyncStatusInProgress == DbUpdateSucceeded
-        maybeAgentUser <- agentUserService.getAgentAdminAndSetAuditData(arn)
-        agentUser = maybeAgentUser.fold(error => throw RelationshipNotFound(error), identity)
-        _ <- checkService
+        _ <- updateEsSyncStatus(InProgress)
+        enrolmentDeallocated <- checkService
           .checkForRelationship(
             arn,
             None,
             enrolmentKey
           )
           .flatMap {
-            case true => es.deallocateEnrolmentFromAgent(agentUser.groupId, enrolmentKey)
-            case false => throw RelationshipNotFound("RELATIONSHIP_NOT_FOUND")
+            case true => es.deallocateEnrolmentFromAgent(groupId, enrolmentKey).map(_ => true)
+            case false => Future.successful(false)
           }
-        _ = auditData.set(enrolmentDeallocatedKey, true)
+        _ = auditData.set(enrolmentDeallocatedKey, enrolmentDeallocated)
         _ <- agentUserClientDetailsConnector.cacheRefresh(arn)
-        esSyncStatusSuccess <- updateEsSyncStatus(Success)
-      } yield esSyncStatusSuccess
-    ).recoverWith(
-      recoverAgentUserRelationshipNotFound
-        .orElse(recoverUpstream5xx)
-        .orElse(recoverUnauthorized)
-        .orElse(recoverNonFatal)
-    )
+        _ =
+          if (!enrolmentDeallocated)
+            logger.warn(s"[DeleteRelationshipsService] ES record not found for ${arn.value}, $enrolmentKey")
+        _ <- updateEsSyncStatus(Success)
+      } yield enrolmentDeallocated
+    ).recoverWith {
+      case ex =>
+        logger.warn(s"[DeleteRelationshipsService] De-allocating ES record failed for ${arn.value}, ${enrolmentKey.tag}: ${ex.getMessage}")
+        updateEsSyncStatus(Failed).map(_ => throw ex)
+    }
   }
+
+  def createDeleteRecord(record: DeleteRecord): Future[Boolean] = deleteRecordRepository
+    .create(record)
+    .recoverWith { case ex =>
+      logger.warn(s"[DeleteRelationshipsService] Inserting delete record into mongo failed for ${record.arn}, ${record.enrolmentKey}: ${ex.getMessage}")
+      Future.failed(new Exception("RELATIONSHIP_DELETE_FAILED_DB"))
+    }
 
   def removeDeleteRecord(
     arn: Arn,
@@ -304,7 +219,7 @@ with Logging {
     .remove(arn, enrolmentKey)
     .map(_ > 0)
     .recoverWith { case NonFatal(ex) =>
-      logger.warn(s"Removing delete record from mongo failed for ${arn.value}, $enrolmentKey : ${ex.getMessage}")
+      logger.warn(s"[DeleteRelationshipsService] Removing delete record from mongo failed for ${arn.value}, $enrolmentKey : ${ex.getMessage}")
       Future.successful(false)
     }
 
@@ -316,10 +231,7 @@ with Logging {
       case Some(record) =>
         val enrolmentKey = record.enrolmentKey
         checkDeleteRecordAndEventuallyResume(Arn(record.arn), enrolmentKey)(NoRequest, auditData)
-
-      case None =>
-        logger.info("No Delete Record Found")
-        Future.successful(true)
+      case None => Future.successful(true)
     }
 
   def checkDeleteRecordAndEventuallyResume(
@@ -342,17 +254,10 @@ with Logging {
                   .plusSeconds(recoveryTimeout)
                   .isAfter(Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime)
               ) {
-                for {
-                  isDone <- resumeRelationshipRemoval(record)
-                  _ <-
-                    if (isDone)
-                      removeDeleteRecord(arn, enrolmentKey)
-                    else
-                      Future.successful(())
-                } yield isDone
+                resumeRelationshipRemoval(record)
               }
               else {
-                logger.error(s"Terminating recovery of failed de-authorisation $record because timeout has passed.")
+                logger.error(s"[DeleteRelationshipsService] Terminating recovery of failed de-authorisation $record because timeout has passed.")
                 auditData.set("abandonmentReason", "timeout")
                 auditService.sendRecoveryOfDeleteRelationshipHasBeenAbandonedAuditEvent()
                 removeDeleteRecord(arn, enrolmentKey).map(_ => true)
@@ -363,7 +268,7 @@ with Logging {
     ).recoverWith {
       case e: UpstreamErrorResponse if e.statusCode == 401 =>
         logger.error(
-          s"Terminating recovery of failed de-authorisation ($arn, $enrolmentKey) because auth token is invalid"
+          s"[DeleteRelationshipsService] Terminating recovery of failed de-authorisation ($arn, $enrolmentKey) because auth token is invalid"
         )
         auditData.set("abandonmentReason", "unauthorised")
         auditService.sendRecoveryOfDeleteRelationshipHasBeenAbandonedAuditEvent()
@@ -371,6 +276,7 @@ with Logging {
       case NonFatal(_) => Future.successful(false)
     }
 
+  // noinspection ScalaStyle
   def resumeRelationshipRemoval(deleteRecord: DeleteRecord)(implicit
     request: RequestHeader,
     auditData: AuditData
@@ -380,14 +286,21 @@ with Logging {
     lockService
       .recoveryLock(arn, enrolmentKey) {
         logger.info(
-          s"Resuming unfinished removal of the relationship between ${arn.value} and $enrolmentKey. Attempt: ${deleteRecord.numberOfAttempts + 1}"
+          s"[DeleteRelationshipsService] Resuming unfinished removal of the relationship between ${arn.value} and $enrolmentKey. " +
+            s"Attempt: ${deleteRecord.numberOfAttempts + 1}"
         )
         (deleteRecord.needToDeleteEtmpRecord, deleteRecord.needToDeleteEsRecord) match {
           case (true, true) =>
             for {
               _ <- deleteRecordRepository.markRecoveryAttempt(arn, enrolmentKey)
-              _ <- deleteEsRecord(arn, enrolmentKey)
-              _ <- deleteEtmpRecord(arn, enrolmentKey)
+              groupId <- es.getPrincipalGroupIdFor(arn)
+              _ <- deallocateEsEnrolment(
+                arn,
+                enrolmentKey,
+                groupId
+              )
+              _ <- removeEtmpRelationship(arn, enrolmentKey)
+              _ <- removeDeleteRecord(arn, enrolmentKey)
               _ <- setRelationshipEnded(
                 arn,
                 enrolmentKey,
@@ -396,13 +309,19 @@ with Logging {
             } yield true
           case (false, true) =>
             logger.warn(
-              s"ES relationship existed without ETMP relationship for ${arn.value}, $enrolmentKey. " +
-                s"This should not happen because we always remove the ES relationship first."
+              s"[DeleteRelationshipsService] ES relationship existed without ETMP relationship for ${arn.value}, $enrolmentKey." +
+                s" This should not happen because we always remove the ES relationship first."
             )
             for {
               _ <- deleteRecordRepository.markRecoveryAttempt(arn, enrolmentKey)
-              _ = auditData.set(etmpRelationshipRemovedKey, true)
-              _ <- deleteEsRecord(arn, enrolmentKey)
+              _ = auditData.set(etmpRelationshipRemovedKey, deleteRecord.syncToETMPStatus.contains(Success))
+              groupId <- es.getPrincipalGroupIdFor(arn)
+              _ <- deallocateEsEnrolment(
+                arn,
+                enrolmentKey,
+                groupId
+              )
+              _ <- removeDeleteRecord(arn, enrolmentKey)
               _ <- setRelationshipEnded(
                 arn,
                 enrolmentKey,
@@ -412,8 +331,9 @@ with Logging {
           case (true, false) =>
             for {
               _ <- deleteRecordRepository.markRecoveryAttempt(arn, enrolmentKey)
-              _ = auditData.set(enrolmentDeallocatedKey, true)
-              _ <- deleteEtmpRecord(arn, enrolmentKey)
+              _ = auditData.set(enrolmentDeallocatedKey, deleteRecord.syncToESStatus.contains(Success))
+              _ <- removeEtmpRelationship(arn, enrolmentKey)
+              _ <- removeDeleteRecord(arn, enrolmentKey)
               _ <- setRelationshipEnded(
                 arn,
                 enrolmentKey,
@@ -421,8 +341,8 @@ with Logging {
               )
             } yield true
           case (false, false) =>
-            logger.warn(s"resumeRelationshipRemoval called for ${arn.value}, $enrolmentKey when no recovery needed")
-            Future.successful(true)
+            logger.warn(s"[DeleteRelationshipsService] resumeRelationshipRemoval called for ${arn.value}, $enrolmentKey when no recovery needed")
+            removeDeleteRecord(arn, enrolmentKey).map(_ => true)
         }
       }
       .map(_.getOrElse(false))

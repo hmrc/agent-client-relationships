@@ -125,20 +125,11 @@ extends PlayMongoRepository[DeleteRecord](
 )
 with RequestAwareLogging {
 
-  private val INDICATE_ERROR_DURING_DB_UPDATE = 0
-
-  def create(record: DeleteRecord)(implicit requestHeader: RequestHeader): Future[Int] = Mdc.preservingMdc {
+  def create(record: DeleteRecord): Future[Boolean] = Mdc.preservingMdc {
     collection
       .insertOne(record)
       .toFuture()
-      .map(insertResult =>
-        if (insertResult.wasAcknowledged())
-          1
-        else {
-          logger.warn(s"[DeleteRecordRepository] Creating DeleteRecord failed for record: ${record.arn}, ${record.enrolmentKey}")
-          INDICATE_ERROR_DURING_DB_UPDATE
-        }
-      )
+      .map(_ => true)
   }
 
   def findBy(
@@ -152,7 +143,7 @@ with RequestAwareLogging {
     arn: Arn,
     enrolmentKey: EnrolmentKey,
     status: SyncStatus
-  )(implicit requestHeader: RequestHeader): Future[Int] = Mdc.preservingMdc {
+  )(implicit requestHeader: RequestHeader): Future[Boolean] = Mdc.preservingMdc {
     collection
       .updateOne(
         filter(arn, enrolmentKey),
@@ -163,7 +154,7 @@ with RequestAwareLogging {
       .map { updateResult =>
         if (updateResult.getModifiedCount != 1L)
           logger.warn(s"Updating ETMP sync status ($status) failed")
-        updateResult.getModifiedCount.toInt
+        true
       }
   }
 
@@ -171,7 +162,7 @@ with RequestAwareLogging {
     arn: Arn,
     enrolmentKey: EnrolmentKey,
     status: SyncStatus
-  )(implicit requestHeader: RequestHeader): Future[Int] = Mdc.preservingMdc {
+  )(implicit requestHeader: RequestHeader): Future[Boolean] = Mdc.preservingMdc {
     collection
       .updateOne(
         filter(arn, enrolmentKey),
@@ -182,7 +173,7 @@ with RequestAwareLogging {
       .map { updateResult =>
         if (updateResult.getModifiedCount != 1L)
           logger.warn(s"Updating ES sync status ($status) failed")
-        updateResult.getModifiedCount.toInt
+        true
       }
   }
 

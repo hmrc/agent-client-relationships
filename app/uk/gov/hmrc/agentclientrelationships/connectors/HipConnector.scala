@@ -121,7 +121,8 @@ with RequestAwareLogging {
       requestBody,
       () => headers.makeSubscriptionHeaders()
     ).map {
-      case Right(response) => Option(response.json.as[RegistrationRelationshipResponse])
+      case Right(response) => Some(response.json.as[RegistrationRelationshipResponse])
+      case Left(ex: UpstreamErrorResponse) if ex.getMessage.contains("No active relationship found") => None
       case Left(errorResponse) =>
         logger.error(s"Error in HIP 'DeleteAgentRelationship' with error: ${errorResponse.getMessage}")
         throw errorResponse

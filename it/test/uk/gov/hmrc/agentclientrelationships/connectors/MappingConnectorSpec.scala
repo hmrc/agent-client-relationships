@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.agentclientrelationships.connectors
 
-import org.scalamock.scalatest.MockFactory
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
@@ -41,8 +40,7 @@ extends UnitSpec
 with GuiceOneServerPerSuite
 with WireMockSupport
 with MappingStubs
-with DataStreamStub
-with MockFactory {
+with DataStreamStub {
 
   override implicit lazy val app: Application = appBuilder.build()
   val metrics: Metrics = app.injector.instanceOf[Metrics]

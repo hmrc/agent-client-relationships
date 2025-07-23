@@ -110,22 +110,19 @@ extends Eventually {
     service: String,
     howRelationshipTerminated: String,
     enrolmentDeallocated: Boolean = true,
-    etmpRelationshipRemoved: Boolean = true,
-    credId: Option[String] = Some("any"),
-    agentCode: Option[String] = Some("bar")
+    etmpRelationshipRemoved: Boolean = true
   ): Unit = verifyAuditRequestSent(
     1,
     event = AgentClientRelationshipEvent.TerminateRelationship,
-    detail =
-      Map(
-        "agentReferenceNumber" -> arn,
-        "clientId" -> clientId,
-        "clientIdType" -> clientIdType,
-        "service" -> service,
-        "enrolmentDeallocated" -> enrolmentDeallocated.toString,
-        "etmpRelationshipRemoved" -> etmpRelationshipRemoved.toString,
-        "howRelationshipTerminated" -> howRelationshipTerminated
-      ) ++ Seq(credId.map(id => "credId" -> id), agentCode.map(code => "agentCode" -> code)).flatten,
+    detail = Map(
+      "agentReferenceNumber" -> arn,
+      "clientId" -> clientId,
+      "clientIdType" -> clientIdType,
+      "service" -> service,
+      "enrolmentDeallocated" -> enrolmentDeallocated.toString,
+      "etmpRelationshipRemoved" -> etmpRelationshipRemoved.toString,
+      "howRelationshipTerminated" -> howRelationshipTerminated
+    ),
     tags = Map("transactionName" -> "terminate-relationship", "path" -> requestPath)
   )
 

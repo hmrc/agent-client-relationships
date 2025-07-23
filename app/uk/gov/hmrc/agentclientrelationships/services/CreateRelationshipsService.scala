@@ -262,7 +262,7 @@ with RequestAwareLogging {
                 maybeArn match {
                   case None =>
                     logger.warn(s"Arn not found for provided groupId: $groupId")
-                    Future.successful(())
+                    Future.unit
                   case Some(arnToRemove) =>
                     val deleteRecord = DeleteRecord(
                       arnToRemove.value,
@@ -272,7 +272,7 @@ with RequestAwareLogging {
                     )
                     deleteRecordRepository
                       .create(deleteRecord)
-                      .map(convertDbUpdateStatus)
+                      .map(_ => DbUpdateSucceeded)
                       .recover { case NonFatal(ex) =>
                         logger.warn(
                           s"Inserting delete record into mongo failed for ${newArn.value}, ${enrolmentKey.tag}",

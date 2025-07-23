@@ -17,7 +17,6 @@ object AppDependencies {
     "uk.gov.hmrc"            %% "bootstrap-test-play-30"    % bootstrapVer % Test,
     "org.scalatestplus.play" %% "scalatestplus-play"        % "7.0.1"      % Test,
     "uk.gov.hmrc.mongo"      %% "hmrc-mongo-test-play-30"   % mongoVer     % Test,
-    "org.scalamock"          %% "scalamock"                 % "7.3.2"      % Test,
     "org.apache.pekko"       %% "pekko-testkit"             % pekkoVersion % Test,
     "org.apache.pekko"       %% "pekko-actor-testkit-typed" % pekkoVersion % Test
   )

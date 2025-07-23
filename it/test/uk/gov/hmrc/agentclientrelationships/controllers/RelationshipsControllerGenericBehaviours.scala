@@ -292,9 +292,7 @@ trait RelationshipsControllerGenericBehaviours {
             clientId.value,
             clientIdType,
             enrolmentKey.service,
-            "AgentReplacement",
-            credId = None,
-            agentCode = None
+            "AgentReplacement"
           )
           verifyTerminateRelationshipAuditSent(
             requestPath,
@@ -302,9 +300,7 @@ trait RelationshipsControllerGenericBehaviours {
             clientId.value,
             clientIdType,
             enrolmentKey.service,
-            "AgentReplacement",
-            credId = None,
-            agentCode = None
+            "AgentReplacement"
           )
         }
       }
@@ -633,9 +629,17 @@ trait RelationshipsControllerGenericBehaviours {
           extraSetup(serviceId)
         }
 
-        "return 500 and send the audit event TerminateRelationship" in new StubsForThisScenario {
-          doAgentDeleteRequest(requestPath).status shouldBe 500
-          verifyAuditRequestNotSent(AgentClientRelationshipEvent.TerminateRelationship)
+        "return 204 and send the audit event TerminateRelationship" in new StubsForThisScenario {
+          doAgentDeleteRequest(requestPath).status shouldBe 204
+          verifyTerminateRelationshipAuditSent(
+            requestPath,
+            arn.value,
+            clientId.value,
+            clientIdType,
+            serviceId,
+            "ClientLedTermination",
+            enrolmentDeallocated = false
+          )
         }
       }
 
@@ -678,7 +682,8 @@ trait RelationshipsControllerGenericBehaviours {
             clientId.value,
             clientIdType,
             serviceId,
-            "ClientLedTermination"
+            "ClientLedTermination",
+            etmpRelationshipRemoved = false
           )
         }
       }

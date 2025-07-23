@@ -75,8 +75,7 @@ with IntegrationPatience {
         lastRecoveryAttempt = None,
         headerCarrier = None
       )
-      val createResult = await(repo.create(deleteRecord))
-      createResult shouldBe 1
+      await(repo.create(deleteRecord))
 
       val findResult = await(repo.findBy(Arn("TARN0000001"), vatEnrolmentKey))
       findResult shouldBe Some(deleteRecord)
@@ -127,10 +126,8 @@ with IntegrationPatience {
         lastRecoveryAttempt = None,
         headerCarrier = None
       )
-      val createResultOld = await(repo.create(deleteRecordOld))
-      createResultOld shouldBe 1
-      val createResultNew = await(repo.create(deleteRecordNew))
-      createResultNew shouldBe 1
+      await(repo.create(deleteRecordOld))
+      await(repo.create(deleteRecordNew))
     }
 
     "fail to create a  new record when an old record with the same arn, clientId and clientIdType already exists" in {
@@ -152,8 +149,7 @@ with IntegrationPatience {
         lastRecoveryAttempt = None,
         headerCarrier = None
       )
-      val createResultOld = await(repo.create(deleteRecordOld))
-      createResultOld shouldBe 1
+      await(repo.create(deleteRecordOld))
       an[MongoException] shouldBe thrownBy {
         await(repo.create(deleteRecordNew))
       }
@@ -182,12 +178,9 @@ with IntegrationPatience {
         lastRecoveryAttempt = Some(now.minusMinutes(5))
       )
 
-      val createResult1 = await(repo.create(deleteRecord1))
-      createResult1 shouldBe 1
-      val createResult2 = await(repo.create(deleteRecord2))
-      createResult2 shouldBe 1
-      val createResult3 = await(repo.create(deleteRecord3))
-      createResult3 shouldBe 1
+      await(repo.create(deleteRecord1))
+      await(repo.create(deleteRecord2))
+      await(repo.create(deleteRecord3))
 
       val result = await(repo.selectNextToRecover())
       result shouldBe Some(deleteRecord2)
@@ -216,15 +209,13 @@ with IntegrationPatience {
         lastRecoveryAttempt = Some(now.minusMinutes(5))
       )
 
-      val createResult1 = await(repo.create(deleteRecord1))
-      createResult1 shouldBe 1
-      val createResult2 = await(repo.create(deleteRecord2))
-      createResult2 shouldBe 1
-      val createResult3 = await(repo.create(deleteRecord3))
-      createResult3 shouldBe 1
+      await(repo.create(deleteRecord1))
+      await(repo.create(deleteRecord2))
+      await(repo.create(deleteRecord3))
 
       val result = await(repo.selectNextToRecover())
       result shouldBe Some(deleteRecord2)
     }
   }
+
 }
