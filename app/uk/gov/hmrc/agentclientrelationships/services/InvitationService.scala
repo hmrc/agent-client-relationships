@@ -35,7 +35,6 @@ import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureRe
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.DuplicateInvitationError
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgencyDetails
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
-import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier.ClientId
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
@@ -56,7 +55,6 @@ import scala.concurrent.Future
 @Singleton
 class InvitationService @Inject() (
   invitationsRepository: InvitationsRepository,
-  partialAuthRepository: PartialAuthRepository,
   ifOrHipConnector: IfOrHipConnector,
   agentAssuranceService: AgentAssuranceService,
   emailService: EmailService,
@@ -249,22 +247,6 @@ extends RequestAwareLogging {
       case e: MongoException if e.getMessage.contains("E11000 duplicate key error") => Left(DuplicateInvitationError)
     }
   }
-
-  def migratePartialAuth(invitation: Invitation): Future[Unit] =
-    for {
-      _ <- partialAuthRepository.create(
-        invitation.created,
-        Arn(invitation.arn),
-        invitation.service,
-        Nino(invitation.clientId)
-      )
-      _ <-
-        if (invitation.expiryDate.isAfter(currentTime().toLocalDate)) {
-          invitationsRepository.migrateActivePartialAuthInvitation(invitation).map(_ => ())
-        }
-        else
-          Future.unit
-    } yield ()
 
   private def currentTime() = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime
 

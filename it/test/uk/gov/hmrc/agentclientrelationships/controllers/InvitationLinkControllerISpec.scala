@@ -71,13 +71,6 @@ with HipStub {
   implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
   implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
 
-  "migrate agent reference record" should {
-    "create a record in the agentReferenceRepository" in {
-      await(agentReferenceService.migrateAgentReferenceRecord(agentReferenceRecord))
-      await(agentReferenceRepo.findBy(uid)).get shouldBe agentReferenceRecord
-    }
-  }
-
   "validate invitation link" should {
 
     "return 200 status and valid JSON when agent reference and details are found and agent is not suspended " in {

@@ -25,14 +25,13 @@ import org.mongodb.scala.model.Filters._
 import org.mongodb.scala.model.Updates.combine
 import org.mongodb.scala.model.Updates.set
 import org.mongodb.scala.model._
-import org.mongodb.scala.result.InsertOneResult
-import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentclientrelationships.model.invitation.CancelInvitationResponse
 import uk.gov.hmrc.agentclientrelationships.model.invitation.CancelInvitationResponse._
 import uk.gov.hmrc.agentclientrelationships.repository.FieldKeys._
 import uk.gov.hmrc.agentclientrelationships.util.CryptoUtil.encryptedString
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier.ClientId
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
@@ -141,12 +140,6 @@ with RequestAwareLogging {
     collection.insertOne(invitation).toFuture().map(_ => invitation)
   }
   // scalastyle:on
-
-  def migrateActivePartialAuthInvitation(invitation: Invitation): Future[InsertOneResult] = Mdc.preservingMdc {
-    collection
-      .insertOne(invitation)
-      .toFuture()
-  }
 
   def findOneByIdForAgent(
     arn: String,
@@ -323,28 +316,6 @@ with RequestAwareLogging {
           set("status", Codecs.toBson[InvitationStatus](DeAuthorised)),
           set("lastUpdated", timestamp.getOrElse(Instant.now())),
           set("relationshipEndedBy", relationshipEndedBy)
-        ),
-        FindOneAndUpdateOptions().returnDocument(ReturnDocument.AFTER)
-      )
-      .toFutureOption()
-  }
-
-  def updateStatusFromTo(
-    invitationId: String,
-    fromStatus: InvitationStatus,
-    toStatus: InvitationStatus,
-    relationshipEndedBy: Option[String] = None,
-    lastUpdated: Option[Instant] = None
-  ): Future[Option[Invitation]] = Mdc.preservingMdc {
-    collection
-      .findOneAndUpdate(
-        and(equal(invitationIdKey, invitationId), equal("status", Codecs.toBson[InvitationStatus](fromStatus))),
-        combine(
-          Seq(
-            Some(set("status", Codecs.toBson(toStatus))),
-            Some(set("lastUpdated", lastUpdated.getOrElse(Instant.now()))),
-            relationshipEndedBy.map(set("relationshipEndedBy", _))
-          ).flatten: _*
         ),
         FindOneAndUpdateOptions().returnDocument(ReturnDocument.AFTER)
       )
