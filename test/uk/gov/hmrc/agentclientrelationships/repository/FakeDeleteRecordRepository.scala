@@ -34,13 +34,12 @@ extends DeleteRecordRepository(FakeMongoComponent.make) {
 
   private val data: mutable.Map[(Arn, EnrolmentKey), DeleteRecord] = mutable.Map()
 
-  // the provided DeleteCopyRecord must use an enrolment key
-  override def create(record: DeleteRecord)(implicit requestHeader: RequestHeader): Future[Int] = findBy(Arn(record.arn), record.enrolmentKey).map(result =>
+  override def create(record: DeleteRecord): Future[Boolean] = findBy(Arn(record.arn), record.enrolmentKey).map(result =>
     if (result.isDefined)
       throw new MongoException("duplicate key error collection")
     else {
       data += ((Arn(record.arn), record.enrolmentKey) -> record)
-      1
+      true
     }
   )
 
@@ -61,12 +60,12 @@ extends DeleteRecordRepository(FakeMongoComponent.make) {
     arn: Arn,
     enrolmentKey: EnrolmentKey,
     status: SyncStatus
-  )(implicit requestHeader: RequestHeader): Future[Int] = {
+  )(implicit requestHeader: RequestHeader): Future[Boolean] = {
     val maybeValue: Option[DeleteRecord] = data.get((arn, enrolmentKey))
     Future.successful(
       if (maybeValue.isDefined) {
         data((arn, enrolmentKey)) = maybeValue.get.copy(syncToETMPStatus = Some(status))
-        1
+        true
       }
       else
         throw new IllegalArgumentException(s"Unexpected arn and enrolment key $arn, ${enrolmentKey.tag}")
@@ -78,12 +77,12 @@ extends DeleteRecordRepository(FakeMongoComponent.make) {
     arn: Arn,
     enrolmentKey: EnrolmentKey,
     status: SyncStatus
-  )(implicit requestHeader: RequestHeader): Future[Int] = {
+  )(implicit requestHeader: RequestHeader): Future[Boolean] = {
     val maybeValue: Option[DeleteRecord] = data.get((arn, enrolmentKey))
     Future.successful(
       if (maybeValue.isDefined) {
         data((arn, enrolmentKey)) = maybeValue.get.copy(syncToESStatus = Some(status))
-        1
+        true
       }
       else
         throw new IllegalArgumentException(s"Unexpected arn and enrolment key $arn, ${enrolmentKey.tag}")
@@ -119,7 +118,7 @@ extends DeleteRecordRepository(FakeMongoComponent.make) {
     data.toSeq.map(_._2).sortBy(_.lastRecoveryAttempt.map(_.toEpochSecond(ZoneOffset.UTC)).getOrElse(0L)).headOption
   )
 
-  def reset() = data.clear()
+  def reset(): Unit = data.clear()
 
   override def terminateAgent(arn: Arn): Future[Either[String, Int]] = {
     val keysToRemove: Seq[(Arn, EnrolmentKey)] = data.keys.filter(_._1 == arn).toSeq

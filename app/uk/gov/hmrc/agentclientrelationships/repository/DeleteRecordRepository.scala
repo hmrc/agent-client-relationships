@@ -18,11 +18,11 @@ package uk.gov.hmrc.agentclientrelationships.repository
 
 import org.mongodb.scala.MongoWriteException
 import org.mongodb.scala.model.Filters.equal
+import org.mongodb.scala.model.Filters.lte
 import org.mongodb.scala.model.Updates.combine
 import org.mongodb.scala.model.Updates.inc
 import org.mongodb.scala.model.Updates.set
 import org.mongodb.scala.model._
-import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import play.api.libs.json.Json.format
 import play.api.libs.json._
 import play.api.mvc.RequestHeader
@@ -30,22 +30,23 @@ import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.MongoLocalDateTimeFormat
 import uk.gov.hmrc.agentclientrelationships.repository.DeleteRecord.formats
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.http.Authorization
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.SessionId
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
+import uk.gov.hmrc.play.http.logging.Mdc
 
-import java.time.temporal.ChronoUnit.MILLIS
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneOffset
+import java.time.temporal.ChronoUnit.MILLIS
 import javax.inject.Inject
 import javax.inject.Singleton
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import uk.gov.hmrc.play.http.logging.Mdc
 
 case class DeleteRecord(
   arn: String,
@@ -125,20 +126,11 @@ extends PlayMongoRepository[DeleteRecord](
 )
 with RequestAwareLogging {
 
-  private val INDICATE_ERROR_DURING_DB_UPDATE = 0
-
-  def create(record: DeleteRecord)(implicit requestHeader: RequestHeader): Future[Int] = Mdc.preservingMdc {
+  def create(record: DeleteRecord): Future[Boolean] = Mdc.preservingMdc {
     collection
       .insertOne(record)
       .toFuture()
-      .map(insertResult =>
-        if (insertResult.wasAcknowledged())
-          1
-        else {
-          logger.warn(s"[DeleteRecordRepository] Creating DeleteRecord failed for record: ${record.arn}, ${record.enrolmentKey}")
-          INDICATE_ERROR_DURING_DB_UPDATE
-        }
-      )
+      .map(_ => true)
   }
 
   def findBy(
@@ -152,7 +144,7 @@ with RequestAwareLogging {
     arn: Arn,
     enrolmentKey: EnrolmentKey,
     status: SyncStatus
-  )(implicit requestHeader: RequestHeader): Future[Int] = Mdc.preservingMdc {
+  )(implicit requestHeader: RequestHeader): Future[Boolean] = Mdc.preservingMdc {
     collection
       .updateOne(
         filter(arn, enrolmentKey),
@@ -163,7 +155,7 @@ with RequestAwareLogging {
       .map { updateResult =>
         if (updateResult.getModifiedCount != 1L)
           logger.warn(s"Updating ETMP sync status ($status) failed")
-        updateResult.getModifiedCount.toInt
+        true
       }
   }
 
@@ -171,7 +163,7 @@ with RequestAwareLogging {
     arn: Arn,
     enrolmentKey: EnrolmentKey,
     status: SyncStatus
-  )(implicit requestHeader: RequestHeader): Future[Int] = Mdc.preservingMdc {
+  )(implicit requestHeader: RequestHeader): Future[Boolean] = Mdc.preservingMdc {
     collection
       .updateOne(
         filter(arn, enrolmentKey),
@@ -182,7 +174,7 @@ with RequestAwareLogging {
       .map { updateResult =>
         if (updateResult.getModifiedCount != 1L)
           logger.warn(s"Updating ES sync status ($status) failed")
-        updateResult.getModifiedCount.toInt
+        true
       }
   }
 
@@ -214,7 +206,7 @@ with RequestAwareLogging {
 
   def selectNextToRecover(): Future[Option[DeleteRecord]] = Mdc.preservingMdc {
     collection
-      .find()
+      .find(lte("dateTime", Instant.now().minusSeconds(30).atZone(ZoneOffset.UTC).toLocalDateTime))
       .sort(Sorts.ascending("lastRecoveryAttempt"))
       .headOption()
   }

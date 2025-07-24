@@ -502,9 +502,7 @@ with TestData {
         PersonalIncomeRecord.id,
         "AgentLedTermination",
         enrolmentDeallocated = false,
-        etmpRelationshipRemoved = false,
-        credId = None,
-        agentCode = None
+        etmpRelationshipRemoved = false
       )
 
       eventually {

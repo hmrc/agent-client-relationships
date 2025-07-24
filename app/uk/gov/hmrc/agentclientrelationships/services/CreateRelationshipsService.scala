@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
-import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys.enrolmentDelegatedKey
 import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys.etmpRelationshipCreatedKey
@@ -29,6 +28,8 @@ import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
 import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _, _}
 import uk.gov.hmrc.agentclientrelationships.support.Monitoring
 import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
+import uk.gov.hmrc.agentclientrelationships.util.RequestSupport._
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.agentmtdidentifiers.model.Service
 import uk.gov.hmrc.http.UpstreamErrorResponse
@@ -39,7 +40,6 @@ import javax.inject.Singleton
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.util.control.NonFatal
-import uk.gov.hmrc.agentclientrelationships.util.RequestSupport._
 
 @Singleton
 class CreateRelationshipsService @Inject() (
@@ -262,7 +262,7 @@ with RequestAwareLogging {
                 maybeArn match {
                   case None =>
                     logger.warn(s"Arn not found for provided groupId: $groupId")
-                    Future.successful(())
+                    Future.unit
                   case Some(arnToRemove) =>
                     val deleteRecord = DeleteRecord(
                       arnToRemove.value,
@@ -272,19 +272,18 @@ with RequestAwareLogging {
                     )
                     deleteRecordRepository
                       .create(deleteRecord)
-                      .map(convertDbUpdateStatus)
                       .recover { case NonFatal(ex) =>
                         logger.warn(
                           s"Inserting delete record into mongo failed for ${newArn.value}, ${enrolmentKey.tag}",
                           ex
                         )
-                        DbUpdateFailed
+                        false
                       }
                 }
               _ <- es.deallocateEnrolmentFromAgent(groupId, enrolmentKey)
               _ <-
                 maybeArn match {
-                  case None => Future successful (())
+                  case None => Future.unit
                   case Some(removedArn) =>
                     deleteRecordRepository
                       .remove(removedArn, enrolmentKey)
@@ -296,12 +295,12 @@ with RequestAwareLogging {
                         else
                           false
                       }
-                      .recoverWith { case NonFatal(ex) =>
+                      .recover { case NonFatal(ex) =>
                         logger.warn(
                           s"Removing delete record from mongo failed for ${removedArn.value}, ${enrolmentKey.tag}",
                           ex
                         )
-                        Future.successful(false)
+                        false
                       }
                 }
             } yield ()

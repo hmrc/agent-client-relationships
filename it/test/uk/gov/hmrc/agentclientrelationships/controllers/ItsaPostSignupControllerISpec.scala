@@ -295,23 +295,14 @@ with HipStub {
         tags = Map("transactionName" -> "create-relationship", "path" -> testUrl)
       )
 
-      verifyAuditRequestSent(
-        1,
-        event = AgentClientRelationshipEvent.TerminateRelationship,
-        detail = Map(
-          "agentCode" -> "NQJUEJCWT14",
-          "credId" -> "any",
-          "agentReferenceNumber" -> arn.value,
-          "clientId" -> mtdItId.value,
-          "service" -> HMRCMTDITSUPP,
-          "clientIdType" -> "MTDITID",
-          "enrolmentDeallocated" -> "true",
-          "etmpRelationshipRemoved" -> "true",
-          "howRelationshipTerminated" -> "AgentRoleChanged"
-        ),
-        tags = Map("transactionName" -> "terminate-relationship", "path" -> testUrl)
+      verifyTerminateRelationshipAuditSent(
+        testUrl,
+        arn.value,
+        mtdItId.value,
+        mtdItIdType,
+        HMRCMTDITSUPP,
+        "AgentRoleChanged"
       )
-
     }
 
     "return 404 Not Found when neither partial-auth nor legacy SA relationship exists" in {

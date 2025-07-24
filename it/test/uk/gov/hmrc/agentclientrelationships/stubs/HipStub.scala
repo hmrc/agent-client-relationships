@@ -87,8 +87,8 @@ trait HipStub {
       .withRequestBody(containing("\"0002\""))
       .willReturn(
         aResponse()
-          .withStatus(200)
-          .withBody(s"""{"processingDate": "2001-03-14T19:16:07Z"}""")
+          .withStatus(422)
+          .withBody("""{"errors":{"processingDate":"2025-01-01T12:00:00Z","code":"014","text":"No active relationship found"}}""")
       )
   )
 

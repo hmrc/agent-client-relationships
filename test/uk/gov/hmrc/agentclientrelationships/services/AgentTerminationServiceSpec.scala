@@ -16,15 +16,15 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
-import org.scalamock.scalatest.MockFactory
+import org.mockito.ArgumentMatchers.{eq => eqs}
+import org.mockito.Mockito.when
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import org.scalatestplus.mockito.MockitoSugar
 import uk.gov.hmrc.agentclientrelationships.model.DeletionCount
 import uk.gov.hmrc.agentclientrelationships.model.TerminationResponse
 import uk.gov.hmrc.agentclientrelationships.repository.DeleteRecordRepository
-import uk.gov.hmrc.agentclientrelationships.repository.FakeDeleteRecordRepository
-import uk.gov.hmrc.agentclientrelationships.repository.FakeRelationshipCopyRecordRepository
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipCopyRecordRepository
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 
@@ -34,22 +34,22 @@ import scala.concurrent.Future
 
 class AgentTerminationServiceSpec
 extends AnyFlatSpec
-with MockFactory
+with MockitoSugar
 with ScalaFutures
 with Matchers {
 
   val arn: Arn = Arn("AARN0000002")
 
-  val drrMock: DeleteRecordRepository = mock[FakeDeleteRecordRepository]
-  val rcrrMock: RelationshipCopyRecordRepository = mock[FakeRelationshipCopyRecordRepository]
+  val drrMock: DeleteRecordRepository = mock[DeleteRecordRepository]
+  val rcrrMock: RelationshipCopyRecordRepository = mock[RelationshipCopyRecordRepository]
   val ec: ExecutionContext = implicitly[ExecutionContext]
 
   val service = new AgentTerminationService(drrMock, rcrrMock)
 
   "AgentTerminationService" should "return result as expected" in {
 
-    (drrMock.terminateAgent(_: Arn)).expects(arn).returning(Future.successful(Right(1)))
-    (rcrrMock.terminateAgent(_: Arn)).expects(arn).returning(Future.successful(Right(1)))
+    when(drrMock.terminateAgent(eqs(arn))).thenReturn(Future.successful(Right(1)))
+    when(rcrrMock.terminateAgent(eqs(arn))).thenReturn(Future.successful(Right(1)))
 
     service.terminateAgent(arn).value.futureValue shouldBe
       Right(
@@ -71,15 +71,15 @@ with Matchers {
   }
 
   it should "handle error from DeleteRecordRepository" in {
-    (drrMock.terminateAgent(_: Arn)).expects(arn).returning(Future.successful(Left("some error")))
-    (rcrrMock.terminateAgent(_: Arn)).expects(arn).returning(Future.successful(Right(1)))
+    when(drrMock.terminateAgent(eqs(arn))).thenReturn(Future.successful(Left("some error")))
+    when(rcrrMock.terminateAgent(eqs(arn))).thenReturn(Future.successful(Right(1)))
 
     service.terminateAgent(arn).value.futureValue shouldBe Left("some error")
   }
 
   it should "handle error from RelationshipCopyRecordRepository" in {
-    (drrMock.terminateAgent(_: Arn)).expects(arn).returning(Future.successful(Right(1)))
-    (rcrrMock.terminateAgent(_: Arn)).expects(arn).returning(Future.successful(Left("some error")))
+    when(drrMock.terminateAgent(eqs(arn))).thenReturn(Future.successful(Right(1)))
+    when(rcrrMock.terminateAgent(eqs(arn))).thenReturn(Future.successful(Left("some error")))
 
     service.terminateAgent(arn).value.futureValue shouldBe Left("some error")
   }

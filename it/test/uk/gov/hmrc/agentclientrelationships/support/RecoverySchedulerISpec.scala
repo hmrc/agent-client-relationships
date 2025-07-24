@@ -39,6 +39,7 @@ import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
 import uk.gov.hmrc.agentmtdidentifiers.model.Service
 import uk.gov.hmrc.mongo.test.MongoSupport
 
+import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 import scala.concurrent.ExecutionContext
@@ -129,7 +130,7 @@ with BeforeAndAfterEach {
       val deleteRecord = DeleteRecord(
         arn.value,
         mtdItEnrolmentKey,
-        dateTime = LocalDateTime.now().atZone(ZoneOffset.UTC).toLocalDateTime.minusSeconds(10),
+        dateTime = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime.minusSeconds(60),
         syncToESStatus = Some(SyncStatus.Success),
         syncToETMPStatus = Some(SyncStatus.Failed)
       )
@@ -158,7 +159,7 @@ with BeforeAndAfterEach {
       val deleteRecord = DeleteRecord(
         arn.value,
         mtdItEnrolmentKey,
-        dateTime = LocalDateTime.now().atZone(ZoneOffset.UTC).toLocalDateTime.minusSeconds(10),
+        dateTime = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime.minusSeconds(60),
         syncToESStatus = Some(SyncStatus.Failed),
         syncToETMPStatus = Some(SyncStatus.Failed)
       )
@@ -187,7 +188,7 @@ with BeforeAndAfterEach {
       val deleteRecord = DeleteRecord(
         arn.value,
         mtdItEnrolmentKey,
-        dateTime = LocalDateTime.now().atZone(ZoneOffset.UTC).toLocalDateTime.minusSeconds(10),
+        dateTime = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime.minusSeconds(60),
         syncToESStatus = Some(SyncStatus.Failed),
         syncToETMPStatus = Some(SyncStatus.Failed)
       )
@@ -212,7 +213,7 @@ with BeforeAndAfterEach {
         val deleteRecord = DeleteRecord(
           arn.value,
           EnrolmentKey(Service.MtdIt, iMtdItId),
-          dateTime = LocalDateTime.now().atZone(ZoneOffset.UTC).toLocalDateTime.minusSeconds(index),
+          dateTime = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime.minusSeconds(60 + index),
           syncToESStatus = Some(SyncStatus.Success),
           syncToETMPStatus = Some(SyncStatus.Failed)
         )
@@ -241,7 +242,7 @@ with BeforeAndAfterEach {
         val deleteRecord = DeleteRecord(
           arn.value,
           EnrolmentKey(Service.MtdIt, iMtdItId),
-          dateTime = LocalDateTime.now().atZone(ZoneOffset.UTC).toLocalDateTime.minusSeconds(index),
+          dateTime = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime.minusSeconds(60 + index),
           syncToESStatus = Some(SyncStatus.Failed),
           syncToETMPStatus = Some(SyncStatus.Failed)
         )
