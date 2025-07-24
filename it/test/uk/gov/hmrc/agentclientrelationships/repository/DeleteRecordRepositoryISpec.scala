@@ -33,10 +33,10 @@ import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
 import uk.gov.hmrc.agentmtdidentifiers.model.Service
 import uk.gov.hmrc.agentmtdidentifiers.model.Vrn
 
-import java.time.temporal.ChronoUnit.MILLIS
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneOffset
+import java.time.temporal.ChronoUnit.MILLIS
 
 class DeleteRecordRepositoryISpec
 extends UnitSpec
@@ -161,21 +161,24 @@ with IntegrationPatience {
         EnrolmentKey(Service.MtdIt, MtdItId("ABCDEF0000000001")),
         syncToETMPStatus = Some(Success),
         syncToESStatus = Some(Failed),
-        lastRecoveryAttempt = Some(now.minusMinutes(1))
+        lastRecoveryAttempt = Some(now.minusMinutes(1)),
+        dateTime = now.minusSeconds(60)
       )
       val deleteRecord2 = DeleteRecord(
         "TARN0000002",
         EnrolmentKey(Service.MtdIt, MtdItId("ABCDEF0000000002")),
         syncToETMPStatus = Some(Success),
         syncToESStatus = Some(Failed),
-        lastRecoveryAttempt = None
+        lastRecoveryAttempt = None,
+        dateTime = now.minusSeconds(60)
       )
       val deleteRecord3 = DeleteRecord(
         "TARN0000003",
         EnrolmentKey(Service.MtdIt, MtdItId("ABCDEF0000000001")),
         syncToETMPStatus = Some(Success),
         syncToESStatus = Some(Failed),
-        lastRecoveryAttempt = Some(now.minusMinutes(5))
+        lastRecoveryAttempt = Some(now.minusMinutes(5)),
+        dateTime = now.minusSeconds(60)
       )
 
       await(repo.create(deleteRecord1))
@@ -192,21 +195,24 @@ with IntegrationPatience {
         EnrolmentKey(Service.MtdIt, MtdItId("ABCDEF0000000001")),
         syncToETMPStatus = Some(Success),
         syncToESStatus = Some(Failed),
-        lastRecoveryAttempt = Some(now.minusMinutes(1))
+        lastRecoveryAttempt = Some(now.minusMinutes(1)),
+        dateTime = now.minusSeconds(60)
       )
       val deleteRecord2 = DeleteRecord(
         "TARN0000002",
         EnrolmentKey(Service.MtdIt, MtdItId("ABCDEF0000000002")),
         syncToETMPStatus = Some(Success),
         syncToESStatus = Some(Failed),
-        lastRecoveryAttempt = Some(now.minusMinutes(13))
+        lastRecoveryAttempt = Some(now.minusMinutes(13)),
+        dateTime = now.minusSeconds(60)
       )
       val deleteRecord3 = DeleteRecord(
         "TARN0000003",
         EnrolmentKey(Service.MtdIt, MtdItId("ABCDEF0000000001")),
         syncToETMPStatus = Some(Success),
         syncToESStatus = Some(Failed),
-        lastRecoveryAttempt = Some(now.minusMinutes(5))
+        lastRecoveryAttempt = Some(now.minusMinutes(5)),
+        dateTime = now.minusSeconds(60)
       )
 
       await(repo.create(deleteRecord1))
@@ -215,6 +221,21 @@ with IntegrationPatience {
 
       val result = await(repo.selectNextToRecover())
       result shouldBe Some(deleteRecord2)
+    }
+
+    "not select delete records created less than a minute ago" in {
+      val deleteRecord1 = DeleteRecord(
+        "TARN0000001",
+        EnrolmentKey(Service.MtdIt, MtdItId("ABCDEF0000000001")),
+        syncToETMPStatus = Some(Success),
+        syncToESStatus = Some(Failed),
+        lastRecoveryAttempt = None
+      )
+
+      await(repo.create(deleteRecord1))
+
+      val result = await(repo.selectNextToRecover())
+      result shouldBe None
     }
   }
 

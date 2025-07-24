@@ -18,11 +18,11 @@ package uk.gov.hmrc.agentclientrelationships.repository
 
 import org.mongodb.scala.MongoWriteException
 import org.mongodb.scala.model.Filters.equal
+import org.mongodb.scala.model.Filters.lte
 import org.mongodb.scala.model.Updates.combine
 import org.mongodb.scala.model.Updates.inc
 import org.mongodb.scala.model.Updates.set
 import org.mongodb.scala.model._
-import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import play.api.libs.json.Json.format
 import play.api.libs.json._
 import play.api.mvc.RequestHeader
@@ -30,22 +30,23 @@ import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.MongoLocalDateTimeFormat
 import uk.gov.hmrc.agentclientrelationships.repository.DeleteRecord.formats
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.http.Authorization
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.SessionId
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
+import uk.gov.hmrc.play.http.logging.Mdc
 
-import java.time.temporal.ChronoUnit.MILLIS
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneOffset
+import java.time.temporal.ChronoUnit.MILLIS
 import javax.inject.Inject
 import javax.inject.Singleton
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import uk.gov.hmrc.play.http.logging.Mdc
 
 case class DeleteRecord(
   arn: String,
@@ -205,7 +206,7 @@ with RequestAwareLogging {
 
   def selectNextToRecover(): Future[Option[DeleteRecord]] = Mdc.preservingMdc {
     collection
-      .find()
+      .find(lte("dateTime", Instant.now().minusSeconds(30).atZone(ZoneOffset.UTC).toLocalDateTime))
       .sort(Sorts.ascending("lastRecoveryAttempt"))
       .headOption()
   }
