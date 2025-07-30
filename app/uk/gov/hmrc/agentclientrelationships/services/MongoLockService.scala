@@ -26,9 +26,9 @@ import uk.gov.hmrc.play.http.logging.Mdc
 
 import javax.inject.Inject
 import javax.inject.Singleton
-import scala.concurrent.duration.DurationInt
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.concurrent.duration.DurationInt
 
 @ImplementedBy(classOf[MongoLockServiceImpl])
 trait MongoLockService {
@@ -42,6 +42,8 @@ trait MongoLockService {
     ec: ExecutionContext,
     appConfig: AppConfig
   ): Future[Option[T]]
+
+  def lock[T](lockName: String)(body: => Future[T])(implicit ec: ExecutionContext): Future[Option[T]]
 
 }
 
@@ -74,6 +76,17 @@ extends MongoLockService {
     )
     Mdc.preservingMdc {
       lockService.withLock(body)
+    }
+  }
+
+  def lock[T](lockName: String)(body: => Future[T])(implicit ec: ExecutionContext): Future[Option[T]] = {
+    val recoveryLock = LockService(
+      lockRepository,
+      lockId = lockName,
+      ttl = 5.minutes
+    )
+    Mdc.preservingMdc {
+      recoveryLock.withLock(body)
     }
   }
 

@@ -19,7 +19,6 @@ package uk.gov.hmrc.agentclientrelationships.repository
 import org.mongodb.scala.MongoWriteException
 import org.mongodb.scala.model.Indexes.ascending
 import org.mongodb.scala.model._
-import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import play.api.libs.json.Json.format
 import play.api.libs.json._
 import play.api.mvc.RequestHeader
@@ -27,15 +26,18 @@ import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.MongoLocalDateTimeFormat
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipCopyRecord.formats
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
+import uk.gov.hmrc.agentclientrelationships.services.MongoLockService
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
+import uk.gov.hmrc.agentclientrelationships.util.RequestSupport.thereIsNoRequest
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 import uk.gov.hmrc.play.http.logging.Mdc
 
-import java.time.temporal.ChronoUnit.MILLIS
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneOffset
+import java.time.temporal.ChronoUnit.MILLIS
 import javax.inject.Inject
 import javax.inject.Singleton
 import scala.concurrent.ExecutionContext
@@ -72,7 +74,10 @@ object RelationshipCopyRecord {
 }
 
 @Singleton
-class RelationshipCopyRecordRepository @Inject() (mongoComponent: MongoComponent)(implicit ec: ExecutionContext)
+class RelationshipCopyRecordRepository @Inject() (
+  mongoComponent: MongoComponent,
+  mongoLockService: MongoLockService
+)(implicit ec: ExecutionContext)
 extends PlayMongoRepository[RelationshipCopyRecord](
   mongoComponent = mongoComponent,
   collectionName = "relationship-copy-record",
@@ -184,5 +189,65 @@ with RequestAwareLogging {
       )
     )
   }
+
+  def queryOnStartup(): Unit = {
+    mongoLockService.lock("lockForQueries") {
+      for {
+        deprecated <- collection.countDocuments(Filters.exists("enrolmentKey", exists = false)).toFuture()
+        withEnrolment <- collection.countDocuments(Filters.exists("enrolmentKey")).toFuture()
+        totalFailedEtmp <- collection.countDocuments(Filters.and(
+          Filters.exists("syncToETMPStatus"),
+          Filters.ne("syncToETMPStatus", Success.toString)
+        )).toFuture()
+        totalFailedEs <- collection.countDocuments(Filters.and(
+          Filters.exists("syncToESStatus"),
+          Filters.ne("syncToESStatus", Success.toString)
+        )).toFuture()
+        copyAcrossItsaOld <- collection.countDocuments(Filters.and(
+          Filters.ne("references", Set()),
+          Filters.eq("clientIdentifierType", "MTDITID")
+        )).toFuture()
+        copyAcrossItsaNew <- collection.countDocuments(Filters.and(
+          Filters.ne("references", Set()),
+          Filters.regex("enrolmentKey", """HMRC-MTD-IT~MTDITID~""")
+        )).toFuture()
+        copyAcrossItsaFailed <- collection.countDocuments(Filters.and(
+          Filters.ne("references", Set()),
+          Filters.ne("syncToETMPStatus", Success.toString), // copy across does not fail when ES fails, only requires etmp
+          Filters.or(
+            Filters.eq("clientIdentifierType", "MTDITID"),
+            Filters.regex("enrolmentKey", """HMRC-MTD-IT~MTDITID~""")
+          )
+        )).toFuture()
+        copyAcrossItsaFailedRecent <- collection.countDocuments(Filters.and(
+          Filters.ne("references", Set()),
+          Filters.ne("syncToETMPStatus", Success.toString), // copy across does not fail when ES fails, only requires etmp
+          Filters.gte("dateTime", Instant.now().atZone(ZoneOffset.UTC).minusDays(30).toLocalDateTime),
+          Filters.or(
+            Filters.eq("clientIdentifierType", "MTDITID"),
+            Filters.regex("enrolmentKey", """HMRC-MTD-IT~MTDITID~""")
+          )
+        )).toFuture()
+        copyAcrossVat <- collection.countDocuments(Filters.and(
+          Filters.ne("references", Set()),
+          Filters.or(
+            Filters.eq("clientIdentifierType", "VRN"),
+            Filters.regex("enrolmentKey", """HMRC-MTD-VAT~VRN~""")
+          )
+        )).toFuture()
+      } yield {
+        logger.warn(
+          s"[RelationshipCopyRecordRepository] Querying copy record repository: \n" +
+            s"Total deprecated docs: $deprecated, Total new format docs: $withEnrolment, \n" +
+            s"Total failed ETMP docs: $totalFailedEtmp, Total failed ES docs: $totalFailedEs, \n" +
+            s"Total VAT copy across docs: $copyAcrossVat, \n" +
+            s"Total deprecated ITSA copy across docs: $copyAcrossItsaOld, Total new format ITSA copy across docs: $copyAcrossItsaNew, \n" +
+            s"Total failed ITSA copy across docs: $copyAcrossItsaFailed, Total recently (30d) failed ITSA copy across docs: $copyAcrossItsaFailedRecent"
+        )(thereIsNoRequest)
+      }
+    }
+  }
+
+  queryOnStartup()
 
 }

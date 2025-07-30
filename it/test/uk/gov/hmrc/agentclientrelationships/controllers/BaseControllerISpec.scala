@@ -122,7 +122,10 @@ with IntegrationPatience {
   implicit lazy val ws: WSClient = app.injector.instanceOf[WSClient]
   implicit val request: RequestHeader = FakeRequest()
 
-  def repo: RelationshipCopyRecordRepository = new RelationshipCopyRecordRepository(mongoComponent)
+  def repo: RelationshipCopyRecordRepository =
+    new RelationshipCopyRecordRepository(mongoComponent, mongoRecoveryLockService) {
+      override def queryOnStartup(): Unit = ()
+    }
   def deleteRecordRepository: DeleteRecordRepository = new DeleteRecordRepository(mongoComponent)
 
   override def beforeEach() = {

@@ -54,4 +54,6 @@ extends MongoLockService {
       result
     }
 
+  override def lock[T](lockName: String)(body: => Future[T])(implicit ec: ExecutionContext): Future[Option[T]] = body.map(Some(_))
+
 }

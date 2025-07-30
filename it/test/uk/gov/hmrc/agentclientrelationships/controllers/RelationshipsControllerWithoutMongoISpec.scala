@@ -42,6 +42,7 @@ import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.domain.SaAgentReference
 import play.api.mvc.RequestHeader
 import play.api.test.FakeRequest
+import uk.gov.hmrc.agentclientrelationships.services.MongoLockService
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.test.MongoSupport
 
@@ -51,10 +52,17 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class TestRelationshipCopyRecordRepository @Inject() (moduleComponent: MongoComponent)
-extends RelationshipCopyRecordRepository(moduleComponent) {
+class TestRelationshipCopyRecordRepository @Inject() (
+  moduleComponent: MongoComponent,
+  mongoLockService: MongoLockService
+)
+extends RelationshipCopyRecordRepository(moduleComponent, mongoLockService) {
+
   override def create(record: RelationshipCopyRecord): Future[Int] = Future
     .failed(new Exception("Could not connect the mongo db."))
+
+  override def queryOnStartup(): Unit = ()
+
 }
 
 class RelationshipsControllerWithoutMongoISpec
