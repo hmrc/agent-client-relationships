@@ -20,6 +20,7 @@ import org.mongodb.scala.MongoException
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus.SyncStatus
+import uk.gov.hmrc.agentclientrelationships.services.FakeLockService
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 
 import scala.collection.mutable
@@ -27,7 +28,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 class FakeRelationshipCopyRecordRepository
-extends RelationshipCopyRecordRepository(FakeMongoComponent.make) {
+extends RelationshipCopyRecordRepository(FakeMongoComponent.make, new FakeLockService) {
 
   override lazy val initialised: Future[Unit] = Future.unit
 
@@ -114,5 +115,7 @@ extends RelationshipCopyRecordRepository(FakeMongoComponent.make) {
     keysToRemove.foreach(data.remove)
     Future.successful(Right(keysToRemove.size))
   }
+
+  override def queryOnStartup(): Unit = ()
 
 }

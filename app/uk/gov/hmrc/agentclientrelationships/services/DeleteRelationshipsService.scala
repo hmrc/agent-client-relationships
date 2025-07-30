@@ -17,7 +17,6 @@
 package uk.gov.hmrc.agentclientrelationships.services
 
 import org.apache.pekko.Done
-import play.api.Logging
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys._
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
@@ -31,6 +30,7 @@ import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _, _}
 import uk.gov.hmrc.agentclientrelationships.support.Monitoring
 import uk.gov.hmrc.agentclientrelationships.support.NoRequest
 import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.agentclientrelationships.util.RequestSupport._
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.auth.core.AffinityGroup
@@ -59,7 +59,7 @@ class DeleteRelationshipsService @Inject() (
   appConfig: AppConfig
 )(implicit ec: ExecutionContext)
 extends Monitoring
-with Logging {
+with RequestAwareLogging {
 
   private val recoveryTimeout: Int = appConfig.recoveryTimeout
 
@@ -205,7 +205,7 @@ with Logging {
     }
   }
 
-  def createDeleteRecord(record: DeleteRecord): Future[Boolean] = deleteRecordRepository
+  def createDeleteRecord(record: DeleteRecord)(implicit request: RequestHeader): Future[Boolean] = deleteRecordRepository
     .create(record)
     .recoverWith { case ex =>
       logger.warn(s"[DeleteRelationshipsService] Inserting delete record into mongo failed for ${record.arn}, ${record.enrolmentKey}: ${ex.getMessage}")
@@ -215,7 +215,7 @@ with Logging {
   def removeDeleteRecord(
     arn: Arn,
     enrolmentKey: EnrolmentKey
-  ): Future[Boolean] = deleteRecordRepository
+  )(implicit request: RequestHeader): Future[Boolean] = deleteRecordRepository
     .remove(arn, enrolmentKey)
     .map(_ > 0)
     .recoverWith { case NonFatal(ex) =>
@@ -359,7 +359,7 @@ with Logging {
     arn: Arn,
     enrolmentKey: EnrolmentKey,
     endedBy: String
-  ): Future[Done] = invitationService
+  )(implicit request: RequestHeader): Future[Done] = invitationService
     .deauthoriseInvitation(
       arn,
       enrolmentKey,
