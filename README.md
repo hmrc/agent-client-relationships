@@ -179,6 +179,12 @@ Error responses:
 
     ./check.sh
 
+### Automated testing
+This service is tested by the following automated test repositories:
+- [agent-helpdesk-ui-tests](https://github.com/hmrc/agent-helpdesk-ui-tests)
+- [agent-gran-perms-acceptance-tests](https://github.com/hmrc/agent-gran-perms-acceptance-tests/)
+- [agent-services-account-ui-tests](https://github.com/hmrc/agent-services-account-ui-tests)
+- [agent-authorisation-api-acceptance-tests](https://github.com/hmrc/agent-authorisation-api-acceptance-tests)
 
 ## Running the app locally
 
