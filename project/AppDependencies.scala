@@ -1,15 +1,15 @@
 import sbt.*
 
 object AppDependencies {
-  private val mongoVer = "2.6.0"
-  private val bootstrapVer = "9.16.0"
+  private val mongoVer = "2.7.0"
+  private val bootstrapVer = "10.0.0"
   private val pekkoVersion = "1.0.3"
   val compile: Seq[ModuleID] = Seq(
     "uk.gov.hmrc"            %% "agent-mtd-identifiers"     % "2.2.0",
     "uk.gov.hmrc"            %% "bootstrap-backend-play-30" % bootstrapVer,
     "uk.gov.hmrc.mongo"      %% "hmrc-mongo-play-30"        % mongoVer,
     "org.typelevel"          %% "cats-core"                 % "2.13.0",
-    "uk.gov.hmrc"            %% "crypto-json-play-30"       % "8.2.0",
+    "uk.gov.hmrc"            %% "crypto-json-play-30"       % "8.3.0",
     "io.github.samueleresca" %% "pekko-quartz-scheduler"    % "1.2.0-pekko-1.0.x"
   )
 
