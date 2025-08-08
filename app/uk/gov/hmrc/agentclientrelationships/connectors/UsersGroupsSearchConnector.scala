@@ -103,7 +103,7 @@ with RequestAwareLogging {
   // TODO: move this transformation to the Service Layer
   def getFirstGroupAdminUser(groupId: String)(implicit rh: RequestHeader): Future[Option[UserDetails]] = getGroupUsers(
     groupId
-  ).map(_.find(_.credentialRole.exists(_ == "Admin")))
+  ).map(_.find(_.credentialRole.exists(role => role == "Admin" | role == "User")))
 
   def getGroupInfo(groupId: String)(implicit rh: RequestHeader): Future[Option[GroupInfo]] =
     monitor(s"ConsumedAPI-UGS-getGroupInfo-GET") {
