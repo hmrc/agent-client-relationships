@@ -97,6 +97,18 @@ trait RelationshipsControllerVATBehaviours {
           ),
           tags = Map("transactionName" -> "create-relationship", "path" -> requestPath)
         )
+
+        verifyAuditRequestSent(
+          1,
+          event = AgentClientRelationshipEvent.CheckES,
+          detail = Map(
+            "agentReferenceNumber" -> arn.value,
+            "oldAgentCodes" -> oldAgentCode,
+            "vrn" -> vrn.value,
+            "ESRelationship" -> "true"
+          ),
+          tags = Map("transactionName" -> "check-es", "path" -> requestPath)
+        )
       }
 
       "return 200 when agent credentials unknown but relationship exists in HMCE-VATDEC-ORG" in {
@@ -162,7 +174,6 @@ trait RelationshipsControllerVATBehaviours {
         )
       }
 
-      // TODO WG That faild
       "return 200 when relationship exists only in HMCE-VATDEC-ORG and relationship copy attempt fails because of es" in {
         givenPrincipalAgentUser(arn, "foo")
         givenGroupInfo("foo", "bar")
@@ -217,6 +228,17 @@ trait RelationshipsControllerVATBehaviours {
           tags = Map("transactionName" -> "create-relationship", "path" -> requestPath)
         )
 
+        verifyAuditRequestSent(
+          1,
+          event = AgentClientRelationshipEvent.CheckES,
+          detail = Map(
+            "agentReferenceNumber" -> arn.value,
+            "ESRelationship" -> "true",
+            "vrn" -> vrn.value,
+            "oldAgentCodes" -> oldAgentCode
+          ),
+          tags = Map("transactionName" -> "check-es", "path" -> requestPath)
+        )
       }
 
       "return 200 when relationship exists only in HMCE-VATDEC-ORG and relationship copy attempt fails because vrn is not known in ETMP" in {
@@ -250,6 +272,17 @@ trait RelationshipsControllerVATBehaviours {
           tags = Map("transactionName" -> "create-relationship", "path" -> requestPath)
         )
 
+        verifyAuditRequestSent(
+          1,
+          event = AgentClientRelationshipEvent.CheckES,
+          detail = Map(
+            "agentReferenceNumber" -> arn.value,
+            "ESRelationship" -> "true",
+            "vrn" -> vrn.value,
+            "oldAgentCodes" -> oldAgentCode
+          ),
+          tags = Map("transactionName" -> "check-es", "path" -> requestPath)
+        )
       }
 
       "return 404 when relationship is not found in es but relationship copy was made before" in {

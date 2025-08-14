@@ -41,24 +41,20 @@ case class AgentUser(
 @Singleton
 class AgentUserService @Inject() (
   es: EnrolmentStoreProxyConnector,
-  ugs: UsersGroupsSearchConnector,
-  agentCacheProvider: AgentCacheProvider
+  ugs: UsersGroupsSearchConnector
 )(implicit val executionContext: ExecutionContext)
 extends RequestAwareLogging {
-
-  val principalGroupIdCache = agentCacheProvider.esPrincipalGroupIdCache
-  val groupInfoCache = agentCacheProvider.ugsGroupInfoCache
 
   def getAgentAdminAndSetAuditData(arn: Arn)(implicit
     request: RequestHeader,
     auditData: AuditData
   ): Future[Either[String, AgentUser]] =
     for {
-      agentGroupId <- principalGroupIdCache(arn.value)(es.getPrincipalGroupIdFor(arn))
+      agentGroupId <- es.getPrincipalGroupIdFor(arn)
       firstAdminUser <- ugs.getFirstGroupAdminUser(agentGroupId)
       adminUserId = firstAdminUser.flatMap(_.userId)
       _ = adminUserId.foreach(auditData.set(credIdKey, _))
-      groupInfo <- groupInfoCache(agentGroupId)(ugs.getGroupInfo(agentGroupId))
+      groupInfo <- ugs.getGroupInfo(agentGroupId)
       agentCode = groupInfo.flatMap(_.agentCode)
       _ = agentCode.foreach(auditData.set(agentCodeKey, _))
     } yield (adminUserId, groupInfo, agentCode) match {

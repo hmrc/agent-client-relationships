@@ -128,7 +128,6 @@ class AgentCacheProvider @Inject() (
 
   implicit val readsOptionalGroupInfo: Reads[Option[GroupInfo]] = _.validateOpt[GroupInfo]
 
-  private val cacheEnabled: Boolean = configuration.underlying.getBoolean("agent.cache.enabled")
   private val agentTrackPageCacheEnabled: Boolean = configuration.underlying.getBoolean("agent.trackPage.cache.enabled")
 
   private def createCache[T](
@@ -147,18 +146,6 @@ class AgentCacheProvider @Inject() (
       )
     else
       new DoNotCache[T]
-
-  val esPrincipalGroupIdCache: Cache[String] = createCache[String](
-    enabled = cacheEnabled,
-    collectionName = "es-principalGroupId-cache",
-    ttlConfigKey = "agent.cache.expires"
-  )
-
-  val ugsGroupInfoCache: Cache[Option[GroupInfo]] = createCache[Option[GroupInfo]](
-    enabled = cacheEnabled,
-    collectionName = "ugs-groupInfo-cache",
-    ttlConfigKey = "agent.cache.expires"
-  )
 
   val agentTrackPageCache: Cache[Seq[InactiveRelationship]] = createCache[Seq[InactiveRelationship]](
     enabled = agentTrackPageCacheEnabled,

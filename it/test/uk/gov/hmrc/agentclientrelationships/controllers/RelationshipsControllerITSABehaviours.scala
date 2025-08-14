@@ -179,6 +179,18 @@ trait RelationshipsControllerITSABehaviours {
           ),
           tags = Map("transactionName" -> "create-relationship", "path" -> requestPath)
         )
+
+        verifyAuditRequestSent(
+          1,
+          event = AgentClientRelationshipEvent.CheckCESA,
+          detail = Map(
+            "agentReferenceNumber" -> arn.value,
+            "nino" -> nino.value,
+            "saAgentRef" -> "foo",
+            "cesaRelationship" -> "true"
+          ),
+          tags = Map("transactionName" -> "check-cesa", "path" -> requestPath)
+        )
       }
 
       // HAPPY PATH FOR ALTERNATIVE-ITSA
@@ -466,6 +478,18 @@ trait RelationshipsControllerITSABehaviours {
             "howRelationshipCreated" -> "CopyExistingCESARelationship"
           ),
           tags = Map("transactionName" -> "create-relationship", "path" -> requestPath)
+        )
+
+        verifyAuditRequestSent(
+          1,
+          event = AgentClientRelationshipEvent.CheckCESA,
+          detail = Map(
+            "agentReferenceNumber" -> arn.value,
+            "nino" -> nino.value,
+            "saAgentRef" -> "foo",
+            "cesaRelationship" -> "true"
+          ),
+          tags = Map("transactionName" -> "check-cesa", "path" -> requestPath)
         )
       }
 
