@@ -48,7 +48,6 @@ class CheckRelationshipsOrchestratorService @Inject() (
   checkService: CheckRelationshipsService,
   checkOldAndCopyService: CheckAndCopyRelationshipsService,
   validationService: ValidationService,
-  agentUserService: AgentUserService,
   deleteService: DeleteRelationshipsService,
   ifOrHipConnector: IfOrHipConnector,
   agentFiRelationshipConnector: AgentFiRelationshipConnector,
@@ -136,7 +135,6 @@ with RequestAwareLogging {
 
     val result =
       for {
-        _ <- agentUserService.getAgentAdminAndSetAuditData(arn)
         isClear <- deleteService.checkDeleteRecordAndEventuallyResume(arn, enrolmentKey)
         res <-
           if (isClear)
