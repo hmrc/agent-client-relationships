@@ -27,7 +27,6 @@ import play.api.Configuration
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.agentclientrelationships.connectors.GroupInfo
-import uk.gov.hmrc.agentclientrelationships.connectors.UserDetails
 import uk.gov.hmrc.agentclientrelationships.model.InactiveRelationship
 import uk.gov.hmrc.mongo.cache.CacheIdType.SimpleCacheId
 import uk.gov.hmrc.mongo.cache.DataKey
@@ -128,9 +127,7 @@ class AgentCacheProvider @Inject() (
 ) {
 
   implicit val readsOptionalGroupInfo: Reads[Option[GroupInfo]] = _.validateOpt[GroupInfo]
-  implicit val readsOptionalUserDetails: Reads[Option[UserDetails]] = _.validateOpt[UserDetails]
 
-  private val cacheEnabled: Boolean = configuration.underlying.getBoolean("agent.cache.enabled")
   private val agentTrackPageCacheEnabled: Boolean = configuration.underlying.getBoolean("agent.trackPage.cache.enabled")
 
   private def createCache[T](
@@ -149,24 +146,6 @@ class AgentCacheProvider @Inject() (
       )
     else
       new DoNotCache[T]
-
-  val esPrincipalGroupIdCache: Cache[String] = createCache[String](
-    enabled = cacheEnabled,
-    collectionName = "es-principalGroupId-cache",
-    ttlConfigKey = "agent.cache.expires"
-  )
-
-  val ugsFirstGroupAdminCache: Cache[Option[UserDetails]] = createCache[Option[UserDetails]](
-    enabled = cacheEnabled,
-    collectionName = "ugs-firstGroupAdmin-cache",
-    ttlConfigKey = "agent.cache.expires"
-  )
-
-  val ugsGroupInfoCache: Cache[Option[GroupInfo]] = createCache[Option[GroupInfo]](
-    enabled = cacheEnabled,
-    collectionName = "ugs-groupInfo-cache",
-    ttlConfigKey = "agent.cache.expires"
-  )
 
   val agentTrackPageCache: Cache[Seq[InactiveRelationship]] = createCache[Seq[InactiveRelationship]](
     enabled = agentTrackPageCacheEnabled,

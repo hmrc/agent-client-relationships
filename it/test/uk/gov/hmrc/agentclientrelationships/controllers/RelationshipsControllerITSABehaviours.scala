@@ -185,8 +185,6 @@ trait RelationshipsControllerITSABehaviours {
           event = AgentClientRelationshipEvent.CheckCESA,
           detail = Map(
             "agentReferenceNumber" -> arn.value,
-            "credId" -> "any",
-            "agentCode" -> "bar",
             "nino" -> nino.value,
             "saAgentRef" -> "foo",
             "cesaRelationship" -> "true"
@@ -487,8 +485,6 @@ trait RelationshipsControllerITSABehaviours {
           event = AgentClientRelationshipEvent.CheckCESA,
           detail = Map(
             "agentReferenceNumber" -> arn.value,
-            "credId" -> "any",
-            "agentCode" -> "bar",
             "nino" -> nino.value,
             "saAgentRef" -> "foo",
             "cesaRelationship" -> "true"

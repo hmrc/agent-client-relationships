@@ -103,8 +103,6 @@ trait RelationshipsControllerVATBehaviours {
           event = AgentClientRelationshipEvent.CheckES,
           detail = Map(
             "agentReferenceNumber" -> arn.value,
-            "credId" -> "any",
-            "agentCode" -> "bar",
             "oldAgentCodes" -> oldAgentCode,
             "vrn" -> vrn.value,
             "ESRelationship" -> "true"
@@ -235,8 +233,6 @@ trait RelationshipsControllerVATBehaviours {
           event = AgentClientRelationshipEvent.CheckES,
           detail = Map(
             "agentReferenceNumber" -> arn.value,
-            "credId" -> "any",
-            "agentCode" -> "bar",
             "ESRelationship" -> "true",
             "vrn" -> vrn.value,
             "oldAgentCodes" -> oldAgentCode
@@ -281,8 +277,6 @@ trait RelationshipsControllerVATBehaviours {
           event = AgentClientRelationshipEvent.CheckES,
           detail = Map(
             "agentReferenceNumber" -> arn.value,
-            "credId" -> "any",
-            "agentCode" -> "bar",
             "ESRelationship" -> "true",
             "vrn" -> vrn.value,
             "oldAgentCodes" -> oldAgentCode
