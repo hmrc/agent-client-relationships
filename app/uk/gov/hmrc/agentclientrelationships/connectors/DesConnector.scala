@@ -17,7 +17,6 @@
 package uk.gov.hmrc.agentclientrelationships.connectors
 
 import play.api.http.Status
-import play.api.libs.json._
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.helpers.CorrelationIdGenerator
@@ -25,7 +24,6 @@ import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentclientrelationships.util.HttpApiMonitor
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.agentclientrelationships.util.RequestSupport._
-import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.domain.SaAgentReference
 import uk.gov.hmrc.http.HttpReads.Implicits._
@@ -53,7 +51,6 @@ class DesConnector @Inject() (
 extends HttpApiMonitor
 with RequestAwareLogging {
 
-  private val desBaseUrl = appConfig.desUrl
   private val desAuthToken = appConfig.desToken
   private val desEnv = appConfig.desEnv
 
@@ -74,26 +71,6 @@ with RequestAwareLogging {
         case other =>
           logger.error(s"Error in GetStatusAgentRelationship. $other, ${response.body}")
           Seq.empty
-      }
-    }
-  }
-
-  // DES API #1363  Get Vat Customer Information
-  def vrnIsKnownInEtmp(vrn: Vrn)(implicit request: RequestHeader): Future[Boolean] = {
-    val url = url"$desBaseUrl/vat/customer/vrn/${vrn.value}/information"
-    getWithDesHeaders(
-      "GetVatCustomerInformation",
-      url,
-      desAuthToken,
-      desEnv
-    ).map { response =>
-      response.status match {
-        case Status.OK if response.json.as[JsObject].fields.isEmpty => false
-        case Status.OK => true
-        case Status.NOT_FOUND => false
-        case other: Int =>
-          logger.error(s"Error in GetVatCustomerInformation. $other, ${response.body}")
-          false
       }
     }
   }

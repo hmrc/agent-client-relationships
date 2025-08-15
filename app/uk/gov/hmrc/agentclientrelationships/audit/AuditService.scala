@@ -226,16 +226,6 @@ extends RequestAwareLogging {
     collectDetails(auditData.getDetails, createPartialAuthDetailsFields)
   )
 
-  // TODO Needs removing when we get the green light to remove legacy VAT code
-  def sendCreateRelationshipAuditEventForMtdVat()(implicit
-    request: RequestHeader,
-    auditData: AuditData
-  ): Future[Unit] = auditEvent(
-    AgentClientRelationshipEvent.CreateRelationship,
-    "create-relationship",
-    collectDetails(auditData.getDetails, createRelationshipDetailsFieldsForMtdVat)
-  )
-
   def sendCheckCesaAndPartialAuthAuditEvent()(implicit
     request: RequestHeader,
     auditData: AuditData

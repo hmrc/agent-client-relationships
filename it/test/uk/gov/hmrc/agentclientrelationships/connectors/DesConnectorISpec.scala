@@ -65,7 +65,6 @@ with IfStub {
     "auditing.consumer.baseUri.host" -> wireMockHost,
     "auditing.consumer.baseUri.port" -> wireMockPort,
     "features.copy-relationship.mtd-it" -> true,
-    "features.copy-relationship.mtd-vat" -> true,
     "features.recovery-enable" -> false,
     "agent.cache.expires" -> "1 millis",
     "agent.cache.enabled" -> false,
@@ -84,7 +83,6 @@ with IfStub {
     )(metrics, ec)
 
   val mtdItId: MtdItId = MtdItId("ABCDEF123456789")
-  val vrn: Vrn = Vrn("101747641")
   val agentARN: Arn = Arn("ABCDE123456")
   val utr: Utr = Utr("1704066305")
   val cgt: CgtRef = CgtRef("XMCGTP837878749")
@@ -174,29 +172,6 @@ with IfStub {
       givenDesReturnsServerError()
       givenAuditConnector()
       await(desConnector.getClientSaAgentSaReferences(nino)) shouldBe empty
-    }
-  }
-
-  "Des Connector vrnIsKnownInETMP" should {
-    "return true when the vrn is known in ETMP" in {
-      givenAuditConnector()
-      getVrnIsKnownInETMPFor(vrn)
-      val result = await(desConnector.vrnIsKnownInEtmp(vrn))
-      result shouldBe true
-    }
-
-    "return false when the vrn is not known in ETMP" in {
-      givenAuditConnector()
-      getVrnIsNotKnownInETMPFor(vrn)
-      val result = await(desConnector.vrnIsKnownInEtmp(vrn))
-      result shouldBe false
-    }
-
-    "return false when DES is unavailable" in {
-      givenAuditConnector()
-      givenDESRespondsWithStatusForVrn(vrn, 503)
-      val result = await(desConnector.vrnIsKnownInEtmp(vrn))
-      result shouldBe false
     }
   }
 

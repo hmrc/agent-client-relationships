@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
-import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
+import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys._
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.audit.AuditService
@@ -26,10 +26,10 @@ import uk.gov.hmrc.agentclientrelationships.connectors._
 import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax.returnValue
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.SaRef
-import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.VatRef
 import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _, _}
 import uk.gov.hmrc.agentclientrelationships.support.Monitoring
 import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDIT
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDITSUPP
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
@@ -40,7 +40,6 @@ import uk.gov.hmrc.auth.core.AffinityGroup.Agent
 import uk.gov.hmrc.domain.AgentCode
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.domain.SaAgentReference
-import play.api.mvc.RequestHeader
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import javax.inject.Inject
@@ -122,8 +121,7 @@ class CheckAndCopyRelationshipsService @Inject() (
 extends Monitoring
 with RequestAwareLogging {
 
-  val copyMtdItRelationshipFlag = appConfig.copyMtdItRelationshipFlag
-  val copyMtdVatRelationshipFlag = appConfig.copyMtdVatRelationshipFlag
+  private val copyMtdItRelationshipFlag = appConfig.copyMtdItRelationshipFlag
 
   def checkForOldRelationshipAndCopy(
     arn: Arn,
@@ -151,8 +149,6 @@ with RequestAwareLogging {
             mNino = None
           )
         )
-      case vrn @ Vrn(_) => ifEnabled(copyMtdVatRelationshipFlag)(checkESForOldRelationshipAndCopyForMtdVat(arn, vrn))
-
       case _ => Future.successful(CheckAndCopyNotImplemented)
     }
   }
@@ -376,73 +372,6 @@ with RequestAwareLogging {
           failIfCreateRecordFails = true,
           failIfAllocateAgentInESFails = false
         )
-    }
-
-  private def checkESForOldRelationshipAndCopyForMtdVat(
-    arn: Arn,
-    vrn: Vrn
-  )(implicit
-    request: RequestHeader,
-    auditData: AuditData
-  ): Future[CheckAndCopyResult] = {
-    auditData.set(howRelationshipCreatedKey, "CopyExistingESRelationship")
-    auditData.set(serviceKey, "mtd-vat")
-    auditData.set("vrn", vrn)
-    relationshipCopyRepository
-      .findBy(arn, EnrolmentKey(Service.Vat, vrn))
-      .flatMap {
-        case Some(relationshipCopyRecord) if !relationshipCopyRecord.actionRequired =>
-          // logger.warn(s"Relationship has been already been found in ES and we have already attempted to copy to MTD")
-          Future successful AlreadyCopiedDidNotCheck
-        case maybeRelationshipCopyRecord @ _ =>
-          for {
-            references <- lookupESForOldRelationship(arn, vrn)
-            result <-
-              if (references.nonEmpty)
-                checkVrnExistsInEtmp(vrn).flatMap {
-                  case true =>
-                    findOrCreateRelationshipCopyRecordAndCopy(
-                      references.map(VatRef.apply),
-                      maybeRelationshipCopyRecord,
-                      arn,
-                      EnrolmentKey(Service.Vat, vrn)
-                    ).map {
-                      case Some(_) =>
-                        auditService.sendCreateRelationshipAuditEventForMtdVat()
-                        mark("Count-CopyRelationship-VAT-FoundAndCopied")
-                        FoundAndCopied
-                      case None =>
-                        auditService.sendCreateRelationshipAuditEventForMtdVat()
-                        mark("Count-CopyRelationship-VAT-FoundButLockedCouldNotCopy")
-                        logger.warn(s"FoundButLockedCouldNotCopy- unable to copy relationship for MTD-VAT")
-                        FoundButLockedCouldNotCopy
-                    }.recover { case NonFatal(ex) =>
-                      logger.warn(
-                        s"Failed to copy ES relationship for ${arn.value}, $vrn due to: ${ex.getMessage}",
-                        ex
-                      )
-                      auditService.sendCreateRelationshipAuditEventForMtdVat()
-                      mark("Count-CopyRelationship-VAT-FoundAndFailedToCopy")
-                      FoundAndFailedToCopy
-                    }
-                  case false =>
-                    auditService.sendCreateRelationshipAuditEventForMtdVat()
-                    Future.successful(VrnNotFoundInEtmp)
-                }
-              else
-                Future.successful(NotFound)
-          } yield result
-      }
-  }
-
-  private def checkVrnExistsInEtmp(vrn: Vrn)(implicit
-    request: RequestHeader,
-    auditData: AuditData
-  ): Future[Boolean] = des
-    .vrnIsKnownInEtmp(vrn)
-    .map { result =>
-      auditData.set("vrnExistsInEtmp", result)
-      result
     }
 
   def lookupCesaForOldRelationship(

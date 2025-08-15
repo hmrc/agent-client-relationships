@@ -16,10 +16,10 @@
 
 package uk.gov.hmrc.agentclientrelationships.support
 
-import org.apache.pekko.actor.testkit.typed.scaladsl.ActorTestKit
 import org.apache.pekko.actor.ActorRef
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.actor.Props
+import org.apache.pekko.actor.testkit.typed.scaladsl.ActorTestKit
 import org.apache.pekko.testkit.TestKit
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.time.Seconds
@@ -27,6 +27,7 @@ import org.scalatest.time.Span
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
+import play.api.mvc.AnyContentAsEmpty
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
@@ -40,7 +41,6 @@ import uk.gov.hmrc.agentmtdidentifiers.model.Service
 import uk.gov.hmrc.mongo.test.MongoSupport
 
 import java.time.Instant
-import java.time.LocalDateTime
 import java.time.ZoneOffset
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
@@ -57,7 +57,7 @@ with HipStub
 with AUCDStubs
 with BeforeAndAfterEach {
 
-  implicit val request = FakeRequest()
+  implicit val request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
 
   protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder().configure(
     "microservice.services.enrolment-store-proxy.port" -> wireMockPort,
@@ -67,7 +67,6 @@ with BeforeAndAfterEach {
     "auditing.consumer.baseUri.host" -> wireMockHost,
     "auditing.consumer.baseUri.port" -> wireMockPort,
     "features.copy-relationship.mtd-it" -> true,
-    "features.copy-relationship.mtd-vat" -> true,
     "microservice.services.agent-client-authorisation.port" -> wireMockPort,
     "microservice.services.agent-user-client-details.port" -> wireMockPort,
     "features.recovery-enable" -> false,

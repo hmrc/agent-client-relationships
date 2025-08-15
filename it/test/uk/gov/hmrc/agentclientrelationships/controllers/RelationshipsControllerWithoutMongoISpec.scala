@@ -21,27 +21,24 @@ import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.ws.WSClient
+import play.api.mvc.RequestHeader
+import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.PartialAuthRelationship
-import uk.gov.hmrc.agentclientrelationships.repository.RelationshipCopyRecordRepository
 import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipCopyRecord
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipCopyRecordRepository
 import uk.gov.hmrc.agentclientrelationships.stubs._
 import uk.gov.hmrc.agentclientrelationships.support.Resource
-import uk.gov.hmrc.agentclientrelationships.support.TestData
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 import uk.gov.hmrc.agentclientrelationships.support.WireMockSupport
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDIT
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDITSUPP
 import uk.gov.hmrc.agentmtdidentifiers.model._
-import uk.gov.hmrc.domain.AgentCode
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.domain.SaAgentReference
-import play.api.mvc.RequestHeader
-import play.api.test.FakeRequest
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.test.MongoSupport
 
@@ -88,7 +85,6 @@ with AuthStub {
       "internal-auth.token" -> "internalAuthToken",
       "auditing.consumer.baseUri.host" -> wireMockHost,
       "auditing.consumer.baseUri.port" -> wireMockPort,
-      "features.copy-relationship.mtd-vat" -> true,
       "features.recovery-enable" -> false,
       "agent.cache.expires" -> "1 millis",
       "agent.cache.enabled" -> true,
@@ -119,10 +115,7 @@ with AuthStub {
   val mtditid = MtdItId("ABCDEF123456789")
   val mtdItEnrolmentKey: EnrolmentKey = EnrolmentKey(Service.MtdIt, mtditid)
   val nino = Nino("AB123456C")
-  val vrn = Vrn("101747641")
-  val vatEnrolmentKey: EnrolmentKey = EnrolmentKey(Service.Vat, vrn)
   val oldAgentCode = "oldAgentCode"
-  val mtdVatIdType = "VRN"
 
   def partialAuthRelationship(service: String): PartialAuthRelationship = PartialAuthRelationship(
     Instant.now().truncatedTo(ChronoUnit.SECONDS),
@@ -169,62 +162,6 @@ with AuthStub {
           "cesaRelationship" -> "true"
         ),
         tags = Map("transactionName" -> "check-cesa", "path" -> requestPath)
-      )
-    }
-  }
-
-  "GET /agent/:arn/service/HMRC-MTD-VAT/client/VRN/:vrn" should {
-
-    val requestPath = s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-VAT/client/VRN/${vrn.value}"
-
-    "return 200 when relationship exists mapping and es and relationship copy attempt fails because of mongo" in {
-      givenPrincipalAgentUser(arn, "foo")
-      givenGroupInfo("foo", "bar")
-      givenDelegatedGroupIdsNotExistForMtdVatId(vrn)
-      givenArnIsKnownFor(arn, AgentCode(oldAgentCode))
-      givenAgentIsAllocatedAndAssignedToClientForHMCEVATDECORG(vrn, oldAgentCode)
-      givenAgentCanBeAllocated(vrn, arn)
-      givenMTDVATEnrolmentAllocationSucceeds(vrn, "bar")
-      givenAuditConnector()
-      givenAdminUser("foo", "any")
-      getVrnIsKnownInETMPFor(vrn)
-
-      await(repo.findBy(arn, vatEnrolmentKey)) shouldBe empty
-
-      val result = doAgentRequest(requestPath)
-      result.status shouldBe 200
-
-      await(repo.findBy(arn, vatEnrolmentKey)) shouldBe empty
-
-      verifyAuditRequestSent(
-        1,
-        event = AgentClientRelationshipEvent.CreateRelationship,
-        detail = Map(
-          "credId" -> "any",
-          "agentCode" -> "bar",
-          "agentReferenceNumber" -> arn.value,
-          "service" -> "mtd-vat",
-          "vrn" -> vrn.value,
-          "oldAgentCodes" -> oldAgentCode,
-          "ESRelationship" -> "true",
-          "etmpRelationshipCreated" -> "false",
-          "enrolmentDelegated" -> "false",
-          "howRelationshipCreated" -> "CopyExistingESRelationship",
-          "vrnExistsInEtmp" -> "true"
-        ),
-        tags = Map("transactionName" -> "create-relationship", "path" -> requestPath)
-      )
-
-      verifyAuditRequestSent(
-        1,
-        event = AgentClientRelationshipEvent.CheckES,
-        detail = Map(
-          "agentReferenceNumber" -> arn.value,
-          "ESRelationship" -> "true",
-          "vrn" -> vrn.value,
-          "oldAgentCodes" -> oldAgentCode
-        ),
-        tags = Map("transactionName" -> "check-es", "path" -> requestPath)
       )
     }
   }

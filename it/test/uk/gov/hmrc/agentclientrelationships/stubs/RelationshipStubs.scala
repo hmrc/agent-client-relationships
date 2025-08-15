@@ -60,11 +60,6 @@ with UsersGroupsSearchStubs {
     EnrolmentKey(Service.Vat, vrn)
   )
 
-  def givenDelegatedGroupIdsExistForMtdVatId(vrn: Vrn) = givenDelegatedGroupIdsExistFor(
-    EnrolmentKey(Service.Vat, vrn),
-    Set("bar", "foo")
-  )
-
   def givenMTDITEnrolmentAllocationSucceeds(
     mtdItId: MtdItId,
     agentCode: String
@@ -82,16 +77,6 @@ with UsersGroupsSearchStubs {
     "foo",
     "any",
     EnrolmentKey(Service.MtdItSupp, mtdItId),
-    agentCode
-  )
-
-  def givenMTDVATEnrolmentAllocationSucceeds(
-    vrn: Vrn,
-    agentCode: String
-  ) = givenEnrolmentAllocationSucceeds(
-    "foo",
-    "any",
-    EnrolmentKey(Service.Vat, vrn),
     agentCode
   )
 
