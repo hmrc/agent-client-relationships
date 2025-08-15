@@ -55,7 +55,6 @@ with UsersGroupsSearchStubs {
     "auditing.consumer.baseUri.host" -> wireMockHost,
     "auditing.consumer.baseUri.port" -> wireMockPort,
     "features.copy-relationship.mtd-it" -> true,
-    "features.copy-relationship.mtd-vat" -> true,
     "features.recovery-enable" -> false,
     "agent.cache.expires" -> "1 millis",
     "agent.cache.enabled" -> true,
