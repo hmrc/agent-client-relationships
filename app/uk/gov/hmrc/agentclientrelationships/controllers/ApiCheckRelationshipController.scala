@@ -23,7 +23,7 @@ import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.api.ApiCheckRelationshipRequest
 import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiFailureResponse._
 import uk.gov.hmrc.agentclientrelationships.services._
-import uk.gov.hmrc.agentmtdidentifiers.model._
+import uk.gov.hmrc.agentclientrelationships.model.identifiers._
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 

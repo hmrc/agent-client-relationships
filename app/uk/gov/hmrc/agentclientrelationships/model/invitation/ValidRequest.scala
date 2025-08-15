@@ -16,8 +16,8 @@
 
 package uk.gov.hmrc.agentclientrelationships.model.invitation
 
-import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier.ClientId
-import uk.gov.hmrc.agentmtdidentifiers.model.Service
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.ClientIdentifier.ClientId
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 
 case class ValidRequest(
   suppliedClientId: ClientId,

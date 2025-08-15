@@ -28,10 +28,10 @@ import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus.Failed
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus.Success
 import uk.gov.hmrc.agentclientrelationships.support.MongoApp
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
-import uk.gov.hmrc.agentmtdidentifiers.model.Service
-import uk.gov.hmrc.agentmtdidentifiers.model.Vrn
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Vrn
 
 import java.time.Instant
 import java.time.LocalDateTime

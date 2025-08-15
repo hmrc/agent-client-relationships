@@ -25,7 +25,7 @@ import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.repository.DbUpdateStatus
 import uk.gov.hmrc.agentclientrelationships.services.CreateRelationshipsService
 import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import play.api.mvc.RequestHeader
 
 import scala.concurrent.Future

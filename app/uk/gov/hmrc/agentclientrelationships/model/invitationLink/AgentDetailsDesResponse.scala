@@ -17,7 +17,7 @@
 package uk.gov.hmrc.agentclientrelationships.model.invitationLink
 
 import play.api.libs.json._
-import uk.gov.hmrc.agentmtdidentifiers.model.SuspensionDetails
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.SuspensionDetails
 
 case class AgentDetailsDesResponse(
   agencyDetails: AgencyDetails,

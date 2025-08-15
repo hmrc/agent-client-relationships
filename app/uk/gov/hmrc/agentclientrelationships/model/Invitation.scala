@@ -22,11 +22,11 @@ import play.api.libs.json.Json
 import play.api.libs.json.Reads
 import play.api.libs.json.__
 import uk.gov.hmrc.agentclientrelationships.model.transitional.StatusChangeEvent
-import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier.ClientId
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDIT
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDITSUPP
-import uk.gov.hmrc.agentmtdidentifiers.model.InvitationId
-import uk.gov.hmrc.agentmtdidentifiers.model.Service
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.ClientIdentifier.ClientId
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDIT
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDITSUPP
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.InvitationId
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 import uk.gov.hmrc.crypto.json.JsonEncryption.stringEncrypterDecrypter
 import uk.gov.hmrc.crypto.Decrypter
 import uk.gov.hmrc.crypto.Encrypter

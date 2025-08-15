@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, MtdItId}
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.{Arn, MtdItId}
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 
 import scala.concurrent.Future

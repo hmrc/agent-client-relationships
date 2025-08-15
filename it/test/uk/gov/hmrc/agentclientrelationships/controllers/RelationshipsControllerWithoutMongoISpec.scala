@@ -25,20 +25,13 @@ import play.api.mvc.RequestHeader
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
-import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
-import uk.gov.hmrc.agentclientrelationships.model.PartialAuthRelationship
-import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
-import uk.gov.hmrc.agentclientrelationships.repository.RelationshipCopyRecord
-import uk.gov.hmrc.agentclientrelationships.repository.RelationshipCopyRecordRepository
+import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey, PartialAuthRelationship}
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.{HMRCMTDIT, HMRCMTDITSUPP}
+import uk.gov.hmrc.agentclientrelationships.model.identifiers._
+import uk.gov.hmrc.agentclientrelationships.repository.{PartialAuthRepository, RelationshipCopyRecord, RelationshipCopyRecordRepository}
 import uk.gov.hmrc.agentclientrelationships.stubs._
-import uk.gov.hmrc.agentclientrelationships.support.Resource
-import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
-import uk.gov.hmrc.agentclientrelationships.support.WireMockSupport
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDIT
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDITSUPP
-import uk.gov.hmrc.agentmtdidentifiers.model._
-import uk.gov.hmrc.domain.Nino
-import uk.gov.hmrc.domain.SaAgentReference
+import uk.gov.hmrc.agentclientrelationships.support.{Resource, UnitSpec, WireMockSupport}
+import uk.gov.hmrc.domain.{AgentCode, Nino, SaAgentReference}
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.test.MongoSupport
 

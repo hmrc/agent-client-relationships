@@ -27,7 +27,7 @@ import uk.gov.hmrc.agentclientrelationships.model.stride.ActiveClientsRelationsh
 import uk.gov.hmrc.agentclientrelationships.model.stride.ClientsRelationshipsRequest
 import uk.gov.hmrc.agentclientrelationships.services.StrideClientDetailsService
 import uk.gov.hmrc.agentclientrelationships.services.ValidationService
-import uk.gov.hmrc.agentmtdidentifiers.model.Service
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 

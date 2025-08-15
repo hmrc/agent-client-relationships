@@ -20,10 +20,10 @@ import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.agentclientrelationships.connectors.EnrolmentStoreProxyConnector
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.Invitation
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDIT
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDITSUPP
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCPIR
-import uk.gov.hmrc.agentmtdidentifiers.model._
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDIT
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDITSUPP
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCPIR
+import uk.gov.hmrc.agentclientrelationships.model.identifiers._
 import play.api.mvc.RequestHeader
 
 import java.net.URLEncoder

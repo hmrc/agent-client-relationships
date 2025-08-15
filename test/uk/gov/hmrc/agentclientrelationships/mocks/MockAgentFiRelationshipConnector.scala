@@ -23,7 +23,7 @@ import org.mockito.stubbing.OngoingStubbing
 import uk.gov.hmrc.agentclientrelationships.connectors.AgentFiRelationshipConnector
 import uk.gov.hmrc.agentclientrelationships.model.stride.ClientRelationship
 import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.model.RelationshipFailureResponse
 

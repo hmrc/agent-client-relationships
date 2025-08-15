@@ -18,7 +18,7 @@ package uk.gov.hmrc.agentclientrelationships.services
 
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext

@@ -20,7 +20,7 @@ import uk.gov.hmrc.mongo.lock.Lock
 import uk.gov.hmrc.mongo.lock.MongoLockRepository
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.TimestampSupport
-import uk.gov.hmrc.play.http.logging.Mdc
+import uk.gov.hmrc.mdc.Mdc
 
 import javax.inject.Inject
 import javax.inject.Singleton

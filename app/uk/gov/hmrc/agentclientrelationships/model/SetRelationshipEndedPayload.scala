@@ -18,7 +18,7 @@ package uk.gov.hmrc.agentclientrelationships.model
 
 import play.api.libs.json.Json
 import play.api.libs.json.OFormat
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 
 case class SetRelationshipEndedPayload(
   arn: Arn,

@@ -19,7 +19,7 @@ package uk.gov.hmrc.agentclientrelationships.connectors
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsFailureResponse
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa.ItsaBusinessDetails
-import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
 import uk.gov.hmrc.domain.Nino
 import play.api.mvc.RequestHeader
 

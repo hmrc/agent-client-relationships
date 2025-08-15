@@ -18,7 +18,7 @@ package uk.gov.hmrc.agentclientrelationships.model
 
 import play.api.libs.functional.syntax.toFunctionalBuilderOps
 import play.api.libs.json._
-import uk.gov.hmrc.agentmtdidentifiers.model._
+import uk.gov.hmrc.agentclientrelationships.model.identifiers._
 
 import java.time.LocalDate
 import java.time.LocalDateTime

@@ -26,7 +26,7 @@ import uk.gov.hmrc.agentclientrelationships.model.DeletionCount
 import uk.gov.hmrc.agentclientrelationships.model.TerminationResponse
 import uk.gov.hmrc.agentclientrelationships.repository.DeleteRecordRepository
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipCopyRecordRepository
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.ExecutionContext

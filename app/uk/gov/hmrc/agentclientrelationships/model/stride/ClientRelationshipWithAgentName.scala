@@ -17,7 +17,7 @@
 package uk.gov.hmrc.agentclientrelationships.model.stride
 
 import play.api.libs.json._
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 
 import java.time.Instant
 import java.time.LocalDate
