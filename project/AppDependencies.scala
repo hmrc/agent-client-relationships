@@ -18,6 +18,7 @@ object AppDependencies {
     "org.scalatestplus.play" %% "scalatestplus-play"        % "7.0.1"      % Test,
     "uk.gov.hmrc.mongo"      %% "hmrc-mongo-test-play-30"   % mongoVer     % Test,
     "org.apache.pekko"       %% "pekko-testkit"             % pekkoVersion % Test,
-    "org.apache.pekko"       %% "pekko-actor-testkit-typed" % pekkoVersion % Test
+    "org.apache.pekko"       %% "pekko-actor-testkit-typed" % pekkoVersion % Test,
+    "org.scalacheck"         %% "scalacheck"                % "1.17.0"     % Test
   )
 }
