@@ -101,21 +101,6 @@ extends RequestAwareLogging {
     invitationIdKey
   )
 
-  // TODO Needs removing when we get the green light to remove legacy VAT code
-  private val createRelationshipDetailsFieldsForMtdVat: Seq[String] = Seq(
-    agentCodeKey,
-    credIdKey,
-    arnKey,
-    serviceKey,
-    "vrn",
-    "oldAgentCodes",
-    "ESRelationship",
-    etmpRelationshipCreatedKey,
-    enrolmentDelegatedKey,
-    howRelationshipCreatedKey,
-    "vrnExistsInEtmp"
-  )
-
   private val checkCesaDetailsAndPartialAuthFields: Seq[String] = Seq(
     agentCodeKey,
     credIdKey,
