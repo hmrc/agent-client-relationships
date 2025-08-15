@@ -22,9 +22,9 @@ import uk.gov.hmrc.agentclientrelationships.model.Invitation
 import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiBulkInvitationResponse
 import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiBulkInvitationsResponse
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
-import uk.gov.hmrc.agentmtdidentifiers.model.Service
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 import uk.gov.hmrc.domain.Nino
 
 import java.time.Instant

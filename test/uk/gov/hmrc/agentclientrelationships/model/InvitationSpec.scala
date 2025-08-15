@@ -20,8 +20,8 @@ import play.api.libs.json.JsObject
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 import uk.gov.hmrc.agentclientrelationships.util.CryptoUtil.encryptedString
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.Vat
-import uk.gov.hmrc.agentmtdidentifiers.model.Vrn
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Vat
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Vrn
 import uk.gov.hmrc.crypto.Decrypter
 import uk.gov.hmrc.crypto.Encrypter
 import uk.gov.hmrc.crypto.SymmetricCryptoFactory

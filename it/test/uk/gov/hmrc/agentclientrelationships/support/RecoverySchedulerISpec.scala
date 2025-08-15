@@ -16,10 +16,10 @@
 
 package uk.gov.hmrc.agentclientrelationships.support
 
+import org.apache.pekko.actor.testkit.typed.scaladsl.ActorTestKit
 import org.apache.pekko.actor.ActorRef
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.actor.Props
-import org.apache.pekko.actor.testkit.typed.scaladsl.ActorTestKit
 import org.apache.pekko.testkit.TestKit
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.time.Seconds
@@ -32,12 +32,12 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 import uk.gov.hmrc.agentclientrelationships.repository._
 import uk.gov.hmrc.agentclientrelationships.services.DeleteRelationshipsService
 import uk.gov.hmrc.agentclientrelationships.stubs._
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
-import uk.gov.hmrc.agentmtdidentifiers.model.Service
 import uk.gov.hmrc.mongo.test.MongoSupport
 
 import java.time.Instant

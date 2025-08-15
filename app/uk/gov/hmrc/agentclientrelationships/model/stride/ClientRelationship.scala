@@ -18,8 +18,8 @@ package uk.gov.hmrc.agentclientrelationships.model.stride
 
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.agentmtdidentifiers.model.Service
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 
 import java.time.Instant
 import java.time.LocalDate

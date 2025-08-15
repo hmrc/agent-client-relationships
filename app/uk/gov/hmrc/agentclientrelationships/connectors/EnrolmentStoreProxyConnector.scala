@@ -30,7 +30,7 @@ import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
 import uk.gov.hmrc.agentclientrelationships.support.TaxIdentifierSupport._
 import uk.gov.hmrc.agentclientrelationships.util.HttpApiMonitor
 import uk.gov.hmrc.agentclientrelationships.util.RequestSupport.hc
-import uk.gov.hmrc.agentmtdidentifiers.model._
+import uk.gov.hmrc.agentclientrelationships.model.identifiers._
 import uk.gov.hmrc.domain.AgentCode
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.HttpResponse

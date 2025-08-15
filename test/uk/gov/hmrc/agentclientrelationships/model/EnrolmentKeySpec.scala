@@ -18,7 +18,7 @@ package uk.gov.hmrc.agentclientrelationships.model
 
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import uk.gov.hmrc.agentmtdidentifiers.model.Identifier
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Identifier
 class EnrolmentKeySpec
 extends AnyFlatSpec
 with Matchers {

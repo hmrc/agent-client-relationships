@@ -19,7 +19,7 @@ package uk.gov.hmrc.agentclientrelationships.stubs
 import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.stubbing.StubMapping
 import org.scalatest.concurrent.Eventually.eventually
-import uk.gov.hmrc.agentmtdidentifiers.model._
+import uk.gov.hmrc.agentclientrelationships.model.identifiers._
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.domain.TaxIdentifier
 

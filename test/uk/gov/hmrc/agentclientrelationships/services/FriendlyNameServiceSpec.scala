@@ -28,10 +28,10 @@ import uk.gov.hmrc.agentclientrelationships.connectors.EnrolmentStoreProxyConnec
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.Invitation
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.MtdIt
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.MtdItSupp
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.PersonalIncomeRecord
-import uk.gov.hmrc.agentmtdidentifiers.model._
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdIt
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdItSupp
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.PersonalIncomeRecord
+import uk.gov.hmrc.agentclientrelationships.model.identifiers._
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.UpstreamErrorResponse
 

@@ -31,9 +31,9 @@ import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
 import uk.gov.hmrc.agentclientrelationships.services.InvitationLinkService
 import uk.gov.hmrc.agentclientrelationships.stubs.HipStub
 import uk.gov.hmrc.agentclientrelationships.support.TestData
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.Cbc
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.MtdIt
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.MtdItSupp
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Cbc
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdIt
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdItSupp
 import uk.gov.hmrc.auth.core.AuthConnector
 
 import java.time.temporal.ChronoUnit

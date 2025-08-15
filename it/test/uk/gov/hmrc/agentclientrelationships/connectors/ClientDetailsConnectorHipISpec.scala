@@ -41,7 +41,7 @@ import uk.gov.hmrc.agentclientrelationships.stubs.DataStreamStub
 import uk.gov.hmrc.agentclientrelationships.stubs.HipStub
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 import uk.gov.hmrc.agentclientrelationships.support.WireMockSupport
-import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
 import uk.gov.hmrc.domain.Nino
 
 import java.time.LocalDate

@@ -27,10 +27,10 @@ import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgencyDetails
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentDetailsDesResponse
 import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDVAT
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.Vat
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.agentmtdidentifiers.model.Vrn
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDVAT
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Vat
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Vrn
 
 import java.time.LocalDate
 import scala.concurrent.ExecutionContext

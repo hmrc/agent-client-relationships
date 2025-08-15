@@ -30,9 +30,9 @@ import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureRe
 import uk.gov.hmrc.agentclientrelationships.model.invitation._
 import uk.gov.hmrc.agentclientrelationships.services.InvitationService
 import uk.gov.hmrc.agentclientrelationships.services.ValidationService
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.Trust
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.TrustNT
-import uk.gov.hmrc.agentmtdidentifiers.model._
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Trust
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.TrustNT
+import uk.gov.hmrc.agentclientrelationships.model.identifiers._
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 

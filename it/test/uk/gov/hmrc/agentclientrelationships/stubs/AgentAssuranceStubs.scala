@@ -23,7 +23,7 @@ import play.api.libs.json.Json
 import play.api.test.Helpers.AUTHORIZATION
 import play.api.test.Helpers.USER_AGENT
 import uk.gov.hmrc.agentclientrelationships.support.TestData
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 
 trait AgentAssuranceStubs
 extends TestData {

@@ -38,8 +38,8 @@ import uk.gov.hmrc.agentclientrelationships.services.EmailService
 import uk.gov.hmrc.agentclientrelationships.services.MongoLockService
 import uk.gov.hmrc.agentclientrelationships.stubs.EmailStubs
 import uk.gov.hmrc.agentclientrelationships.util.DateTimeHelper
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.Vat
-import uk.gov.hmrc.agentmtdidentifiers.model.Vrn
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Vat
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Vrn
 
 import java.time.Instant
 import java.time.LocalDate

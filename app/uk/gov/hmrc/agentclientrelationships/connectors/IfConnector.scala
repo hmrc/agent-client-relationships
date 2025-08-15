@@ -28,7 +28,7 @@ import uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa.ItsaBusines
 import uk.gov.hmrc.agentclientrelationships.util.HttpApiMonitor
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.agentclientrelationships.util.RequestSupport._
-import uk.gov.hmrc.agentmtdidentifiers.model._
+import uk.gov.hmrc.agentclientrelationships.model.identifiers._
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.HttpResponse

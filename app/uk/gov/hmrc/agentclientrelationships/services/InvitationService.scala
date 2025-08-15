@@ -36,13 +36,13 @@ import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureRe
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgencyDetails
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
-import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier.ClientId
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier
-import uk.gov.hmrc.agentmtdidentifiers.model.NinoType
-import uk.gov.hmrc.agentmtdidentifiers.model.Service
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.MtdIt
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.MtdItSupp
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.ClientIdentifier.ClientId
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.ClientIdentifier
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoType
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdIt
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdItSupp
 import uk.gov.hmrc.domain.Nino
 
 import java.time.Instant

@@ -19,8 +19,8 @@ package uk.gov.hmrc.agentclientrelationships.services
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.connectors.AgentAssuranceConnector
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentDetailsDesResponse
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.agentmtdidentifiers.model.SuspensionDetails
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.SuspensionDetails
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext

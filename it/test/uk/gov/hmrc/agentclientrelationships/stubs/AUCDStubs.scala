@@ -21,7 +21,7 @@ import com.github.tomakehurst.wiremock.client.WireMock.get
 import com.github.tomakehurst.wiremock.client.WireMock.stubFor
 import com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo
 import uk.gov.hmrc.agentclientrelationships.support.WireMockSupport
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 
 trait AUCDStubs {
 

@@ -30,8 +30,8 @@ import uk.gov.hmrc.agentclientrelationships.stubs.EnrolmentStoreProxyStubs
 import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 import uk.gov.hmrc.agentclientrelationships.support.WireMockSupport
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.MtdIt
-import uk.gov.hmrc.agentmtdidentifiers.model._
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdIt
+import uk.gov.hmrc.agentclientrelationships.model.identifiers._
 import uk.gov.hmrc.domain.AgentCode
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http._

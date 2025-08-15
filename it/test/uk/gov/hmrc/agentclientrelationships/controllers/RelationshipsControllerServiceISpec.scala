@@ -17,7 +17,7 @@
 package uk.gov.hmrc.agentclientrelationships.controllers
 
 import uk.gov.hmrc.agentclientrelationships.stubs.HipStub
-import uk.gov.hmrc.agentmtdidentifiers.model.Service
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 
 class RelationshipsControllerServiceISpec
 extends RelationshipsBaseControllerISpec

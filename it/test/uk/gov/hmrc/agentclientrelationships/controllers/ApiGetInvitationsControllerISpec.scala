@@ -35,8 +35,8 @@ import uk.gov.hmrc.agentclientrelationships.services.AgentAssuranceService
 import uk.gov.hmrc.agentclientrelationships.services.InvitationLinkService
 import uk.gov.hmrc.agentclientrelationships.stubs._
 import uk.gov.hmrc.agentclientrelationships.support.TestData
-import uk.gov.hmrc.agentmtdidentifiers.model.Service._
-import uk.gov.hmrc.agentmtdidentifiers.model.SuspensionDetails
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service._
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.SuspensionDetails
 import uk.gov.hmrc.auth.core.AuthConnector
 
 import java.time.Instant
