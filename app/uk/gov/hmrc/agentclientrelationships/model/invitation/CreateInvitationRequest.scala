@@ -19,9 +19,9 @@ package uk.gov.hmrc.agentclientrelationships.model.invitation
 import play.api.libs.json.Json
 import play.api.libs.json.OFormat
 import InvitationFailureResponse._
-import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier.ClientId
-import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier
-import uk.gov.hmrc.agentmtdidentifiers.model.Service
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.ClientIdentifier.ClientId
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.ClientIdentifier
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 
 import scala.util.Try
 

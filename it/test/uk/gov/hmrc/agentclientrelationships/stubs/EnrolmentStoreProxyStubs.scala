@@ -27,7 +27,7 @@ import org.scalatest.time.Span
 import play.api.http.Status
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
-import uk.gov.hmrc.agentmtdidentifiers.model._
+import uk.gov.hmrc.agentclientrelationships.model.identifiers._
 import uk.gov.hmrc.domain.TaxIdentifier
 
 trait EnrolmentStoreProxyStubs

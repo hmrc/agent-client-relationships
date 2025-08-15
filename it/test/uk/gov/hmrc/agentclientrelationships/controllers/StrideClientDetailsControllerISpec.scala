@@ -32,9 +32,9 @@ import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
 import uk.gov.hmrc.agentclientrelationships.stubs.AfiRelationshipStub
 import uk.gov.hmrc.agentclientrelationships.stubs.ClientDetailsStub
 import uk.gov.hmrc.agentclientrelationships.stubs.HipStub
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.Cbc
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.CbcNonUk
-import uk.gov.hmrc.agentmtdidentifiers.model._
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Cbc
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.CbcNonUk
+import uk.gov.hmrc.agentclientrelationships.model.identifiers._
 import uk.gov.hmrc.domain.Nino
 
 import java.time.temporal.ChronoUnit

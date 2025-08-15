@@ -30,8 +30,8 @@ import uk.gov.hmrc.agentclientrelationships.services.AltItsaNotFoundOrFailed
 import uk.gov.hmrc.agentclientrelationships.services.CheckAndCopyRelationshipsService
 import uk.gov.hmrc.agentclientrelationships.services.FoundAndCopied
 import uk.gov.hmrc.agentclientrelationships.services.{NotFound => CheckAndCopyNotFound}
-import uk.gov.hmrc.agentmtdidentifiers.model.Service
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.HMRCMTDIT
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDIT
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController

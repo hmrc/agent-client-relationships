@@ -23,21 +23,15 @@ import play.api.mvc.RequestHeader
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.model.ActiveRelationship
-import uk.gov.hmrc.agentclientrelationships.model.InactiveRelationship
+import uk.gov.hmrc.agentclientrelationships.model.{ActiveRelationship, InactiveRelationship}
+import uk.gov.hmrc.agentclientrelationships.model.identifiers._
 import uk.gov.hmrc.agentclientrelationships.stubs.AfiRelationshipStub
-import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
-import uk.gov.hmrc.agentclientrelationships.support.WireMockSupport
-import uk.gov.hmrc.agentmtdidentifiers.model._
-import uk.gov.hmrc.http.client.HttpClientV2
-import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.agentclientrelationships.support.{UnitSpec, WireMockSupport}
 import uk.gov.hmrc.http.UpstreamErrorResponse
+import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
-import java.time.LocalDate
-import java.time.LocalDateTime
-import scala.concurrent.ExecutionContext
-import scala.concurrent.ExecutionContextExecutor
+import java.time.{LocalDate, LocalDateTime}
 
 class AgentFiRelationshipConnectorISpec
 extends UnitSpec

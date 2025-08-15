@@ -17,10 +17,10 @@
 package uk.gov.hmrc.agentclientrelationships.model
 
 import play.api.libs.json._
-import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdType
-import uk.gov.hmrc.agentmtdidentifiers.model.ClientIdentifier
-import uk.gov.hmrc.agentmtdidentifiers.model.Identifier
-import uk.gov.hmrc.agentmtdidentifiers.model.Service
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.ClientIdType
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.ClientIdentifier
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Identifier
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 import uk.gov.hmrc.domain.TaxIdentifier
 
 /** An implementation of EnrolmentKey with some extra features to make life easier.

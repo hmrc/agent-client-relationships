@@ -22,7 +22,7 @@ import org.apache.commons.lang3.RandomStringUtils
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink._
 import uk.gov.hmrc.agentclientrelationships.repository.AgentReferenceRepository
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import play.api.mvc.RequestHeader
 
 import javax.inject.Inject
@@ -113,7 +113,7 @@ extends RequestAwareLogging {
     normalisedAgentNames: String
   ): Future[AgentReferenceRecord] = {
     val agentReferenceRecord = AgentReferenceRecord(
-      uid = RandomStringUtils.random(8, codetable),
+      uid = RandomStringUtils.secure().next(8, codetable),
       arn = arn,
       normalisedAgentNames = Seq(normalisedAgentNames)
     )

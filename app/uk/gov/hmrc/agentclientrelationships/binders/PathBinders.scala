@@ -19,7 +19,7 @@ package uk.gov.hmrc.agentclientrelationships.binders
 import play.api.mvc.QueryStringBindable
 import uk.gov.hmrc.agentclientrelationships.model.InvitationStatus
 import uk.gov.hmrc.agentclientrelationships.model.UserId
-import uk.gov.hmrc.agentmtdidentifiers.model._
+import uk.gov.hmrc.agentclientrelationships.model.identifiers._
 import uk.gov.hmrc.domain.Nino
 
 // scalafmt: { binPack.parentConstructors = Always }

@@ -16,14 +16,11 @@
 
 package uk.gov.hmrc.agentclientrelationships.support
 
+import org.apache.pekko.actor.{ActorRef, ActorSystem, Props}
 import org.apache.pekko.actor.testkit.typed.scaladsl.ActorTestKit
-import org.apache.pekko.actor.ActorRef
-import org.apache.pekko.actor.ActorSystem
-import org.apache.pekko.actor.Props
 import org.apache.pekko.testkit.TestKit
 import org.scalatest.BeforeAndAfterEach
-import org.scalatest.time.Seconds
-import org.scalatest.time.Span
+import org.scalatest.time.{Seconds, Span}
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
@@ -31,17 +28,13 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.{Arn, MtdItId, Service}
 import uk.gov.hmrc.agentclientrelationships.repository._
 import uk.gov.hmrc.agentclientrelationships.services.DeleteRelationshipsService
 import uk.gov.hmrc.agentclientrelationships.stubs._
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
-import uk.gov.hmrc.agentmtdidentifiers.model.Service
 import uk.gov.hmrc.mongo.test.MongoSupport
 
-import java.time.Instant
-import java.time.LocalDateTime
-import java.time.ZoneOffset
+import java.time.{Instant, ZoneOffset}
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 

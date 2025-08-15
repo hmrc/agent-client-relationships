@@ -22,7 +22,7 @@ import uk.gov.hmrc.agentclientrelationships.model.api.ApiCheckRelationshipReques
 import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiFailureResponse.ErrorBody
 import uk.gov.hmrc.agentclientrelationships.stubs._
 import uk.gov.hmrc.agentclientrelationships.support.TestData
-import uk.gov.hmrc.agentmtdidentifiers.model.Service._
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service._
 
 class ApiCheckRelationshipControllerISpec
 extends BaseControllerISpec

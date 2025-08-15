@@ -22,7 +22,7 @@ import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys.agentCodeKey
 import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys.credIdKey
 import uk.gov.hmrc.agentclientrelationships.connectors.EnrolmentStoreProxyConnector
 import uk.gov.hmrc.agentclientrelationships.connectors.UsersGroupsSearchConnector
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.domain.AgentCode
 import play.api.mvc.RequestHeader
 

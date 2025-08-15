@@ -19,8 +19,12 @@ package uk.gov.hmrc.agentclientrelationships.auth
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import play.api.mvc._
 import uk.gov.hmrc.agentclientrelationships.controllers.ErrorResults._
-import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey => LocalEnrolmentKey, _}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Enrolment => _, _}
+import uk.gov.hmrc.agentclientrelationships.model.BasicAuthentication
+import uk.gov.hmrc.agentclientrelationships.model.EnrolmentsWithNino
+import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey => LocalEnrolmentKey}
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.{Enrolment => _, _}
 import uk.gov.hmrc.auth.core.AffinityGroup.Individual
 import uk.gov.hmrc.auth.core.AffinityGroup.Organisation
 import uk.gov.hmrc.auth.core.AuthProvider.GovernmentGateway

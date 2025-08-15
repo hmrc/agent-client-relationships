@@ -21,7 +21,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import play.api.Configuration
 import uk.gov.hmrc.agentclientrelationships.model.BasicAuthentication
-import uk.gov.hmrc.agentmtdidentifiers.model.Service
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
 import scala.concurrent.duration.Duration
