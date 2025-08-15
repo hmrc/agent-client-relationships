@@ -26,19 +26,32 @@ import play.api.test.Helpers._
 import play.utils.UriEncoding
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.helpers.HipHeaders
-import uk.gov.hmrc.agentclientrelationships.model.{ActiveRelationship, EnrolmentKey, InactiveRelationship}
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.{CapitalGains, Cbc, MtdIt, MtdItSupp, Pillar2, Ppt, Trust, TrustNT, Vat}
+import uk.gov.hmrc.agentclientrelationships.model.ActiveRelationship
+import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
+import uk.gov.hmrc.agentclientrelationships.model.InactiveRelationship
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.CapitalGains
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Cbc
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdIt
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdItSupp
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Pillar2
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Ppt
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Trust
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.TrustNT
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Vat
 import uk.gov.hmrc.agentclientrelationships.model.identifiers._
 import uk.gov.hmrc.agentclientrelationships.services.AgentCacheProvider
-import uk.gov.hmrc.agentclientrelationships.stubs.{DataStreamStub, HipStub}
-import uk.gov.hmrc.agentclientrelationships.support.{UnitSpec, WireMockSupport}
+import uk.gov.hmrc.agentclientrelationships.stubs.DataStreamStub
+import uk.gov.hmrc.agentclientrelationships.stubs.HipStub
+import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
+import uk.gov.hmrc.agentclientrelationships.support.WireMockSupport
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import java.time.LocalDate
-import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.ExecutionContextExecutor
 
 class HipConnectorISpec
 extends UnitSpec

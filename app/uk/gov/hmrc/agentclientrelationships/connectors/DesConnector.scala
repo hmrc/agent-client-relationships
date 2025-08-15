@@ -24,7 +24,6 @@ import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentclientrelationships.util.HttpApiMonitor
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.agentclientrelationships.util.RequestSupport._
-import uk.gov.hmrc.agentclientrelationships.model.identifiers._
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.domain.SaAgentReference
 import uk.gov.hmrc.http.HttpReads.Implicits._
@@ -52,7 +51,6 @@ class DesConnector @Inject() (
 extends HttpApiMonitor
 with RequestAwareLogging {
 
-  private val desBaseUrl = appConfig.desUrl
   private val desAuthToken = appConfig.desToken
   private val desEnv = appConfig.desEnv
 
