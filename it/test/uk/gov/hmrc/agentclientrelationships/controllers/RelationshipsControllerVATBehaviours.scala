@@ -160,6 +160,7 @@ trait RelationshipsControllerVATBehaviours {
       "return 200 when agent credentials unknown but relationship exists in mapping" in {
         givenAgentIsAllocatedAndAssignedToClientForHMCEVATDECORG(vrn, oldAgentCode)
         givenArnIsKnownFor(arn, AgentCode(oldAgentCode))
+        givenUserAuthorised()
 
         val result = doRequest
         result.status shouldBe 200
@@ -175,6 +176,13 @@ trait RelationshipsControllerVATBehaviours {
           ),
           tags = Map("transactionName" -> "check-es", "path" -> requestPath)
         )
+      }
+
+      "return 401 when auth token is missing" in {
+        requestIsNotAuthenticated()
+
+        val result = doRequest
+        result.status shouldBe 401
       }
     }
   }

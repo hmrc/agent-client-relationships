@@ -22,6 +22,7 @@ import play.api.mvc.Action
 import play.api.mvc.AnyContent
 import play.api.mvc.ControllerComponents
 import play.api.mvc.RequestHeader
+import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.Invitation
 import uk.gov.hmrc.agentclientrelationships.model.invitation._
@@ -29,6 +30,7 @@ import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
 import uk.gov.hmrc.agentclientrelationships.services.AgentAssuranceService
 import uk.gov.hmrc.agentclientrelationships.services.InvitationLinkService
 import uk.gov.hmrc.agentclientrelationships.model.identifiers._
+import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.Inject
@@ -42,9 +44,11 @@ class ApiGetInvitationController @Inject() (
   agentAssuranceService: AgentAssuranceService,
   invitationsRepository: InvitationsRepository,
   val appConfig: AppConfig,
-  cc: ControllerComponents
+  cc: ControllerComponents,
+  val authConnector: AuthConnector
 )(implicit val executionContext: ExecutionContext)
-extends BackendController(cc) {
+extends BackendController(cc)
+with AuthActions {
 
   val supportedServices: Seq[Service] = appConfig.supportedServicesWithoutPir
 
@@ -54,13 +58,15 @@ extends BackendController(cc) {
     arn: Arn,
     invitationId: String
   ): Action[AnyContent] = Action.async { implicit request =>
-    findInvitationForAgent(
-      arn,
-      invitationId,
-      apiSupportedServices
-    ).map {
-      case Right(apiInvitationResponse) => Ok(Json.toJson(apiInvitationResponse))
-      case Left(apiErrorResults) => apiErrorResults.getResult
+    authorised() {
+      findInvitationForAgent(
+        arn,
+        invitationId,
+        apiSupportedServices
+      ).map {
+        case Right(apiInvitationResponse) => Ok(Json.toJson(apiInvitationResponse))
+        case Left(apiErrorResults) => apiErrorResults.getResult
+      }
     }
   }
 

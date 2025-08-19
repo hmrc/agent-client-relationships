@@ -50,26 +50,28 @@ with AuthActions {
   // scalastyle:off cyclomatic.complexity
   def checkRelationship(arn: Arn): Action[ApiCheckRelationshipRequest] =
     Action.async(parse.json[ApiCheckRelationshipRequest]) { implicit request =>
-      agentAssuranceService.getNonSuspendedAgentRecord(arn).flatMap {
-        case None => Future.successful(AgentSuspended.getResult)
-        case Some(_) =>
-          clientDetailsService.findClientDetails(request.body.service, request.body.suppliedClientId).flatMap {
-            case Left(_) => Future.successful(ClientRegistrationNotFound.getResult)
-            case Right(clientDetails) if !clientDetails.containsKnownFact(request.body.knownFact) => Future.successful(KnownFactDoesNotMatch.getResult)
-            case Right(clientDetails) if clientDetails.status.nonEmpty => Future.successful(ClientInsolvent.getResult)
-            case Right(_) =>
-              checkRelationshipsService.checkForRelationship(
-                arn,
-                request.body.service,
-                Service.forId(request.body.service).supportedSuppliedClientIdType.enrolmentId,
-                request.body.suppliedClientId,
-                None
-              ).map {
-                case CheckRelationshipFound => NoContent
-                case CheckRelationshipNotFound(_) => RelationshipNotFound.getResult
-                case _ => ApiInternalServerError.getResult
-              }
-          }
+      authorised() {
+        agentAssuranceService.getNonSuspendedAgentRecord(arn).flatMap {
+          case None => Future.successful(AgentSuspended.getResult)
+          case Some(_) =>
+            clientDetailsService.findClientDetails(request.body.service, request.body.suppliedClientId).flatMap {
+              case Left(_) => Future.successful(ClientRegistrationNotFound.getResult)
+              case Right(clientDetails) if !clientDetails.containsKnownFact(request.body.knownFact) => Future.successful(KnownFactDoesNotMatch.getResult)
+              case Right(clientDetails) if clientDetails.status.nonEmpty => Future.successful(ClientInsolvent.getResult)
+              case Right(_) =>
+                checkRelationshipsService.checkForRelationship(
+                  arn,
+                  request.body.service,
+                  Service.forId(request.body.service).supportedSuppliedClientIdType.enrolmentId,
+                  request.body.suppliedClientId,
+                  None
+                ).map {
+                  case CheckRelationshipFound => NoContent
+                  case CheckRelationshipNotFound(_) => RelationshipNotFound.getResult
+                  case _ => ApiInternalServerError.getResult
+                }
+            }
+        }
       }
     }
 

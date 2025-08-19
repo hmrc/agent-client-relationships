@@ -78,19 +78,21 @@ with RequestAwareLogging {
     clientId: String,
     userId: Option[String]
   ): Action[AnyContent] = Action.async { implicit request =>
-    checkOrchestratorService
-      .checkForRelationship(
-        arn,
-        service,
-        clientIdType,
-        clientId,
-        userId
-      )
-      .map {
-        case CheckRelationshipFound => Ok
-        case CheckRelationshipNotFound(message) => NotFound(toJson(message))
-        case CheckRelationshipInvalidRequest => BadRequest
-      }
+    authorised() {
+      checkOrchestratorService
+        .checkForRelationship(
+          arn,
+          service,
+          clientIdType,
+          clientId,
+          userId
+        )
+        .map {
+          case CheckRelationshipFound => Ok
+          case CheckRelationshipNotFound(message) => NotFound(toJson(message))
+          case CheckRelationshipInvalidRequest => BadRequest
+        }
+    }
   }
 
   def create(

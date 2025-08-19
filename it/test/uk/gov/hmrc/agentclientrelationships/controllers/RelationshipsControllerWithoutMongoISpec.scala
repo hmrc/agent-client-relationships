@@ -142,6 +142,7 @@ with AuthStub {
       givenMTDITEnrolmentAllocationSucceeds(mtditid, "bar")
       givenAuditConnector()
       givenAdminUser("foo", "any")
+      givenUserAuthorised()
 
       await(repo.findBy(arn, mtdItEnrolmentKey)) shouldBe None
 
@@ -177,6 +178,7 @@ with AuthStub {
       givenArnIsKnownFor(arn, SaAgentReference("foo"))
       givenClientHasRelationshipWithAgentInCESA(nino, "foo")
       givenAuditConnector()
+      givenUserAuthorised()
 
       await(repo.findBy(arn, enrolmentKey)) shouldBe None
 
@@ -204,6 +206,7 @@ with AuthStub {
       givenAgentRecordFound(arn, agentRecordResponse)
       givenClientHasNoActiveRelationshipWithAgentInCESA(nino)
       givenAuditConnector()
+      givenUserAuthorised()
       await(partialAuthRepo.collection.insertOne(partialAuthRelationship(HMRCMTDIT)).toFuture())
 
       await(repo.findBy(arn, enrolmentKey)) shouldBe None
@@ -232,6 +235,7 @@ with AuthStub {
       givenAgentRecordFound(arn, agentRecordResponse)
       givenClientHasNoActiveRelationshipWithAgentInCESA(nino)
       givenAuditConnector()
+      givenUserAuthorised()
       await(partialAuthRepo.collection.insertOne(partialAuthRelationship(HMRCMTDITSUPP)).toFuture())
 
       await(repo.findBy(arn, enrolmentKey)) shouldBe None
@@ -260,6 +264,7 @@ with AuthStub {
       givenAgentRecordFound(arn, agentRecordResponse)
       givenClientHasNoActiveRelationshipWithAgentInCESA(nino)
       givenAuditConnector()
+      givenUserAuthorised()
 
       await(repo.findBy(arn, enrolmentKey)) shouldBe empty
 
@@ -281,6 +286,17 @@ with AuthStub {
         ),
         tags = Map("transactionName" -> "check-cesa", "path" -> requestPath)
       )
+    }
+
+    "return 401 when auth token is missing" in {
+      requestIsNotAuthenticated()
+
+      await(repo.findBy(arn, enrolmentKey)) shouldBe empty
+
+      val result = doAgentRequest(requestPath)
+      result.status shouldBe 401
+
+      await(repo.findBy(arn, enrolmentKey)) shouldBe empty
     }
   }
 

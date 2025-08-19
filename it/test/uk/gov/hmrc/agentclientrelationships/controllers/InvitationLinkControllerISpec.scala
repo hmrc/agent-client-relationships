@@ -77,6 +77,7 @@ with HipStub {
       givenAuditConnector()
 
       givenAgentRecordFound(arn, agentRecordResponse)
+      givenUserAuthorised()
       await(agentReferenceRepo.create(agentReferenceRecord))
 
       val result = doGetRequest(s"/agent-client-relationships/agent/agent-reference/uid/$uid/$normalizedAgentName")
@@ -87,6 +88,7 @@ with HipStub {
     "return 404 status when agent reference is not found" in {
       givenAuditConnector()
       givenAgentRecordFound(arn, agentRecordResponse)
+      givenUserAuthorised()
 
       val result = doGetRequest(s"/agent-client-relationships/agent/agent-reference/uid/$uid/$normalizedAgentName")
       result.status shouldBe 404
@@ -95,6 +97,7 @@ with HipStub {
     "return 404 status when normalisedAgentNames is not on agent reference list" in {
       givenAuditConnector()
       givenAgentRecordFound(arn, agentRecordResponse)
+      givenUserAuthorised()
       await(agentReferenceRepo.create(agentReferenceRecord.copy(normalisedAgentNames = Seq("DummyNotMatching"))))
 
       val result = doGetRequest(s"/agent-client-relationships/agent/agent-reference/uid/$uid/$normalizedAgentName")
@@ -104,6 +107,7 @@ with HipStub {
     "return 404 status when agent name is missing" in {
       givenAuditConnector()
       givenAgentRecordFound(arn, agentRecordResponseWithNoAgentName)
+      givenUserAuthorised()
 
       val result = doGetRequest(s"/agent-client-relationships/agent/agent-reference/uid/$uid/$normalizedAgentName")
       result.status shouldBe 404
@@ -112,6 +116,7 @@ with HipStub {
     "return 502 status agent details are not found" in {
       givenAuditConnector()
       givenAgentDetailsErrorResponse(arn, 502)
+      givenUserAuthorised()
       await(agentReferenceRepo.create(agentReferenceRecord))
 
       val result = doGetRequest(s"/agent-client-relationships/agent/agent-reference/uid/$uid/$normalizedAgentName")
@@ -121,10 +126,18 @@ with HipStub {
     "return 403 status when agent is suspended" in {
       givenAuditConnector()
       givenAgentRecordFound(arn, suspendedAgentRecordResponse)
+      givenUserAuthorised()
       await(agentReferenceRepo.create(agentReferenceRecord))
 
       val result = doGetRequest(s"/agent-client-relationships/agent/agent-reference/uid/$uid/$normalizedAgentName")
       result.status shouldBe 403
+    }
+    "return 401 status when authorisation ia missing" in {
+      requestIsNotAuthenticated()
+      await(agentReferenceRepo.create(agentReferenceRecord))
+
+      val result = doGetRequest(s"/agent-client-relationships/agent/agent-reference/uid/$uid/$normalizedAgentName")
+      result.status shouldBe 401
     }
   }
 

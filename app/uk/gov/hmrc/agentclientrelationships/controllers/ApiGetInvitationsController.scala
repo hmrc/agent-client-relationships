@@ -22,6 +22,7 @@ import play.api.mvc.Action
 import play.api.mvc.AnyContent
 import play.api.mvc.ControllerComponents
 import play.api.mvc.RequestHeader
+import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.Invitation
 import uk.gov.hmrc.agentclientrelationships.model.invitation._
@@ -29,6 +30,7 @@ import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
 import uk.gov.hmrc.agentclientrelationships.services.AgentAssuranceService
 import uk.gov.hmrc.agentclientrelationships.services.InvitationLinkService
 import uk.gov.hmrc.agentclientrelationships.model.identifiers._
+import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.Inject
@@ -42,18 +44,22 @@ class ApiGetInvitationsController @Inject() (
   agentAssuranceService: AgentAssuranceService,
   invitationsRepository: InvitationsRepository,
   val appConfig: AppConfig,
+  val authConnector: AuthConnector,
   cc: ControllerComponents
 )(implicit val executionContext: ExecutionContext)
-extends BackendController(cc) {
+extends BackendController(cc)
+with AuthActions {
 
   val supportedServices: Seq[Service] = appConfig.supportedServicesWithoutPir
 
   val apiSupportedServices: Seq[Service] = appConfig.apiSupportedServices
 
   def getInvitations(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
-    findAllInvitationsForAgent(arn, apiSupportedServices).map {
-      case Right(apiBulkInvitationsResponse) => Ok(Json.toJson(apiBulkInvitationsResponse))
-      case Left(apiErrorResults) => apiErrorResults.getResult
+    authorised() {
+      findAllInvitationsForAgent(arn, apiSupportedServices).map {
+        case Right(apiBulkInvitationsResponse) => Ok(Json.toJson(apiBulkInvitationsResponse))
+        case Left(apiErrorResults) => apiErrorResults.getResult
+      }
     }
   }
 

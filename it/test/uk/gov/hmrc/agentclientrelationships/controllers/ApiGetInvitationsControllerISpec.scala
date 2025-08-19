@@ -76,6 +76,7 @@ with TestData {
       agentAssuranceService,
       invitationRepo,
       appConfig,
+      authConnector,
       stubControllerComponents()
     )
 
@@ -178,6 +179,7 @@ with TestData {
       invitationRepo.collection.insertMany(invitations).toFuture().futureValue
       agentReferenceRepo.create(agentReferenceRecord).futureValue
       givenAgentRecordFound(arn, testAgentRecord)
+      givenUserAuthorised()
 
       val requestPath = s"/agent-client-relationships/api/${arn.value}/invitations"
       val result = doGetRequest(requestPath)
@@ -227,6 +229,7 @@ with TestData {
       invitationRepo.collection.insertMany(invitations).toFuture().futureValue
       agentReferenceRepo.create(agentReferenceRecord).futureValue
       givenAgentRecordFound(arn, testAgentRecord)
+      givenUserAuthorised()
 
       val requestPath = s"/agent-client-relationships/api/${arn.value}/invitations"
       val result = doGetRequest(requestPath)
@@ -254,6 +257,7 @@ with TestData {
         arn,
         testAgentRecord.copy(suspensionDetails = Some(SuspensionDetails(suspensionStatus = true, regimes = None)))
       )
+      givenUserAuthorised()
 
       val expectedJson: JsValue = Json.toJson(
         toJson(
@@ -281,6 +285,7 @@ with TestData {
       invitationRepo.collection.insertMany(invitations).toFuture().futureValue
       agentReferenceRepo.create(agentReferenceRecord).futureValue
       givenAgentDetailsErrorResponse(arn, 404)
+      givenUserAuthorised()
 
       val requestPath = s"/agent-client-relationships/api/${arn.value}/invitations"
       val result = doGetRequest(requestPath)

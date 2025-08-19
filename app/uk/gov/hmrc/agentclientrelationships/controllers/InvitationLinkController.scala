@@ -62,21 +62,23 @@ with AuthActions {
     uid: String,
     normalizedAgentName: String
   ): Action[AnyContent] = Action.async { implicit request =>
-    agentReferenceService
-      .validateLink(uid, normalizedAgentName)
-      .map { response =>
-        response.fold(
-          {
-            case AgentReferenceDataNotFound | NormalizedAgentNameNotMatched =>
-              Logger(getClass).warn(s"Agent Reference Record not found for uid: $uid")
-              NotFound
-            case AgentSuspended =>
-              Logger(getClass).warn(s"Agent is suspended for uid: $uid")
-              Forbidden
-          },
-          validLinkResponse => Ok(Json.toJson(validLinkResponse))
-        )
-      }
+    authorised() {
+      agentReferenceService
+        .validateLink(uid, normalizedAgentName)
+        .map { response =>
+          response.fold(
+            {
+              case AgentReferenceDataNotFound | NormalizedAgentNameNotMatched =>
+                Logger(getClass).warn(s"Agent Reference Record not found for uid: $uid")
+                NotFound
+              case AgentSuspended =>
+                Logger(getClass).warn(s"Agent is suspended for uid: $uid")
+                Forbidden
+            },
+            validLinkResponse => Ok(Json.toJson(validLinkResponse))
+          )
+        }
+    }
   }
 
   def createLink: Action[AnyContent] = Action.async { implicit request =>
