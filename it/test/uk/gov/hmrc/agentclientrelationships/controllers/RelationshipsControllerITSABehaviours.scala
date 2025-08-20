@@ -51,6 +51,7 @@ trait RelationshipsControllerITSABehaviours {
     val relationshipCopiedSuccessfully = RelationshipCopyRecord(
       arn.value,
       Some(mtdItEnrolmentKey),
+      references = Some(Set(SaRef(SaAgentReference("foo")))),
       syncToETMPStatus = Some(SyncStatus.Success),
       syncToESStatus = Some(SyncStatus.Success)
     )
