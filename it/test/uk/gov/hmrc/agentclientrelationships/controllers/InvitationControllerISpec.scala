@@ -192,6 +192,7 @@ with TestData {
           }
 
           givenAgentRecordFound(arn, testAgentRecord)
+          givenUserAuthorised()
 
           val requestPath = s"/agent-client-relationships/agent/${arn.value}/authorisation-request"
           val result = doAgentPostRequest(requestPath, Json.toJson(inputData).toString())
@@ -238,6 +239,7 @@ with TestData {
       givenMtdItIdIsUnKnownFor(nino)
 
       givenAgentRecordFound(arn, testAgentRecord)
+      givenUserAuthorised()
 
       val result = doAgentPostRequest(
         s"/agent-client-relationships/agent/${arn.value}/authorisation-request",
@@ -278,6 +280,7 @@ with TestData {
       )
 
       givenAuditConnector()
+      givenUserAuthorised()
 
       invitationRepo.findAllForAgent(arn.value).futureValue shouldBe empty
 
@@ -309,6 +312,7 @@ with TestData {
       )
 
       givenAuditConnector()
+      givenUserAuthorised()
 
       invitationRepo.findAllForAgent(arn.value).futureValue shouldBe empty
 
@@ -338,6 +342,7 @@ with TestData {
       )
 
       givenAuditConnector()
+      givenUserAuthorised()
 
       invitationRepo.findAllForAgent(arn.value).futureValue shouldBe empty
 
@@ -371,6 +376,7 @@ with TestData {
       )
 
       givenAuditConnector()
+      givenUserAuthorised()
 
       invitationRepo.findAllForAgent(arn.value).futureValue shouldBe empty
 
@@ -382,6 +388,35 @@ with TestData {
 
       val message = s"""Unsupported clientType "${createInvitationInputData.clientType}"""".stripMargin
       result.json shouldBe toJson(IFRErrorBody("UNSUPPORTED_CLIENT_TYPE", message))
+
+      invitationRepo.findAllForAgent(arn.value).futureValue shouldBe empty
+
+    }
+
+    "return 401 when auth token is missing" in {
+      val suppliedClientId = nino.value
+      val suppliedClientIdType = NinoType.id
+      val service = MtdIt.id
+      val clientName = "DummyClientName"
+      val clientType = Some("invalid")
+
+      val createInvitationInputData: CreateInvitationRequest = CreateInvitationRequest(
+        clientId = suppliedClientId,
+        suppliedClientIdType = suppliedClientIdType,
+        clientName = clientName,
+        service = service,
+        clientType = clientType
+      )
+
+      requestIsNotAuthenticated()
+
+      invitationRepo.findAllForAgent(arn.value).futureValue shouldBe empty
+
+      val result = doAgentPostRequest(
+        s"/agent-client-relationships/agent/${arn.value}/authorisation-request",
+        Json.toJson(createInvitationInputData).toString()
+      )
+      result.status shouldBe 401
 
       invitationRepo.findAllForAgent(arn.value).futureValue shouldBe empty
 
@@ -476,6 +511,7 @@ with TestData {
     val requestJson = Json.obj("utr" -> utr)
 
     "return 204 when an invitation is found and updated" in {
+      givenUserAuthorised()
       await(
         invitationRepo.create(
           arn.value,
@@ -503,6 +539,7 @@ with TestData {
     }
 
     "return 404 when no invitation was found" in {
+      givenUserAuthorised()
       val result = doAgentPostRequest(
         s"/agent-client-relationships/invitations/trusts-enrolment-orchestrator/$urn/update",
         requestJson
@@ -519,6 +556,7 @@ with TestData {
     }
 
     "return 500 when the JSON body is invalid" in {
+      givenUserAuthorised()
       val invalidJson = Json.obj("abc" -> "xyz")
       val result = doAgentPostRequest(
         s"/agent-client-relationships/invitations/trusts-enrolment-orchestrator/$urn/update",

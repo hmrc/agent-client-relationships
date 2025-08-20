@@ -619,6 +619,7 @@ trait RelationshipsControllerITSABehaviours {
         givenDelegatedGroupIdsNotExistForNino(nino)
         givenNinoIsUnknownFor(mtdItId)
         givenClientHasNoActiveRelationshipWithAgentInCESA(nino)
+        givenUserAuthorised()
 
         val result = doRequest
         result.status shouldBe 404
@@ -632,6 +633,7 @@ trait RelationshipsControllerITSABehaviours {
         givenDelegatedGroupIdsNotExistForNino(nino)
         givenNinoIsKnownFor(mtdItId, nino)
         givenClientHasNoActiveRelationshipWithAgentInCESA(nino)
+        givenUserAuthorised()
 
         val result = doRequest
         result.status shouldBe 404
@@ -646,6 +648,7 @@ trait RelationshipsControllerITSABehaviours {
         givenNinoIsKnownFor(mtdItId, nino)
         givenClientHasRelationshipWithAgentInCESA(nino, "foo")
         givenServiceReturnsServiceUnavailable()
+        givenUserAuthorised()
 
         val result = doRequest
         result.status shouldBe 404
@@ -659,6 +662,7 @@ trait RelationshipsControllerITSABehaviours {
         givenNinoIsKnownFor(mtdItId, nino)
         givenClientHasRelationshipWithAgentInCESA(nino, "foo")
         givenArnIsUnknownFor(arn)
+        givenUserAuthorised()
 
         val result = doRequest
         result.status shouldBe 404
@@ -667,6 +671,7 @@ trait RelationshipsControllerITSABehaviours {
 
       "return 400 when agent record is suspended" in {
         givenAgentRecordFound(arn, suspendedAgentRecordResponse)
+        givenUserAuthorised()
 
         val result = doRequest
         result.status shouldBe 400
@@ -677,6 +682,7 @@ trait RelationshipsControllerITSABehaviours {
         givenPrincipalGroupIdNotExistsFor(agentEnrolmentKey(arn))
         givenArnIsKnownFor(arn, SaAgentReference("foo"))
         givenClientHasRelationshipWithAgentInCESA(nino, "foo")
+        givenUserAuthorised()
 
         val result = doRequest
         result.status shouldBe 200
@@ -700,6 +706,7 @@ trait RelationshipsControllerITSABehaviours {
         givenArnIsKnownFor(arn, SaAgentReference("foo"))
         givenClientHasRelationshipWithAgentInCESA(nino, "foo")
         givenMtdItIdIsUnKnownFor(nino)
+        givenUserAuthorised()
 
         val enrolmentKey = EnrolmentKey("IR-SA", Seq(Identifier("NINO", nino.value)))
 
@@ -719,6 +726,13 @@ trait RelationshipsControllerITSABehaviours {
           ),
           tags = Map("transactionName" -> "check-cesa", "path" -> requestPath)
         )
+      }
+
+      "return 401 when auth token is missing" in {
+        requestIsNotAuthenticated()
+
+        val result = doRequest
+        result.status shouldBe 401
       }
     }
 

@@ -142,6 +142,7 @@ with TestData {
     givenAdminUser("foo", "bar")
     givenPrincipalGroupIdExistsFor(agentEnrolmentKey(arn), "foo")
     givenAgentRecordFound(arn, testAgentRecord)
+    givenUserAuthorised()
 
     if (taxService == HMRCMTDIT || taxService == HMRCMTDITSUPP) {
       givenDelegatedGroupIdsNotExistFor(EnrolmentKey(taxService, mtdItId))
@@ -609,6 +610,7 @@ with TestData {
         val inputData: ApiCreateInvitationRequest = allServicesClientIdFormatInvalidService(taxService)
 
         givenAuditConnector()
+        givenUserAuthorised()
         val expectedJson: JsValue = Json.toJson(
           toJson(
             ErrorBody(
@@ -633,6 +635,7 @@ with TestData {
       )
 
       givenAuditConnector()
+      givenUserAuthorised()
       val expectedJson: JsValue = Json.toJson(
         toJson(
           ErrorBody(
@@ -652,6 +655,7 @@ with TestData {
         val inputData: ApiCreateInvitationRequest = allServices(taxService).copy(clientType = Some("UNSUPPORTED"))
 
         givenAuditConnector()
+        givenUserAuthorised()
         val expectedJson: JsValue = Json.toJson(
           toJson(
             ErrorBody(
@@ -677,6 +681,7 @@ with TestData {
           arn,
           testAgentRecord.copy(suspensionDetails = Some(SuspensionDetails(suspensionStatus = true, regimes = None)))
         )
+        givenUserAuthorised()
 
         val requestPath = s"/agent-client-relationships/api/${arn.value}/invitation"
         val result = doAgentPostRequest(requestPath, Json.toJson(inputData).toString())

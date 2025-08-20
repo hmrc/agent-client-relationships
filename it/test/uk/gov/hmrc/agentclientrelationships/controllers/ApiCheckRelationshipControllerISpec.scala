@@ -53,6 +53,7 @@ with TestData {
       givenAdminUser("groupId", "userId")
       givenPrincipalGroupIdExistsFor(agentEnrolmentKey(arn), "groupId")
       givenDelegatedGroupIdsExistFor(EnrolmentKey(HMRCMTDIT, mtdItId), Set("groupId"))
+      givenUserAuthorised()
 
       val testData = ApiCheckRelationshipRequest(
         HMRCMTDIT,
@@ -74,6 +75,7 @@ with TestData {
       givenAdminUser("groupId", "userId")
       givenPrincipalGroupIdExistsFor(agentEnrolmentKey(arn), "groupId")
       givenDelegatedGroupIdsExistFor(EnrolmentKey(HMRCMTDVAT, vrn), Set("groupId"))
+      givenUserAuthorised()
 
       val testData = ApiCheckRelationshipRequest(
         HMRCMTDVAT,
@@ -87,6 +89,7 @@ with TestData {
     "return 422 with AGENT_SUSPENDED when agent is suspended" in {
       givenAuditConnector()
       givenAgentRecordFound(arn, suspendedAgentRecordResponse)
+      givenUserAuthorised()
 
       val testData = ApiCheckRelationshipRequest(
         HMRCMTDIT,
@@ -101,6 +104,7 @@ with TestData {
       givenAuditConnector()
       givenAgentRecordFound(arn, agentRecordResponse)
       givenItsaBusinessDetailsError(nino.value, 404)
+      givenUserAuthorised()
 
       val testData = ApiCheckRelationshipRequest(
         HMRCMTDIT,
@@ -119,6 +123,7 @@ with TestData {
         mtdId = mtdItId,
         postCode = "Z11 11Z"
       )
+      givenUserAuthorised()
 
       val testData = ApiCheckRelationshipRequest(
         HMRCMTDIT,
@@ -137,6 +142,7 @@ with TestData {
         testVatRegDate,
         isInsolvent = true
       )
+      givenUserAuthorised()
 
       val testData = ApiCheckRelationshipRequest(
         HMRCMTDVAT,
@@ -165,6 +171,7 @@ with TestData {
         testPostcode
       )
       givenClientHasNoActiveRelationshipWithAgentInCESA(nino)
+      givenUserAuthorised()
 
       val testData = ApiCheckRelationshipRequest(
         HMRCMTDIT,
@@ -187,6 +194,7 @@ with TestData {
       givenAdminUser("groupId", "userId")
       givenPrincipalGroupIdExistsFor(agentEnrolmentKey(arn), "groupId")
       givenDelegatedGroupIdRequestFailsWith(EnrolmentKey(HMRCMTDIT, mtdItId), 500)
+      givenUserAuthorised()
 
       val testData = ApiCheckRelationshipRequest(
         HMRCMTDIT,

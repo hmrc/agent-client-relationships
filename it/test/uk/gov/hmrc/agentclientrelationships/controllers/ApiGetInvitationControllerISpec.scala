@@ -78,7 +78,8 @@ with TestData {
       agentAssuranceService,
       invitationsRepository,
       appConfig,
-      stubControllerComponents()
+      stubControllerComponents(),
+      authConnector
     )
 
   val testDate: LocalDate = LocalDate.now()
@@ -168,6 +169,7 @@ with TestData {
         invitationRepo.collection.insertOne(invitation).toFuture().futureValue
         agentReferenceRepo.create(agentReferenceRecord).futureValue
         givenAgentRecordFound(arn, testAgentRecord)
+        givenUserAuthorised()
 
         val requestPath = s"/agent-client-relationships/api/${invitation.arn}/invitation/${invitation.invitationId}"
         val result = doGetRequest(requestPath)
@@ -194,6 +196,7 @@ with TestData {
         invitationRepo.collection.insertOne(invitation).toFuture().futureValue
         agentReferenceRepo.create(agentReferenceRecord).futureValue
         givenAgentRecordFound(arn, testAgentRecord)
+        givenUserAuthorised()
 
         val requestPath = s"/agent-client-relationships/api/${invitation.arn}/invitation/${invitation.invitationId}"
         val result = doGetRequest(requestPath)
@@ -219,6 +222,7 @@ with TestData {
 
         invitationRepo.collection.insertOne(invitation).toFuture().futureValue
         givenAgentRecordFound(arn, testAgentRecord)
+        givenUserAuthorised()
 
         val requestPath = s"/agent-client-relationships/api/${invitation.arn}/invitation/${invitation.invitationId}"
         val result = doGetRequest(requestPath)
@@ -239,6 +243,7 @@ with TestData {
 
         agentReferenceRepo.create(agentReferenceRecord).futureValue
         givenAgentRecordFound(arn, testAgentRecord)
+        givenUserAuthorised()
 
         val expectedJson: JsValue = Json.toJson(
           toJson(
@@ -262,6 +267,7 @@ with TestData {
       invitationRepo.collection.insertOne(invitation).toFuture().futureValue
       agentReferenceRepo.create(agentReferenceRecord).futureValue
       givenAgentRecordFound(arn, testAgentRecord)
+      givenUserAuthorised()
 
       val expectedJson: JsValue = Json.toJson(
         toJson(
@@ -284,6 +290,7 @@ with TestData {
       invitationRepo.collection.insertOne(invitation).toFuture().futureValue
       agentReferenceRepo.create(agentReferenceRecord).futureValue
       givenAgentRecordFound(arn, testAgentRecord)
+      givenUserAuthorised()
 
       val expectedJson: JsValue = Json.toJson(
         toJson(
@@ -311,6 +318,7 @@ with TestData {
           arn,
           testAgentRecord.copy(suspensionDetails = Some(SuspensionDetails(suspensionStatus = true, regimes = None)))
         )
+        givenUserAuthorised()
 
         val expectedJson: JsValue = Json.toJson(
           toJson(
@@ -335,6 +343,7 @@ with TestData {
         agentReferenceRepo.create(agentReferenceRecord).futureValue
         invitationRepo.collection.insertOne(invitation).toFuture().futureValue
         givenAgentDetailsErrorResponse(arn, 404)
+        givenUserAuthorised()
 
         val requestPath = s"/agent-client-relationships/api/${invitation.arn}/invitation/${invitation.invitationId}"
         val result = doGetRequest(requestPath)

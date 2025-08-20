@@ -22,13 +22,17 @@ import play.api.libs.json.JsValue
 import play.api.mvc.Action
 import play.api.mvc.ControllerComponents
 import play.api.mvc.Result
+import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
+import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.CleanUpInvitationStatusRequest
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.InvalidClientId
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.InvitationNotFound
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.UnsupportedService
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.UpdateStatusFailed
 import uk.gov.hmrc.agentclientrelationships.services.CleanUpInvitationStatusService
+import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.Inject
@@ -39,47 +43,55 @@ import scala.concurrent.Future
 @Singleton
 class CleanUpInvitationStatusController @Inject() (
   setRelationshipEndedService: CleanUpInvitationStatusService,
+  val appConfig: AppConfig,
+  val authConnector: AuthConnector,
   cc: ControllerComponents
-)(implicit ec: ExecutionContext)
-extends BackendController(cc) {
+)(implicit val executionContext: ExecutionContext)
+extends BackendController(cc)
+with AuthActions {
+
+  val supportedServices: Seq[Service] = appConfig.supportedServicesWithoutPir
+  val apiSupportedServices: Seq[Service] = appConfig.apiSupportedServices
 
   def deauthoriseInvitation: Action[JsValue] =
     Action.async(parse.json) { implicit request =>
-      request.body
-        .validate[CleanUpInvitationStatusRequest]
-        .fold(
-          errs => Future.successful(BadRequest(s"Invalid payload: $errs")),
-          payload => {
-            val responseT =
-              for {
-                service <- EitherT.fromEither[Future](setRelationshipEndedService.validateService(payload.service))
-                clientId <- EitherT.fromEither[Future](
-                  setRelationshipEndedService.validateClientId(service, payload.clientId)
-                )
-                result <- EitherT(
-                  setRelationshipEndedService.deauthoriseInvitation(
-                    arn = payload.arn,
-                    clientId = clientId.value,
-                    service = service.id,
-                    relationshipEndedBy = "HMRC"
+      authorised() {
+        request.body
+          .validate[CleanUpInvitationStatusRequest]
+          .fold(
+            errs => Future.successful(BadRequest(s"Invalid payload: $errs")),
+            payload => {
+              val responseT =
+                for {
+                  service <- EitherT.fromEither[Future](setRelationshipEndedService.validateService(payload.service))
+                  clientId <- EitherT.fromEither[Future](
+                    setRelationshipEndedService.validateClientId(service, payload.clientId)
+                  )
+                  result <- EitherT(
+                    setRelationshipEndedService.deauthoriseInvitation(
+                      arn = payload.arn,
+                      clientId = clientId.value,
+                      service = service.id,
+                      relationshipEndedBy = "HMRC"
+                    )
+                  )
+                } yield result
+
+              responseT.value
+                .map(
+                  _.fold(
+                    failureResponse =>
+                      invitationErrorHandler(
+                        invitationFailureResponse = failureResponse,
+                        service = payload.service,
+                        clientId = payload.clientId
+                      ),
+                    _ => NoContent
                   )
                 )
-              } yield result
-
-            responseT.value
-              .map(
-                _.fold(
-                  failureResponse =>
-                    invitationErrorHandler(
-                      invitationFailureResponse = failureResponse,
-                      service = payload.service,
-                      clientId = payload.clientId
-                    ),
-                  _ => NoContent
-                )
-              )
-          }
-        )
+            }
+          )
+      }
     }
 
   private def invitationErrorHandler(

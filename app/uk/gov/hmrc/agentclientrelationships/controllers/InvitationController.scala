@@ -59,65 +59,67 @@ with AuthActions {
 
   def createInvitation(arn: Arn): Action[JsValue] =
     Action.async(parse.json) { implicit request =>
-      request.body
-        .validate[CreateInvitationRequest]
-        .fold(
-          errs => Future.successful(BadRequest(s"Invalid payload: $errs")),
-          createInvitationRequest =>
-            invitationService
-              .createInvitation(arn, createInvitationRequest)
-              .map { response =>
-                response.fold(
-                  {
-                    case UnsupportedService =>
-                      val msg = s"""Unsupported service "${createInvitationRequest.service}""""
-                      Logger(getClass).warn(msg)
-                      UnsupportedService.getResult(msg)
+      authorised() {
+        request.body
+          .validate[CreateInvitationRequest]
+          .fold(
+            errs => Future.successful(BadRequest(s"Invalid payload: $errs")),
+            createInvitationRequest =>
+              invitationService
+                .createInvitation(arn, createInvitationRequest)
+                .map { response =>
+                  response.fold(
+                    {
+                      case UnsupportedService =>
+                        val msg = s"""Unsupported service "${createInvitationRequest.service}""""
+                        Logger(getClass).warn(msg)
+                        UnsupportedService.getResult(msg)
 
-                    case InvalidClientId =>
-                      val msg = s"""Invalid clientId "${createInvitationRequest.clientId}", for service type "${createInvitationRequest.service}""""
-                      Logger(getClass).warn(msg)
-                      InvalidClientId.getResult(msg)
+                      case InvalidClientId =>
+                        val msg = s"""Invalid clientId "${createInvitationRequest.clientId}", for service type "${createInvitationRequest.service}""""
+                        Logger(getClass).warn(msg)
+                        InvalidClientId.getResult(msg)
 
-                    case UnsupportedClientIdType =>
-                      val msg =
-                        s"""Unsupported clientIdType "${createInvitationRequest.suppliedClientIdType}", for service type "${createInvitationRequest.service}"""".stripMargin
-                      Logger(getClass).warn(msg)
-                      UnsupportedClientIdType.getResult(msg)
+                      case UnsupportedClientIdType =>
+                        val msg =
+                          s"""Unsupported clientIdType "${createInvitationRequest.suppliedClientIdType}", for service type "${createInvitationRequest.service}"""".stripMargin
+                        Logger(getClass).warn(msg)
+                        UnsupportedClientIdType.getResult(msg)
 
-                    case UnsupportedClientType =>
-                      val msg = s"""Unsupported clientType "${createInvitationRequest.clientType}""""
-                      Logger(getClass).warn(msg)
-                      UnsupportedClientType.getResult(msg)
+                      case UnsupportedClientType =>
+                        val msg = s"""Unsupported clientType "${createInvitationRequest.clientType}""""
+                        Logger(getClass).warn(msg)
+                        UnsupportedClientType.getResult(msg)
 
-                    case ClientRegistrationNotFound =>
-                      val msg =
-                        s"""The Client's MTDfB registration or SAUTR (if alt-itsa is enabled) was not found.
-                           | for clientId "${createInvitationRequest.clientId}",
-                           | for clientIdType "${createInvitationRequest.suppliedClientIdType}",
-                           | for service type "${createInvitationRequest.service}"""".stripMargin
-                      Logger(getClass).warn(msg)
-                      ClientRegistrationNotFound.getResult(msg)
+                      case ClientRegistrationNotFound =>
+                        val msg =
+                          s"""The Client's MTDfB registration or SAUTR (if alt-itsa is enabled) was not found.
+                             | for clientId "${createInvitationRequest.clientId}",
+                             | for clientIdType "${createInvitationRequest.suppliedClientIdType}",
+                             | for service type "${createInvitationRequest.service}"""".stripMargin
+                        Logger(getClass).warn(msg)
+                        ClientRegistrationNotFound.getResult(msg)
 
-                    case DuplicateInvitationError =>
-                      val msg =
-                        s"""An authorisation request for this service has already been created
-                           | and is awaiting the client’s response.
-                           | for clientId "${createInvitationRequest.clientId}",
-                           | for clientIdType "${createInvitationRequest.suppliedClientIdType}",
-                           | for service type "${createInvitationRequest.service}"""".stripMargin
-                      Logger(getClass).warn(msg)
-                      DuplicateInvitationError.getResult(msg)
+                      case DuplicateInvitationError =>
+                        val msg =
+                          s"""An authorisation request for this service has already been created
+                             | and is awaiting the client’s response.
+                             | for clientId "${createInvitationRequest.clientId}",
+                             | for clientIdType "${createInvitationRequest.suppliedClientIdType}",
+                             | for service type "${createInvitationRequest.service}"""".stripMargin
+                        Logger(getClass).warn(msg)
+                        DuplicateInvitationError.getResult(msg)
 
-                    case _ => BadRequest
-                  },
-                  invitation => {
-                    auditService.sendCreateInvitationAuditEvent(invitation)
-                    Created(Json.toJson(CreateInvitationResponse(invitation.invitationId)))
-                  }
-                )
-              }
-        )
+                      case _ => BadRequest
+                    },
+                    invitation => {
+                      auditService.sendCreateInvitationAuditEvent(invitation)
+                      Created(Json.toJson(CreateInvitationResponse(invitation.invitationId)))
+                    }
+                  )
+                }
+          )
+      }
     }
 
   def rejectInvitation(invitationId: String): Action[AnyContent] = Action.async { implicit request =>
@@ -167,20 +169,22 @@ with AuthActions {
 
   def replaceUrnWithUtr(urn: String): Action[JsValue] =
     Action.async(parse.json) { implicit request =>
-      val utr = (request.body \ "utr").as[String]
-      invitationService
-        .updateInvitation(
-          TrustNT.enrolmentKey,
-          urn,
-          UrnType.id,
-          Trust.enrolmentKey,
-          utr,
-          UtrType.id
-        )
-        .map {
-          case true => NoContent
-          case false => NotFound
-        }
+      authorised() {
+        val utr = (request.body \ "utr").as[String]
+        invitationService
+          .updateInvitation(
+            TrustNT.enrolmentKey,
+            urn,
+            UrnType.id,
+            Trust.enrolmentKey,
+            utr,
+            UtrType.id
+          )
+          .map {
+            case true => NoContent
+            case false => NotFound
+          }
+      }
     }
 
   def cancelInvitation(invitationId: String): Action[AnyContent] = Action.async { implicit request =>

@@ -77,28 +77,30 @@ with AuthActions {
 
   def createInvitation(arn: Arn): Action[JsValue] =
     Action.async(parse.json) { implicit request =>
-      request.body
-        .validate[ApiCreateInvitationRequest]
-        .fold(
-          _ => Future.successful(ApiFailureResponse.InvalidPayload.getResult),
-          apiCreateInvitationRequest =>
-            createInvitation(
-              arn,
-              apiCreateInvitationRequest,
-              apiSupportedServices
-            ).map { response =>
-              response.fold(
-                {
-                  case apiErrorResults: ApiFailureResponse => apiErrorResults.getResult
-                  case _ => InternalServerError
-                },
-                invitation => {
-                  auditService.sendCreateInvitationAuditEvent(invitation)
-                  Created(Json.toJson(CreateInvitationResponse(invitation.invitationId)))
-                }
-              )
-            }
-        )
+      authorised() {
+        request.body
+          .validate[ApiCreateInvitationRequest]
+          .fold(
+            _ => Future.successful(ApiFailureResponse.InvalidPayload.getResult),
+            apiCreateInvitationRequest =>
+              createInvitation(
+                arn,
+                apiCreateInvitationRequest,
+                apiSupportedServices
+              ).map { response =>
+                response.fold(
+                  {
+                    case apiErrorResults: ApiFailureResponse => apiErrorResults.getResult
+                    case _ => InternalServerError
+                  },
+                  invitation => {
+                    auditService.sendCreateInvitationAuditEvent(invitation)
+                    Created(Json.toJson(CreateInvitationResponse(invitation.invitationId)))
+                  }
+                )
+              }
+          )
+      }
     }
 
   private def createInvitation(

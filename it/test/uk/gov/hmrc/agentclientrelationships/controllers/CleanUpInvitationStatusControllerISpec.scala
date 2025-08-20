@@ -104,6 +104,7 @@ with TestData {
 
       s"when no invitation record for ${service.id}" should {
         s"return 404 NOT_FOUND" in {
+          givenUserAuthorised()
           val result = doAgentPutRequest(
             route = requestPath,
             body = requestJson(
@@ -119,6 +120,7 @@ with TestData {
 
       s"when invitation exists with the status Accepted in invitationStore for ${service.id}" should {
         s"update status to DeAuthorised" in {
+          givenUserAuthorised()
           val newInvitation: Invitation = baseInvitation
             .copy(
               service = serviceId,
@@ -148,6 +150,7 @@ with TestData {
     "when request data are incorrect" should {
 
       "return NotImplemented 501 status and JSON Error If service is not supported" in {
+        givenUserAuthorised()
         val result = doAgentPutRequest(
           route = requestPath,
           body = requestJson(

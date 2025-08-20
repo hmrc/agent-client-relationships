@@ -353,6 +353,24 @@ trait AuthStub {
     this
   }
 
+  def givenUserAuthorised(): AuthStub = {
+    stubFor(
+      post(urlEqualTo("/auth/authorise")).willReturn(
+        aResponse()
+          .withStatus(200)
+          .withBody(s"""
+                      {
+                       |  "optionalCredentials": {
+                       |    "providerId": "ANYCRED",
+                       |    "providerType": "GovernmentGateway"
+                       |  }
+                       |}
+       """.stripMargin)
+      )
+    )
+    this
+  }
+
   // noinspection ScalaStyle
   def givenUserIsSubscribedClient(
     identifier: TaxIdentifier,
