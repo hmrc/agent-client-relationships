@@ -71,57 +71,75 @@ with RequestAwareLogging {
       auditData.set(enrolmentDelegatedKey, false)
       auditData.set(etmpRelationshipCreatedKey, false)
 
+      val containsCopyAcrossReferences = oldReferences.nonEmpty
+
       def createRelationshipRecord: Future[DbUpdateStatus] = {
-        val record = RelationshipCopyRecord(
-          arn.value,
-          Some(enrolmentKey), // APB-7215 added to accommodate multiple identifiers
-          references = Some(oldReferences)
-        )
-        relationshipCopyRepository
-          .create(record)
-          .map { count =>
-            convertDbUpdateStatus(count)
-          }
-          .recoverWith { case NonFatal(ex) =>
-            logger.warn(s"Inserting relationship record into mongo failed for ${arn.value}, ${enrolmentKey.tag}", ex)
-            if (failIfCreateRecordFails)
-              Future.failed(new Exception("RELATIONSHIP_CREATE_FAILED_DB"))
-            else
-              Future.successful(DbUpdateFailed)
-          }
+        if (containsCopyAcrossReferences) {
+          val record = RelationshipCopyRecord(
+            arn.value,
+            Some(enrolmentKey), // APB-7215 added to accommodate multiple identifiers
+            references = Some(oldReferences)
+          )
+          relationshipCopyRepository
+            .create(record)
+            .map { count =>
+              convertDbUpdateStatus(count)
+            }
+            .recoverWith { case NonFatal(ex) =>
+              logger.warn(s"Inserting relationship record into mongo failed for ${arn.value}, ${enrolmentKey.tag}", ex)
+              if (failIfCreateRecordFails)
+                Future.failed(new Exception("RELATIONSHIP_CREATE_FAILED_DB"))
+              else
+                Future.successful(DbUpdateFailed)
+            }
+        }
+        else {
+          Future.successful(DbUpdateSucceeded)
+        }
       }
 
       for {
         agentUser <- retrieveAgentUser(arn)
         recordCreationStatus <- createRelationshipRecord
         if recordCreationStatus == DbUpdateSucceeded
-        etmpRecordCreationStatus <- createEtmpRecord(arn, enrolmentKey)
+        etmpRecordCreationStatus <- createEtmpRecord(
+          arn,
+          enrolmentKey,
+          containsCopyAcrossReferences
+        )
         if etmpRecordCreationStatus == DbUpdateSucceeded
         esRecordCreationStatus <- createEsRecord(
           arn,
           enrolmentKey,
           agentUser,
-          failIfAllocateAgentInESFails
+          failIfAllocateAgentInESFails,
+          containsCopyAcrossReferences
         )
         _ = auditService.sendCreateRelationshipAuditEvent()
       } yield esRecordCreationStatus
     }
 
+  // noinspection ScalaStyle
   private def createEtmpRecord(
     arn: Arn,
-    enrolmentKey: EnrolmentKey
+    enrolmentKey: EnrolmentKey,
+    containsCopyAcrossReferences: Boolean
   )(implicit
     ec: ExecutionContext,
     request: RequestHeader,
     auditData: AuditData
   ): Future[DbUpdateStatus] = {
-    val updateEtmpSyncStatus =
-      relationshipCopyRepository.updateEtmpSyncStatus(
-        arn,
-        enrolmentKey,
-        _: SyncStatus
-      )
-        .map(convertDbUpdateStatus)
+
+    def updateEtmpSyncStatus(status: SyncStatus) =
+      if (containsCopyAcrossReferences) {
+        relationshipCopyRepository.updateEtmpSyncStatus(
+          arn,
+          enrolmentKey,
+          status
+        ).map(convertDbUpdateStatus)
+      }
+      else
+        Future.successful(DbUpdateSucceeded)
 
     val recoverFromException =
       (
@@ -166,19 +184,24 @@ with RequestAwareLogging {
     arn: Arn,
     enrolmentKey: EnrolmentKey,
     agentUser: AgentUser,
-    failIfAllocateAgentInESFails: Boolean
+    failIfAllocateAgentInESFails: Boolean,
+    containsCopyAcrossReferences: Boolean
   )(implicit
     request: RequestHeader,
     auditData: AuditData
   ): Future[DbUpdateStatus] = {
 
-    def updateEsSyncStatus(status: SyncStatus): Future[DbUpdateStatus] = relationshipCopyRepository
-      .updateEsSyncStatus(
-        arn,
-        enrolmentKey,
-        status
-      )
-      .map(convertDbUpdateStatus)
+    def updateEsSyncStatus(status: SyncStatus): Future[DbUpdateStatus] =
+      if (containsCopyAcrossReferences) {
+        relationshipCopyRepository
+          .updateEsSyncStatus(
+            arn,
+            enrolmentKey,
+            status
+          ).map(convertDbUpdateStatus)
+      }
+      else
+        Future.successful(DbUpdateSucceeded)
 
     def logAndMaybeFail(
       origExc: Throwable,
@@ -319,6 +342,7 @@ with RequestAwareLogging {
       _.toOption.getOrElse(throw RelationshipNotFound(s"No admin agent user found for Arn $arn"))
     }
 
+  // noinspection ScalaStyle
   // This seems to only get triggered by the relationship check endpoint, as a result it doesn't seem to happen at all
   def resumeRelationshipCreation(
     relationshipCopyRecord: RelationshipCopyRecord,
@@ -336,13 +360,18 @@ with RequestAwareLogging {
           )
           for {
             agentUser <- retrieveAgentUser(arn)
-            etmpStatus <- createEtmpRecord(arn, enrolmentKey)
+            etmpStatus <- createEtmpRecord(
+              arn,
+              enrolmentKey,
+              containsCopyAcrossReferences = true
+            )
             if etmpStatus == DbUpdateSucceeded
             esStatus <- createEsRecord(
               arn,
               enrolmentKey,
               agentUser,
-              failIfAllocateAgentInESFails = false
+              failIfAllocateAgentInESFails = false,
+              containsCopyAcrossReferences = true
             )
             _ = auditService.sendCreateRelationshipAuditEvent()
           } yield esStatus
@@ -356,7 +385,8 @@ with RequestAwareLogging {
               arn,
               enrolmentKey,
               agentUser,
-              failIfAllocateAgentInESFails = false
+              failIfAllocateAgentInESFails = false,
+              containsCopyAcrossReferences = true
             )
             _ = auditService.sendCreateRelationshipAuditEvent()
           } yield esStatus
@@ -365,7 +395,11 @@ with RequestAwareLogging {
             s"ES relationship existed without ETMP relationship for ${arn.value}, ${enrolmentKey.tag}. " +
               s"This should not happen because we always create the ETMP relationship first. Record dateTime: ${relationshipCopyRecord.dateTime}"
           )
-          createEtmpRecord(arn, enrolmentKey).map { result =>
+          createEtmpRecord(
+            arn,
+            enrolmentKey,
+            containsCopyAcrossReferences = true
+          ).map { result =>
             auditService.sendCreateRelationshipAuditEvent()
             result
           }
