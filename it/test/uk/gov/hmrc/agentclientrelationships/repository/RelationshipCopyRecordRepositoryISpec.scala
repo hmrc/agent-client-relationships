@@ -220,139 +220,70 @@ with GuiceOneServerPerSuite {
 
   "The temporary cleanup code" should {
 
-    val itsaCopyRecord1 = RelationshipCopyRecord(
+    val modernRecord1 = RelationshipCopyRecord(
       arn = "TARN0000001",
-      enrolmentKey = Some(EnrolmentKey("HMRC-MTD-IT~MTDITID~ABCDEF0000000002")),
+      enrolmentKey = Some(EnrolmentKey("HMRC-MTD-IT~MTDITID~ABCDEF0000000001")),
       clientIdentifier = None,
       clientIdentifierType = None,
       references = Some(Set(SaRef(SaAgentReference("foo"))))
     )
 
-    val itsaCopyRecord2 = RelationshipCopyRecord(
+    val modernRecord2 = modernRecord1.copy(enrolmentKey = Some(EnrolmentKey("HMRC-MTD-IT~MTDITID~ABCDEF0000000002")))
+
+    val deprecatedRecord1 = RelationshipCopyRecord(
       arn = "TARN0000001",
       enrolmentKey = None,
-      clientIdentifier = Some("ABCDEF0000000001"),
+      clientIdentifier = Some("ABCDEF0000000003"),
       clientIdentifierType = Some("MTDITID"),
       references = Some(Set(SaRef(SaAgentReference("foo"))))
     )
 
-    val itsaNonCopyRecord1 = itsaCopyRecord1.copy(
-      enrolmentKey = Some(EnrolmentKey("HMRC-MTD-IT~MTDITID~ABCDEF0000000004")),
-      references = None
-    )
+    val deprecatedRecord2 = deprecatedRecord1.copy(clientIdentifier = Some("ABCDEF0000000004"))
 
-    val itsaNonCopyRecord2 = itsaCopyRecord2.copy(
-      clientIdentifier = Some("ABCDEF0000000003"),
-      references = None
-    )
+    "count the number of records in the deprecated format (use of clientIdentifier and clientIdentifierType)" in {
+      repo.collection.insertMany(Seq(
+        modernRecord1,
+        modernRecord2,
+        deprecatedRecord1,
+        deprecatedRecord2
+      )).toFuture().futureValue
 
-    val vatCopyRecord1 = RelationshipCopyRecord(
-      arn = "TARN0000001",
-      enrolmentKey = Some(EnrolmentKey("HMRC-MTD-VAT~VRN~123456789")),
-      clientIdentifier = None,
-      clientIdentifierType = None,
-      references = Some(Set(SaRef(SaAgentReference("foo"))))
-    )
-
-    val vatCopyRecord2 = vatCopyRecord1.copy(
-      arn = "TARN0000001",
-      enrolmentKey = None,
-      clientIdentifier = Some("234567890"),
-      clientIdentifierType = Some("VRN"),
-      references = Some(Set(SaRef(SaAgentReference("foo"))))
-    )
-
-    val vatNonCopyRecord1 = vatCopyRecord1.copy(
-      enrolmentKey = Some(EnrolmentKey("HMRC-MTD-VAT~VRN~345678901")),
-      references = None
-    )
-
-    val vatNonCopyRecord2 = vatCopyRecord2.copy(
-      clientIdentifier = Some("456789012"),
-      references = None
-    )
-
-    "count the number of records that are not ITSA copy across" when {
-
-      "there are only records in the 'new' format (use of enrolmentKey)" in {
-        await(repo.collection.insertMany(Seq(
-          itsaCopyRecord1,
-          itsaNonCopyRecord1,
-          vatCopyRecord1,
-          vatNonCopyRecord1
-        )).toFuture())
-
-        repo.countIrrelevantRecords().futureValue shouldBe 3
-      }
-
-      "there are only records in the 'old' format (use of clientIdentifier and clientIdentifierType)" in {
-        await(repo.collection.insertMany(Seq(
-          itsaCopyRecord2,
-          itsaNonCopyRecord2,
-          vatCopyRecord2,
-          vatNonCopyRecord2
-        )).toFuture())
-
-        repo.countIrrelevantRecords().futureValue shouldBe 3
-      }
-
-      "there are only ITSA copy across records" in {
-        await(repo.collection.insertMany(Seq(
-          itsaCopyRecord1,
-          itsaCopyRecord2
-        )).toFuture())
-
-        repo.countIrrelevantRecords().futureValue shouldBe 0
-      }
-
-      "there are no ITSA copy across records" in {
-        await(repo.collection.insertMany(Seq(
-          itsaNonCopyRecord1,
-          itsaNonCopyRecord2,
-          vatCopyRecord1,
-          vatCopyRecord2,
-          vatNonCopyRecord1,
-          vatNonCopyRecord2
-        )).toFuture())
-
-        repo.countIrrelevantRecords().futureValue shouldBe 6
-      }
-
-      "there are a mix of many types of records" in {
-        await(repo.collection.insertMany(Seq(
-          itsaCopyRecord1,
-          itsaCopyRecord2,
-          itsaNonCopyRecord1,
-          itsaNonCopyRecord2,
-          vatCopyRecord1,
-          vatCopyRecord2,
-          vatNonCopyRecord1,
-          vatNonCopyRecord2
-        )).toFuture())
-
-        repo.countIrrelevantRecords().futureValue shouldBe 6
-      }
+      repo.countDeprecatedRecords().futureValue shouldBe 2
     }
 
-    "delete the records that are not ITSA copy across" in {
-      await(repo.collection.insertMany(Seq(
-        itsaCopyRecord1,
-        itsaCopyRecord2,
-        itsaNonCopyRecord1,
-        itsaNonCopyRecord2,
-        vatCopyRecord1,
-        vatCopyRecord2,
-        vatNonCopyRecord1,
-        vatNonCopyRecord2
-      )).toFuture())
+    "convert the records that are in the deprecated format to the new format (use of enrolmentKey)" in {
+      repo.collection.insertMany(Seq(
+        modernRecord1,
+        modernRecord2,
+        deprecatedRecord1,
+        deprecatedRecord2
+      )).toFuture().futureValue
 
-      repo.deleteIrrelevantRecords()
+      repo.convertDeprecatedRecords()
 
       eventually(timeout(Span(5, Seconds)), interval(Span(100, Millis))) {
-        repo.countIrrelevantRecords().futureValue shouldBe 0
-        repo.collection.countDocuments().toFuture().futureValue shouldBe 2
-        repo.collection.find().toFuture().futureValue shouldBe Seq(itsaCopyRecord1, itsaCopyRecord2)
+        repo.countDeprecatedRecords().futureValue shouldBe 0
+        repo.collection.countDocuments().toFuture().futureValue shouldBe 4
       }
+
+      val expectedRecords = Seq(
+        modernRecord1,
+        modernRecord2,
+        deprecatedRecord1.copy(
+          enrolmentKey = Some(EnrolmentKey("HMRC-MTD-IT~MTDITID~ABCDEF0000000003")),
+          clientIdentifier = None,
+          clientIdentifierType = None
+        ),
+        deprecatedRecord2.copy(
+          enrolmentKey = Some(EnrolmentKey("HMRC-MTD-IT~MTDITID~ABCDEF0000000004")),
+          clientIdentifier = None,
+          clientIdentifierType = None
+        )
+      )
+
+      val records = repo.collection.find().toFuture().futureValue
+
+      records shouldBe expectedRecords
     }
   }
 

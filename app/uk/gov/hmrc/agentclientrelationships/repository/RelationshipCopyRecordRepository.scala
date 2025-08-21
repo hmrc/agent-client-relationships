@@ -192,39 +192,39 @@ with RequestAwareLogging {
     )
   }
 
-  private val nonItsaCopyAcrossQuery: Bson = Filters.or(
-    Filters.or(
-      Filters.eq("references", Set()),
-      Filters.exists("references", exists = false)
-    ),
-    Filters.and(
-      Filters.ne("clientIdentifierType", "MTDITID"),
-      Filters.or(
-        Filters.exists("enrolmentKey", exists = false),
-        Filters.regex("enrolmentKey", "^((?!HMRC-MTD-IT).)*$") // regex = does not start with 'HMRC-MTD-IT'
-      )
-    )
-  )
+  private val deprecatedRecordsQuery: Bson = Filters.exists("clientIdentifier")
 
-  def countIrrelevantRecords(): Future[Long] = collection.countDocuments(nonItsaCopyAcrossQuery).toFuture()
+  def countDeprecatedRecords(): Future[Long] = collection.countDocuments(deprecatedRecordsQuery).toFuture()
 
-  def deleteIrrelevantRecords(): Unit = {
+  def convertDeprecatedRecords(): Unit = {
     val logger = Logger(getClass)
-    val observable = collection.deleteMany(nonItsaCopyAcrossQuery)
-    countIrrelevantRecords().map { count =>
-      logger.warn(s"Data deletion has started, $count irrelevant documents scheduled for deletion")
+    val observable = collection.find(deprecatedRecordsQuery)
+    countDeprecatedRecords().map { count =>
+      logger.warn(s"Data conversion has started, $count deprecated documents scheduled for conversion")
     }
     Source
       .fromPublisher(observable)
       .throttle(10, 1.second)
-      .run()
+      .runForeach { record =>
+        collection.replaceOne(
+          Filters.and(Filters.eq("arn", record.arn), Filters.eq("clientIdentifier", record.clientIdentifier.get)),
+          record.copy(
+            clientIdentifier = None,
+            clientIdentifierType = None,
+            enrolmentKey = Some(EnrolmentKey(s"HMRC-MTD-IT~MTDITID~${record.clientIdentifier.get}"))
+          )
+        ).toFuture()
+          .map(_ => logger.warn("Document replaced successfully"))
+          .recover { case ex: Throwable => logger.warn("Failed to replace record", ex) }
+        ()
+      }
       .onComplete { _ =>
-        countIrrelevantRecords().map { count =>
-          logger.warn(s"Deletion job completed, $count irrelevant documents remain")
+        countDeprecatedRecords().map { count =>
+          logger.warn(s"Conversion job completed, $count deprecated documents remain")
         }
       }
   }
 
-  deleteIrrelevantRecords()
+  convertDeprecatedRecords()
 
 }

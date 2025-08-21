@@ -116,6 +116,6 @@ extends RelationshipCopyRecordRepository(FakeMongoComponent.make) {
     Future.successful(Right(keysToRemove.size))
   }
 
-  override def deleteIrrelevantRecords(): Unit = ()
+  override def convertDeprecatedRecords(): Unit = ()
 
 }
