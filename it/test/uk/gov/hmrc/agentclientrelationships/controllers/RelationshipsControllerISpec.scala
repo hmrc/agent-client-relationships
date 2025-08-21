@@ -50,8 +50,6 @@ import uk.gov.hmrc.agentclientrelationships.stubs.HipStub
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Identifier
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
-import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.SaRef
-import uk.gov.hmrc.domain.SaAgentReference
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.HeaderNames
 import uk.gov.hmrc.http.HttpResponse
@@ -61,14 +59,13 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.Base64
 
-class RelationshipsControllerISpec
+class RelationshipshipControllerISpec
 extends RelationshipsBaseControllerISpec
 with HipStub {
 
   val relationshipCopiedSuccessfully: RelationshipCopyRecord = RelationshipCopyRecord(
     arn.value,
     Some(EnrolmentKey(Service.MtdIt, MtdItId("ABCDEF0000000001"))),
-    references = Some(Set(SaRef(SaAgentReference("foo")))),
     syncToETMPStatus = Some(SyncStatus.Success),
     syncToESStatus = Some(SyncStatus.Success)
   )

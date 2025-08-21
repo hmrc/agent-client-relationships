@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.agentclientrelationships.repository
 
-import org.apache.pekko.stream.Materializer
 import org.mongodb.scala.MongoException
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
@@ -27,7 +26,7 @@ import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class FakeRelationshipCopyRecordRepository(implicit mat: Materializer)
+class FakeRelationshipCopyRecordRepository
 extends RelationshipCopyRecordRepository(FakeMongoComponent.make) {
 
   override lazy val initialised: Future[Unit] = Future.unit
@@ -115,7 +114,5 @@ extends RelationshipCopyRecordRepository(FakeMongoComponent.make) {
     keysToRemove.foreach(data.remove)
     Future.successful(Right(keysToRemove.size))
   }
-
-  override def deleteIrrelevantRecords(): Unit = ()
 
 }
