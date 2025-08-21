@@ -16,32 +16,36 @@
 
 package uk.gov.hmrc.agentclientrelationships.repository
 
+import org.apache.pekko.stream.Materializer
+import org.apache.pekko.stream.scaladsl.Source
 import org.mongodb.scala.MongoWriteException
+import org.mongodb.scala.bson.conversions.Bson
 import org.mongodb.scala.model.Indexes.ascending
 import org.mongodb.scala.model._
-import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
+import play.api.Logger
 import play.api.libs.json.Json.format
 import play.api.libs.json._
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.MongoLocalDateTimeFormat
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipCopyRecord.formats
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
+import uk.gov.hmrc.mdc.Mdc
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
-import uk.gov.hmrc.mdc.Mdc
 
-import java.time.temporal.ChronoUnit.MILLIS
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneOffset
+import java.time.temporal.ChronoUnit.MILLIS
 import javax.inject.Inject
 import javax.inject.Singleton
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.concurrent.duration.DurationInt
 
-/* Despite the name not just for copy across, also used as CreateRecord recovery */
 case class RelationshipCopyRecord(
   arn: String,
   enrolmentKey: Option[EnrolmentKey], // APB-7215 - added to accommodate multiple identifiers (cbc)
@@ -72,7 +76,10 @@ object RelationshipCopyRecord {
 }
 
 @Singleton
-class RelationshipCopyRecordRepository @Inject() (mongoComponent: MongoComponent)(implicit ec: ExecutionContext)
+class RelationshipCopyRecordRepository @Inject() (mongoComponent: MongoComponent)(implicit
+  ec: ExecutionContext,
+  mat: Materializer
+)
 extends PlayMongoRepository[RelationshipCopyRecord](
   mongoComponent = mongoComponent,
   collectionName = "relationship-copy-record",
@@ -134,7 +141,7 @@ with RequestAwareLogging {
       .toFuture()
       .map(res => res.getModifiedCount.toInt)
       .recover { case e: MongoWriteException =>
-        logger.warn(s"Updating ETMP sync status ($status) failed: ${e.getMessage}");
+        logger.warn(s"Updating ETMP sync status ($status) failed: ${e.getMessage}")
         INDICATE_ERROR_DURING_DB_UPDATE
       }
   }
@@ -149,7 +156,7 @@ with RequestAwareLogging {
       .toFuture()
       .map(res => res.getModifiedCount.toInt)
       .recover { case e: MongoWriteException =>
-        logger.warn(s"Updating ES sync status ($status) failed: ${e.getMessage}");
+        logger.warn(s"Updating ES sync status ($status) failed: ${e.getMessage}")
         INDICATE_ERROR_DURING_DB_UPDATE
       }
   }
@@ -184,5 +191,40 @@ with RequestAwareLogging {
       )
     )
   }
+
+  private val nonItsaCopyAcrossQuery: Bson = Filters.or(
+    Filters.or(
+      Filters.eq("references", Set()),
+      Filters.exists("references", exists = false)
+    ),
+    Filters.and(
+      Filters.ne("clientIdentifierType", "MTDITID"),
+      Filters.or(
+        Filters.exists("enrolmentKey", exists = false),
+        Filters.regex("enrolmentKey", "^((?!HMRC-MTD-IT).)*$") // regex = does not start with 'HMRC-MTD-IT'
+      )
+    )
+  )
+
+  def countIrrelevantRecords(): Future[Long] = collection.countDocuments(nonItsaCopyAcrossQuery).toFuture()
+
+  def deleteIrrelevantRecords(): Unit = {
+    val logger = Logger(getClass)
+    val observable = collection.deleteMany(nonItsaCopyAcrossQuery)
+    countIrrelevantRecords().map { count =>
+      logger.warn(s"Data deletion has started, $count irrelevant documents scheduled for deletion")
+    }
+    Source
+      .fromPublisher(observable)
+      .throttle(10, 1.second)
+      .run()
+      .onComplete { _ =>
+        countIrrelevantRecords().map { count =>
+          logger.warn(s"Deletion job completed, $count irrelevant documents remain")
+        }
+      }
+  }
+
+  deleteIrrelevantRecords()
 
 }

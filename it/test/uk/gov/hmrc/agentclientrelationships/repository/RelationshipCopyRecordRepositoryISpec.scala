@@ -17,9 +17,14 @@
 package uk.gov.hmrc.agentclientrelationships.repository
 
 import org.mongodb.scala.model.Filters
+import org.scalatest.concurrent.Eventually.eventually
+import org.scalatest.time.Millis
+import org.scalatest.time.Seconds
+import org.scalatest.time.Span
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
+import play.api.mvc.AnyContentAsEmpty
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
@@ -31,6 +36,8 @@ import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Vrn
+import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.SaRef
+import uk.gov.hmrc.domain.SaAgentReference
 
 import java.time.temporal.ChronoUnit.MILLIS
 import java.time.Instant
@@ -42,7 +49,7 @@ extends UnitSpec
 with MongoApp
 with GuiceOneServerPerSuite {
 
-  implicit val request = FakeRequest()
+  implicit val request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
 
   protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder()
     .configure("features.recovery-enable" -> false)
@@ -209,6 +216,144 @@ with GuiceOneServerPerSuite {
       await(repo.findBy(Arn("TARN0000002"), mtdItEnrolmentKey)) shouldBe Some(copyRecord3)
     }
 
+  }
+
+  "The temporary cleanup code" should {
+
+    val itsaCopyRecord1 = RelationshipCopyRecord(
+      arn = "TARN0000001",
+      enrolmentKey = Some(EnrolmentKey("HMRC-MTD-IT~MTDITID~ABCDEF0000000002")),
+      clientIdentifier = None,
+      clientIdentifierType = None,
+      references = Some(Set(SaRef(SaAgentReference("foo"))))
+    )
+
+    val itsaCopyRecord2 = RelationshipCopyRecord(
+      arn = "TARN0000001",
+      enrolmentKey = None,
+      clientIdentifier = Some("ABCDEF0000000001"),
+      clientIdentifierType = Some("MTDITID"),
+      references = Some(Set(SaRef(SaAgentReference("foo"))))
+    )
+
+    val itsaNonCopyRecord1 = itsaCopyRecord1.copy(
+      enrolmentKey = Some(EnrolmentKey("HMRC-MTD-IT~MTDITID~ABCDEF0000000004")),
+      references = None
+    )
+
+    val itsaNonCopyRecord2 = itsaCopyRecord2.copy(
+      clientIdentifier = Some("ABCDEF0000000003"),
+      references = None
+    )
+
+    val vatCopyRecord1 = RelationshipCopyRecord(
+      arn = "TARN0000001",
+      enrolmentKey = Some(EnrolmentKey("HMRC-MTD-VAT~VRN~123456789")),
+      clientIdentifier = None,
+      clientIdentifierType = None,
+      references = Some(Set(SaRef(SaAgentReference("foo"))))
+    )
+
+    val vatCopyRecord2 = vatCopyRecord1.copy(
+      arn = "TARN0000001",
+      enrolmentKey = None,
+      clientIdentifier = Some("234567890"),
+      clientIdentifierType = Some("VRN"),
+      references = Some(Set(SaRef(SaAgentReference("foo"))))
+    )
+
+    val vatNonCopyRecord1 = vatCopyRecord1.copy(
+      enrolmentKey = Some(EnrolmentKey("HMRC-MTD-VAT~VRN~345678901")),
+      references = None
+    )
+
+    val vatNonCopyRecord2 = vatCopyRecord2.copy(
+      clientIdentifier = Some("456789012"),
+      references = None
+    )
+
+    "count the number of records that are not ITSA copy across" when {
+
+      "there are only records in the 'new' format (use of enrolmentKey)" in {
+        await(repo.collection.insertMany(Seq(
+          itsaCopyRecord1,
+          itsaNonCopyRecord1,
+          vatCopyRecord1,
+          vatNonCopyRecord1
+        )).toFuture())
+
+        repo.countIrrelevantRecords().futureValue shouldBe 3
+      }
+
+      "there are only records in the 'old' format (use of clientIdentifier and clientIdentifierType)" in {
+        await(repo.collection.insertMany(Seq(
+          itsaCopyRecord2,
+          itsaNonCopyRecord2,
+          vatCopyRecord2,
+          vatNonCopyRecord2
+        )).toFuture())
+
+        repo.countIrrelevantRecords().futureValue shouldBe 3
+      }
+
+      "there are only ITSA copy across records" in {
+        await(repo.collection.insertMany(Seq(
+          itsaCopyRecord1,
+          itsaCopyRecord2
+        )).toFuture())
+
+        repo.countIrrelevantRecords().futureValue shouldBe 0
+      }
+
+      "there are no ITSA copy across records" in {
+        await(repo.collection.insertMany(Seq(
+          itsaNonCopyRecord1,
+          itsaNonCopyRecord2,
+          vatCopyRecord1,
+          vatCopyRecord2,
+          vatNonCopyRecord1,
+          vatNonCopyRecord2
+        )).toFuture())
+
+        repo.countIrrelevantRecords().futureValue shouldBe 6
+      }
+
+      "there are a mix of many types of records" in {
+        await(repo.collection.insertMany(Seq(
+          itsaCopyRecord1,
+          itsaCopyRecord2,
+          itsaNonCopyRecord1,
+          itsaNonCopyRecord2,
+          vatCopyRecord1,
+          vatCopyRecord2,
+          vatNonCopyRecord1,
+          vatNonCopyRecord2
+        )).toFuture())
+
+        repo.countIrrelevantRecords().futureValue shouldBe 6
+      }
+    }
+
+    "delete the records that are not ITSA copy across" in {
+      await(repo.collection.insertMany(Seq(
+        itsaCopyRecord1,
+        itsaCopyRecord2,
+        itsaNonCopyRecord1,
+        itsaNonCopyRecord2,
+        vatCopyRecord1,
+        vatCopyRecord2,
+        vatNonCopyRecord1,
+        vatNonCopyRecord2
+      )).toFuture())
+
+      repo.deleteIrrelevantRecords()
+
+      eventually(timeout(Span(5, Seconds)), interval(Span(100, Millis))) {
+        repo.countIrrelevantRecords().futureValue shouldBe 0
+        repo.collection.countDocuments().toFuture().futureValue shouldBe 2
+        repo.collection.find().toFuture().futureValue shouldBe Seq(itsaCopyRecord1, itsaCopyRecord2)
+      }
+    }
   }
 
 }

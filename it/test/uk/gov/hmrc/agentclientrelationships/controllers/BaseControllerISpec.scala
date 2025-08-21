@@ -17,6 +17,7 @@
 package uk.gov.hmrc.agentclientrelationships.controllers
 
 import com.google.inject.AbstractModule
+import org.apache.pekko.stream.Materializer
 import org.scalatest.concurrent.IntegrationPatience
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
@@ -120,6 +121,7 @@ with IntegrationPatience {
 
   implicit lazy val ws: WSClient = app.injector.instanceOf[WSClient]
   implicit val request: RequestHeader = FakeRequest()
+  implicit lazy val mat: Materializer = app.injector.instanceOf[Materializer]
 
   def repo: RelationshipCopyRecordRepository = new RelationshipCopyRecordRepository(mongoComponent)
   def deleteRecordRepository: DeleteRecordRepository = new DeleteRecordRepository(mongoComponent)
