@@ -207,16 +207,19 @@ with RequestAwareLogging {
       .throttle(10, 1.second)
       .runForeach { record =>
         collection.updateOne(
-          Filters.and(Filters.eq("arn", record.arn), Filters.eq("clientIdentifier", record.clientIdentifier.get)),
+          Filters.eq("clientIdentifier", record.clientIdentifier.get),
           Updates.combine(
             Updates.set("enrolmentKey", s"HMRC-MTD-IT~MTDITID~${record.clientIdentifier.get}"),
             Updates.unset("clientIdentifier"),
             Updates.unset("clientIdentifierType")
           )
         ).toFuture()
-          .map(_ => logger.warn("Document updated successfully"))
+          .map(updateResult => logger.warn(s"Documents updated: ${updateResult.getModifiedCount}"))
           .recover { case ex: Throwable => logger.warn("Failed to replace record", ex) }
         ()
+      }
+      .recover {
+        case ex: Throwable => logger.warn("Exception encountered when performing update", ex)
       }
       .onComplete { _ =>
         countDeprecatedRecords().map { count =>
