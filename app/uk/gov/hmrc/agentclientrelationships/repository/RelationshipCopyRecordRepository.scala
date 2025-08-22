@@ -206,15 +206,15 @@ with RequestAwareLogging {
       .fromPublisher(observable)
       .throttle(10, 1.second)
       .runForeach { record =>
-        collection.replaceOne(
+        collection.updateOne(
           Filters.and(Filters.eq("arn", record.arn), Filters.eq("clientIdentifier", record.clientIdentifier.get)),
-          record.copy(
-            clientIdentifier = None,
-            clientIdentifierType = None,
-            enrolmentKey = Some(EnrolmentKey(s"HMRC-MTD-IT~MTDITID~${record.clientIdentifier.get}"))
+          Updates.combine(
+            Updates.set("enrolmentKey", s"HMRC-MTD-IT~MTDITID~${record.clientIdentifier.get}"),
+            Updates.unset("clientIdentifier"),
+            Updates.unset("clientIdentifierType")
           )
         ).toFuture()
-          .map(_ => logger.warn("Document replaced successfully"))
+          .map(_ => logger.warn("Document updated successfully"))
           .recover { case ex: Throwable => logger.warn("Failed to replace record", ex) }
         ()
       }
