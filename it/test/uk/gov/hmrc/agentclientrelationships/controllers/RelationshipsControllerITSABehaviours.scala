@@ -50,7 +50,7 @@ trait RelationshipsControllerITSABehaviours {
 
     val relationshipCopiedSuccessfully = RelationshipCopyRecord(
       arn.value,
-      Some(mtdItEnrolmentKey),
+      mtdItEnrolmentKey,
       references = Some(Set(SaRef(SaAgentReference("foo")))),
       syncToETMPStatus = Some(SyncStatus.Success),
       syncToESStatus = Some(SyncStatus.Success)
@@ -155,7 +155,7 @@ trait RelationshipsControllerITSABehaviours {
 
         await(repo.findBy(arn, mtdItEnrolmentKey)).get should have(
           Symbol("arn")(arn.value),
-          Symbol("enrolmentKey")(Some(mtdItEnrolmentKey)),
+          Symbol("enrolmentKey")(mtdItEnrolmentKey),
           Symbol("references")(Some(Set(SaRef(SaAgentReference("foo"))))),
           Symbol("syncToETMPStatus")(Some(SyncStatus.Success)),
           Symbol("syncToESStatus")(Some(SyncStatus.Success))
@@ -412,7 +412,7 @@ trait RelationshipsControllerITSABehaviours {
 
         await(repo.findBy(arn, mtdItEnrolmentKey)).get should have(
           Symbol("arn")(arn.value),
-          Symbol("enrolmentKey")(Some(mtdItEnrolmentKey)),
+          Symbol("enrolmentKey")(mtdItEnrolmentKey),
           Symbol("references")(Some(Set(SaRef(SaAgentReference("foo"))))),
           Symbol("syncToETMPStatus")(Some(SyncStatus.Failed)),
           Symbol("syncToESStatus")(None)
@@ -455,7 +455,7 @@ trait RelationshipsControllerITSABehaviours {
 
         await(repo.findBy(arn, mtdItEnrolmentKey)).get should have(
           Symbol("arn")(arn.value),
-          Symbol("enrolmentKey")(Some(mtdItEnrolmentKey)),
+          Symbol("enrolmentKey")(mtdItEnrolmentKey),
           Symbol("references")(Some(Set(SaRef(SaAgentReference("foo"))))),
           Symbol("syncToETMPStatus")(Some(SyncStatus.Success)),
           Symbol("syncToESStatus")(Some(SyncStatus.Failed))

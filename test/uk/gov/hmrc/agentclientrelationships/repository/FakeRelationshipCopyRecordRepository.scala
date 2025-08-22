@@ -16,18 +16,17 @@
 
 package uk.gov.hmrc.agentclientrelationships.repository
 
-import org.apache.pekko.stream.Materializer
 import org.mongodb.scala.MongoException
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
-import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus.SyncStatus
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
+import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus.SyncStatus
 
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class FakeRelationshipCopyRecordRepository(implicit mat: Materializer)
+class FakeRelationshipCopyRecordRepository
 extends RelationshipCopyRecordRepository(FakeMongoComponent.make) {
 
   override lazy val initialised: Future[Unit] = Future.unit
@@ -35,14 +34,13 @@ extends RelationshipCopyRecordRepository(FakeMongoComponent.make) {
   private val data: mutable.Map[(Arn, EnrolmentKey), RelationshipCopyRecord] = mutable.Map()
   private val UPDATED_RECORD_COUNT = 1
 
-  // the provided RelationshipCopyRecord must use an enrolment key
-  override def create(record: RelationshipCopyRecord): Future[Int] = findBy(Arn(record.arn), record.enrolmentKey.get)
+  override def create(record: RelationshipCopyRecord): Future[Int] = findBy(Arn(record.arn), record.enrolmentKey)
     .map { result =>
       if (result.isDefined) {
         throw new MongoException("duplicate key error collection")
       }
       else {
-        data += ((Arn(record.arn), record.enrolmentKey.get) -> record)
+        data += ((Arn(record.arn), record.enrolmentKey) -> record)
         1
       }
     }
@@ -115,7 +113,5 @@ extends RelationshipCopyRecordRepository(FakeMongoComponent.make) {
     keysToRemove.foreach(data.remove)
     Future.successful(Right(keysToRemove.size))
   }
-
-  override def convertDeprecatedRecords(): Unit = ()
 
 }

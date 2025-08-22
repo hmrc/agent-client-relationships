@@ -808,7 +808,7 @@ trait RelationshipsControllerGenericBehaviours {
           repo.create(
             RelationshipCopyRecord(
               arn.value,
-              Some(EnrolmentKey(serviceId, Seq(Identifier(clientIdType, clientId.value))))
+              EnrolmentKey(serviceId, Seq(Identifier(clientIdType, clientId.value)))
             )
           )
         ) shouldBe 1

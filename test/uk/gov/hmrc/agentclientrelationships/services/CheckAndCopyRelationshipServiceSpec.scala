@@ -18,7 +18,6 @@ package uk.gov.hmrc.agentclientrelationships.services
 
 import com.codahale.metrics.MetricRegistry
 import org.apache.pekko.actor.ActorSystem
-import org.apache.pekko.stream.Materializer
 import org.mockito.ArgumentCaptor
 import org.mockito.ArgumentMatchers.any
 import org.mockito.ArgumentMatchers.{eq => eqs}
@@ -93,7 +92,7 @@ with ResettingMockitoSugar {
   val nino: Nino = testDataGenerator.nextNino
   val defaultRecord: RelationshipCopyRecord = RelationshipCopyRecord(
     arn.value,
-    Some(mtdItEnrolmentKey),
+    mtdItEnrolmentKey,
     references = Some(Set(SaRef(saAgentRef))),
     syncToETMPStatus = None,
     syncToESStatus = None
@@ -138,7 +137,6 @@ with ResettingMockitoSugar {
   )
 
   val actorSystem: ActorSystem = ActorSystem()
-  implicit val materializer: Materializer = Materializer(actorSystem)
   val relationshipCopyRepository = new FakeRelationshipCopyRecordRepository
   val lockService = new FakeLockService
 
