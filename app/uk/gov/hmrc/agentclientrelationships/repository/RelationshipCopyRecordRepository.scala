@@ -202,30 +202,36 @@ with RequestAwareLogging {
     countDeprecatedRecords().map { count =>
       logger.warn(s"Data conversion has started, $count deprecated documents scheduled for conversion")
     }
-    Source
-      .fromPublisher(observable)
-      .throttle(10, 1.second)
-      .runForeach { record =>
-        collection.updateOne(
-          Filters.eq("clientIdentifier", record.clientIdentifier.get),
-          Updates.combine(
-            Updates.set("enrolmentKey", s"HMRC-MTD-IT~MTDITID~${record.clientIdentifier.get}"),
-            Updates.unset("clientIdentifier"),
-            Updates.unset("clientIdentifierType")
-          )
-        ).toFuture()
-          .map(updateResult => logger.warn(s"Documents updated: ${updateResult.getModifiedCount}"))
-          .recover { case ex: Throwable => logger.warn("Failed to replace record", ex) }
-        ()
-      }
-      .recover {
-        case ex: Throwable => logger.warn("Exception encountered when performing update", ex)
-      }
-      .onComplete { _ =>
-        countDeprecatedRecords().map { count =>
-          logger.warn(s"Conversion job completed, $count deprecated documents remain")
+
+    collection.deleteMany(
+      Filters.and(deprecatedRecordsQuery, Filters.eq("references", null))
+    ).toFuture().map { deleteResult =>
+      logger.warn(s"${deleteResult.getDeletedCount} deprecated records with null references deleted")
+      Source
+        .fromPublisher(observable)
+        .throttle(10, 1.second)
+        .runForeach { record =>
+          collection.updateOne(
+            Filters.eq("clientIdentifier", record.clientIdentifier.get),
+            Updates.combine(
+              Updates.set("enrolmentKey", s"HMRC-MTD-IT~MTDITID~${record.clientIdentifier.get}"),
+              Updates.unset("clientIdentifier"),
+              Updates.unset("clientIdentifierType")
+            )
+          ).toFuture()
+            .map(updateResult => logger.warn(s"Documents updated: ${updateResult.getModifiedCount}"))
+            .recover { case ex: Throwable => logger.warn("Failed to replace record", ex) }
+          ()
         }
-      }
+        .recover {
+          case ex: Throwable => logger.warn("Exception encountered when performing update", ex)
+        }
+        .onComplete { _ =>
+          countDeprecatedRecords().map { count =>
+            logger.warn(s"Conversion job completed, $count deprecated documents remain")
+          }
+        }
+    }
   }
 
   convertDeprecatedRecords()
