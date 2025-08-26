@@ -17,6 +17,7 @@
 package uk.gov.hmrc.agentclientrelationships.repository
 
 import org.mongodb.scala.model.Filters
+import org.mongodb.scala.model.Updates
 import org.scalatest.concurrent.Eventually.eventually
 import org.scalatest.time.Millis
 import org.scalatest.time.Seconds
@@ -28,21 +29,21 @@ import play.api.mvc.AnyContentAsEmpty
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
-import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus.Failed
-import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus.Success
-import uk.gov.hmrc.agentclientrelationships.support.MongoApp
-import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Vrn
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.SaRef
+import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus.Failed
+import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus.Success
+import uk.gov.hmrc.agentclientrelationships.support.MongoApp
+import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 import uk.gov.hmrc.domain.SaAgentReference
 
-import java.time.temporal.ChronoUnit.MILLIS
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneOffset
+import java.time.temporal.ChronoUnit.MILLIS
 
 class RelationshipCopyRecordRepositoryISpec
 extends UnitSpec
@@ -274,6 +275,43 @@ with GuiceOneServerPerSuite {
           clientIdentifier = None,
           clientIdentifierType = None
         ),
+        deprecatedRecord2.copy(
+          enrolmentKey = Some(EnrolmentKey("HMRC-MTD-IT~MTDITID~ABCDEF0000000004")),
+          clientIdentifier = None,
+          clientIdentifierType = None
+        )
+      )
+
+      val records = repo.collection.find().toFuture().futureValue
+
+      records shouldBe expectedRecords
+    }
+
+    "delete deprecated records where the references array contains null" in {
+      repo.collection.insertMany(Seq(
+        modernRecord1,
+        modernRecord2,
+        deprecatedRecord1,
+        deprecatedRecord2
+      )).toFuture().futureValue
+
+      repo.collection.updateOne(
+        Filters.eq("clientIdentifier", "ABCDEF0000000003"),
+        Updates.combine(
+          Updates.set("references.0", null)
+        )
+      ).toFuture().futureValue
+
+      repo.convertDeprecatedRecords()
+
+      eventually(timeout(Span(5, Seconds)), interval(Span(100, Millis))) {
+        repo.countDeprecatedRecords().futureValue shouldBe 0
+        repo.collection.countDocuments().toFuture().futureValue shouldBe 3
+      }
+
+      val expectedRecords = Seq(
+        modernRecord1,
+        modernRecord2,
         deprecatedRecord2.copy(
           enrolmentKey = Some(EnrolmentKey("HMRC-MTD-IT~MTDITID~ABCDEF0000000004")),
           clientIdentifier = None,
