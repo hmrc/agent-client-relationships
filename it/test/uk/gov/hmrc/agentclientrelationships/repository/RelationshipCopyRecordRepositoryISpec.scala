@@ -16,6 +16,11 @@
 
 package uk.gov.hmrc.agentclientrelationships.repository
 
+import org.bson.BSONObject
+import org.mongodb.scala.bson.collection.immutable.Document
+import org.mongodb.scala.bson.BsonArray
+import org.mongodb.scala.bson.BsonDocument
+import org.mongodb.scala.bson.BsonNull
 import org.mongodb.scala.model.Filters
 import org.mongodb.scala.model.Updates
 import org.scalatest.concurrent.Eventually.eventually
@@ -287,19 +292,25 @@ with GuiceOneServerPerSuite {
       records shouldBe expectedRecords
     }
 
-    "delete deprecated records where the references array contains null" in {
+    "delete deprecated records where the references has some permutation of null/invalid values" in {
       repo.collection.insertMany(Seq(
         modernRecord1,
         modernRecord2,
-        deprecatedRecord1,
+        deprecatedRecord1.copy(references = None),
+        deprecatedRecord1.copy(references = Some(Set()), clientIdentifier = Some("ABCDEF0000000005")),
+        deprecatedRecord1.copy(clientIdentifier = Some("ABCDEF0000000006")),
+        deprecatedRecord1.copy(clientIdentifier = Some("ABCDEF0000000007")),
         deprecatedRecord2
       )).toFuture().futureValue
 
       repo.collection.updateOne(
-        Filters.eq("clientIdentifier", "ABCDEF0000000003"),
-        Updates.combine(
-          Updates.set("references.0", null)
-        )
+        Filters.eq("clientIdentifier", "ABCDEF0000000006"),
+        Updates.set("references.0.saAgentReference", BsonNull.apply())
+      ).toFuture().futureValue
+
+      repo.collection.updateOne(
+        Filters.eq("clientIdentifier", "ABCDEF0000000007"),
+        Updates.set("references", BsonArray(Document("oldAgentCode" -> "f")))
       ).toFuture().futureValue
 
       repo.convertDeprecatedRecords()

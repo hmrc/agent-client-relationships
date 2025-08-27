@@ -18,7 +18,9 @@ package uk.gov.hmrc.agentclientrelationships.repository
 
 import org.apache.pekko.stream.Materializer
 import org.apache.pekko.stream.scaladsl.Source
+import org.mongodb.scala.Document
 import org.mongodb.scala.MongoWriteException
+import org.mongodb.scala.bson.BsonArray
 import org.mongodb.scala.bson.conversions.Bson
 import org.mongodb.scala.model.Indexes.ascending
 import org.mongodb.scala.model._
@@ -204,9 +206,19 @@ with RequestAwareLogging {
     }
 
     collection.deleteMany(
-      Filters.and(deprecatedRecordsQuery, Filters.eq("references", null))
+      Filters.and(
+        deprecatedRecordsQuery,
+        Filters.or(
+          Filters.eq("references", Document("$exists" -> false)),
+          Filters.eq("references", Document("$size" -> 0)),
+          Filters.eq("references", Set()),
+          Filters.eq("references", BsonArray()),
+          Filters.elemMatch("references", Filters.eq("saAgentReference", Document("$exists" -> false))),
+          Filters.elemMatch("references", Filters.eq("saAgentReference", null))
+        )
+      )
     ).toFuture().map { deleteResult =>
-      logger.warn(s"${deleteResult.getDeletedCount} deprecated records with null references deleted")
+      logger.warn(s"${deleteResult.getDeletedCount} deprecated records with invalid data deleted")
       Source
         .fromPublisher(observable)
         .throttle(10, 1.second)
