@@ -18,14 +18,11 @@ package uk.gov.hmrc.agentclientrelationships.repository
 
 import org.apache.pekko.stream.Materializer
 import org.apache.pekko.stream.scaladsl.Source
-import org.mongodb.scala.Document
 import org.mongodb.scala.MongoWriteException
-import org.mongodb.scala.bson.BsonArray
 import org.mongodb.scala.bson.conversions.Bson
 import org.mongodb.scala.model.Indexes.ascending
 import org.mongodb.scala.model._
 import play.api.Logger
-import play.api.libs.json.Json.format
 import play.api.libs.json._
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
@@ -73,7 +70,28 @@ case class RelationshipCopyRecord(
 object RelationshipCopyRecord {
 
   implicit val localDateTimeFormat: Format[LocalDateTime] = MongoLocalDateTimeFormat.localDateTimeFormat
-  implicit val formats: OFormat[RelationshipCopyRecord] = format[RelationshipCopyRecord]
+  val reads: Reads[RelationshipCopyRecord] =
+    for {
+      arn <- (__ \ "arn").read[String]
+      enrolmentKey <- (__ \ "enrolmentKey").readNullable[EnrolmentKey]
+      clientIdentifier <- (__ \ "clientIdentifier").readNullable[String]
+      clientIdentifierType <- (__ \ "clientIdentifierType").readNullable[String]
+      references <- (__ \ "references").readNullable[Set[RelationshipReference]].orElse(Reads.pure(None))
+      dateTime <- (__ \ "dateTime").read[LocalDateTime]
+      syncToETMPStatus <- (__ \ "syncToETMPStatus").readNullable[SyncStatus]
+      syncToESStatus <- (__ \ "syncToESStatus").readNullable[SyncStatus]
+    } yield RelationshipCopyRecord(
+      arn,
+      enrolmentKey,
+      clientIdentifier,
+      clientIdentifierType,
+      references,
+      dateTime,
+      syncToETMPStatus,
+      syncToESStatus
+    )
+  val writes: OWrites[RelationshipCopyRecord] = Json.writes[RelationshipCopyRecord]
+  implicit val formats: Format[RelationshipCopyRecord] = OFormat(reads, writes)
 
 }
 
@@ -204,46 +222,33 @@ with RequestAwareLogging {
     countDeprecatedRecords().map { count =>
       logger.warn(s"Data conversion has started, $count deprecated documents scheduled for conversion")
     }
-
-    collection.deleteMany(
-      Filters.and(
-        deprecatedRecordsQuery,
-        Filters.or(
-          Filters.eq("references", Document("$exists" -> false)),
-          Filters.eq("references", Document("$size" -> 0)),
-          Filters.eq("references", Set()),
-          Filters.eq("references", BsonArray()),
-          Filters.elemMatch("references", Filters.eq("saAgentReference", Document("$exists" -> false))),
-          Filters.elemMatch("references", Filters.eq("saAgentReference", null))
-        )
-      )
-    ).toFuture().map { deleteResult =>
-      logger.warn(s"${deleteResult.getDeletedCount} deprecated records with invalid data deleted")
-      Source
-        .fromPublisher(observable)
-        .throttle(10, 1.second)
-        .runForeach { record =>
-          collection.updateOne(
-            Filters.eq("clientIdentifier", record.clientIdentifier.get),
-            Updates.combine(
-              Updates.set("enrolmentKey", s"HMRC-MTD-IT~MTDITID~${record.clientIdentifier.get}"),
-              Updates.unset("clientIdentifier"),
-              Updates.unset("clientIdentifierType")
-            )
-          ).toFuture()
-            .map(updateResult => logger.warn(s"Documents updated: ${updateResult.getModifiedCount}"))
-            .recover { case ex: Throwable => logger.warn("Failed to replace record", ex) }
-          ()
-        }
-        .recover {
-          case ex: Throwable => logger.warn("Exception encountered when performing update", ex)
-        }
-        .onComplete { _ =>
-          countDeprecatedRecords().map { count =>
-            logger.warn(s"Conversion job completed, $count deprecated documents remain")
+    Source
+      .fromPublisher(observable)
+      .throttle(10, 1.second)
+      .runForeach { record =>
+        collection.replaceOne(
+          Filters.eq("clientIdentifier", record.clientIdentifier.get),
+          record.copy(
+            clientIdentifier = None,
+            clientIdentifierType = None,
+            enrolmentKey = Some(EnrolmentKey(s"HMRC-MTD-IT~MTDITID~${record.clientIdentifier.get}"))
+          )
+        ).toFuture()
+          .map(replaceResult => logger.warn(s"Documents replaced: ${replaceResult.getModifiedCount}"))
+          .recover { case ex: Throwable => logger.warn("Failed to replace record", ex) }
+        ()
+      }
+      .recover {
+        case ex: Throwable => logger.warn("Exception encountered when performing update", ex)
+      }
+      .onComplete { _ =>
+        countDeprecatedRecords().flatMap { count =>
+          logger.warn(s"Conversion job completed, $count deprecated documents remain")
+          collection.deleteMany(Filters.exists("references", exists = false)).toFuture().map { deleteResult =>
+            logger.warn(s"After conversion, ${deleteResult.getDeletedCount} records were deleted")
           }
         }
-    }
+      }
   }
 
   convertDeprecatedRecords()
