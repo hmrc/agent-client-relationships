@@ -169,22 +169,20 @@ with AuthActions {
 
   def replaceUrnWithUtr(urn: String): Action[JsValue] =
     Action.async(parse.json) { implicit request =>
-      authorised() {
-        val utr = (request.body \ "utr").as[String]
-        invitationService
-          .updateInvitation(
-            TrustNT.enrolmentKey,
-            urn,
-            UrnType.id,
-            Trust.enrolmentKey,
-            utr,
-            UtrType.id
-          )
-          .map {
-            case true => NoContent
-            case false => NotFound
-          }
-      }
+      val utr = (request.body \ "utr").as[String]
+      invitationService
+        .updateInvitation(
+          TrustNT.enrolmentKey,
+          urn,
+          UrnType.id,
+          Trust.enrolmentKey,
+          utr,
+          UtrType.id
+        )
+        .map {
+          case true => NoContent
+          case false => NotFound
+        }
     }
 
   def cancelInvitation(invitationId: String): Action[AnyContent] = Action.async { implicit request =>
