@@ -17,7 +17,6 @@
 package uk.gov.hmrc.agentclientrelationships.controllers
 
 import com.google.inject.AbstractModule
-import org.apache.pekko.stream.Materializer
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
@@ -49,7 +48,7 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class TestRelationshipCopyRecordRepository @Inject() (moduleComponent: MongoComponent)(implicit mat: Materializer)
+class TestRelationshipCopyRecordRepository @Inject() (moduleComponent: MongoComponent)
 extends RelationshipCopyRecordRepository(moduleComponent) {
   override def create(record: RelationshipCopyRecord): Future[Int] = Future
     .failed(new Exception("Could not connect the mongo db."))

@@ -35,7 +35,7 @@ trait RelationshipsControllerVATBehaviours {
   def relationshipControllerVATSpecificBehaviours(): Unit = {
     val relationshipCopiedSuccessfullyForMtdVat = RelationshipCopyRecord(
       arn.value,
-      Some(EnrolmentKey(Service.Vat, vrn)),
+      EnrolmentKey(Service.Vat, vrn),
       syncToETMPStatus = Some(SyncStatus.Success),
       syncToESStatus = Some(SyncStatus.Success)
     )

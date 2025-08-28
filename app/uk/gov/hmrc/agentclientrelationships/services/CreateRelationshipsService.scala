@@ -77,7 +77,7 @@ with RequestAwareLogging {
         if (containsCopyAcrossReferences) {
           val record = RelationshipCopyRecord(
             arn.value,
-            Some(enrolmentKey), // APB-7215 added to accommodate multiple identifiers
+            enrolmentKey,
             references = Some(oldReferences)
           )
           relationshipCopyRepository

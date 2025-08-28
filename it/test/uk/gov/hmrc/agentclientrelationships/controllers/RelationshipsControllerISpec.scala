@@ -67,7 +67,7 @@ with HipStub {
 
   val relationshipCopiedSuccessfully: RelationshipCopyRecord = RelationshipCopyRecord(
     arn.value,
-    Some(EnrolmentKey(Service.MtdIt, MtdItId("ABCDEF0000000001"))),
+    EnrolmentKey(Service.MtdIt, MtdItId("ABCDEF0000000001")),
     references = Some(Set(SaRef(SaAgentReference("foo")))),
     syncToETMPStatus = Some(SyncStatus.Success),
     syncToESStatus = Some(SyncStatus.Success)

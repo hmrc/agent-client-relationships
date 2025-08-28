@@ -16,13 +16,10 @@
 
 package uk.gov.hmrc.agentclientrelationships.repository
 
-import org.apache.pekko.stream.Materializer
-import org.apache.pekko.stream.scaladsl.Source
 import org.mongodb.scala.MongoWriteException
-import org.mongodb.scala.bson.conversions.Bson
 import org.mongodb.scala.model.Indexes.ascending
 import org.mongodb.scala.model._
-import play.api.Logger
+import play.api.libs.json.Json.format
 import play.api.libs.json._
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
@@ -43,21 +40,15 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import scala.concurrent.duration.DurationInt
 
 case class RelationshipCopyRecord(
   arn: String,
-  enrolmentKey: Option[EnrolmentKey], // APB-7215 - added to accommodate multiple identifiers (cbc)
-  clientIdentifier: Option[String] = None, // Deprecated - for legacy use only. Use the enrolment key instead.
-  clientIdentifierType: Option[String] = None, // Deprecated - for legacy use only. Use the enrolment key instead.
+  enrolmentKey: EnrolmentKey,
   references: Option[Set[RelationshipReference]] = None,
   dateTime: LocalDateTime = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime.truncatedTo(MILLIS),
   syncToETMPStatus: Option[SyncStatus] = None,
   syncToESStatus: Option[SyncStatus] = None
 ) {
-
-  // Legacy records use client id & client id type. Newer records use enrolment key.
-  require(enrolmentKey.isDefined || (clientIdentifier.isDefined && clientIdentifierType.isDefined))
 
   def actionRequired: Boolean = needToCreateEtmpRecord || needToCreateEsRecord
 
@@ -70,54 +61,17 @@ case class RelationshipCopyRecord(
 object RelationshipCopyRecord {
 
   implicit val localDateTimeFormat: Format[LocalDateTime] = MongoLocalDateTimeFormat.localDateTimeFormat
-  val reads: Reads[RelationshipCopyRecord] =
-    for {
-      arn <- (__ \ "arn").read[String]
-      enrolmentKey <- (__ \ "enrolmentKey").readNullable[EnrolmentKey]
-      clientIdentifier <- (__ \ "clientIdentifier").readNullable[String]
-      clientIdentifierType <- (__ \ "clientIdentifierType").readNullable[String]
-      references <- (__ \ "references").readNullable[Set[RelationshipReference]].orElse(Reads.pure(None))
-      dateTime <- (__ \ "dateTime").read[LocalDateTime]
-      syncToETMPStatus <- (__ \ "syncToETMPStatus").readNullable[SyncStatus]
-      syncToESStatus <- (__ \ "syncToESStatus").readNullable[SyncStatus]
-    } yield RelationshipCopyRecord(
-      arn,
-      enrolmentKey,
-      clientIdentifier,
-      clientIdentifierType,
-      references,
-      dateTime,
-      syncToETMPStatus,
-      syncToESStatus
-    )
-  val writes: OWrites[RelationshipCopyRecord] = Json.writes[RelationshipCopyRecord]
-  implicit val formats: Format[RelationshipCopyRecord] = OFormat(reads, writes)
+  implicit val formats: OFormat[RelationshipCopyRecord] = format[RelationshipCopyRecord]
 
 }
 
 @Singleton
-class RelationshipCopyRecordRepository @Inject() (mongoComponent: MongoComponent)(implicit
-  ec: ExecutionContext,
-  mat: Materializer
-)
+class RelationshipCopyRecordRepository @Inject() (mongoComponent: MongoComponent)(implicit ec: ExecutionContext)
 extends PlayMongoRepository[RelationshipCopyRecord](
   mongoComponent = mongoComponent,
   collectionName = "relationship-copy-record",
   domainFormat = formats,
   indexes = Seq(
-    // Note: these are *partial* indexes as sometimes we index on clientIdentifier, other times on enrolmentKey.
-    // The situation will be simplified after a migration of the legacy documents.
-    IndexModel(
-      ascending(
-        "arn",
-        "clientIdentifier",
-        "clientIdentifierType"
-      ),
-      IndexOptions()
-        .name("arnAndAgentReferencePartial")
-        .partialFilterExpression(Filters.exists("clientIdentifier"))
-        .unique(true)
-    ),
     IndexModel(
       ascending("arn", "enrolmentKey"),
       IndexOptions()
@@ -137,8 +91,8 @@ with RequestAwareLogging {
       .findOneAndReplace(
         filter(
           Arn(record.arn),
-          record.enrolmentKey.get
-        ), // we assume that all newly created records WILL have an enrolment key
+          record.enrolmentKey
+        ),
         record,
         FindOneAndReplaceOptions().upsert(true)
       )
@@ -199,58 +153,6 @@ with RequestAwareLogging {
   private def filter(
     arn: Arn,
     enrolmentKey: EnrolmentKey
-  ) = {
-    val identifierType: String = enrolmentKey.identifiers.head.key
-    val identifier: String = enrolmentKey.identifiers.head.value
-    Filters.or(
-      Filters.and(Filters.equal("arn", arn.value), Filters.equal("enrolmentKey", enrolmentKey.tag)),
-      Filters.and(
-        Filters.equal("arn", arn.value),
-        Filters.equal("clientIdentifier", identifier),
-        Filters.equal("clientIdentifierType", identifierType)
-      )
-    )
-  }
-
-  private val deprecatedRecordsQuery: Bson = Filters.exists("clientIdentifier")
-
-  def countDeprecatedRecords(): Future[Long] = collection.countDocuments(deprecatedRecordsQuery).toFuture()
-
-  def convertDeprecatedRecords(): Unit = {
-    val logger = Logger(getClass)
-    val observable = collection.find(deprecatedRecordsQuery)
-    countDeprecatedRecords().map { count =>
-      logger.warn(s"Data conversion has started, $count deprecated documents scheduled for conversion")
-    }
-    Source
-      .fromPublisher(observable)
-      .throttle(10, 1.second)
-      .runForeach { record =>
-        collection.replaceOne(
-          Filters.eq("clientIdentifier", record.clientIdentifier.get),
-          record.copy(
-            clientIdentifier = None,
-            clientIdentifierType = None,
-            enrolmentKey = Some(EnrolmentKey(s"HMRC-MTD-IT~MTDITID~${record.clientIdentifier.get}"))
-          )
-        ).toFuture()
-          .map(replaceResult => logger.warn(s"Documents replaced: ${replaceResult.getModifiedCount}"))
-          .recover { case ex: Throwable => logger.warn("Failed to replace record", ex) }
-        ()
-      }
-      .recover {
-        case ex: Throwable => logger.warn("Exception encountered when performing update", ex)
-      }
-      .onComplete { _ =>
-        countDeprecatedRecords().flatMap { count =>
-          logger.warn(s"Conversion job completed, $count deprecated documents remain")
-          collection.deleteMany(Filters.exists("references", exists = false)).toFuture().map { deleteResult =>
-            logger.warn(s"After conversion, ${deleteResult.getDeletedCount} records were deleted")
-          }
-        }
-      }
-  }
-
-  convertDeprecatedRecords()
+  ) = Filters.and(Filters.equal("arn", arn.value), Filters.equal("enrolmentKey", enrolmentKey.tag))
 
 }
