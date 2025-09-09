@@ -76,7 +76,6 @@ extends PlayMongoRepository[RelationshipCopyRecord](
       ascending("arn", "enrolmentKey"),
       IndexOptions()
         .name("arnAndEnrolmentKeyPartial")
-        .partialFilterExpression(Filters.exists("enrolmentKey"))
         .unique(true)
     )
   ),
@@ -86,7 +85,7 @@ with RequestAwareLogging {
 
   private val INDICATE_ERROR_DURING_DB_UPDATE = 0
 
-  def create(record: RelationshipCopyRecord): Future[Int] = Mdc.preservingMdc {
+  def create(record: RelationshipCopyRecord): Future[Boolean] = Mdc.preservingMdc {
     collection
       .findOneAndReplace(
         filter(
@@ -97,7 +96,7 @@ with RequestAwareLogging {
         FindOneAndReplaceOptions().upsert(true)
       )
       .toFuture()
-      .map(_ => 1)
+      .map(_ => true)
   }
 
   def findBy(
@@ -109,14 +108,14 @@ with RequestAwareLogging {
     arn: Arn,
     enrolmentKey: EnrolmentKey,
     status: SyncStatus
-  )(implicit requestHeader: RequestHeader): Future[Int] = Mdc.preservingMdc {
+  )(implicit requestHeader: RequestHeader): Future[Boolean] = Mdc.preservingMdc {
     collection
       .updateMany(filter(arn, enrolmentKey), Updates.set("syncToETMPStatus", status.toString))
       .toFuture()
-      .map(res => res.getModifiedCount.toInt)
-      .recover { case e: MongoWriteException =>
-        logger.warn(s"Updating ETMP sync status ($status) failed: ${e.getMessage}")
-        INDICATE_ERROR_DURING_DB_UPDATE
+      .map { updateResult =>
+        if (updateResult.getModifiedCount != 1L)
+          logger.warn(s"Updating ETMP sync status ($status) failed")
+        true
       }
   }
 
@@ -124,14 +123,14 @@ with RequestAwareLogging {
     arn: Arn,
     enrolmentKey: EnrolmentKey,
     status: SyncStatus
-  )(implicit requestHeader: RequestHeader): Future[Int] = Mdc.preservingMdc {
+  )(implicit requestHeader: RequestHeader): Future[Boolean] = Mdc.preservingMdc {
     collection
       .updateMany(filter(arn, enrolmentKey), Updates.set("syncToESStatus", status.toString))
       .toFuture()
-      .map(res => res.getModifiedCount.toInt)
-      .recover { case e: MongoWriteException =>
-        logger.warn(s"Updating ES sync status ($status) failed: ${e.getMessage}")
-        INDICATE_ERROR_DURING_DB_UPDATE
+      .map { updateResult =>
+        if (updateResult.getModifiedCount != 1L)
+          logger.warn(s"Updating ES sync status ($status) failed")
+        true
       }
   }
 

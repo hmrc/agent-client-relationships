@@ -322,7 +322,7 @@ with HipStub {
 
     }
 
-    "return 500 InternalServerError when there is a problem in ETMP" in {
+    "return downstream error when there is a problem in ETMP" in {
 
       val fakeRequest = FakeRequest("POST", testUrl)
 
@@ -350,9 +350,7 @@ with HipStub {
 
       val result = doAgentPostRequest(testUrl, "")
 
-      result.status shouldBe 500
-      result.body shouldBe """{"statusCode":500,"message":"RELATIONSHIP_CREATE_FAILED_IF"}"""
-
+      result.status shouldBe 502
     }
   }
 

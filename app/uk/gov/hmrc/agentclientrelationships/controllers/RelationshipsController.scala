@@ -129,7 +129,6 @@ with RequestAwareLogging {
                 arn,
                 enrolmentKey,
                 Set(),
-                failIfCreateRecordFails = false,
                 failIfAllocateAgentInESFails = true
               )
               .map {

@@ -38,7 +38,7 @@ import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutor
 
-class IFConnectorISpec
+class IfConnectorISpec
 extends UnitSpec
 with GuiceOneServerPerSuite
 with WireMockSupport

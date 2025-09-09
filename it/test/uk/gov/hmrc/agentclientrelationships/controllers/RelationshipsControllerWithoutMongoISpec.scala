@@ -50,7 +50,7 @@ import scala.concurrent.Future
 
 class TestRelationshipCopyRecordRepository @Inject() (moduleComponent: MongoComponent)
 extends RelationshipCopyRecordRepository(moduleComponent) {
-  override def create(record: RelationshipCopyRecord): Future[Int] = Future
+  override def create(record: RelationshipCopyRecord): Future[Boolean] = Future
     .failed(new Exception("Could not connect the mongo db."))
 }
 

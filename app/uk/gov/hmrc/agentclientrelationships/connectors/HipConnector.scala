@@ -75,7 +75,7 @@ with RequestAwareLogging {
   def createAgentRelationship(
     enrolmentKey: EnrolmentKey,
     arn: Arn
-  )(implicit request: RequestHeader): Future[Option[RegistrationRelationshipResponse]] = {
+  )(implicit request: RequestHeader): Future[RegistrationRelationshipResponse] = {
 
     val url = new URL(s"$baseUrl/etmp/RESTAdapter/rosm/agent-relationship")
     val isExclusiveAgent = getIsExclusiveAgent(enrolmentKey.service)
@@ -91,13 +91,10 @@ with RequestAwareLogging {
       requestBody,
       () => headers.makeSubscriptionHeaders()
     ).map {
-      case Right(response) => Option(response.json.as[RegistrationRelationshipResponse])
+      case Right(response) => response.json.as[RegistrationRelationshipResponse]
       case Left(errorResponse) =>
-        errorResponse.statusCode match {
-          case _ =>
-            logger.error(s"Error in HIP 'CreateAgentRelationship' with error: ${errorResponse.getMessage}")
-            None
-        }
+        logger.error(s"Error in HIP 'CreateAgentRelationship' with error: ${errorResponse.getMessage}")
+        throw errorResponse
     }
   }
 

@@ -85,7 +85,7 @@ with IntegrationPatience {
 
     "return 204 for a valid arn and mtdItId" in {
       givenAuditConnector()
-      await(repo.create(RelationshipCopyRecord(arn, EnrolmentKey(Service.MtdIt, MtdItId(mtditid))))) shouldBe 1
+      await(repo.create(RelationshipCopyRecord(arn, EnrolmentKey(Service.MtdIt, MtdItId(mtditid))))) shouldBe true
       val result = doAgentDeleteRequest(requestPath)
       result.status shouldBe 204
     }
@@ -94,7 +94,7 @@ with IntegrationPatience {
       givenAuditConnector()
       await(
         repo.create(RelationshipCopyRecord(arn, EnrolmentKey(Service.MtdIt, MtdItId("ABCDEF123456780"))))
-      ) shouldBe 1
+      ) shouldBe true
       val result = doAgentDeleteRequest(requestPath)
       result.status shouldBe 404
     }

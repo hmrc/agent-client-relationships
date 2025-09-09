@@ -185,7 +185,6 @@ extends RequestAwareLogging {
               arn = Arn(invitation.arn),
               enrolmentKey = enrolment,
               oldReferences = Set(),
-              failIfCreateRecordFails = false,
               failIfAllocateAgentInESFails = true
             )
             .map(_.getOrElse(throw CreateRelationshipLocked))
@@ -205,7 +204,6 @@ extends RequestAwareLogging {
             arn = Arn(invitation.arn),
             enrolmentKey = enrolment,
             oldReferences = Set(),
-            failIfCreateRecordFails = false,
             failIfAllocateAgentInESFails = true
           )
           .map(_.getOrElse(throw CreateRelationshipLocked))

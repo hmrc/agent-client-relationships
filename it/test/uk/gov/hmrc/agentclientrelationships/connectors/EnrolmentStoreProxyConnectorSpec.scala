@@ -346,30 +346,6 @@ with MockitoSugar {
       )
     }
 
-    "keep calm if conflict reported" in {
-      givenAuditConnector()
-      givenEnrolmentAllocationFailsWith(409)(
-        "group1",
-        "user1",
-        enrolmentKey,
-        "bar"
-      )
-      await(
-        connector.allocateEnrolmentToAgent(
-          "group1",
-          "user1",
-          enrolmentKey,
-          AgentCode("bar")
-        )
-      )
-      verifyEnrolmentAllocationAttempt(
-        "group1",
-        "user1",
-        enrolmentKey,
-        "bar"
-      )
-    }
-
     "throw an exception if service not available when allocating enrolment" in {
       givenAuditConnector()
       givenEnrolmentAllocationFailsWith(503)(

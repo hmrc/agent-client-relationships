@@ -488,7 +488,7 @@ trait RelationshipsControllerGenericBehaviours {
 
         val result = doAgentPutRequest(requestPath)
         result.status shouldBe 500
-        (result.json \ "code").asOpt[String] shouldBe Some("RELATIONSHIP_CREATE_FAILED_IF")
+        result.body should include("returned 404")
 
         verifyAuditRequestNotSent(AgentClientRelationshipEvent.CreateRelationship)
       }
@@ -811,7 +811,7 @@ trait RelationshipsControllerGenericBehaviours {
               EnrolmentKey(serviceId, Seq(Identifier(clientIdType, clientId.value)))
             )
           )
-        ) shouldBe 1
+        ) shouldBe true
         val result = doAgentDeleteRequest(requestPath)
         result.status shouldBe 404
       }

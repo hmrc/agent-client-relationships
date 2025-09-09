@@ -231,10 +231,9 @@ with HipStub {
         "there is an existing relationship in the form of a PartialAuth invitation (alt-itsa), in a main role" in {
           val request = FakeRequest("GET", "/agent-client-relationships/client/HMRC-MTD-IT/details/AA000001B")
           setupCommonStubs(request)
-          givenMtdItsaBusinessDetailsExists(Nino("AA000001B"), MtdItId("XAIT0000111122"))
-          givenNinoItsaBusinessDetailsExists(MtdItId("XAIT0000111122"), Nino("AA000001B"))
-          givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")))
-          givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
+          givenMtdItIdIsUnKnownFor(Nino("AA000001B"))
+          givenItsaCitizenDetailsExists("AA000001B")
+          givenItsaDesignatoryDetailsExists("AA000001B")
           await(
             partialAuthRepo.create(
               Instant.parse("2020-01-01T00:00:00.000Z"),
@@ -247,7 +246,7 @@ with HipStub {
           val result = doGetRequest(request.uri)
           result.status shouldBe 200
           result.json shouldBe Json.obj(
-            "name" -> "Erling Haal",
+            "name" -> "Matthew Kovacic",
             "isOverseas" -> false,
             "knownFacts" -> Json.arr("AA11AA"),
             "knownFactType" -> "PostalCode",
@@ -259,10 +258,9 @@ with HipStub {
         "there is an existing relationship in the form of a PartialAuth invitation (alt-itsa), in a supporting role" in {
           val request = FakeRequest("GET", "/agent-client-relationships/client/HMRC-MTD-IT/details/AA000001B")
           setupCommonStubs(request)
-          givenMtdItsaBusinessDetailsExists(Nino("AA000001B"), MtdItId("XAIT0000111122"))
-          givenNinoItsaBusinessDetailsExists(MtdItId("XAIT0000111122"), Nino("AA000001B"))
-          givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")))
-          givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
+          givenMtdItIdIsUnKnownFor(Nino("AA000001B"))
+          givenItsaCitizenDetailsExists("AA000001B")
+          givenItsaDesignatoryDetailsExists("AA000001B")
           await(
             partialAuthRepo.create(
               Instant.now(),
@@ -275,7 +273,7 @@ with HipStub {
           val result = doGetRequest(request.uri)
           result.status shouldBe 200
           result.json shouldBe Json.obj(
-            "name" -> "Erling Haal",
+            "name" -> "Matthew Kovacic",
             "isOverseas" -> false,
             "knownFacts" -> Json.arr("AA11AA"),
             "knownFactType" -> "PostalCode",

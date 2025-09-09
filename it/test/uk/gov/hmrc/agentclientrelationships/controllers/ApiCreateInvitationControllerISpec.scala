@@ -40,6 +40,8 @@ import uk.gov.hmrc.agentclientrelationships.services.ApiKnownFactsCheckService
 import uk.gov.hmrc.agentclientrelationships.stubs._
 import uk.gov.hmrc.agentclientrelationships.support.TestData
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service._
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.SuspensionDetails
 import uk.gov.hmrc.auth.core.AuthConnector
 
@@ -499,10 +501,18 @@ with TestData {
       result.json shouldBe expectedJson
     }
 
-    s"return UNPROCESSABLE_ENTITY status and valid JSON ALREADY_AUTHORISED when invitation is created for Alt Itsa - client mtdItId exists and PartialAuth relationship exists" in {
+    s"return UNPROCESSABLE_ENTITY status and valid JSON ALREADY_AUTHORISED when invitation is created for Alt Itsa - client mtdItId exists and PartialAuth relationship exists (triggers a proper relationship creation in the background)" in {
       val inputData: ApiCreateInvitationRequest = baseInvitationInputData
 
       getStandardStubForCreateInvitation(HMRCMTDIT)
+      givenAgentCanBeAllocated(mtdItId, arn)
+      givenEnrolmentAllocationSucceeds(
+        "foo",
+        "bar",
+        EnrolmentKey(Service.MtdIt, mtdItId),
+        "NQJUEJCWT14"
+      )
+      givenCacheRefresh(arn)
 
       partialAuthRepository
         .create(

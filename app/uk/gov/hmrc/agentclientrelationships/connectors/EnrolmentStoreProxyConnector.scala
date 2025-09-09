@@ -214,7 +214,7 @@ with RequestAwareLogging {
     userId: String,
     enrolmentKey: EnrolmentKey,
     agentCode: AgentCode
-  )(implicit request: RequestHeader): Future[Unit] = {
+  )(implicit request: RequestHeader): Future[Boolean] = {
     val url = url"$teBaseUrl/tax-enrolments/groups/$groupId/enrolments/$enrolmentKey?legacy-agentCode=${agentCode.value}"
 
     monitor(s"ConsumedAPI-TE-allocateEnrolmentToAgent-${enrolmentKey.service}-POST") {
@@ -224,13 +224,7 @@ with RequestAwareLogging {
         .execute[HttpResponse]
         .map { response =>
           response.status match {
-            case Status.CREATED => ()
-            case Status.CONFLICT =>
-              // TODO: it should fail not just log a warning which is mostlikely to be ignored leaving user with the problem alone
-              logger.warn(
-                s"An attempt to allocate new enrolment for ${enrolmentKey.service} resulted in conflict with an existing one."
-              )
-              ()
+            case Status.CREATED => true
             case other =>
               throw UpstreamErrorResponse(
                 response.body,

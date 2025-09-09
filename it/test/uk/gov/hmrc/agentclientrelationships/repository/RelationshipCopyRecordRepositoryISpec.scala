@@ -69,7 +69,7 @@ with GuiceOneServerPerSuite {
         syncToESStatus = Some(SyncStatus.Failed)
       )
       val createResult = await(repo.create(relationshipCopyRecord))
-      createResult shouldBe 1
+      createResult shouldBe true
       val findResult = await(repo.findBy(Arn("TARN0000001"), vatEnrolmentKey))
       findResult shouldBe Some(relationshipCopyRecord)
 
@@ -108,7 +108,7 @@ with GuiceOneServerPerSuite {
         syncToESStatus = Some(SyncStatus.Failed)
       )
       val createResult1 = await(repo.create(relationshipCopyRecord1))
-      createResult1 shouldBe 1
+      createResult1 shouldBe true
       val relationshipCopyRecord2 = RelationshipCopyRecord(
         "TARN0000001",
         vatEnrolmentKey,
@@ -117,7 +117,7 @@ with GuiceOneServerPerSuite {
         syncToESStatus = None
       )
       val createResult2 = await(repo.create(relationshipCopyRecord2))
-      createResult2 shouldBe 1
+      createResult2 shouldBe true
 
       val result = await(
         repo.collection

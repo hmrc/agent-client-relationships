@@ -227,7 +227,7 @@ with MockAuditService {
       "create a relationship" should
         also {
           "update the invitation's status, check for and deauth previously accepted invitations and send a confirmation email" in {
-            mockCreateRelationship(testArn, vatEnrolment)(Future.successful(Some(DbUpdateSucceeded)))
+            mockCreateRelationship(testArn, vatEnrolment)(Future.successful(Some(true)))
             mockUpdateStatus(vatInvitation.invitationId, Accepted)(
               Future.successful(vatInvitation.copy(status = Accepted))
             )
@@ -325,7 +325,7 @@ with MockAuditService {
                   testNino,
                   testArn3
                 )(Future.successful(true))
-                mockCreateRelationship(testArn, itsaEnrolment)(Future.successful(Some(DbUpdateSucceeded)))
+                mockCreateRelationship(testArn, itsaEnrolment)(Future.successful(Some(true)))
                 mockUpdateStatus(itsaInvitation.invitationId, Accepted)(
                   Future.successful(itsaInvitation.copy(status = Accepted))
                 )
@@ -383,7 +383,7 @@ with MockAuditService {
                   Some(testMtdItId.value),
                   testNino.nino
                 )(Future.successful(true))
-                mockCreateRelationship(testArn, itsaEnrolment)(Future.successful(Some(DbUpdateSucceeded)))
+                mockCreateRelationship(testArn, itsaEnrolment)(Future.successful(Some(true)))
                 mockUpdateStatus(itsaSuppInvitation.invitationId, Accepted)(
                   Future.successful(itsaSuppInvitation.copy(status = Accepted))
                 )

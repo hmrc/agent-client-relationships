@@ -34,14 +34,14 @@ extends RelationshipCopyRecordRepository(FakeMongoComponent.make) {
   private val data: mutable.Map[(Arn, EnrolmentKey), RelationshipCopyRecord] = mutable.Map()
   private val UPDATED_RECORD_COUNT = 1
 
-  override def create(record: RelationshipCopyRecord): Future[Int] = findBy(Arn(record.arn), record.enrolmentKey)
+  override def create(record: RelationshipCopyRecord): Future[Boolean] = findBy(Arn(record.arn), record.enrolmentKey)
     .map { result =>
       if (result.isDefined) {
         throw new MongoException("duplicate key error collection")
       }
       else {
         data += ((Arn(record.arn), record.enrolmentKey) -> record)
-        1
+        true
       }
     }
 
@@ -64,12 +64,12 @@ extends RelationshipCopyRecordRepository(FakeMongoComponent.make) {
     arn: Arn,
     enrolmentKey: EnrolmentKey,
     status: SyncStatus
-  )(implicit requestHeader: RequestHeader): Future[Int] = {
+  )(implicit requestHeader: RequestHeader): Future[Boolean] = {
     val maybeValue: Option[RelationshipCopyRecord] = data.get((arn, enrolmentKey))
     Future.successful(
       if (maybeValue.isDefined) {
         data((arn, enrolmentKey)) = maybeValue.get.copy(syncToETMPStatus = Some(status))
-        UPDATED_RECORD_COUNT
+        true
       }
       else {
         throw new IllegalArgumentException(s"Unexpected arn and identifier $arn, ${enrolmentKey.tag}")
@@ -82,12 +82,12 @@ extends RelationshipCopyRecordRepository(FakeMongoComponent.make) {
     arn: Arn,
     enrolmentKey: EnrolmentKey,
     status: SyncStatus
-  )(implicit requestHeader: RequestHeader): Future[Int] = {
+  )(implicit requestHeader: RequestHeader): Future[Boolean] = {
     val maybeValue: Option[RelationshipCopyRecord] = data.get((arn, enrolmentKey))
     Future.successful(
       if (maybeValue.isDefined) {
         data((arn, enrolmentKey)) = maybeValue.get.copy(syncToESStatus = Some(status))
-        UPDATED_RECORD_COUNT
+        true
       }
       else {
         throw new IllegalArgumentException(s"Unexpected arn and identifier $arn, ${enrolmentKey.tag}")
