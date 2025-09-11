@@ -17,6 +17,7 @@
 package uk.gov.hmrc.agentclientrelationships.services
 
 import com.codahale.metrics.MetricRegistry
+import org.apache.pekko.Done
 import org.apache.pekko.actor.ActorSystem
 import org.mockito.ArgumentCaptor
 import org.mockito.ArgumentMatchers.any
@@ -245,7 +246,7 @@ with ResettingMockitoSugar {
       s"create ES relationship (only) and return FoundAndCopied if RelationshipCopyRecord exists " +
         s"with syncToETMPStatus = Success and syncToESStatus = $status" in {
           val record = defaultRecord.copy(syncToETMPStatus = Some(Success), syncToESStatus = status)
-          when(deleteRecordRepository.create(any[DeleteRecord])).thenReturn(Future.successful(true))
+          when(deleteRecordRepository.create(any[DeleteRecord])).thenReturn(Future.successful(Done))
           when(deleteRecordRepository.remove(any[Arn], any[EnrolmentKey])).thenReturn(Future.successful(1))
           when(agentUserService.getAgentAdminAndSetAuditData(any[Arn])(any[RequestHeader], any[AuditData])).thenReturn(
             Future.successful(agentUserForAsAgent)
@@ -749,19 +750,18 @@ with ResettingMockitoSugar {
     )
   }
 
-  private def previousRelationshipWillBeRemoved(enrolmentKey: EnrolmentKey): OngoingStubbing[Future[Unit]] = {
-
+  private def previousRelationshipWillBeRemoved(enrolmentKey: EnrolmentKey): OngoingStubbing[Future[Done]] = {
     when(es.getDelegatedGroupIdsFor(eqs(enrolmentKey))(any[RequestHeader]())).thenReturn(Future.successful(Set("foo")))
     when(es.getAgentReferenceNumberFor(eqs("foo"))(any[RequestHeader]())).thenReturn(Future.successful(Some(arn)))
-    when(deleteRecordRepository.create(any[DeleteRecord])).thenReturn(Future.successful(true))
+    when(deleteRecordRepository.create(any[DeleteRecord])).thenReturn(Future.successful(Done))
     when(es.deallocateEnrolmentFromAgent(eqs("foo"), eqs(enrolmentKey))(any[RequestHeader]())).thenReturn(
-      Future.successful(())
+      Future.successful(Done)
     )
   }
 
   private def relationshipWillBeCreated(enrolmentKey: EnrolmentKey): OngoingStubbing[Future[Unit]] = {
     when(hipConnector.createAgentRelationship(eqs(enrolmentKey), eqs(arn))(any[RequestHeader]())).thenReturn(
-      Future successful Some(RegistrationRelationshipResponse("processing date"))
+      Future.successful(RegistrationRelationshipResponse("processing date"))
     )
     when(
       es.allocateEnrolmentToAgent(
@@ -770,7 +770,7 @@ with ResettingMockitoSugar {
         eqs(enrolmentKey),
         eqs(agentCodeForAsAgent)
       )(any[RequestHeader]())
-    ).thenReturn(Future.successful(()))
+    ).thenReturn(Future.successful(Done))
     when(aucdConnector.cacheRefresh(eqs(arn))(any[RequestHeader]())).thenReturn(Future successful ())
   }
 
@@ -796,19 +796,19 @@ with ResettingMockitoSugar {
     )(any[RequestHeader](), any[CurrentUser])
   ).thenReturn(Future.successful(true))
 
-  def verifyEtmpRecordCreated(): Future[Option[RegistrationRelationshipResponse]] =
+  def verifyEtmpRecordCreated(): Future[RegistrationRelationshipResponse] =
     verify(hipConnector).createAgentRelationship(eqs(mtdItEnrolmentKey), eqs(arn))(any[RequestHeader]())
 
-  def verifyEtmpRecordNotCreated(): Future[Option[RegistrationRelationshipResponse]] =
+  def verifyEtmpRecordNotCreated(): Future[RegistrationRelationshipResponse] =
     verify(hipConnector, never()).createAgentRelationship(eqs(mtdItEnrolmentKey), eqs(arn))(any[RequestHeader]())
 
-  def verifyEtmpRecordCreatedForMtdVat(): Future[Option[RegistrationRelationshipResponse]] =
+  def verifyEtmpRecordCreatedForMtdVat(): Future[RegistrationRelationshipResponse] =
     verify(hipConnector).createAgentRelationship(eqs(vatEnrolmentKey), eqs(arn))(any[RequestHeader]())
 
-  def verifyEtmpRecordNotCreatedForMtdVat(): Future[Option[RegistrationRelationshipResponse]] =
+  def verifyEtmpRecordNotCreatedForMtdVat(): Future[RegistrationRelationshipResponse] =
     verify(hipConnector, never()).createAgentRelationship(eqs(vatEnrolmentKey), eqs(arn))(any[RequestHeader]())
 
-  def verifyEsRecordCreated(): Future[Unit] =
+  def verifyEsRecordCreated(): Future[Done] =
     verify(es).allocateEnrolmentToAgent(
       eqs(agentGroupId),
       eqs(agentUserId),
@@ -816,7 +816,7 @@ with ResettingMockitoSugar {
       eqs(agentCodeForAsAgent)
     )(any[RequestHeader]())
 
-  def verifyEsRecordNotCreated(): Future[Unit] =
+  def verifyEsRecordNotCreated(): Future[Done] =
     verify(es, never()).allocateEnrolmentToAgent(
       eqs(agentUserId),
       eqs(agentGroupId),
@@ -824,7 +824,7 @@ with ResettingMockitoSugar {
       eqs(agentCodeForAsAgent)
     )(any[RequestHeader]())
 
-  def verifyEsRecordCreatedForMtdVat(): Future[Unit] =
+  def verifyEsRecordCreatedForMtdVat(): Future[Done] =
     verify(es).allocateEnrolmentToAgent(
       eqs(agentGroupId),
       eqs(agentUserId),
@@ -832,7 +832,7 @@ with ResettingMockitoSugar {
       eqs(agentCodeForAsAgent)
     )(any[RequestHeader]())
 
-  def verifyEsRecordNotCreatedMtdVat(): Future[Unit] =
+  def verifyEsRecordNotCreatedMtdVat(): Future[Done] =
     verify(es, never()).allocateEnrolmentToAgent(
       eqs(agentUserId),
       eqs(agentGroupId),

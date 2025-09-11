@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
+import org.apache.pekko.Done
 import org.mockito.ArgumentMatchers.any
 import org.mockito.ArgumentMatchers.{eq => eqs}
 import org.mockito.Mockito._
@@ -763,15 +764,15 @@ extends UnitSpec {
       hipConnector.deleteAgentRelationship(eqs(mtdItEnrolmentKey), eqs(arn))(any[RequestHeader])
     ).thenReturn(Future.successful(None))
 
-    def givenESDeAllocationSucceeds: OngoingStubbing[Future[Unit]] = when(
+    def givenESDeAllocationSucceeds: OngoingStubbing[Future[Done]] = when(
       es.deallocateEnrolmentFromAgent(eqs(agentGroupId), eqs(mtdItEnrolmentKey))(any[RequestHeader])
-    ).thenReturn(Future.successful(()))
+    ).thenReturn(Future.successful(Done))
 
-    def givenESDeAllocationFails: OngoingStubbing[Future[Unit]] = when(
+    def givenESDeAllocationFails: OngoingStubbing[Future[Done]] = when(
       es.deallocateEnrolmentFromAgent(eqs(agentGroupId), eqs(mtdItEnrolmentKey))(any[RequestHeader])
     ).thenReturn(Future.failed(new Exception))
 
-    def givenESDeAllocationFailsWith(ex: Exception): OngoingStubbing[Future[Unit]] = when(
+    def givenESDeAllocationFailsWith(ex: Exception): OngoingStubbing[Future[Done]] = when(
       es.deallocateEnrolmentFromAgent(eqs(agentGroupId), eqs(mtdItEnrolmentKey))(any[RequestHeader])
     ).thenReturn(Future.failed(ex))
 
@@ -795,9 +796,9 @@ extends UnitSpec {
       aucdConnector.cacheRefresh(eqs(arn))(any[RequestHeader])
     ).thenReturn(Future.successful(()))
 
-    def verifyESDeAllocateHasBeenPerformed: Future[Unit] = verify(es, times(1)).deallocateEnrolmentFromAgent(any[String], any[EnrolmentKey])(any[RequestHeader])
+    def verifyESDeAllocateHasBeenPerformed: Future[Done] = verify(es, times(1)).deallocateEnrolmentFromAgent(any[String], any[EnrolmentKey])(any[RequestHeader])
 
-    def verifyESDeAllocateHasNOTBeenPerformed: Future[Unit] = verify(es, never).deallocateEnrolmentFromAgent(any[String], any[EnrolmentKey])(any[RequestHeader])
+    def verifyESDeAllocateHasNOTBeenPerformed: Future[Done] = verify(es, never).deallocateEnrolmentFromAgent(any[String], any[EnrolmentKey])(any[RequestHeader])
 
     def verifyETMPDeAuthorisationHasBeenPerformed: Future[Option[RegistrationRelationshipResponse]] =
       verify(hipConnector, times(1)).deleteAgentRelationship(any[EnrolmentKey], any[Arn])(any[RequestHeader])

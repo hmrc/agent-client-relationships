@@ -205,7 +205,7 @@ with Logging {
     }
   }
 
-  def createDeleteRecord(record: DeleteRecord): Future[Boolean] = deleteRecordRepository
+  def createDeleteRecord(record: DeleteRecord): Future[Done] = deleteRecordRepository
     .create(record)
     .recoverWith { case ex =>
       logger.warn(s"[DeleteRelationshipsService] Inserting delete record into mongo failed for ${record.arn}, ${record.enrolmentKey}: ${ex.getMessage}")

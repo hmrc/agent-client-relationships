@@ -16,13 +16,13 @@
 
 package uk.gov.hmrc.agentclientrelationships.mocks
 
+import org.apache.pekko.Done
 import org.mockito.ArgumentMatchers.any
 import org.mockito.ArgumentMatchers.{eq => eqs}
 import org.mockito.Mockito.when
 import org.mockito.stubbing.OngoingStubbing
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
-import uk.gov.hmrc.agentclientrelationships.repository.DbUpdateStatus
 import uk.gov.hmrc.agentclientrelationships.services.CreateRelationshipsService
 import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
@@ -38,12 +38,11 @@ trait MockCreateRelationshipsService {
   def mockCreateRelationship(
     arn: Arn,
     enrolment: EnrolmentKey
-  )(response: Future[Option[DbUpdateStatus]]): OngoingStubbing[Future[Option[DbUpdateStatus]]] = when(
+  )(response: Future[Option[Done]]): OngoingStubbing[Future[Option[Done]]] = when(
     mockCreateRelationshipsService.createRelationship(
       eqs(arn),
       eqs(enrolment),
       eqs(Set()),
-      any[Boolean],
       any[Boolean]
     )(any[RequestHeader], any[AuditData])
   ).thenReturn(response)

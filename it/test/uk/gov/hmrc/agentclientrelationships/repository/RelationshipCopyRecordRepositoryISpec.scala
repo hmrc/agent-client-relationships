@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.repository
 
+import org.apache.pekko.Done
 import org.mongodb.scala.model.Filters
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
@@ -69,7 +70,7 @@ with GuiceOneServerPerSuite {
         syncToESStatus = Some(SyncStatus.Failed)
       )
       val createResult = await(repo.create(relationshipCopyRecord))
-      createResult shouldBe 1
+      createResult shouldBe Done
       val findResult = await(repo.findBy(Arn("TARN0000001"), vatEnrolmentKey))
       findResult shouldBe Some(relationshipCopyRecord)
 
@@ -108,7 +109,7 @@ with GuiceOneServerPerSuite {
         syncToESStatus = Some(SyncStatus.Failed)
       )
       val createResult1 = await(repo.create(relationshipCopyRecord1))
-      createResult1 shouldBe 1
+      createResult1 shouldBe Done
       val relationshipCopyRecord2 = RelationshipCopyRecord(
         "TARN0000001",
         vatEnrolmentKey,
@@ -117,7 +118,7 @@ with GuiceOneServerPerSuite {
         syncToESStatus = None
       )
       val createResult2 = await(repo.create(relationshipCopyRecord2))
-      createResult2 shouldBe 1
+      createResult2 shouldBe Done
 
       val result = await(
         repo.collection

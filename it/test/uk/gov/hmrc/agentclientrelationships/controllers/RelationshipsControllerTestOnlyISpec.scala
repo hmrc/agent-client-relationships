@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.controllers
 
+import org.apache.pekko.Done
 import org.scalatest.concurrent.IntegrationPatience
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
@@ -85,16 +86,14 @@ with IntegrationPatience {
 
     "return 204 for a valid arn and mtdItId" in {
       givenAuditConnector()
-      await(repo.create(RelationshipCopyRecord(arn, EnrolmentKey(Service.MtdIt, MtdItId(mtditid))))) shouldBe 1
+      await(repo.create(RelationshipCopyRecord(arn, EnrolmentKey(Service.MtdIt, MtdItId(mtditid))))) shouldBe Done
       val result = doAgentDeleteRequest(requestPath)
       result.status shouldBe 204
     }
 
     "return 404 for an invalid mtdItId" in {
       givenAuditConnector()
-      await(
-        repo.create(RelationshipCopyRecord(arn, EnrolmentKey(Service.MtdIt, MtdItId("ABCDEF123456780"))))
-      ) shouldBe 1
+      await(repo.create(RelationshipCopyRecord(arn, EnrolmentKey(Service.MtdIt, MtdItId("ABCDEF123456780"))))) shouldBe Done
       val result = doAgentDeleteRequest(requestPath)
       result.status shouldBe 404
     }

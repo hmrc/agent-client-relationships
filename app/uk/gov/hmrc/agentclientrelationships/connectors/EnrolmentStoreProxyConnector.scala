@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.connectors
 
+import org.apache.pekko.Done
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import play.api.http.Status
 import play.api.libs.json.Format
@@ -214,7 +215,7 @@ with RequestAwareLogging {
     userId: String,
     enrolmentKey: EnrolmentKey,
     agentCode: AgentCode
-  )(implicit request: RequestHeader): Future[Unit] = {
+  )(implicit request: RequestHeader): Future[Done] = {
     val url = url"$teBaseUrl/tax-enrolments/groups/$groupId/enrolments/$enrolmentKey?legacy-agentCode=${agentCode.value}"
 
     monitor(s"ConsumedAPI-TE-allocateEnrolmentToAgent-${enrolmentKey.service}-POST") {
@@ -224,13 +225,7 @@ with RequestAwareLogging {
         .execute[HttpResponse]
         .map { response =>
           response.status match {
-            case Status.CREATED => ()
-            case Status.CONFLICT =>
-              // TODO: it should fail not just log a warning which is mostlikely to be ignored leaving user with the problem alone
-              logger.warn(
-                s"An attempt to allocate new enrolment for ${enrolmentKey.service} resulted in conflict with an existing one."
-              )
-              ()
+            case Status.CREATED => Done
             case other =>
               throw UpstreamErrorResponse(
                 response.body,
@@ -246,7 +241,7 @@ with RequestAwareLogging {
   def deallocateEnrolmentFromAgent(
     groupId: String,
     enrolmentKey: EnrolmentKey
-  )(implicit request: RequestHeader): Future[Unit] = {
+  )(implicit request: RequestHeader): Future[Done] = {
     val url = url"$teBaseUrl/tax-enrolments/groups/$groupId/enrolments/${enrolmentKey.tag}"
     monitor(s"ConsumedAPI-TE-deallocateEnrolmentFromAgent-${enrolmentKey.service}-DELETE") {
       httpClient
@@ -254,7 +249,7 @@ with RequestAwareLogging {
         .execute[HttpResponse]
         .map { response =>
           response.status match {
-            case Status.NO_CONTENT => ()
+            case Status.NO_CONTENT => Done
             case other =>
               // TODO: verify that other 2xx are rally errors, use HttpReadsImplicits to idiomatically handle that
               throw UpstreamErrorResponse(

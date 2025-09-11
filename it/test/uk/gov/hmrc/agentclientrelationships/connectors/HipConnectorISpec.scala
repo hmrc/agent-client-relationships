@@ -29,6 +29,7 @@ import uk.gov.hmrc.agentclientrelationships.connectors.helpers.HipHeaders
 import uk.gov.hmrc.agentclientrelationships.model.ActiveRelationship
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.InactiveRelationship
+import uk.gov.hmrc.agentclientrelationships.model.RegistrationRelationshipResponse
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.CapitalGains
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Cbc
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdIt
@@ -131,13 +132,14 @@ with DataStreamStub {
     "create relationship between agent and client and return 200" in {
       givenAgentCanBeAllocated(mtdItId, Arn("bar"))
       givenAuditConnector()
-      await(hipConnector.createAgentRelationship(mtdItEnrolmentKey, Arn("bar"))).get.processingDate should not be null
+      await(hipConnector.createAgentRelationship(mtdItEnrolmentKey, Arn("bar"))) shouldBe
+        RegistrationRelationshipResponse("2001-12-17T09:30:47Z")
     }
 
     "not create relationship between agent and client and return nothing" in {
       givenAgentCanNotBeAllocated(status = 404)
       givenAuditConnector()
-      await(hipConnector.createAgentRelationship(mtdItEnrolmentKey, Arn("bar"))) shouldBe None
+      intercept[UpstreamErrorResponse](await(hipConnector.createAgentRelationship(mtdItEnrolmentKey, Arn("bar"))))
     }
 
     "request body contains regime as ITSA when client Id is an MtdItId" in {
@@ -306,13 +308,13 @@ with DataStreamStub {
     "return nothing when IF is throwing errors" in {
       givenReturnsServerError()
       givenAuditConnector()
-      await(hipConnector.createAgentRelationship(vatEnrolmentKey, Arn("someArn"))) shouldBe None
+      intercept[UpstreamErrorResponse](await(hipConnector.createAgentRelationship(vatEnrolmentKey, Arn("someArn"))))
     }
 
     "return nothing when IF is unavailable" in {
       givenReturnsServiceUnavailable()
       givenAuditConnector()
-      await(hipConnector.createAgentRelationship(vatEnrolmentKey, Arn("someArn"))) shouldBe None
+      intercept[UpstreamErrorResponse](await(hipConnector.createAgentRelationship(vatEnrolmentKey, Arn("someArn"))))
     }
   }
 
