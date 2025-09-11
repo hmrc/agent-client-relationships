@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.repository
 
+import org.apache.pekko.Done
 import org.mongodb.scala.MongoWriteException
 import org.mongodb.scala.model.Filters.equal
 import org.mongodb.scala.model.Filters.lte
@@ -126,11 +127,11 @@ extends PlayMongoRepository[DeleteRecord](
 )
 with RequestAwareLogging {
 
-  def create(record: DeleteRecord): Future[Boolean] = Mdc.preservingMdc {
+  def create(record: DeleteRecord): Future[Done] = Mdc.preservingMdc {
     collection
       .insertOne(record)
       .toFuture()
-      .map(_ => true)
+      .map(_ => Done)
   }
 
   def findBy(
@@ -144,7 +145,7 @@ with RequestAwareLogging {
     arn: Arn,
     enrolmentKey: EnrolmentKey,
     status: SyncStatus
-  )(implicit requestHeader: RequestHeader): Future[Boolean] = Mdc.preservingMdc {
+  )(implicit requestHeader: RequestHeader): Future[Done] = Mdc.preservingMdc {
     collection
       .updateOne(
         filter(arn, enrolmentKey),
@@ -154,8 +155,8 @@ with RequestAwareLogging {
       .toFuture()
       .map { updateResult =>
         if (updateResult.getModifiedCount != 1L)
-          logger.warn(s"Updating ETMP sync status ($status) failed")
-        true
+          logger.warn(s"Updated ${updateResult.getModifiedCount} documents when updating ETMP sync status to ($status)")
+        Done
       }
   }
 
@@ -163,7 +164,7 @@ with RequestAwareLogging {
     arn: Arn,
     enrolmentKey: EnrolmentKey,
     status: SyncStatus
-  )(implicit requestHeader: RequestHeader): Future[Boolean] = Mdc.preservingMdc {
+  )(implicit requestHeader: RequestHeader): Future[Done] = Mdc.preservingMdc {
     collection
       .updateOne(
         filter(arn, enrolmentKey),
@@ -173,15 +174,15 @@ with RequestAwareLogging {
       .toFuture()
       .map { updateResult =>
         if (updateResult.getModifiedCount != 1L)
-          logger.warn(s"Updating ES sync status ($status) failed")
-        true
+          logger.warn(s"Updated ${updateResult.getModifiedCount} documents when updating ES sync status to ($status)")
+        Done
       }
   }
 
   def markRecoveryAttempt(
     arn: Arn,
     enrolmentKey: EnrolmentKey
-  ): Future[Unit] = Mdc.preservingMdc {
+  ): Future[Done] = Mdc.preservingMdc {
     collection
       .findOneAndUpdate(
         filter(arn, enrolmentKey),
@@ -191,7 +192,7 @@ with RequestAwareLogging {
         )
       )
       .toFuture()
-      .map(_ => ())
+      .map(_ => Done)
   }
 
   def remove(

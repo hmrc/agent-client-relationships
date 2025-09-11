@@ -16,11 +16,13 @@
 
 package uk.gov.hmrc.agentclientrelationships.repository
 
+import org.apache.pekko.Done
 import org.mongodb.scala.MongoException
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus.SyncStatus
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
+
 import java.time.Instant
 import java.time.ZoneOffset
 import scala.collection.mutable
@@ -34,12 +36,12 @@ extends DeleteRecordRepository(FakeMongoComponent.make) {
 
   private val data: mutable.Map[(Arn, EnrolmentKey), DeleteRecord] = mutable.Map()
 
-  override def create(record: DeleteRecord): Future[Boolean] = findBy(Arn(record.arn), record.enrolmentKey).map(result =>
+  override def create(record: DeleteRecord): Future[Done] = findBy(Arn(record.arn), record.enrolmentKey).map(result =>
     if (result.isDefined)
       throw new MongoException("duplicate key error collection")
     else {
       data += ((Arn(record.arn), record.enrolmentKey) -> record)
-      true
+      Done
     }
   )
 
@@ -60,12 +62,12 @@ extends DeleteRecordRepository(FakeMongoComponent.make) {
     arn: Arn,
     enrolmentKey: EnrolmentKey,
     status: SyncStatus
-  )(implicit requestHeader: RequestHeader): Future[Boolean] = {
+  )(implicit requestHeader: RequestHeader): Future[Done] = {
     val maybeValue: Option[DeleteRecord] = data.get((arn, enrolmentKey))
     Future.successful(
       if (maybeValue.isDefined) {
         data((arn, enrolmentKey)) = maybeValue.get.copy(syncToETMPStatus = Some(status))
-        true
+        Done
       }
       else
         throw new IllegalArgumentException(s"Unexpected arn and enrolment key $arn, ${enrolmentKey.tag}")
@@ -77,12 +79,12 @@ extends DeleteRecordRepository(FakeMongoComponent.make) {
     arn: Arn,
     enrolmentKey: EnrolmentKey,
     status: SyncStatus
-  )(implicit requestHeader: RequestHeader): Future[Boolean] = {
+  )(implicit requestHeader: RequestHeader): Future[Done] = {
     val maybeValue: Option[DeleteRecord] = data.get((arn, enrolmentKey))
     Future.successful(
       if (maybeValue.isDefined) {
         data((arn, enrolmentKey)) = maybeValue.get.copy(syncToESStatus = Some(status))
-        true
+        Done
       }
       else
         throw new IllegalArgumentException(s"Unexpected arn and enrolment key $arn, ${enrolmentKey.tag}")
@@ -103,12 +105,14 @@ extends DeleteRecordRepository(FakeMongoComponent.make) {
   override def markRecoveryAttempt(
     arn: Arn,
     enrolmentKey: EnrolmentKey
-  ): Future[Unit] = {
+  ): Future[Done] = {
     val maybeValue: Option[DeleteRecord] = data.get((arn, enrolmentKey))
     Future.successful(
-      if (maybeValue.isDefined)
+      if (maybeValue.isDefined) {
         data((arn, enrolmentKey)) = maybeValue.get
           .copy(lastRecoveryAttempt = Some(Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime))
+        Done
+      }
       else
         throw new IllegalArgumentException(s"Unexpected arn and enrolment key $arn, ${enrolmentKey.tag}")
     )

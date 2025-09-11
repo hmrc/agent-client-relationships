@@ -241,7 +241,7 @@ with RequestAwareLogging {
   def deallocateEnrolmentFromAgent(
     groupId: String,
     enrolmentKey: EnrolmentKey
-  )(implicit request: RequestHeader): Future[Unit] = {
+  )(implicit request: RequestHeader): Future[Done] = {
     val url = url"$teBaseUrl/tax-enrolments/groups/$groupId/enrolments/${enrolmentKey.tag}"
     monitor(s"ConsumedAPI-TE-deallocateEnrolmentFromAgent-${enrolmentKey.service}-DELETE") {
       httpClient
@@ -249,7 +249,7 @@ with RequestAwareLogging {
         .execute[HttpResponse]
         .map { response =>
           response.status match {
-            case Status.NO_CONTENT => ()
+            case Status.NO_CONTENT => Done
             case other =>
               // TODO: verify that other 2xx are rally errors, use HttpReadsImplicits to idiomatically handle that
               throw UpstreamErrorResponse(

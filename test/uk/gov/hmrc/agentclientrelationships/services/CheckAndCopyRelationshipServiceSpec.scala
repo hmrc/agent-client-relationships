@@ -246,7 +246,7 @@ with ResettingMockitoSugar {
       s"create ES relationship (only) and return FoundAndCopied if RelationshipCopyRecord exists " +
         s"with syncToETMPStatus = Success and syncToESStatus = $status" in {
           val record = defaultRecord.copy(syncToETMPStatus = Some(Success), syncToESStatus = status)
-          when(deleteRecordRepository.create(any[DeleteRecord])).thenReturn(Future.successful(true))
+          when(deleteRecordRepository.create(any[DeleteRecord])).thenReturn(Future.successful(Done))
           when(deleteRecordRepository.remove(any[Arn], any[EnrolmentKey])).thenReturn(Future.successful(1))
           when(agentUserService.getAgentAdminAndSetAuditData(any[Arn])(any[RequestHeader], any[AuditData])).thenReturn(
             Future.successful(agentUserForAsAgent)
@@ -750,13 +750,12 @@ with ResettingMockitoSugar {
     )
   }
 
-  private def previousRelationshipWillBeRemoved(enrolmentKey: EnrolmentKey): OngoingStubbing[Future[Unit]] = {
-
+  private def previousRelationshipWillBeRemoved(enrolmentKey: EnrolmentKey): OngoingStubbing[Future[Done]] = {
     when(es.getDelegatedGroupIdsFor(eqs(enrolmentKey))(any[RequestHeader]())).thenReturn(Future.successful(Set("foo")))
     when(es.getAgentReferenceNumberFor(eqs("foo"))(any[RequestHeader]())).thenReturn(Future.successful(Some(arn)))
-    when(deleteRecordRepository.create(any[DeleteRecord])).thenReturn(Future.successful(true))
+    when(deleteRecordRepository.create(any[DeleteRecord])).thenReturn(Future.successful(Done))
     when(es.deallocateEnrolmentFromAgent(eqs("foo"), eqs(enrolmentKey))(any[RequestHeader]())).thenReturn(
-      Future.successful(())
+      Future.successful(Done)
     )
   }
 
