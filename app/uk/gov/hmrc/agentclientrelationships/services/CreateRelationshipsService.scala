@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
+import org.apache.pekko.Done
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys.enrolmentDelegatedKey
 import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys.etmpRelationshipCreatedKey
@@ -63,29 +64,24 @@ with RequestAwareLogging {
   )(implicit
     request: RequestHeader,
     auditData: AuditData
-  ): Future[Option[Boolean]] =
+  ): Future[Option[Done]] =
     lockService.recoveryLock(arn, enrolmentKey) {
       auditData.set(enrolmentDelegatedKey, false)
       auditData.set(etmpRelationshipCreatedKey, false)
 
       val isCopyAcrossRelationship = oldReferences.nonEmpty
 
-      def createRelationshipRecord: Future[Boolean] = {
+      def createRelationshipRecord: Future[Done] = {
         if (isCopyAcrossRelationship) {
           val record = RelationshipCopyRecord(
             arn.value,
             enrolmentKey,
             references = Some(oldReferences)
           )
-          relationshipCopyRepository
-            .create(record)
-            .recoverWith { case ex =>
-              logger.warn(s"[CreateRelationshipsService] Inserting relationship record into mongo failed for ${arn.value}, ${enrolmentKey.tag}", ex)
-              Future.failed(new Exception("RELATIONSHIP_CREATE_FAILED_DB"))
-            }
+          relationshipCopyRepository.create(record)
         }
         else {
-          Future.successful(true)
+          Future.successful(Done)
         }
       }
 
@@ -105,7 +101,7 @@ with RequestAwareLogging {
           isCopyAcrossRelationship
         )
         _ = auditService.sendCreateRelationshipAuditEvent()
-      } yield true
+      } yield Done
     }
 
   private def createEtmpRecord(
@@ -116,9 +112,9 @@ with RequestAwareLogging {
     ec: ExecutionContext,
     request: RequestHeader,
     auditData: AuditData
-  ): Future[Boolean] = {
+  ): Future[Done] = {
 
-    def updateEtmpSyncStatus(status: SyncStatus) =
+    def updateEtmpSyncStatus(status: SyncStatus): Future[Done] =
       if (isCopyAcrossRelationship) {
         relationshipCopyRepository.updateEtmpSyncStatus(
           arn,
@@ -127,7 +123,7 @@ with RequestAwareLogging {
         )
       }
       else
-        Future.successful(true)
+        Future.successful(Done)
 
     (
       for {
@@ -135,7 +131,7 @@ with RequestAwareLogging {
         _ <- hipConnector.createAgentRelationship(enrolmentKey, arn)
         _ = auditData.set(etmpRelationshipCreatedKey, true)
         _ <- updateEtmpSyncStatus(Success)
-      } yield true
+      } yield Done
     ).recoverWith {
       case ex =>
         logger.warn(s"[CreateRelationshipsService] Creating ETMP record failed for ${arn.value}, $enrolmentKey due to: ${ex.getMessage}")
@@ -152,9 +148,9 @@ with RequestAwareLogging {
   )(implicit
     request: RequestHeader,
     auditData: AuditData
-  ): Future[Boolean] = {
+  ): Future[Done] = {
 
-    def updateEsSyncStatus(status: SyncStatus): Future[Boolean] =
+    def updateEsSyncStatus(status: SyncStatus): Future[Done] =
       if (isCopyAcrossRelationship) {
         relationshipCopyRepository
           .updateEsSyncStatus(
@@ -164,7 +160,7 @@ with RequestAwareLogging {
           )
       }
       else
-        Future.successful(true)
+        Future.successful(Done)
 
     (
       for {
@@ -174,16 +170,16 @@ with RequestAwareLogging {
             Future.unit
           else
             deallocatePreviousRelationship(arn, enrolmentKey)
-        allocated <- es.allocateEnrolmentToAgent(
+        _ <- es.allocateEnrolmentToAgent(
           agentUser.groupId,
           agentUser.userId,
           enrolmentKey,
           agentUser.agentCode
         )
-        _ = auditData.set(enrolmentDelegatedKey, allocated)
+        _ = auditData.set(enrolmentDelegatedKey, true)
         _ <- agentUserClientDetailsConnector.cacheRefresh(arn)
         _ <- updateEsSyncStatus(Success)
-      } yield allocated
+      } yield Done
     ).recoverWith {
       case ex =>
         logger.warn(s"[CreateRelationshipsService] Creating ES record failed for ${arn.value}, $enrolmentKey due to: ${ex.getMessage}")
@@ -191,7 +187,7 @@ with RequestAwareLogging {
           if (failIfAllocateAgentInESFails)
             throw ex
           else
-            true
+            Done
         )
     }
   }
@@ -281,7 +277,7 @@ with RequestAwareLogging {
   )(implicit
     request: RequestHeader,
     auditData: AuditData
-  ): Future[Option[Boolean]] =
+  ): Future[Option[Done]] =
     lockService.recoveryLock(arn, enrolmentKey) {
       (relationshipCopyRecord.needToCreateEtmpRecord, relationshipCopyRecord.needToCreateEsRecord) match {
         case (true, true) =>
@@ -303,7 +299,7 @@ with RequestAwareLogging {
               isCopyAcrossRelationship = true
             )
             _ = auditService.sendCreateRelationshipAuditEvent()
-          } yield true
+          } yield Done
         case (false, true) =>
           logger.warn(
             s"[CreateRelationshipsService] Relationship copy record found: ETMP had succeeded and ES had failed. Record dateTime: ${relationshipCopyRecord.dateTime}"
@@ -318,7 +314,7 @@ with RequestAwareLogging {
               isCopyAcrossRelationship = true
             )
             _ = auditService.sendCreateRelationshipAuditEvent()
-          } yield true
+          } yield Done
         case (true, false) =>
           logger.warn(
             s"[CreateRelationshipsService] ES relationship existed without ETMP relationship for ${arn.value}, ${enrolmentKey.tag}. " +
@@ -336,7 +332,7 @@ with RequestAwareLogging {
           logger.warn(
             s"[CreateRelationshipsService] recoverRelationshipCreation called for ${arn.value}, ${enrolmentKey.tag} when no recovery needed"
           )
-          Future.successful(true)
+          Future.successful(Done)
       }
     }
 

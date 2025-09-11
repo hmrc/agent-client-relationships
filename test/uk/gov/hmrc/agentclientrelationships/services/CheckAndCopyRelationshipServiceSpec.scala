@@ -17,6 +17,7 @@
 package uk.gov.hmrc.agentclientrelationships.services
 
 import com.codahale.metrics.MetricRegistry
+import org.apache.pekko.Done
 import org.apache.pekko.actor.ActorSystem
 import org.mockito.ArgumentCaptor
 import org.mockito.ArgumentMatchers.any
@@ -770,7 +771,7 @@ with ResettingMockitoSugar {
         eqs(enrolmentKey),
         eqs(agentCodeForAsAgent)
       )(any[RequestHeader]())
-    ).thenReturn(Future.successful(true))
+    ).thenReturn(Future.successful(Done))
     when(aucdConnector.cacheRefresh(eqs(arn))(any[RequestHeader]())).thenReturn(Future successful ())
   }
 
@@ -808,7 +809,7 @@ with ResettingMockitoSugar {
   def verifyEtmpRecordNotCreatedForMtdVat(): Future[RegistrationRelationshipResponse] =
     verify(hipConnector, never()).createAgentRelationship(eqs(vatEnrolmentKey), eqs(arn))(any[RequestHeader]())
 
-  def verifyEsRecordCreated(): Future[Boolean] =
+  def verifyEsRecordCreated(): Future[Done] =
     verify(es).allocateEnrolmentToAgent(
       eqs(agentGroupId),
       eqs(agentUserId),
@@ -816,7 +817,7 @@ with ResettingMockitoSugar {
       eqs(agentCodeForAsAgent)
     )(any[RequestHeader]())
 
-  def verifyEsRecordNotCreated(): Future[Boolean] =
+  def verifyEsRecordNotCreated(): Future[Done] =
     verify(es, never()).allocateEnrolmentToAgent(
       eqs(agentUserId),
       eqs(agentGroupId),
@@ -824,7 +825,7 @@ with ResettingMockitoSugar {
       eqs(agentCodeForAsAgent)
     )(any[RequestHeader]())
 
-  def verifyEsRecordCreatedForMtdVat(): Future[Boolean] =
+  def verifyEsRecordCreatedForMtdVat(): Future[Done] =
     verify(es).allocateEnrolmentToAgent(
       eqs(agentGroupId),
       eqs(agentUserId),
@@ -832,7 +833,7 @@ with ResettingMockitoSugar {
       eqs(agentCodeForAsAgent)
     )(any[RequestHeader]())
 
-  def verifyEsRecordNotCreatedMtdVat(): Future[Boolean] =
+  def verifyEsRecordNotCreatedMtdVat(): Future[Done] =
     verify(es, never()).allocateEnrolmentToAgent(
       eqs(agentUserId),
       eqs(agentGroupId),

@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.repository
 
+import org.apache.pekko.Done
 import org.mongodb.scala.MongoException
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
@@ -32,16 +33,15 @@ extends RelationshipCopyRecordRepository(FakeMongoComponent.make) {
   override lazy val initialised: Future[Unit] = Future.unit
 
   private val data: mutable.Map[(Arn, EnrolmentKey), RelationshipCopyRecord] = mutable.Map()
-  private val UPDATED_RECORD_COUNT = 1
 
-  override def create(record: RelationshipCopyRecord): Future[Boolean] = findBy(Arn(record.arn), record.enrolmentKey)
+  override def create(record: RelationshipCopyRecord): Future[Done] = findBy(Arn(record.arn), record.enrolmentKey)
     .map { result =>
       if (result.isDefined) {
         throw new MongoException("duplicate key error collection")
       }
       else {
         data += ((Arn(record.arn), record.enrolmentKey) -> record)
-        true
+        Done
       }
     }
 
@@ -64,12 +64,12 @@ extends RelationshipCopyRecordRepository(FakeMongoComponent.make) {
     arn: Arn,
     enrolmentKey: EnrolmentKey,
     status: SyncStatus
-  )(implicit requestHeader: RequestHeader): Future[Boolean] = {
+  )(implicit requestHeader: RequestHeader): Future[Done] = {
     val maybeValue: Option[RelationshipCopyRecord] = data.get((arn, enrolmentKey))
     Future.successful(
       if (maybeValue.isDefined) {
         data((arn, enrolmentKey)) = maybeValue.get.copy(syncToETMPStatus = Some(status))
-        true
+        Done
       }
       else {
         throw new IllegalArgumentException(s"Unexpected arn and identifier $arn, ${enrolmentKey.tag}")
@@ -82,12 +82,12 @@ extends RelationshipCopyRecordRepository(FakeMongoComponent.make) {
     arn: Arn,
     enrolmentKey: EnrolmentKey,
     status: SyncStatus
-  )(implicit requestHeader: RequestHeader): Future[Boolean] = {
+  )(implicit requestHeader: RequestHeader): Future[Done] = {
     val maybeValue: Option[RelationshipCopyRecord] = data.get((arn, enrolmentKey))
     Future.successful(
       if (maybeValue.isDefined) {
         data((arn, enrolmentKey)) = maybeValue.get.copy(syncToESStatus = Some(status))
-        true
+        Done
       }
       else {
         throw new IllegalArgumentException(s"Unexpected arn and identifier $arn, ${enrolmentKey.tag}")

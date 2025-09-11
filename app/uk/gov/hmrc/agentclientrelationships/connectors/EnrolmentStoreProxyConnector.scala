@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.connectors
 
+import org.apache.pekko.Done
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import play.api.http.Status
 import play.api.libs.json.Format
@@ -214,7 +215,7 @@ with RequestAwareLogging {
     userId: String,
     enrolmentKey: EnrolmentKey,
     agentCode: AgentCode
-  )(implicit request: RequestHeader): Future[Boolean] = {
+  )(implicit request: RequestHeader): Future[Done] = {
     val url = url"$teBaseUrl/tax-enrolments/groups/$groupId/enrolments/$enrolmentKey?legacy-agentCode=${agentCode.value}"
 
     monitor(s"ConsumedAPI-TE-allocateEnrolmentToAgent-${enrolmentKey.service}-POST") {
@@ -224,7 +225,7 @@ with RequestAwareLogging {
         .execute[HttpResponse]
         .map { response =>
           response.status match {
-            case Status.CREATED => true
+            case Status.CREATED => Done
             case other =>
               throw UpstreamErrorResponse(
                 response.body,

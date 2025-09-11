@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.controllers
 
+import org.apache.pekko.Done
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
@@ -811,7 +812,7 @@ trait RelationshipsControllerGenericBehaviours {
               EnrolmentKey(serviceId, Seq(Identifier(clientIdType, clientId.value)))
             )
           )
-        ) shouldBe true
+        ) shouldBe Done
         val result = doAgentDeleteRequest(requestPath)
         result.status shouldBe 404
       }

@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
+import org.apache.pekko.Done
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys._
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
@@ -262,7 +263,7 @@ with RequestAwareLogging {
   )(implicit
     request: RequestHeader,
     auditData: AuditData
-  ): Future[Option[Boolean]] = {
+  ): Future[Option[Done]] = {
     auditData.set(serviceKey, s"$service")
     auditData.set(howRelationshipCreatedKey, partialAuth)
     createRelationshipsService.createRelationship(
@@ -355,7 +356,7 @@ with RequestAwareLogging {
   )(implicit
     request: RequestHeader,
     auditData: AuditData
-  ): Future[Option[Boolean]] =
+  ): Future[Option[Done]] =
     maybeRelationshipCopyRecord match {
       case Some(relationshipCopyRecord) =>
         createRelationshipsService.resumeRelationshipCreation(
