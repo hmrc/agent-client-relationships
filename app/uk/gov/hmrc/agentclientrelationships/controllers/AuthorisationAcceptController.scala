@@ -87,7 +87,7 @@ with RequestAwareLogging {
                 strideRoles
               ) { implicit currentUser =>
                 authorisationAcceptService
-                  .accept(invitation, enrolment)
+                  .acceptInvitation(invitation, enrolment)
                   .map { _ =>
                     auditService.sendRespondToInvitationAuditEvent(
                       invitation,

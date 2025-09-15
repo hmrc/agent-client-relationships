@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
+import org.apache.pekko.Done
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys._
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
@@ -42,7 +43,6 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.util.Success
 
-// scalastyle:off method.length
 @Singleton
 class AuthorisationAcceptService @Inject() (
   createRelationshipsService: CreateRelationshipsService,
@@ -55,7 +55,8 @@ class AuthorisationAcceptService @Inject() (
 )(implicit ec: ExecutionContext)
 extends RequestAwareLogging {
 
-  def accept(
+  // scalastyle:off
+  def acceptInvitation(
     invitation: Invitation,
     enrolment: EnrolmentKey
   )(implicit
@@ -90,7 +91,8 @@ extends RequestAwareLogging {
           Future.unit
       // Create relationship
       _ <- createRelationship(
-        invitation,
+        Arn(invitation.arn),
+        invitation.suppliedClientId,
         enrolment,
         isAltItsa,
         timestamp
@@ -134,8 +136,9 @@ extends RequestAwareLogging {
     } yield updated
   }
 
-  private def createRelationship(
-    invitation: Invitation,
+  def createRelationship(
+    arn: Arn,
+    suppliedClientId: String,
     enrolment: EnrolmentKey,
     isAltItsa: Boolean,
     timestamp: Instant
@@ -143,7 +146,7 @@ extends RequestAwareLogging {
     request: RequestHeader,
     currentUser: CurrentUser,
     auditData: AuditData
-  ) = {
+  ): Future[Done] = {
     auditData.set(
       key =
         if (isAltItsa)
@@ -157,32 +160,32 @@ extends RequestAwareLogging {
           clientAcceptedInvitation
     )
 
-    invitation.service match {
+    enrolment.service match {
       case `HMRCMTDITSUPP` if isAltItsa => // Does not need to deauthorise current agent
         partialAuthRepository
           .create(
             created = timestamp,
-            arn = Arn(invitation.arn),
-            service = invitation.service,
-            nino = Nino(invitation.clientId)
+            arn = arn,
+            service = enrolment.service,
+            nino = Nino(enrolment.oneIdentifier().value)
           )
           .andThen { case Success(_) => auditService.sendCreatePartialAuthAuditEvent() }
       case `HMRCMTDIT` if isAltItsa => // Deauthorises current agent by updating partial auth
-        deauthPartialAuth(invitation.clientId, timestamp).flatMap { _ =>
+        deauthPartialAuth(enrolment.oneIdentifier().value, timestamp).flatMap { _ =>
           partialAuthRepository
             .create(
               created = timestamp,
-              arn = Arn(invitation.arn),
-              service = invitation.service,
-              nino = Nino(invitation.clientId)
+              arn = arn,
+              service = enrolment.service,
+              nino = Nino(enrolment.oneIdentifier().value)
             )
             .andThen { case Success(_) => auditService.sendCreatePartialAuthAuditEvent() }
         }
       case `HMRCMTDIT` => // Create relationship automatically deauthorises current itsa agent, manually deauth alt itsa for this nino as a precaution
-        deauthPartialAuth(invitation.suppliedClientId, timestamp).flatMap { _ =>
+        deauthPartialAuth(suppliedClientId, timestamp).flatMap { _ =>
           createRelationshipsService
             .createRelationship(
-              arn = Arn(invitation.arn),
+              arn = arn,
               enrolmentKey = enrolment,
               oldReferences = Set(),
               failIfAllocateAgentInESFails = true
@@ -192,16 +195,16 @@ extends RequestAwareLogging {
       case `HMRCPIR` => // AFI handles its own deauthorisations
         agentFiRelationshipConnector
           .createRelationship(
-            arn = Arn(invitation.arn),
-            service = invitation.service,
-            clientId = invitation.clientId,
+            arn = arn,
+            service = enrolment.service,
+            clientId = enrolment.oneIdentifier().value,
             acceptedDate = LocalDateTime.ofInstant(timestamp, ZoneId.systemDefault)
           )
           .andThen { case Success(_) => auditService.sendCreateRelationshipAuditEvent() }
       case _ => // Create relationship automatically deauthorises current agents except for itsa-supp
         createRelationshipsService
           .createRelationship(
-            arn = Arn(invitation.arn),
+            arn = arn,
             enrolmentKey = enrolment,
             oldReferences = Set(),
             failIfAllocateAgentInESFails = true

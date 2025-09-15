@@ -19,18 +19,28 @@ package uk.gov.hmrc.agentclientrelationships.testOnly.controllers
 import play.api.mvc.Action
 import play.api.mvc.AnyContent
 import play.api.mvc.ControllerComponents
+import uk.gov.hmrc.agentclientrelationships.audit.AuditData
+import uk.gov.hmrc.agentclientrelationships.auth.CurrentUser
+import uk.gov.hmrc.agentclientrelationships.services.AuthorisationAcceptService
 import uk.gov.hmrc.agentclientrelationships.services.CheckAndCopyRelationshipsService
+import uk.gov.hmrc.agentclientrelationships.services.ValidationService
 import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoType
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service._
 
+import java.time.Instant
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 class TestOnlyRelationshipsController @Inject() (
   checkOldAndCopyService: CheckAndCopyRelationshipsService,
-  controllerComponents: ControllerComponents
+  controllerComponents: ControllerComponents,
+  validationService: ValidationService,
+  authorisationAcceptService: AuthorisationAcceptService
 )(implicit ec: ExecutionContext)
 extends BackendController(controllerComponents) {
 
@@ -43,4 +53,30 @@ extends BackendController(controllerComponents) {
       .map(_ => NoContent)
       .recover { case ex: RelationshipNotFound => NotFound(ex.getMessage) }
   }
+
+  def createRelationship(
+    arn: Arn,
+    service: String,
+    clientIdType: String,
+    clientId: String
+  ): Action[AnyContent] = Action.async { implicit request =>
+    validationService.validateForEnrolmentKey(
+      service,
+      clientIdType,
+      clientId
+    ).flatMap {
+      case Right(enrolmentKey) =>
+        implicit val auditData: AuditData = new AuditData()
+        implicit val currentUser: CurrentUser = new CurrentUser(None, None) // Only needed for audits, pointless for test endpoint
+        authorisationAcceptService.createRelationship(
+          arn = arn,
+          suppliedClientId = "", // This only gets used to deauth existing partial auth for a normal ITSA user, not very relevant for a test endpoint
+          enrolment = enrolmentKey,
+          isAltItsa = Seq(MtdIt.id, MtdItSupp.id).contains(enrolmentKey.service) && enrolmentKey.oneIdentifier().key == NinoType.enrolmentId,
+          timestamp = Instant.now()
+        ).map(_ => Created)
+      case Left(error) => Future.successful(BadRequest(error))
+    }
+  }
+
 }

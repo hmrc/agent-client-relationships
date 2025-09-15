@@ -10,7 +10,9 @@
 # Failing to follow this rule may result in test routes deployed in production.
 
 # Add all the application routes to the prod.routes file
-->         /                                                                     prod.Routes
-DELETE     /test-only/db/agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:mtdItId  @uk.gov.hmrc.agentclientrelationships.testOnly.controllers.TestOnlyRelationshipsController.cleanCopyStatusRecord(arn: uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn, mtdItId: uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId)
+->            /                                                                            prod.Routes
+DELETE        /test-only/db/agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:mtdItId         @uk.gov.hmrc.agentclientrelationships.testOnly.controllers.TestOnlyRelationshipsController.cleanCopyStatusRecord(arn: uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn, mtdItId: uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId)
 
-GET        /test-only/invitation/:invitationId                                   @uk.gov.hmrc.agentclientrelationships.testOnly.controllers.TestOnlyInvitationsController.getInvitation(invitationId: String)
+GET           /test-only/invitation/:invitationId                                          @uk.gov.hmrc.agentclientrelationships.testOnly.controllers.TestOnlyInvitationsController.getInvitation(invitationId: String)
+
+PUT           /test-only/agent/:arn/service/:service/client/:clientIdType/:clientId        @uk.gov.hmrc.agentclientrelationships.testOnly.controllers.TestOnlyRelationshipsController.createRelationship(arn: Arn, service: String, clientIdType: String, clientId: String)

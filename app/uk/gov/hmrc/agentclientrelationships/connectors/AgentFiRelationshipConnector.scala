@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.connectors
 
+import org.apache.pekko.Done
 import play.api.http.Status.CREATED
 import play.api.http.Status.NOT_FOUND
 import play.api.http.Status.OK
@@ -91,7 +92,7 @@ extends HttpApiMonitor {
     service: String,
     clientId: String,
     acceptedDate: LocalDateTime
-  )(implicit rh: RequestHeader): Future[Unit] = {
+  )(implicit rh: RequestHeader): Future[Done] = {
     val body = Json.obj("startDate" -> acceptedDate.toString)
     monitor(s"ConsumedAPI-AgentFiRelationship-$service-PUT") {
       httpClient
@@ -106,7 +107,7 @@ extends HttpApiMonitor {
         .execute[HttpResponse]
         .map { response =>
           response.status match {
-            case CREATED => ()
+            case CREATED => Done
             case status => throw UpstreamErrorResponse(s"Unexpected status $status received from AFI create relationship", status)
           }
         }

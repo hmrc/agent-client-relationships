@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.mocks
 
+import org.apache.pekko.Done
 import org.mockito.ArgumentMatchers.any
 import org.mockito.ArgumentMatchers.{eq => eqs}
 import org.mockito.Mockito.when
@@ -39,14 +40,14 @@ trait MockAgentFiRelationshipConnector {
     arn: Arn,
     service: String,
     clientId: String
-  ): OngoingStubbing[Future[Unit]] = when(
+  ): OngoingStubbing[Future[Done]] = when(
     mockAgentFiRelationshipConnector.createRelationship(
       eqs(arn),
       eqs(service),
       eqs(clientId),
       any[LocalDateTime]
     )(any[RequestHeader])
-  ).thenReturn(Future.unit)
+  ).thenReturn(Future.successful(Done))
 
   def mockFindRelationshipForClient(clientId: String)(response: Either[
     RelationshipFailureResponse,

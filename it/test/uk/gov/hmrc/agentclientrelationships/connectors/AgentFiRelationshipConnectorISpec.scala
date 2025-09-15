@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.connectors
 
+import org.apache.pekko.Done
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
@@ -139,7 +140,7 @@ with AfiRelationshipStub {
           clientId,
           LocalDateTime.now()
         )
-      ) shouldBe ()
+      ) shouldBe Done
     }
     "throw an if PersonalIncomeRecord fails to create" in {
       givenCreateAfiRelationshipFails(

@@ -63,7 +63,7 @@ with RequestAwareLogging {
     failIfAllocateAgentInESFails: Boolean
   )(implicit
     request: RequestHeader,
-    auditData: AuditData
+    auditData: AuditData = new AuditData()
   ): Future[Option[Done]] =
     lockService.recoveryLock(arn, enrolmentKey) {
       auditData.set(enrolmentDelegatedKey, false)
