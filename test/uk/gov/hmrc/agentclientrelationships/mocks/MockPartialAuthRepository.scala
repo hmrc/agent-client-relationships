@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.mocks
 
+import org.apache.pekko.Done
 import org.mockito.ArgumentMatchers.any
 import org.mockito.ArgumentMatchers.{eq => eqs}
 import org.mockito.Mockito.when
@@ -56,7 +57,7 @@ trait MockPartialAuthRepository {
     arn: Arn,
     service: String,
     nino: Nino
-  )(response: Future[Unit] = Future.unit): OngoingStubbing[Future[Unit]] = when(
+  )(response: Future[Done] = Future.successful(Done)): OngoingStubbing[Future[Done]] = when(
     mockPartialAuthRepository.create(
       any[Instant],
       eqs(arn),

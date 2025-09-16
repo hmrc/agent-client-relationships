@@ -28,7 +28,6 @@ import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.auth.CurrentUser
 import uk.gov.hmrc.agentclientrelationships.mocks._
 import uk.gov.hmrc.agentclientrelationships.model._
-import uk.gov.hmrc.agentclientrelationships.repository.DbUpdateSucceeded
 import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdIt
@@ -154,6 +153,7 @@ with MockAuditService {
     LocalDate.now(),
     Some("personal")
   )
+  val altItsaEnrolment: EnrolmentKey = EnrolmentKey(MtdIt, testNino)
   val altItsaInvitation: Invitation = Invitation.createNew(
     testArn.value,
     MtdIt,
@@ -199,6 +199,7 @@ with MockAuditService {
     active = true,
     Instant.now()
   )
+  val itsaSuppEnrolment: EnrolmentKey = EnrolmentKey(MtdItSupp, testMtdItId)
   val itsaSuppInvitation: Invitation = Invitation.createNew(
     testArn.value,
     MtdItSupp,
@@ -210,6 +211,7 @@ with MockAuditService {
     LocalDate.now(),
     Some("personal")
   )
+  val altItsaSuppEnrolment: EnrolmentKey = EnrolmentKey(MtdItSupp, testNino)
   val altItsaSuppInvitation: Invitation = Invitation.createNew(
     testArn.value,
     MtdItSupp,
@@ -243,7 +245,7 @@ with MockAuditService {
             )
             mockSendAcceptedEmail(vatInvitation)()
 
-            TestService.accept(vatInvitation, vatEnrolment).futureValue shouldBe vatInvitation.copy(status = Accepted)
+            TestService.acceptInvitation(vatInvitation, vatEnrolment).futureValue shouldBe vatInvitation.copy(status = Accepted)
 
             // Verifying non blocking side effects actually happen
             verifySideEffectsOccur { _ =>
@@ -287,7 +289,7 @@ with MockAuditService {
             )
             mockSendAcceptedEmail(pirInvitation)()
 
-            await(TestService.accept(pirInvitation, pirEnrolment)) shouldBe pirInvitation.copy(status = Accepted)
+            await(TestService.acceptInvitation(pirInvitation, pirEnrolment)) shouldBe pirInvitation.copy(status = Accepted)
 
             // Verifying non blocking side effects actually happen
             verifySideEffectsOccur { _ =>
@@ -350,7 +352,7 @@ with MockAuditService {
                 )
                 mockSendAcceptedEmail(itsaInvitation)()
 
-                await(TestService.accept(itsaInvitation, itsaEnrolment)) shouldBe itsaInvitation.copy(status = Accepted)
+                await(TestService.acceptInvitation(itsaInvitation, itsaEnrolment)) shouldBe itsaInvitation.copy(status = Accepted)
 
                 // Verifying non blocking side effects actually happen
                 verifySideEffectsOccur { _ =>
@@ -384,13 +386,13 @@ with MockAuditService {
                   Some(testMtdItId.value),
                   testNino.nino
                 )(Future.successful(true))
-                mockCreateRelationship(testArn, itsaEnrolment)(Future.successful(Some(Done)))
+                mockCreateRelationship(testArn, itsaSuppEnrolment)(Future.successful(Some(Done)))
                 mockUpdateStatus(itsaSuppInvitation.invitationId, Accepted)(
                   Future.successful(itsaSuppInvitation.copy(status = Accepted))
                 )
                 mockSendAcceptedEmail(itsaSuppInvitation)()
 
-                await(TestService.accept(itsaSuppInvitation, itsaEnrolment)) shouldBe
+                await(TestService.acceptInvitation(itsaSuppInvitation, itsaSuppEnrolment)) shouldBe
                   itsaSuppInvitation.copy(status = Accepted)
 
                 // Verifying non blocking side effects actually happen
@@ -439,7 +441,7 @@ with MockAuditService {
                 )
                 mockSendAcceptedEmail(altItsaInvitation)()
 
-                await(TestService.accept(altItsaInvitation, itsaEnrolment)) shouldBe
+                await(TestService.acceptInvitation(altItsaInvitation, altItsaEnrolment)) shouldBe
                   altItsaInvitation.copy(status = PartialAuth)
 
                 // Verifying non blocking side effects actually happen
@@ -484,7 +486,7 @@ with MockAuditService {
                 )
                 mockSendAcceptedEmail(altItsaSuppInvitation)()
 
-                await(TestService.accept(altItsaSuppInvitation, itsaEnrolment)) shouldBe
+                await(TestService.acceptInvitation(altItsaSuppInvitation, altItsaSuppEnrolment)) shouldBe
                   altItsaSuppInvitation.copy(status = PartialAuth)
 
                 // Verifying non blocking side effects actually happen

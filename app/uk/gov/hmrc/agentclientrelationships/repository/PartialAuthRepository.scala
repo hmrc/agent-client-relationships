@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.repository
 
+import org.apache.pekko.Done
 import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.Filters.and
 import org.mongodb.scala.model.Filters.equal
@@ -90,7 +91,7 @@ with RequestAwareLogging {
     arn: Arn,
     service: String,
     nino: Nino
-  ): Future[Unit] = Mdc.preservingMdc {
+  ): Future[Done] = Mdc.preservingMdc {
     require(List(HMRCMTDIT, HMRCMTDITSUPP).contains(service))
     val partialAuth = PartialAuthRelationship(
       created,
@@ -100,7 +101,7 @@ with RequestAwareLogging {
       active = true,
       lastUpdated = created
     )
-    collection.insertOne(partialAuth).toFuture().map(_ => ())
+    collection.insertOne(partialAuth).toFuture().map(_ => Done)
   }
 
   def findActive(
