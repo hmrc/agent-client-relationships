@@ -17,7 +17,6 @@
 package uk.gov.hmrc.agentclientrelationships.controllers
 
 import cats.implicits._
-import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import play.api.libs.json.Json
 import play.api.mvc._
 import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys._
@@ -27,12 +26,11 @@ import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.DesConnector
 import uk.gov.hmrc.agentclientrelationships.connectors.EnrolmentStoreProxyConnector
-import uk.gov.hmrc.agentclientrelationships.connectors.IfOrHipConnector
 import uk.gov.hmrc.agentclientrelationships.connectors.MappingConnector
 import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax._
-import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
-import uk.gov.hmrc.agentclientrelationships.services._
 import uk.gov.hmrc.agentclientrelationships.model.identifiers._
+import uk.gov.hmrc.agentclientrelationships.services._
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.domain.TaxIdentifier
@@ -52,11 +50,9 @@ class RelationshipsController @Inject() (
   checkOrchestratorService: CheckRelationshipsOrchestratorService,
   checkOldAndCopyService: CheckAndCopyRelationshipsService,
   createService: CreateRelationshipsService,
-  deleteService: DeleteRelationshipsService,
   findService: FindRelationshipsService,
   agentTerminationService: AgentTerminationService,
   des: DesConnector,
-  ifOrHipConnector: IfOrHipConnector,
   val esConnector: EnrolmentStoreProxyConnector,
   mappingConnector: MappingConnector,
   auditService: AuditService,
@@ -147,58 +143,6 @@ with RequestAwareLogging {
               }
           }
 
-        case Left(error) => Future.successful(BadRequest(error))
-      }
-  }
-
-  def delete(
-    arn: Arn,
-    serviceId: String,
-    clientIdType: String,
-    clientId: String
-  ): Action[AnyContent] = Action.async { implicit request =>
-    validationService
-      .validateForEnrolmentKey(
-        serviceId,
-        clientIdType,
-        clientId
-      )
-      .flatMap {
-        case Right(enrolmentKey) =>
-          val taxIdentifier = enrolmentKey.oneTaxIdentifier()
-          authorisedUser(
-            Some(arn),
-            taxIdentifier,
-            strideRoles
-          ) { implicit currentUser =>
-            (
-              for {
-                maybeEk <-
-                  taxIdentifier match {
-                    // turn a NINO-based enrolment key for IT into a MtdItId-based one if necessary
-                    case nino @ Nino(_) => ifOrHipConnector.getMtdIdFor(nino).map(_.map(EnrolmentKey(Service.MtdIt, _)))
-                    case _ => Future.successful(Some(enrolmentKey))
-                  }
-                _ <-
-                  maybeEk.fold {
-                    Future.successful(logger.error(s"Could not identify $taxIdentifier for $clientIdType"))
-                  } { ek =>
-                    deleteService.deleteRelationship(
-                      arn,
-                      ek,
-                      currentUser.affinityGroup
-                    ).map(_ => ())
-                  }
-              } yield NoContent
-            ).recover {
-              case upS: UpstreamErrorResponse =>
-                logger.warn(s"Could not delete relationship: ${upS.getMessage}")
-                InternalServerError(toJson(upS.getMessage))
-              case NonFatal(ex) =>
-                logger.warn(s"Could not delete relationship: ${ex.getMessage}")
-                InternalServerError(toJson(ex.getMessage))
-            }
-          }
         case Left(error) => Future.successful(BadRequest(error))
       }
   }
