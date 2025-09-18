@@ -1,7 +1,6 @@
 
 GET           /agent/:arn/service/:service/client/:clientIdType/:clientId    @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.checkForRelationship(arn: Arn, service: String, clientIdType: String, clientId: String, userId: Option[String] ?= None)
 PUT           /agent/:arn/service/:service/client/:clientIdType/:clientId    @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.create(arn: Arn, service: String, clientIdType: String, clientId: String)
-DELETE        /agent/:arn/service/:service/client/:clientIdType/:clientId    @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.delete(arn: Arn, service: String, clientIdType: String, clientId: String)
 
 GET           /agent/relationships/inactive                                  @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getInactiveRelationshipsAgent
 

@@ -40,7 +40,6 @@ import uk.gov.hmrc.agentclientrelationships.services.ApiKnownFactsCheckService
 import uk.gov.hmrc.agentclientrelationships.stubs._
 import uk.gov.hmrc.agentclientrelationships.support.TestData
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service._
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.SuspensionDetails
 import uk.gov.hmrc.auth.core.AuthConnector
