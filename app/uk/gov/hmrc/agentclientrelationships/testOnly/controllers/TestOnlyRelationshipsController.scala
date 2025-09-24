@@ -21,24 +21,21 @@ import play.api.mvc.AnyContent
 import play.api.mvc.ControllerComponents
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.auth.CurrentUser
-import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax.toJson
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoType
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service._
 import uk.gov.hmrc.agentclientrelationships.services.AuthorisationAcceptService
 import uk.gov.hmrc.agentclientrelationships.services.CheckAndCopyRelationshipsService
 import uk.gov.hmrc.agentclientrelationships.services.CreateRelationshipLocked
 import uk.gov.hmrc.agentclientrelationships.services.ValidationService
 import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoType
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service._
-import uk.gov.hmrc.http.UpstreamErrorResponse
 
 import java.time.Instant
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import scala.util.control.NonFatal
 
 class TestOnlyRelationshipsController @Inject() (
   checkOldAndCopyService: CheckAndCopyRelationshipsService,
@@ -80,11 +77,7 @@ extends BackendController(controllerComponents) {
           timestamp = Instant.now()
         )
           .map(_ => Created)
-          .recover {
-            case CreateRelationshipLocked => Locked
-            case upS: UpstreamErrorResponse => InternalServerError(toJson(upS.getMessage))
-            case NonFatal(ex) => InternalServerError(toJson(ex.getMessage))
-          }
+          .recover { case CreateRelationshipLocked => Locked }
       case Left(error) => Future.successful(BadRequest(error))
     }
   }

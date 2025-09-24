@@ -209,7 +209,7 @@ trait TestOnlyRelationshipsControllerGenericBehaviours {
 
       }
 
-      "return 500 when ES1 is unavailable" in new StubsForThisScenario {
+      "return 503 when ES1 is unavailable" in new StubsForThisScenario {
         givenUserIsSubscribedClient(clientId)
         givenPrincipalAgentUser(
           arn,
@@ -221,11 +221,11 @@ trait TestOnlyRelationshipsControllerGenericBehaviours {
         extraSetup(serviceId, clientIdType)
 
         val result = doAgentPutRequest(requestPath)
-        result.status shouldBe 500
+        result.status shouldBe 503
 
       }
 
-      "return 500 when ES8 is unavailable" in {
+      "return 503 when ES8 is unavailable" in {
         givenUserIsSubscribedClient(clientId)
         givenPrincipalAgentUser(
           arn,
@@ -245,12 +245,12 @@ trait TestOnlyRelationshipsControllerGenericBehaviours {
         extraSetup(serviceId, clientIdType)
 
         val result = doAgentPutRequest(requestPath)
-        result.status shouldBe 500
-        (result.json \ "message").asOpt[String] shouldBe None
+        result.status shouldBe 503
+        (result.json \ "message").asOpt[String] shouldBe Some("")
 
       }
 
-      "return 500 when DES/IF is unavailable" in {
+      "return 502 when DES/IF is unavailable" in {
         givenUserIsSubscribedClient(clientId)
         givenPrincipalAgentUser(arn, "foo")
         givenGroupInfo("foo", "bar")
@@ -261,8 +261,8 @@ trait TestOnlyRelationshipsControllerGenericBehaviours {
         extraSetup(serviceId, clientIdType)
 
         val result = doAgentPutRequest(requestPath)
-        result.status shouldBe 500
-        (result.json \ "message").asOpt[String] shouldBe None
+        result.status shouldBe 502
+        result.body should include("returned 503")
 
       }
 
