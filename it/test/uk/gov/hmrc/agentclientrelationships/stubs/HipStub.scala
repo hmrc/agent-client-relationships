@@ -52,6 +52,20 @@ trait HipStub {
       )
   )
 
+  def verifyAgentCanBeAllocatedCalled(
+    taxIdentifier: TaxIdentifier,
+    arn: Arn,
+    count: Int = 1
+  ): Unit = eventually {
+    verify(
+      count,
+      postRequestedFor(urlEqualTo(s"/etmp/RESTAdapter/rosm/agent-relationship"))
+        .withRequestBody(containing(taxIdentifier.value))
+        .withRequestBody(containing(arn.value))
+        .withRequestBody(containing("\"0001\""))
+    )
+  }
+
   def givenAgentCanNotBeAllocated(status: Int): StubMapping = stubFor(
     post(urlEqualTo(s"/etmp/RESTAdapter/rosm/agent-relationship"))
       .withRequestBody(containing("\"0001\""))
@@ -76,6 +90,20 @@ trait HipStub {
           .withBody(s"""{"processingDate": "2001-03-14T19:16:07Z"}""")
       )
   )
+
+  def verifyAgentDeallocationCalled(
+    taxIdentifier: TaxIdentifier,
+    arn: Arn,
+    count: Int = 1
+  ): Unit = eventually {
+    verify(
+      count,
+      postRequestedFor(urlEqualTo(s"/etmp/RESTAdapter/rosm/agent-relationship"))
+        .withRequestBody(containing(taxIdentifier.value))
+        .withRequestBody(containing(arn.value))
+        .withRequestBody(containing("\"0002\""))
+    )
+  }
 
   def givenAgentHasNoActiveRelationship(
     taxIdentifier: TaxIdentifier,

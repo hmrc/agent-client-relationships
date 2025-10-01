@@ -155,10 +155,11 @@ extends Eventually {
     groupId: String,
     clientUserId: String,
     enrolmentKey: EnrolmentKey,
-    agentCode: String
+    agentCode: String,
+    count: Int = 1
   ): Unit = eventually {
     verify(
-      1,
+      count,
       postRequestedFor(
         urlEqualTo(s"$teBaseUrl/groups/$groupId/enrolments/${enrolmentKey.tag}?legacy-agentCode=$agentCode")
       ).withRequestBody(similarToJson(s"""
