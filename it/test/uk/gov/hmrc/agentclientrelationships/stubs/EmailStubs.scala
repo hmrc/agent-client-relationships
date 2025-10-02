@@ -26,10 +26,10 @@ import uk.gov.hmrc.agentclientrelationships.support.TestData
 trait EmailStubs
 extends TestData {
 
-  def verifyRejectInvitationSent(
+  def verifyInvitationEmailInfoSent(
     emailInformation: EmailInformation,
     count: Int = 1
-  ) = eventually {
+  ): Unit = eventually {
     verify(
       count,
       postRequestedFor(urlPathEqualTo(s"/hmrc/email"))

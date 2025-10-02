@@ -481,7 +481,7 @@ with TestData {
           invitations.size shouldBe 1
           invitations.head.status shouldBe Rejected
 
-          verifyRejectInvitationSent(emailInfo)
+          verifyInvitationEmailInfoSent(emailInfo)
           verifyRespondToInvitationAuditSent(
             requestPath,
             pendingInvitation,

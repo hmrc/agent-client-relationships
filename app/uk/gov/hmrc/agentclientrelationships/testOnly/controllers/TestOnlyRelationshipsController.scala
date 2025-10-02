@@ -21,15 +21,16 @@ import play.api.mvc.AnyContent
 import play.api.mvc.ControllerComponents
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.auth.CurrentUser
-import uk.gov.hmrc.agentclientrelationships.services.AuthorisationAcceptService
-import uk.gov.hmrc.agentclientrelationships.services.CheckAndCopyRelationshipsService
-import uk.gov.hmrc.agentclientrelationships.services.ValidationService
-import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoType
-import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service._
+import uk.gov.hmrc.agentclientrelationships.services.AuthorisationAcceptService
+import uk.gov.hmrc.agentclientrelationships.services.CheckAndCopyRelationshipsService
+import uk.gov.hmrc.agentclientrelationships.services.CreateRelationshipLocked
+import uk.gov.hmrc.agentclientrelationships.services.ValidationService
+import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
+import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import java.time.Instant
 import javax.inject.Inject
@@ -74,7 +75,9 @@ extends BackendController(controllerComponents) {
           enrolment = enrolmentKey,
           isAltItsa = Seq(MtdIt.id, MtdItSupp.id).contains(enrolmentKey.service) && enrolmentKey.oneIdentifier().key == NinoType.enrolmentId,
           timestamp = Instant.now()
-        ).map(_ => Created)
+        )
+          .map(_ => Created)
+          .recover { case CreateRelationshipLocked => Locked }
       case Left(error) => Future.successful(BadRequest(error))
     }
   }

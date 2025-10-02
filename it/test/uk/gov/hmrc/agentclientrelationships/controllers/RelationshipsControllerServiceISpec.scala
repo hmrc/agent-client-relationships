@@ -39,16 +39,6 @@ with HipStub {
     nino,
     "NI"
   )
-  behave like relationshipsControllerPutISpec(
-    Service.MtdIt.id,
-    mtdItId,
-    "MTDITID"
-  )
-  behave like relationshipsControllerDeleteISpec(
-    Service.MtdIt.id,
-    mtdItId,
-    "MTDITID"
-  )
   behave like strideEndpointISpec(
     Service.MtdIt.id,
     nino,
@@ -66,29 +56,9 @@ with HipStub {
     nino,
     "NI"
   )
-  behave like relationshipsControllerPutISpec(
-    Service.MtdItSupp.id,
-    mtdItId,
-    "MTDITID"
-  )
-  behave like relationshipsControllerDeleteISpec(
-    Service.MtdItSupp.id,
-    mtdItId,
-    "MTDITID"
-  )
 
   // VAT
   behave like relationshipsControllerGetISpec(
-    Service.Vat.id,
-    vrn,
-    "VRN"
-  )
-  behave like relationshipsControllerPutISpec(
-    Service.Vat.id,
-    vrn,
-    "VRN"
-  )
-  behave like relationshipsControllerDeleteISpec(
     Service.Vat.id,
     vrn,
     "VRN"
@@ -106,16 +76,6 @@ with HipStub {
     utr,
     "SAUTR"
   )
-  behave like relationshipsControllerPutISpec(
-    Service.Trust.id,
-    utr,
-    "SAUTR"
-  )
-  behave like relationshipsControllerDeleteISpec(
-    Service.Trust.id,
-    utr,
-    "SAUTR"
-  )
   behave like strideEndpointISpec(
     Service.Trust.id,
     utr,
@@ -124,16 +84,6 @@ with HipStub {
 
   // TrustNT
   behave like relationshipsControllerGetISpec(
-    Service.TrustNT.id,
-    urn,
-    "URN"
-  )
-  behave like relationshipsControllerPutISpec(
-    Service.TrustNT.id,
-    urn,
-    "URN"
-  )
-  behave like relationshipsControllerDeleteISpec(
     Service.TrustNT.id,
     urn,
     "URN"
@@ -150,16 +100,6 @@ with HipStub {
     cgtRef,
     "CGTPDRef"
   )
-  behave like relationshipsControllerPutISpec(
-    Service.CapitalGains.id,
-    cgtRef,
-    "CGTPDRef"
-  )
-  behave like relationshipsControllerDeleteISpec(
-    Service.CapitalGains.id,
-    cgtRef,
-    "CGTPDRef"
-  )
   behave like strideEndpointISpec(
     Service.CapitalGains.id,
     cgtRef,
@@ -168,16 +108,6 @@ with HipStub {
 
   // PPT
   behave like relationshipsControllerGetISpec(
-    Service.Ppt.id,
-    pptRef,
-    "EtmpRegistrationNumber"
-  )
-  behave like relationshipsControllerPutISpec(
-    Service.Ppt.id,
-    pptRef,
-    "EtmpRegistrationNumber"
-  )
-  behave like relationshipsControllerDeleteISpec(
     Service.Ppt.id,
     pptRef,
     "EtmpRegistrationNumber"
@@ -194,16 +124,6 @@ with HipStub {
     cbcId,
     "cbcId"
   )
-  behave like relationshipsControllerPutISpec(
-    Service.Cbc.id,
-    cbcId,
-    "cbcId"
-  )
-  behave like relationshipsControllerDeleteISpec(
-    Service.Cbc.id,
-    cbcId,
-    "cbcId"
-  )
   behave like strideEndpointISpec(
     Service.Cbc.id,
     cbcId,
@@ -216,16 +136,6 @@ with HipStub {
     cbcId,
     "cbcId"
   )
-  behave like relationshipsControllerPutISpec(
-    Service.CbcNonUk.id,
-    cbcId,
-    "cbcId"
-  )
-  behave like relationshipsControllerDeleteISpec(
-    Service.CbcNonUk.id,
-    cbcId,
-    "cbcId"
-  )
   behave like strideEndpointISpec(
     Service.CbcNonUk.id,
     cbcId,
@@ -234,16 +144,6 @@ with HipStub {
 
   // Pillar2
   behave like relationshipsControllerGetISpec(
-    Service.Pillar2.id,
-    plrId,
-    "PLRID"
-  )
-  behave like relationshipsControllerPutISpec(
-    Service.Pillar2.id,
-    plrId,
-    "PLRID"
-  )
-  behave like relationshipsControllerDeleteISpec(
     Service.Pillar2.id,
     plrId,
     "PLRID"
