@@ -99,6 +99,18 @@ with UsersGroupsSearchStubs {
     agentCode
   )
 
+  def verifyServiceEnrolmentAllocationSucceedsCalled(
+    enrolmentKey: EnrolmentKey,
+    agentCode: String,
+    count: Int = 1
+  ) = verifyEnrolmentAllocationAttempt(
+    "foo",
+    "any",
+    enrolmentKey,
+    agentCode,
+    count
+  )
+
   def givenAgentIsAllocatedAndAssignedToClient(
     enrolmentKey: EnrolmentKey,
     agentCode: String

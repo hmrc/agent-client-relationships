@@ -41,7 +41,6 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import scala.util.control.NonFatal
 
 @Singleton
 class RelationshipsController @Inject() (
@@ -62,8 +61,6 @@ class RelationshipsController @Inject() (
 extends BackendController(controllerComponents)
 with AuthActions
 with RequestAwareLogging {
-
-  private val strideRoles = Seq(appConfig.oldAuthStrideRole, appConfig.newAuthStrideRole)
 
   val supportedServices: Seq[Service] = appConfig.supportedServicesWithoutPir
 
@@ -89,62 +86,6 @@ with RequestAwareLogging {
           case CheckRelationshipInvalidRequest => BadRequest
         }
     }
-  }
-
-  def create(
-    arn: Arn,
-    serviceId: String,
-    clientIdType: String,
-    clientId: String
-  ): Action[AnyContent] = Action.async { implicit request =>
-    validationService
-      .validateForEnrolmentKey(
-        serviceId,
-        clientIdType,
-        clientId
-      )
-      .flatMap {
-        case Right(enrolmentKey) =>
-          val taxIdentifier = enrolmentKey.oneTaxIdentifier()
-          authorisedClientOrStrideUserOrAgent(taxIdentifier, strideRoles) { currentUser =>
-            implicit val auditData: AuditData = new AuditData()
-            auditData.set(arnKey, arn)
-            auditData.set(serviceKey, serviceId)
-            auditData.set(clientIdKey, clientId)
-            auditData.set(clientIdTypeKey, clientIdType)
-            auditData.set(
-              howRelationshipCreatedKey,
-              if (currentUser.isStride)
-                hmrcAcceptedInvitation
-              else
-                clientAcceptedInvitation
-            )
-
-            createService
-              .createRelationship(
-                arn,
-                enrolmentKey,
-                Set(),
-                failIfAllocateAgentInESFails = true
-              )
-              .map {
-                case Some(_) => Created
-                case None =>
-                  logger.warn(s"create relationship is currently in Locked state");
-                  Locked
-              }
-              .recover {
-                case upS: UpstreamErrorResponse =>
-                  logger.warn(s"Could not create relationship due to ${upS.getMessage}")
-                  InternalServerError(toJson(upS.getMessage))
-                case NonFatal(ex) =>
-                  logger.warn(s"Could not create relationship due to ${ex.getMessage}")
-                  InternalServerError(toJson(ex.getMessage))
-              }
-          }
-
-        case Left(error) => Future.successful(BadRequest(error))
-      }
   }
 
   def getActiveRelationshipsForClient: Action[AnyContent] = Action.async { implicit request =>
