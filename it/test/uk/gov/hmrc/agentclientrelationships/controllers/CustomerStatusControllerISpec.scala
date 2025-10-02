@@ -333,6 +333,28 @@ with HipStub {
         result.json shouldBe expectedBody
       }
 
+      "there are no pending invitations, no partial auth history and no existing relationships" in {
+        givenAuditConnector()
+        givenAuthorisedItsaClientWithNino(
+          request,
+          mtdItId,
+          nino
+        )
+        getActiveRelationshipFailsWith(mtdItId, NOT_FOUND)
+        givenAfiRelationshipForClientNotFound(nino.value)
+        val expectedBody = Json.toJson(
+          CustomerStatus(
+            hasPendingInvitations = false,
+            hasInvitationsHistory = false,
+            hasExistingRelationships = false
+          )
+        )
+
+        val result = doGetRequest(request.uri)
+        result.status shouldBe OK
+        result.json shouldBe expectedBody
+      }
+
       "return 401 when the request is not authorised as a client" in {
         givenAuthorisedAsValidAgent(request, arn.value)
         val result = doGetRequest(request.uri)

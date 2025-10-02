@@ -23,8 +23,13 @@ import play.api.mvc.ControllerComponents
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.AgentFiRelationshipConnector
+import uk.gov.hmrc.agentclientrelationships.model.Accepted
 import uk.gov.hmrc.agentclientrelationships.model.CustomerStatus
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentsWithNino
+import uk.gov.hmrc.agentclientrelationships.model.Invitation
+import uk.gov.hmrc.agentclientrelationships.model.InvitationStatus
+import uk.gov.hmrc.agentclientrelationships.model.PartialAuth
+import uk.gov.hmrc.agentclientrelationships.model.PartialAuthRelationship
 import uk.gov.hmrc.agentclientrelationships.model.Pending
 import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
 import uk.gov.hmrc.agentclientrelationships.services.AgentCacheProvider
@@ -76,17 +81,21 @@ with AuthActions {
                 .map(_.fold(_ => false, rel => rel.nonEmpty))
             case None => Future.successful(false)
           }
-        existingRelationships <-
-          customerStatusExistingRelationshipsCache(toCacheKey(authResponse.getIdentifierMap(supportedServices))) {
-            if (partialAuthRecords.iterator.exists(_.active) || irvRelationshipExists) {
-              Future.successful(true)
-            }
-            else {
+        existingRelationships <- {
+          val partialAuthOrAcceptedInvExists = invitations.exists(inv =>
+            Seq(PartialAuth, uk.gov.hmrc.agentclientrelationships.model.Accepted).contains(inv.status)
+          )
+          if (partialAuthRecords.iterator.exists(_.active) || irvRelationshipExists || partialAuthOrAcceptedInvExists) {
+            Future.successful(true)
+          }
+          else {
+            customerStatusExistingRelationshipsCache(toCacheKey(authResponse.getIdentifierMap(supportedServices))) {
               findRelationshipsService
                 .getActiveRelationshipsForClient(authResponse.getIdentifierMap(supportedServices))
                 .map(_.nonEmpty)
             }
           }
+        }
       } yield Ok(
         Json.toJson(
           CustomerStatus(
