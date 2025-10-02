@@ -27,11 +27,13 @@ import uk.gov.hmrc.agentclientrelationships.model.CustomerStatus
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentsWithNino
 import uk.gov.hmrc.agentclientrelationships.model.Pending
 import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
+import uk.gov.hmrc.agentclientrelationships.services.AgentCacheProvider
 import uk.gov.hmrc.agentclientrelationships.services.FindRelationshipsService
 import uk.gov.hmrc.agentclientrelationships.services.InvitationService
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.Nino
+import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.Inject
@@ -47,17 +49,19 @@ class CustomerStatusController @Inject() (
   partialAuthRepository: PartialAuthRepository,
   val authConnector: AuthConnector,
   appConfig: AppConfig,
-  cc: ControllerComponents
+  cc: ControllerComponents,
+  agentCacheProvider: AgentCacheProvider
 )(implicit val executionContext: ExecutionContext)
 extends BackendController(cc)
 with AuthActions {
 
   val supportedServices: Seq[Service] = appConfig.supportedServices
+  private val customerStatusExistingRelationshipsCache = agentCacheProvider.customerStatusExistingRelationshipsCache
 
   def customerStatus: Action[AnyContent] = Action.async { implicit request =>
     withAuthorisedAsClientWithNino { authResponse: EnrolmentsWithNino =>
-      val services = authResponse.getIdentifierMap(supportedServices).keys.toSeq.map(_.id)
-      val identifiers = authResponse.getIdentifierMap(supportedServices).values.toSeq.map(_.value)
+      val services: Seq[String] = authResponse.getIdentifierMap(supportedServices).keys.toSeq.map(_.id)
+      val identifiers: Seq[String] = authResponse.getIdentifierMap(supportedServices).values.toSeq.map(_.value)
       for {
         invitations <- invitationsService.findNonSuspendedClientInvitations(services, identifiers)
         partialAuthRecords <-
@@ -73,13 +77,15 @@ with AuthActions {
             case None => Future.successful(false)
           }
         existingRelationships <-
-          if (partialAuthRecords.iterator.exists(_.active) || irvRelationshipExists) {
-            Future.successful(true)
-          }
-          else {
-            findRelationshipsService
-              .getActiveRelationshipsForClient(authResponse.getIdentifierMap(supportedServices))
-              .map(_.nonEmpty)
+          customerStatusExistingRelationshipsCache(toCacheKey(authResponse.getIdentifierMap(supportedServices))) {
+            if (partialAuthRecords.iterator.exists(_.active) || irvRelationshipExists) {
+              Future.successful(true)
+            }
+            else {
+              findRelationshipsService
+                .getActiveRelationshipsForClient(authResponse.getIdentifierMap(supportedServices))
+                .map(_.nonEmpty)
+            }
           }
       } yield Ok(
         Json.toJson(
@@ -92,5 +98,9 @@ with AuthActions {
       )
     }
   }
+
+  private def toCacheKey(identifiers: Map[Service, TaxIdentifier]): String = identifiers
+    .map(i => s"${i._1}__${i._2}".toLowerCase.replace(" ", ""))
+    .mkString(",")
 
 }

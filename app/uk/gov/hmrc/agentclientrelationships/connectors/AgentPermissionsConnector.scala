@@ -50,18 +50,16 @@ with RequestAwareLogging {
     enrolmentKey: EnrolmentKey
   )(implicit rh: RequestHeader): Future[Boolean] = {
     val url = url"${appConfig.agentPermissionsUrl}/agent-permissions/arn/${arn.value}/client/${enrolmentKey.tag}/groups"
-    monitor("ConsumedAPI-GetGroupSummariesForClient-GET") {
-      httpClient
-        .get(url)
-        .execute[HttpResponse]
-        .map { response =>
-          response.status match {
-            case Status.OK => false
-            case Status.NOT_FOUND => true
-            case e => throw UpstreamErrorResponse(response.body, e)
-          }
+    httpClient
+      .get(url)
+      .execute[HttpResponse]
+      .map { response =>
+        response.status match {
+          case Status.OK => false
+          case Status.NOT_FOUND => true
+          case e => throw UpstreamErrorResponse(response.body, e)
         }
-    }
+      }
   }
 
 }

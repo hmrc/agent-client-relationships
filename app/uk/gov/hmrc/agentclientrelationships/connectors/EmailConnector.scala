@@ -47,20 +47,18 @@ with RequestAwareLogging {
 
   private val baseUrl: String = appConfig.emailBaseUrl
 
-  def sendEmail(emailInformation: EmailInformation)(implicit request: RequestHeader): Future[Boolean] =
-    monitor(s"Send-Email-${emailInformation.templateId}") {
-      httpClient
-        .post(url"$baseUrl/hmrc/email")
-        .withBody(Json.toJson(emailInformation))
-        .execute[HttpResponse]
-        .map { response =>
-          response.status match {
-            case status if is2xx(status) => true
-            case other =>
-              logger.warn(s"unexpected status from email service, status: $other")
-              false
-          }
-        }
+  def sendEmail(emailInformation: EmailInformation)(implicit request: RequestHeader): Future[Boolean] = httpClient
+    .post(url"$baseUrl/hmrc/email")
+    .withBody(Json.toJson(emailInformation))
+    .execute[HttpResponse]
+    .map { response =>
+      response.status match {
+        case status if is2xx(status) => true
+        case other =>
+          logger.warn(s"unexpected status from email service, status: $other")
+          false
+      }
+
     }
 
 }

@@ -361,13 +361,10 @@ with RequestAwareLogging {
     apiName: String,
     url: URL,
     getHeaders: () => Seq[(String, String)]
-  )(implicit request: RequestHeader): Future[Either[UpstreamErrorResponse, HttpResponse]] =
-    monitor(s"ConsumedAPI-HIP-$apiName-GET") {
-      httpClient
-        .get(url)
-        .setHeader(getHeaders(): _*)
-        .execute[Either[UpstreamErrorResponse, HttpResponse]]
-    }
+  )(implicit request: RequestHeader): Future[Either[UpstreamErrorResponse, HttpResponse]] = httpClient
+    .get(url)
+    .setHeader(getHeaders(): _*)
+    .execute[Either[UpstreamErrorResponse, HttpResponse]]
 
   private def postWithHipHeaders(
     apiName: String,
@@ -377,14 +374,11 @@ with RequestAwareLogging {
   )(implicit
     request: RequestHeader,
     ec: ExecutionContext
-  ): Future[Either[UpstreamErrorResponse, HttpResponse]] =
-    monitor(s"ConsumedAPI-HIP-$apiName-POST") {
-      httpClient
-        .post(url)
-        .setHeader(getHeaders(): _*)
-        .withBody(body)
-        .execute[Either[UpstreamErrorResponse, HttpResponse]]
-    }
+  ): Future[Either[UpstreamErrorResponse, HttpResponse]] = httpClient
+    .post(url)
+    .setHeader(getHeaders(): _*)
+    .withBody(body)
+    .execute[Either[UpstreamErrorResponse, HttpResponse]]
 
   private[connectors] def isActive(r: ActiveRelationship): Boolean =
     r.dateTo match {

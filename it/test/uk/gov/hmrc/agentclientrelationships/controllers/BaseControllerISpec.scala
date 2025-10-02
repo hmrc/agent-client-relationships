@@ -109,6 +109,8 @@ with IntegrationPatience {
       "agent.cache.enabled" -> true,
       "agent.trackPage.cache.expires" -> "1 millis",
       "agent.trackPage.cache.enabled" -> true,
+      "agent.customerStatusExistingRelationships.cache.expires" -> "15 minutes",
+      "agent.customerStatusExistingRelationships.cache.enabled" -> true,
       "mongodb.uri" -> mongoUri,
       "internal-auth.token" -> "internalAuthToken",
       "new.auth.stride.role" -> NEW_STRIDE_ROLE,

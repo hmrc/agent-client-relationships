@@ -75,42 +75,37 @@ class MappingConnector @Inject() (
 extends HttpApiMonitor
 with RequestAwareLogging {
 
-  def getSaAgentReferencesFor(arn: Arn)(implicit rh: RequestHeader): Future[Seq[SaAgentReference]] =
-    monitor(s"ConsumedAPI-Digital-Mappings-GET") {
-      httpClient
-        .get(url"${appConfig.agentMappingUrl}/agent-mapping/mappings/${arn.value}")
-        .execute[HttpResponse]
-        .map { response =>
-          // TODO: Fix error handling
-          // Currently
-          // - Only correctly handles 404 status codes
-          // - Incorrectly reports Seq.empty for all other error cases
-          response.status match {
-            case Status.OK => response.json.as[SaMappings].mappings.map(_.saAgentReference)
-            case other =>
-              logger.error(s"Error in Digital-Mappings getSaAgentReferences: $other, ${response.body}")
-              Seq.empty
-          }
-        }
+  def getSaAgentReferencesFor(arn: Arn)(implicit rh: RequestHeader): Future[Seq[SaAgentReference]] = httpClient
+    .get(url"${appConfig.agentMappingUrl}/agent-mapping/mappings/${arn.value}")
+    .execute[HttpResponse]
+    .map { response =>
+      // TODO: Fix error handling
+      // Currently
+      // - Only correctly handles 404 status codes
+      // - Incorrectly reports Seq.empty for all other error cases
+      response.status match {
+        case Status.OK => response.json.as[SaMappings].mappings.map(_.saAgentReference)
+        case other =>
+          logger.error(s"Error in Digital-Mappings getSaAgentReferences: $other, ${response.body}")
+          Seq.empty
+
+      }
     }
 
-  def getAgentCodesFor(arn: Arn)(implicit rh: RequestHeader): Future[Seq[AgentCode]] =
-    monitor(s"ConsumedAPI-Digital-Mappings-GET") {
-      httpClient
-        .get(url"${appConfig.agentMappingUrl}/agent-mapping/mappings/agentcode/${arn.value}")
-        .execute[HttpResponse]
-        .map { response =>
-          // TODO: Fix error handling
-          // Currently
-          // - Only correctly handles 404 status codes
-          // - Incorrectly reports Seq.empty for all other error cases
-          response.status match {
-            case Status.OK => response.json.as[AgentCodeMappings].mappings.map(_.agentCode)
-            case other =>
-              logger.error(s"Error in Digital-Mappings getAgentCodes: $other, ${response.body}")
-              Seq.empty
-          }
-        }
+  def getAgentCodesFor(arn: Arn)(implicit rh: RequestHeader): Future[Seq[AgentCode]] = httpClient
+    .get(url"${appConfig.agentMappingUrl}/agent-mapping/mappings/agentcode/${arn.value}")
+    .execute[HttpResponse]
+    .map { response =>
+      // TODO: Fix error handling
+      // Currently
+      // - Only correctly handles 404 status codes
+      // - Incorrectly reports Seq.empty for all other error cases
+      response.status match {
+        case Status.OK => response.json.as[AgentCodeMappings].mappings.map(_.agentCode)
+        case other =>
+          logger.error(s"Error in Digital-Mappings getAgentCodes: $other, ${response.body}")
+          Seq.empty
+      }
     }
 
 }

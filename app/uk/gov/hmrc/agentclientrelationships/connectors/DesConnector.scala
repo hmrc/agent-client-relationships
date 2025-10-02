@@ -60,7 +60,7 @@ with RequestAwareLogging {
   def getClientSaAgentSaReferences(nino: Nino)(implicit request: RequestHeader): Future[Seq[SaAgentReference]] = {
     val url = url"${appConfig.desUrl}/registration/relationship/nino/${nino.value}"
 
-    getWithDesHeaders("GetStatusAgentRelationship", url).map { response =>
+    getWithDesHeaders(url).map { response =>
       response.status match {
         case Status.OK =>
           response.json
@@ -85,14 +85,9 @@ with RequestAwareLogging {
   )
 
   private def getWithDesHeaders(
-    apiName: String,
     url: URL,
     authToken: String = desAuthToken,
     env: String = desEnv
-  )(implicit request: RequestHeader): Future[HttpResponse] =
-    monitor(s"ConsumedAPI-DES-$apiName-GET") {
-      httpClient.get(url = url).setHeader(desHeaders(authToken, env): _*).execute[HttpResponse]
-
-    }
+  )(implicit request: RequestHeader): Future[HttpResponse] = httpClient.get(url = url).setHeader(desHeaders(authToken, env): _*).execute[HttpResponse]
 
 }

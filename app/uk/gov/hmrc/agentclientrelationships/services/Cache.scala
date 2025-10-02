@@ -129,6 +129,9 @@ class AgentCacheProvider @Inject() (
   implicit val readsOptionalGroupInfo: Reads[Option[GroupInfo]] = _.validateOpt[GroupInfo]
 
   private val agentTrackPageCacheEnabled: Boolean = configuration.underlying.getBoolean("agent.trackPage.cache.enabled")
+  private val customerStatusExistingRelationshipsCacheEnabled: Boolean = configuration.underlying.getBoolean(
+    "agent.customerStatusExistingRelationships.cache.enabled"
+  )
 
   private def createCache[T](
     enabled: Boolean,
@@ -138,12 +141,13 @@ class AgentCacheProvider @Inject() (
     reads: Reads[T],
     writes: Writes[T]
   ): Cache[T] =
-    if (enabled)
+    if (enabled) {
       new MongoCache[T](
         cacheRepositoryFactory,
         collectionName,
         ttlConfigKey
       )
+    }
     else
       new DoNotCache[T]
 
@@ -151,6 +155,12 @@ class AgentCacheProvider @Inject() (
     enabled = agentTrackPageCacheEnabled,
     collectionName = "agent-trackPage-cache",
     ttlConfigKey = "agent.trackPage.cache.expires"
+  )
+
+  val customerStatusExistingRelationshipsCache: Cache[Boolean] = createCache[Boolean](
+    enabled = customerStatusExistingRelationshipsCacheEnabled,
+    collectionName = "agent-customerStatus-existingRelationships-cache",
+    ttlConfigKey = "agent.customerStatusExistingRelationships.cache.expires"
   )
 
 }

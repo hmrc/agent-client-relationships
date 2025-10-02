@@ -77,27 +77,25 @@ extends HttpApiMonitor
 with HttpErrorFunctions
 with RequestAwareLogging {
 
-  def getGroupUsers(groupId: String)(implicit rh: RequestHeader): Future[Seq[UserDetails]] =
-    monitor(s"ConsumedAPI-UGS-getGroupUsers-GET") {
-      httpClient
-        .get(url"${appConfig.userGroupsSearchUrl}/users-groups-search/groups/$groupId/users")
-        .execute[HttpResponse]
-        .map { response =>
-          // TODO: Refactor error handling, use http verbs and standard `.execute[Seq[UserDetails]]` to yield required value
-          // Current issues:
-          // - Code relies on UpstreamErrorResponse exceptions being caught upstream
-          // - Exception-based flow control makes code hard to understand
-          // - Error recovery logic is hidden from the immediate context
-          response.status match {
-            case status if is2xx(status) => response.json.as[Seq[UserDetails]]
-            case Status.NOT_FOUND =>
-              logger.warn(s"Group $groupId not found in SCP")
-              throw UpstreamErrorResponse(s"Group $groupId not found in SCP", Status.NOT_FOUND)
-            case other =>
-              logger.error(s"Error in UGS-getGroupUsers: $other, ${response.body}")
-              throw UpstreamErrorResponse(s"Error in UGS-getGroupUsers: $other, ${response.body}", other)
-          }
-        }
+  def getGroupUsers(groupId: String)(implicit rh: RequestHeader): Future[Seq[UserDetails]] = httpClient
+    .get(url"${appConfig.userGroupsSearchUrl}/users-groups-search/groups/$groupId/users")
+    .execute[HttpResponse]
+    .map { response =>
+      // TODO: Refactor error handling, use http verbs and standard `.execute[Seq[UserDetails]]` to yield required value
+      // Current issues:
+      // - Code relies on UpstreamErrorResponse exceptions being caught upstream
+      // - Exception-based flow control makes code hard to understand
+      // - Error recovery logic is hidden from the immediate context
+      response.status match {
+        case status if is2xx(status) => response.json.as[Seq[UserDetails]]
+        case Status.NOT_FOUND =>
+          logger.warn(s"Group $groupId not found in SCP")
+          throw UpstreamErrorResponse(s"Group $groupId not found in SCP", Status.NOT_FOUND)
+        case other =>
+          logger.error(s"Error in UGS-getGroupUsers: $other, ${response.body}")
+          throw UpstreamErrorResponse(s"Error in UGS-getGroupUsers: $other, ${response.body}", other)
+      }
+
     }
 
   // TODO: move this transformation to the Service Layer
@@ -105,11 +103,8 @@ with RequestAwareLogging {
     groupId
   ).map(_.find(_.credentialRole.exists(role => role == "Admin" | role == "User")))
 
-  def getGroupInfo(groupId: String)(implicit rh: RequestHeader): Future[Option[GroupInfo]] =
-    monitor(s"ConsumedAPI-UGS-getGroupInfo-GET") {
-      httpClient
-        .get(url"${appConfig.userGroupsSearchUrl}/users-groups-search/groups/$groupId")
-        .execute[Option[GroupInfo]]
-    }
+  def getGroupInfo(groupId: String)(implicit rh: RequestHeader): Future[Option[GroupInfo]] = httpClient
+    .get(url"${appConfig.userGroupsSearchUrl}/users-groups-search/groups/$groupId")
+    .execute[Option[GroupInfo]]
 
 }
