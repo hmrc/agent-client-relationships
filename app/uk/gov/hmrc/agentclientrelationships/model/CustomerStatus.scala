@@ -17,7 +17,7 @@
 package uk.gov.hmrc.agentclientrelationships.model
 
 import play.api.libs.json.Json
-import play.api.libs.json.OWrites
+import play.api.libs.json.OFormat
 
 case class CustomerStatus(
   hasPendingInvitations: Boolean,
@@ -26,5 +26,5 @@ case class CustomerStatus(
 )
 
 object CustomerStatus {
-  implicit val writes: OWrites[CustomerStatus] = Json.writes[CustomerStatus]
+  implicit val formats: OFormat[CustomerStatus] = Json.format[CustomerStatus]
 }

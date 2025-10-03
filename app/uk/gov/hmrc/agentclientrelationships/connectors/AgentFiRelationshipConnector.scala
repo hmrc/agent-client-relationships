@@ -63,29 +63,27 @@ extends HttpApiMonitor {
     arn: Arn,
     service: String,
     clientId: String
-  )(implicit rh: RequestHeader): Future[Option[ActiveRelationship]] =
-    monitor(s"ConsumedAPI-AgentFiRelationship-$service-GET") {
-      implicit val reads: Reads[ActiveRelationship] = ActiveRelationship.irvReads
-      httpClient
-        .get(
-          afiRelationshipUrl(
-            arn,
-            service,
-            clientId
-          )
+  )(implicit rh: RequestHeader): Future[Option[ActiveRelationship]] = {
+    implicit val reads: Reads[ActiveRelationship] = ActiveRelationship.irvReads
+    httpClient
+      .get(
+        afiRelationshipUrl(
+          arn,
+          service,
+          clientId
         )
-        .execute[Option[Seq[ActiveRelationship]]]
-        .map(_.flatMap(_.headOption))
-    }
+      )
+      .execute[Option[Seq[ActiveRelationship]]]
+      .map(_.flatMap(_.headOption))
+  }
 
-  def getInactiveRelationships(implicit rh: RequestHeader): Future[Seq[InactiveRelationship]] =
-    monitor(s"ConsumedAPI-AgentFiRelationship-PERSONAL-INCOME-RECORD-GET") {
-      implicit val reads: Reads[InactiveRelationship] = InactiveRelationship.irvReads
-      httpClient
-        .get(url"${appConfig.agentFiRelationshipBaseUrl}/agent-fi-relationship/relationships/inactive")
-        .execute[Option[Seq[InactiveRelationship]]]
-        .map(_.fold(Seq[InactiveRelationship]())(identity))
-    }
+  def getInactiveRelationships(implicit rh: RequestHeader): Future[Seq[InactiveRelationship]] = {
+    implicit val reads: Reads[InactiveRelationship] = InactiveRelationship.irvReads
+    httpClient
+      .get(url"${appConfig.agentFiRelationshipBaseUrl}/agent-fi-relationship/relationships/inactive")
+      .execute[Option[Seq[InactiveRelationship]]]
+      .map(_.fold(Seq[InactiveRelationship]())(identity))
+  }
 
   def createRelationship(
     arn: Arn,
@@ -94,24 +92,23 @@ extends HttpApiMonitor {
     acceptedDate: LocalDateTime
   )(implicit rh: RequestHeader): Future[Done] = {
     val body = Json.obj("startDate" -> acceptedDate.toString)
-    monitor(s"ConsumedAPI-AgentFiRelationship-$service-PUT") {
-      httpClient
-        .put(
-          afiRelationshipUrl(
-            arn,
-            service,
-            clientId
-          )
+    httpClient
+      .put(
+        afiRelationshipUrl(
+          arn,
+          service,
+          clientId
         )
-        .withBody(body)
-        .execute[HttpResponse]
-        .map { response =>
-          response.status match {
-            case CREATED => Done
-            case status => throw UpstreamErrorResponse(s"Unexpected status $status received from AFI create relationship", status)
-          }
+      )
+      .withBody(body)
+      .execute[HttpResponse]
+      .map { response =>
+        response.status match {
+          case CREATED => Done
+          case status => throw UpstreamErrorResponse(s"Unexpected status $status received from AFI create relationship", status)
         }
-    }
+      }
+
   }
 
   def deleteRelationship(
@@ -121,70 +118,65 @@ extends HttpApiMonitor {
   )(implicit
     rh: RequestHeader
   ): Future[Boolean] // TODO: Verify the boolean is really needed. It seems that NotFound is transformed into false, which is then transformed into NotFound ...
-  =
-    monitor(s"ConsumedAPI-AgentFiRelationship-$service-DELETE") {
-      httpClient
-        .delete(
-          afiRelationshipUrl(
-            arn,
-            service,
-            clientId
-          )
-        )
-        .execute[HttpResponse]
-        .map { response =>
-          response.status match {
-            case OK => true
-            case NOT_FOUND => false
-            case status => throw UpstreamErrorResponse(s"Unexpected status $status received from AFI delete relationship", status)
-          }
-        }
+  = httpClient
+    .delete(
+      afiRelationshipUrl(
+        arn,
+        service,
+        clientId
+      )
+    )
+    .execute[HttpResponse]
+    .map { response =>
+      response.status match {
+        case OK => true
+        case NOT_FOUND => false
+        case status => throw UpstreamErrorResponse(s"Unexpected status $status received from AFI delete relationship", status)
+      }
     }
 
   def findIrvActiveRelationshipForClient(clientId: String)(implicit rh: RequestHeader): Future[Either[RelationshipFailureResponse, Seq[ClientRelationship]]] = {
     implicit val reads: Reads[ClientRelationship] = ClientRelationship.irvReads(IsActive = true)
-    monitor(s"ConsumedAPI-AgentFiRelationship-GET") {
-      httpClient
-        .get(url"${appConfig.agentFiRelationshipBaseUrl}/agent-fi-relationship/relationships/service/PERSONAL-INCOME-RECORD/clientId/$clientId")
-        .execute[HttpResponse]
-        .map { response =>
-          response.status match {
-            case OK => Right(response.json.as[List[ClientRelationship]])
-            case NOT_FOUND => Left(RelationshipFailureResponse.RelationshipNotFound)
-            case status =>
-              Left(
-                RelationshipFailureResponse.ErrorRetrievingRelationship(
-                  status = status,
-                  message = s"Unexpected status $status received from AFI get active relationship for client"
-                )
+    httpClient
+      .get(url"${appConfig.agentFiRelationshipBaseUrl}/agent-fi-relationship/relationships/service/PERSONAL-INCOME-RECORD/clientId/$clientId")
+      .execute[HttpResponse]
+      .map { response =>
+        response.status match {
+          case OK => Right(response.json.as[List[ClientRelationship]])
+          case NOT_FOUND => Left(RelationshipFailureResponse.RelationshipNotFound)
+          case status =>
+            Left(
+              RelationshipFailureResponse.ErrorRetrievingRelationship(
+                status = status,
+                message = s"Unexpected status $status received from AFI get active relationship for client"
               )
-          }
+            )
         }
-    }
+
+      }
   }
 
   def findIrvInactiveRelationshipForClient(implicit
     rh: RequestHeader
   ): Future[Either[RelationshipFailureResponse, Seq[ClientRelationship]]] = {
     implicit val reads: Reads[ClientRelationship] = ClientRelationship.irvReads(IsActive = false)
-    monitor(s"ConsumedAPI-AgentInactiveFiRelationship-GET") {
-      httpClient
-        .get(url"${appConfig.agentFiRelationshipBaseUrl}/agent-fi-relationship/relationships/inactive")
-        .execute[HttpResponse]
-        .map { response =>
-          response.status match {
-            case OK => Right(response.json.as[List[ClientRelationship]])
-            case NOT_FOUND => Left(RelationshipFailureResponse.RelationshipNotFound)
-            case status =>
-              Left(
-                RelationshipFailureResponse.ErrorRetrievingRelationship(
-                  status = status,
-                  message = s"Unexpected status $status received from AFI get active relationship for client"
-                )
+    httpClient
+      .get(url"${appConfig.agentFiRelationshipBaseUrl}/agent-fi-relationship/relationships/inactive")
+      .execute[HttpResponse]
+      .map { response =>
+        response.status match {
+          case OK => Right(response.json.as[List[ClientRelationship]])
+          case NOT_FOUND => Left(RelationshipFailureResponse.RelationshipNotFound)
+          case status =>
+            Left(
+              RelationshipFailureResponse.ErrorRetrievingRelationship(
+                status = status,
+                message = s"Unexpected status $status received from AFI get active relationship for client"
               )
-          }
+            )
+
         }
-    }
+      }
   }
 
 }

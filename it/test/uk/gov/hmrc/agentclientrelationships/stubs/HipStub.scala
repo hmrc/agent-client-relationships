@@ -735,7 +735,7 @@ trait HipStub {
       )
   )
 
-  private def relationshipHipUrl(
+  def relationshipHipUrl(
     taxIdentifier: TaxIdentifier,
     authProfileOption: Option[String],
     activeOnly: Boolean = true,

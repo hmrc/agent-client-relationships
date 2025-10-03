@@ -32,6 +32,9 @@ import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
 import uk.gov.hmrc.agentclientrelationships.stubs.AfiRelationshipStub
 import uk.gov.hmrc.agentclientrelationships.stubs.AgentAssuranceStubs
 import uk.gov.hmrc.agentclientrelationships.stubs.HipStub
+import com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor
+import com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo
+import com.github.tomakehurst.wiremock.client.WireMock.verify
 
 import java.time.temporal.ChronoUnit
 import java.time.Instant
@@ -78,6 +81,42 @@ with HipStub {
   ".customerStatus" should {
 
     lazy val request = FakeRequest("GET", "/agent-client-relationships/customer-status")
+
+    "Cache results of existing customer relationships and do not call ETMP if record exists in Cache" in {
+      givenAuditConnector()
+      givenAuthorisedItsaClientWithNino(
+        request,
+        mtdItId,
+        nino
+      )
+      getActiveRelationshipFailsWith(mtdItId, NOT_FOUND)
+      givenAfiRelationshipForClientNotFound(nino.value)
+      val expectedBody = Json.toJson(
+        CustomerStatus(
+          hasPendingInvitations = false,
+          hasInvitationsHistory = false,
+          hasExistingRelationships = false
+        )
+      )
+
+      val firstCall = doGetRequest(request.uri)
+      firstCall.status shouldBe OK
+      firstCall.json shouldBe expectedBody
+
+      val secondCall = doGetRequest(request.uri)
+      secondCall.status shouldBe OK
+      secondCall.json shouldBe expectedBody
+
+      verify(
+        1,
+        getRequestedFor(urlEqualTo(
+          relationshipHipUrl(
+            taxIdentifier = mtdItId,
+            authProfileOption = Some("ALL00001")
+          )
+        ))
+      )
+    }
 
     "return 200 and the expected customer status JSON body" when {
 
@@ -315,13 +354,14 @@ with HipStub {
         result.status shouldBe OK
         result.json shouldBe expectedBody
       }
+
+      "return 401 when the request is not authorised as a client" in {
+        givenAuthorisedAsValidAgent(request, arn.value)
+        val result = doGetRequest(request.uri)
+        result.status shouldBe UNAUTHORIZED
+      }
     }
 
-    "return 401 when the request is not authorised as a client" in {
-      givenAuthorisedAsValidAgent(request, arn.value)
-      val result = doGetRequest(request.uri)
-      result.status shouldBe UNAUTHORIZED
-    }
   }
 
 }

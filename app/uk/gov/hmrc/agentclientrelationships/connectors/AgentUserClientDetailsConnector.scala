@@ -49,17 +49,16 @@ with RequestAwareLogging {
   // update the cache in Granular Permissions (returns 404 if no cache currently in use)
   def cacheRefresh(arn: Arn)(implicit requestHeader: RequestHeader): Future[Unit] = {
     val url = url"$baseUrl/agent-user-client-details/arn/${arn.value}/cache-refresh"
-    monitor("ConsumedAPI-GranPermsCacheRefresh-GET") {
-      httpClient
-        .get(url)
-        .execute[HttpResponse]
-        .map(response =>
-          response.status match {
-            case NOT_FOUND | NO_CONTENT => ()
-            case other => throw new RuntimeException(s"cache refresh returned status $other")
-          }
-        )
-    }
+    httpClient
+      .get(url)
+      .execute[HttpResponse]
+      .map(response =>
+        response.status match {
+          case NOT_FOUND | NO_CONTENT => ()
+          case other => throw new RuntimeException(s"cache refresh returned status $other")
+        }
+      )
+
   }
 
 }

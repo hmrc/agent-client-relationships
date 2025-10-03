@@ -43,11 +43,8 @@ with RequestAwareLogging {
 
   def getCitizenDetails(
     nino: String
-  )(implicit rh: RequestHeader): Future[CitizenDetails] =
-    monitor(s"ConsumedAPI-CitizenDetails-GET") {
-      httpClient
-        .get(url"${appConfig.citizenDetailsBaseUrl}/citizen-details/nino/$nino")
-        .execute[CitizenDetails]
-    }
+  )(implicit rh: RequestHeader): Future[CitizenDetails] = httpClient
+    .get(url"${appConfig.citizenDetailsBaseUrl}/citizen-details/nino/$nino")
+    .execute[CitizenDetails]
 
 }

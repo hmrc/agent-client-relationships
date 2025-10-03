@@ -72,60 +72,56 @@ with RequestAwareLogging {
 
   def getItsaDesignatoryDetails(
     nino: String
-  )(implicit rh: RequestHeader): Future[Either[ClientDetailsFailureResponse, ItsaDesignatoryDetails]] =
-    monitor(s"ConsumedAPI-DesignatoryDetails-GET") {
-      val url = url"${appConfig.citizenDetailsBaseUrl}/citizen-details/$nino/designatory-details"
-      httpClient
-        .get(url)
-        .execute[HttpResponse]
-        .map { response =>
-          response.status match {
-            case OK => Right(response.json.as[ItsaDesignatoryDetails])
-            case NOT_FOUND => Left(ClientDetailsNotFound)
-            case status =>
-              logger.warn(s"Unexpected error during 'getItsaDesignatoryDetails', statusCode=$status")
-              Left(ErrorRetrievingClientDetails(status, "Unexpected error during 'getItsaDesignatoryDetails'"))
-          }
+  )(implicit rh: RequestHeader): Future[Either[ClientDetailsFailureResponse, ItsaDesignatoryDetails]] = {
+    val url = url"${appConfig.citizenDetailsBaseUrl}/citizen-details/$nino/designatory-details"
+    httpClient
+      .get(url)
+      .execute[HttpResponse]
+      .map { response =>
+        response.status match {
+          case OK => Right(response.json.as[ItsaDesignatoryDetails])
+          case NOT_FOUND => Left(ClientDetailsNotFound)
+          case status =>
+            logger.warn(s"Unexpected error during 'getItsaDesignatoryDetails', statusCode=$status")
+            Left(ErrorRetrievingClientDetails(status, "Unexpected error during 'getItsaDesignatoryDetails'"))
         }
-    }
+      }
+  }
 
   def getItsaCitizenDetails(
     nino: String
-  )(implicit rh: RequestHeader): Future[Either[ClientDetailsFailureResponse, CitizenDetails]] =
-    monitor(s"ConsumedAPI-CitizenDetails-GET") {
-      httpClient
-        .get(url"${appConfig.citizenDetailsBaseUrl}/citizen-details/nino/$nino")
-        .execute[HttpResponse]
-        .map { response =>
-          response.status match {
-            case OK => Right(response.json.as[CitizenDetails])
-            case NOT_FOUND => Left(ClientDetailsNotFound)
-            case status =>
-              logger.warn(s"Unexpected error during 'getItsaCitizenDetails', statusCode=$status")
-              Left(ErrorRetrievingClientDetails(status, "Unexpected error during 'getItsaCitizenDetails'"))
-          }
-        }
+  )(implicit rh: RequestHeader): Future[Either[ClientDetailsFailureResponse, CitizenDetails]] = httpClient
+    .get(url"${appConfig.citizenDetailsBaseUrl}/citizen-details/nino/$nino")
+    .execute[HttpResponse]
+    .map { response =>
+      response.status match {
+        case OK => Right(response.json.as[CitizenDetails])
+        case NOT_FOUND => Left(ClientDetailsNotFound)
+        case status =>
+          logger.warn(s"Unexpected error during 'getItsaCitizenDetails', statusCode=$status")
+          Left(ErrorRetrievingClientDetails(status, "Unexpected error during 'getItsaCitizenDetails'"))
+      }
+
     }
 
   def getVatCustomerInfo(
     vrn: String
   )(implicit rh: RequestHeader): Future[Either[ClientDetailsFailureResponse, VatCustomerDetails]] = {
     val url = url"${appConfig.desUrl}/vat/customer/vrn/$vrn/information"
-    monitor("ConsumedAPI-DES-GetVatCustomerInformation-GET") {
-      httpClient
-        .get(url)
-        .setHeader(desHeaders(appConfig.desToken): _*)
-        .execute[HttpResponse]
-        .map { response =>
-          response.status match {
-            case OK => Right(response.json.as[VatCustomerDetails])
-            case NOT_FOUND => Left(ClientDetailsNotFound)
-            case status =>
-              logger.warn(s"Unexpected error during 'getVatCustomerInfo', statusCode=$status")
-              Left(ErrorRetrievingClientDetails(status, "Unexpected error during 'getVatCustomerInfo'"))
-          }
+    httpClient
+      .get(url)
+      .setHeader(desHeaders(appConfig.desToken): _*)
+      .execute[HttpResponse]
+      .map { response =>
+        response.status match {
+          case OK => Right(response.json.as[VatCustomerDetails])
+          case NOT_FOUND => Left(ClientDetailsNotFound)
+          case status =>
+            logger.warn(s"Unexpected error during 'getVatCustomerInfo', statusCode=$status")
+            Left(ErrorRetrievingClientDetails(status, "Unexpected error during 'getVatCustomerInfo'"))
         }
-    }
+
+      }
   }
 
   // API#1495 Agent Trust Known Facts
@@ -139,60 +135,55 @@ with RequestAwareLogging {
         "UTR"
       else
         "URN"
-    monitor("ConsumedAPI-IF-GetTrustName-GET") {
-      httpClient
-        .get(url"${appConfig.ifPlatformBaseUrl}/trusts/agent-known-fact-check/$identifierType/$trustTaxIdentifier")
-        .setHeader(ifHeaders(appConfig.ifAPI1495Token): _*)
-        .execute[HttpResponse]
-        .map { response =>
-          response.status match {
-            case OK => Right((response.json \ "trustDetails" \ "trustName").as[String])
-            case NOT_FOUND => Left(ClientDetailsNotFound)
-            case status =>
-              logger.warn(s"Unexpected error during 'getTrustName', statusCode=$status")
-              Left(ErrorRetrievingClientDetails(status, "Unexpected error during 'getTrustName'"))
-          }
+    httpClient
+      .get(url"${appConfig.ifPlatformBaseUrl}/trusts/agent-known-fact-check/$identifierType/$trustTaxIdentifier")
+      .setHeader(ifHeaders(appConfig.ifAPI1495Token): _*)
+      .execute[HttpResponse]
+      .map { response =>
+        response.status match {
+          case OK => Right((response.json \ "trustDetails" \ "trustName").as[String])
+          case NOT_FOUND => Left(ClientDetailsNotFound)
+          case status =>
+            logger.warn(s"Unexpected error during 'getTrustName', statusCode=$status")
+            Left(ErrorRetrievingClientDetails(status, "Unexpected error during 'getTrustName'"))
         }
-    }
+      }
+
   }
 
   def getCgtSubscriptionDetails(
     cgtRef: String
-  )(implicit rh: RequestHeader): Future[Either[ClientDetailsFailureResponse, CgtSubscriptionDetails]] =
-    monitor("ConsumedAPI-DES-GetCgtSubscriptionDetails-GET") {
-      httpClient
-        .get(url"${appConfig.desUrl}/subscriptions/CGT/ZCGT/$cgtRef")
-        .setHeader(desHeaders(appConfig.desToken): _*)
-        .execute[HttpResponse]
-        .map { response =>
-          response.status match {
-            case OK => Right(response.json.as[CgtSubscriptionDetails])
-            case NOT_FOUND => Left(ClientDetailsNotFound)
-            case status =>
-              logger.warn(s"Unexpected error during 'getCgtSubscriptionDetails', statusCode=$status")
-              Left(ErrorRetrievingClientDetails(status, "Unexpected error during 'getCgtSubscriptionDetails'"))
-          }
-        }
+  )(implicit rh: RequestHeader): Future[Either[ClientDetailsFailureResponse, CgtSubscriptionDetails]] = httpClient
+    .get(url"${appConfig.desUrl}/subscriptions/CGT/ZCGT/$cgtRef")
+    .setHeader(desHeaders(appConfig.desToken): _*)
+    .execute[HttpResponse]
+    .map { response =>
+      response.status match {
+        case OK => Right(response.json.as[CgtSubscriptionDetails])
+        case NOT_FOUND => Left(ClientDetailsNotFound)
+        case status =>
+          logger.warn(s"Unexpected error during 'getCgtSubscriptionDetails', statusCode=$status")
+          Left(ErrorRetrievingClientDetails(status, "Unexpected error during 'getCgtSubscriptionDetails'"))
+      }
+
     }
 
   // API#1712 Get PPT Subscription Display
   def getPptSubscriptionDetails(
     pptRef: String
-  )(implicit rh: RequestHeader): Future[Either[ClientDetailsFailureResponse, PptSubscriptionDetails]] =
-    monitor("ConsumedAPI-IF-GetPptSubscriptionDetails-GET") {
-      httpClient
-        .get(url"${appConfig.ifPlatformBaseUrl}/plastic-packaging-tax/subscriptions/PPT/$pptRef/display")
-        .setHeader(ifHeaders(appConfig.ifAPI1712Token): _*)
-        .execute[HttpResponse]
-        .map { response =>
-          response.status match {
-            case OK => Right(response.json.as[PptSubscriptionDetails])
-            case NOT_FOUND => Left(ClientDetailsNotFound)
-            case status =>
-              logger.warn(s"Unexpected error during 'getPptSubscriptionDetails', statusCode=$status")
-              Left(ErrorRetrievingClientDetails(status, "Unexpected error during 'getPptSubscriptionDetails'"))
-          }
-        }
+  )(implicit rh: RequestHeader): Future[Either[ClientDetailsFailureResponse, PptSubscriptionDetails]] = httpClient
+    .get(url"${appConfig.ifPlatformBaseUrl}/plastic-packaging-tax/subscriptions/PPT/$pptRef/display")
+    .setHeader(ifHeaders(appConfig.ifAPI1712Token): _*)
+    .execute[HttpResponse]
+    .map { response =>
+      response.status match {
+        case OK => Right(response.json.as[PptSubscriptionDetails])
+        case NOT_FOUND => Left(ClientDetailsNotFound)
+        case status =>
+          logger.warn(s"Unexpected error during 'getPptSubscriptionDetails', statusCode=$status")
+          Left(ErrorRetrievingClientDetails(status, "Unexpected error during 'getPptSubscriptionDetails'"))
+      }
+
     }
 
   // DCT 50d
@@ -219,43 +210,41 @@ with RequestAwareLogging {
       "Environment" -> appConfig.eisEnvironment
     )
 
-    monitor(s"ConsumedAPI-EIS-GetCbcSubscriptionDetails-POST") {
-      httpClient
-        .post(url"${appConfig.eisBaseUrl}/dac6/dct50d/v1")
-        .withBody(Json.toJson(request))
-        .setHeader(httpHeaders: _*)
-        .execute[HttpResponse]
-        .map { response =>
-          response.status match {
-            case OK => Right(response.json.as[SimpleCbcSubscription])
-            case NOT_FOUND => Left(ClientDetailsNotFound)
-            case status =>
-              logger.warn(s"Unexpected error during 'getCbcSubscriptionDetails', statusCode=$status")
-              Left(ErrorRetrievingClientDetails(status, "Unexpected error during 'getCbcSubscriptionDetails'"))
-          }
+    httpClient
+      .post(url"${appConfig.eisBaseUrl}/dac6/dct50d/v1")
+      .withBody(Json.toJson(request))
+      .setHeader(httpHeaders: _*)
+      .execute[HttpResponse]
+      .map { response =>
+        response.status match {
+          case OK => Right(response.json.as[SimpleCbcSubscription])
+          case NOT_FOUND => Left(ClientDetailsNotFound)
+          case status =>
+            logger.warn(s"Unexpected error during 'getCbcSubscriptionDetails', statusCode=$status")
+            Left(ErrorRetrievingClientDetails(status, "Unexpected error during 'getCbcSubscriptionDetails'"))
         }
-    }
+      }
+
   }
 
   def getPillar2SubscriptionDetails(
     plrId: String
   )(implicit rh: RequestHeader): Future[Either[ClientDetailsFailureResponse, Pillar2Record]] = {
     val url = url"${appConfig.ifPlatformBaseUrl}/pillar2/subscription/$plrId"
-    monitor("ConsumedAPI-IF-GetPillar2SubscriptionDetails-GET") {
-      httpClient
-        .get(url)
-        .setHeader(ifHeaders(appConfig.ifAPI2143Token): _*)
-        .execute[HttpResponse]
-        .map { response =>
-          response.status match {
-            case OK => Right(response.json.as[Pillar2Record])
-            case NOT_FOUND => Left(ClientDetailsNotFound)
-            case status =>
-              logger.warn(s"Unexpected error during 'getPillar2SubscriptionDetails', statusCode=$status")
-              Left(ErrorRetrievingClientDetails(status, "Unexpected error during 'getPillar2SubscriptionDetails'"))
-          }
+    httpClient
+      .get(url)
+      .setHeader(ifHeaders(appConfig.ifAPI2143Token): _*)
+      .execute[HttpResponse]
+      .map { response =>
+        response.status match {
+          case OK => Right(response.json.as[Pillar2Record])
+          case NOT_FOUND => Left(ClientDetailsNotFound)
+          case status =>
+            logger.warn(s"Unexpected error during 'getPillar2SubscriptionDetails', statusCode=$status")
+            Left(ErrorRetrievingClientDetails(status, "Unexpected error during 'getPillar2SubscriptionDetails'"))
         }
-    }
+
+      }
   }
 
 }

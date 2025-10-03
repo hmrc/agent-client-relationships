@@ -69,7 +69,6 @@ https://confluence.tools.tax.service.gov.uk/display/AG/API+1171+%28API+5%29+-+Ge
     val url = url"$ifBaseUrl/registration/business-details/mtdId/${mtdId.value}"
 
     getWithIFHeaders(
-      "GetBusinessDetailsByMtdId",
       url,
       ifAPI1171Token
     ).map { result =>
@@ -91,7 +90,6 @@ https://confluence.tools.tax.service.gov.uk/display/AG/API+1171+%28API+5%29+-+Ge
     val url = url"$ifBaseUrl/registration/business-details/nino/${nino.value}"
 
     getWithIFHeaders(
-      "GetBusinessDetailsByNino",
       url,
       ifAPI1171Token
     ).map { result =>
@@ -114,7 +112,6 @@ https://confluence.tools.tax.service.gov.uk/display/AG/API+1171+%28API+5%29+-+Ge
     val url = url"$ifBaseUrl/registration/business-details/nino/$nino"
 
     getWithIFHeaders(
-      "ConsumedAPI-IF-GetBusinessDetails-GET",
       url,
       ifAPI1171Token
     ).map { result =>
@@ -136,14 +133,10 @@ https://confluence.tools.tax.service.gov.uk/display/AG/API+1171+%28API+5%29+-+Ge
   }
 
   private[connectors] def getWithIFHeaders(
-    apiName: String,
     url: URL,
     authToken: String
   )(implicit
     request: RequestHeader
-  ): Future[HttpResponse] =
-    monitor(s"ConsumedAPI-IF-$apiName-GET") {
-      httpClient.get(url).setHeader(ifHeaders.makeHeaders(authToken): _*).execute[HttpResponse]
-    }
+  ): Future[HttpResponse] = httpClient.get(url).setHeader(ifHeaders.makeHeaders(authToken): _*).execute[HttpResponse]
 
 }
