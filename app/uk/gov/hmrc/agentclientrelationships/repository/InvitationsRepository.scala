@@ -476,6 +476,7 @@ with RequestAwareLogging {
     val filters = makeTrackRequestsFilters(statusFilter, clientName)
     val fullAggregatePipeline = Seq(
       Aggregates.filter(equal(arnKey, arn)),
+      Aggregates.sort(Sorts.descending("created")),
       facet(
         Facet("clientNamesFacet", Aggregates.group(null, addToSet("clientNames", "$clientName"))),
         Facet("availableFiltersFacet", Aggregates.group(null, addToSet("availableFilters", "$status"))),
@@ -487,7 +488,6 @@ with RequestAwareLogging {
         Facet(
           "requests",
           filters,
-          Aggregates.sort(Sorts.descending("created")),
           Aggregates.skip((pageNumber - 1) * pageSize),
           Aggregates.limit(pageSize)
         )
