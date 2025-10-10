@@ -27,7 +27,6 @@ import play.api.Configuration
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.agentclientrelationships.connectors.GroupInfo
-import uk.gov.hmrc.agentclientrelationships.model.InactiveRelationship
 import uk.gov.hmrc.mongo.cache.CacheIdType.SimpleCacheId
 import uk.gov.hmrc.mongo.cache.DataKey
 import uk.gov.hmrc.mongo.cache.MongoCacheRepository
@@ -128,7 +127,6 @@ class AgentCacheProvider @Inject() (
 
   implicit val readsOptionalGroupInfo: Reads[Option[GroupInfo]] = _.validateOpt[GroupInfo]
 
-  private val agentTrackPageCacheEnabled: Boolean = configuration.underlying.getBoolean("agent.trackPage.cache.enabled")
   private val customerStatusExistingRelationshipsCacheEnabled: Boolean = configuration.underlying.getBoolean(
     "agent.customerStatusExistingRelationships.cache.enabled"
   )
@@ -150,12 +148,6 @@ class AgentCacheProvider @Inject() (
     }
     else
       new DoNotCache[T]
-
-  val agentTrackPageCache: Cache[Seq[InactiveRelationship]] = createCache[Seq[InactiveRelationship]](
-    enabled = agentTrackPageCacheEnabled,
-    collectionName = "agent-trackPage-cache",
-    ttlConfigKey = "agent.trackPage.cache.expires"
-  )
 
   val customerStatusExistingRelationshipsCache: Cache[Boolean] = createCache[Boolean](
     enabled = customerStatusExistingRelationshipsCacheEnabled,

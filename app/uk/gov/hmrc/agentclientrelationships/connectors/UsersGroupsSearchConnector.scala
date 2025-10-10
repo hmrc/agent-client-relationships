@@ -24,7 +24,6 @@ import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import play.api.http.Status
 import play.api.libs.json._
 import play.api.mvc.RequestHeader
-import uk.gov.hmrc.agentclientrelationships.util.HttpApiMonitor
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.util.RequestSupport.hc
 import uk.gov.hmrc.domain.AgentCode
@@ -73,8 +72,7 @@ class UsersGroupsSearchConnector @Inject() (
   val metrics: Metrics,
   val ec: ExecutionContext
 )
-extends HttpApiMonitor
-with HttpErrorFunctions
+extends HttpErrorFunctions
 with RequestAwareLogging {
 
   def getGroupUsers(groupId: String)(implicit rh: RequestHeader): Future[Seq[UserDetails]] = httpClient

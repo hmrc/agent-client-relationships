@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.agentclientrelationships.controllers
 
-import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.CbcId
@@ -28,7 +27,6 @@ import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.domain.TaxIdentifier
 
 import java.time.Instant
-import java.time.LocalDate
 import java.time.ZoneOffset
 
 // TODO. All of the following tests should be rewritten directly against a RelationshipsController instance (with appropriate mocks/stubs)
@@ -47,11 +45,6 @@ trait RelationshipsControllerGenericBehaviours {
     clientIdType: String
   ): Unit = {
     relationshipsControllerGetISpec(
-      serviceId,
-      clientId,
-      clientIdType
-    )
-    strideEndpointISpec(
       serviceId,
       clientId,
       clientIdType
@@ -184,121 +177,5 @@ trait RelationshipsControllerGenericBehaviours {
       }
     }
   }
-
-  // noinspection ScalaStyle
-  def strideEndpointISpec(
-    serviceId: String,
-    clientId: TaxIdentifier,
-    clientIdType: String
-  ) =
-    s"GET /relationships/service/$serviceId/client/$clientIdType/:clientId" should {
-
-      val requestPath: String = s"/agent-client-relationships/relationships/service/$serviceId/client/$clientIdType/${clientId.value}"
-
-      def doRequest = doGetRequest(requestPath)
-      val req = FakeRequest()
-
-      val enrolmentKey =
-        if (serviceId == Service.Cbc.id) {
-          EnrolmentKey(s"${Service.Cbc.id}~UTR~1234567890~$clientIdType~${clientId.value}")
-        }
-        else
-          EnrolmentKey(Service.forId(serviceId), clientId)
-      def extraSetup(serviceId: String): Unit = {
-        if (serviceId == Service.Cbc.id)
-          givenCbcUkExistsInES(CbcId(clientId.value), enrolmentKey.oneIdentifier(Some("UTR")).value)
-        ()
-      }
-
-      "find relationship and send back Json" in {
-        givenAuthorisedAsStrideUser(req, "someStrideId")
-        extraSetup(serviceId)
-
-        if (clientIdType == "NI") {
-          givenMtdItIdIsKnownFor(Nino(clientId.value), mtdItId)
-          getActiveRelationshipsViaClient(mtdItId, arn)
-        }
-        else
-          getActiveRelationshipsViaClient(clientId, arn)
-
-        val result = doRequest
-        result.status shouldBe 200
-
-        (result.json \ "arn").get.as[String] shouldBe arn.value
-        (result.json \ "dateTo").get.as[LocalDate].toString() shouldBe "9999-12-31"
-      }
-
-      "find relationship but filter out if the end date has been changed from 9999-12-31" in {
-        givenAuthorisedAsStrideUser(req, "someStrideId")
-        extraSetup(serviceId)
-
-        if (clientIdType == "NI") {
-          givenMtdItIdIsKnownFor(Nino(clientId.value), mtdItId)
-          getInactiveRelationshipViaClient(mtdItId, arn.value)
-        }
-        else
-          getInactiveRelationshipViaClient(clientId, arn.value)
-
-        val result = doRequest
-        result.status shouldBe 404
-      }
-
-      "find multiple relationships but filter out active and ended relationships" in {
-        givenAuthorisedAsStrideUser(req, "someStrideId")
-        extraSetup(serviceId)
-
-        if (clientIdType == "NI") {
-          givenMtdItIdIsKnownFor(Nino(clientId.value), mtdItId)
-          getSomeActiveRelationshipsViaClient(
-            mtdItId,
-            arn.value,
-            arn2.value,
-            arn3.value
-          )
-        }
-        else
-          getSomeActiveRelationshipsViaClient(
-            clientId,
-            arn.value,
-            arn2.value,
-            arn3.value
-          )
-
-        val result = doRequest
-        result.status shouldBe 200
-        (result.json \ "arn").get.as[String] shouldBe arn3.value
-        (result.json \ "dateTo").get.as[LocalDate].toString() shouldBe "9999-12-31"
-      }
-
-      "return 404 when DES returns 404 relationship not found" in {
-        givenAuthorisedAsStrideUser(req, "someStrideId")
-        extraSetup(serviceId)
-
-        if (clientIdType == "NI") {
-          givenMtdItIdIsKnownFor(Nino(clientId.value), mtdItId)
-          getActiveRelationshipFailsWith(mtdItId, status = 404)
-        }
-        else
-          getActiveRelationshipFailsWith(clientId, status = 404)
-
-        val result = doRequest
-        result.status shouldBe 404
-      }
-
-      "return 404 when DES returns 400 (treated as relationship not found)" in {
-        givenAuthorisedAsStrideUser(req, "someStrideId")
-        extraSetup(serviceId)
-
-        if (clientIdType == "NI") {
-          givenMtdItIdIsKnownFor(Nino(clientId.value), mtdItId)
-          getActiveRelationshipFailsWith(mtdItId, status = 400)
-        }
-        else
-          getActiveRelationshipFailsWith(clientId, status = 400)
-
-        val result = doRequest
-        result.status shouldBe 404
-      }
-    }
 
 }

@@ -19,7 +19,6 @@ package uk.gov.hmrc.agentclientrelationships.connectors
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.CitizenDetails
-import uk.gov.hmrc.agentclientrelationships.util.HttpApiMonitor
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.agentclientrelationships.util.RequestSupport.hc
 import uk.gov.hmrc.http.HttpReads.Implicits._
@@ -38,8 +37,7 @@ class CitizenDetailsConnector @Inject() (
   httpClient: HttpClientV2,
   val metrics: Metrics
 )(implicit val ec: ExecutionContext)
-extends HttpApiMonitor
-with RequestAwareLogging {
+extends RequestAwareLogging {
 
   def getCitizenDetails(
     nino: String

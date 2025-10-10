@@ -32,7 +32,6 @@ import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ErrorRetrievingC
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa.ItsaBusinessDetails
 import uk.gov.hmrc.agentclientrelationships.model.stride.ClientRelationship
 import uk.gov.hmrc.agentclientrelationships.services.AgentCacheProvider
-import uk.gov.hmrc.agentclientrelationships.util.HttpApiMonitor
 import uk.gov.hmrc.agentclientrelationships.util.RequestSupport._
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDITSUPP
 import uk.gov.hmrc.agentclientrelationships.model.identifiers._
@@ -40,7 +39,6 @@ import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.HttpResponse
-import uk.gov.hmrc.http.StringContextOps
 import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
@@ -65,11 +63,9 @@ class HipConnector @Inject() (
   val metrics: Metrics,
   val ec: ExecutionContext
 )
-extends HttpApiMonitor
-with RequestAwareLogging {
+extends RequestAwareLogging {
 
   private val baseUrl = appConfig.hipPlatformBaseUrl
-  private val showInactiveRelationshipsDays = appConfig.inactiveRelationshipShowLastDays
 
   // HIP API #EPID1521 Create/Update Agent Relationship
   def createAgentRelationship(
@@ -198,73 +194,6 @@ with RequestAwareLogging {
       .value
   }
 
-  // HIP API #EPID1521 Create/Update Agent Relationship
-  def getInactiveClientRelationships(
-    taxIdentifier: TaxIdentifier,
-    service: Service
-  )(implicit request: RequestHeader): Future[Seq[InactiveRelationship]] = {
-
-    val authProfile = getAuthProfile(service.id)
-    val url = relationshipHipUrl(
-      taxIdentifier = taxIdentifier,
-      authProfileOption = Some(authProfile),
-      activeOnly = false
-    )
-    implicit val reads: Reads[InactiveRelationship] = InactiveRelationship.hipReads
-
-    getWithHipHeaders(
-      s"GetInactiveClientRelationships",
-      url,
-      () => headers.makeSubscriptionHeaders()
-    ).map {
-      case Right(response) => (response.json \ "relationshipDisplayResponse").as[Seq[InactiveRelationship]].filter(isNotActive)
-      case Left(errorResponse) =>
-        errorResponse.statusCode match {
-          case Status.BAD_REQUEST | Status.NOT_FOUND => Nil
-          case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("suspended") => Nil
-          case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("009") => Nil
-          case _ =>
-            logger.error(s"Error in HIP 'GetInactiveClientRelationships' with error: ${errorResponse.getMessage}")
-            Seq.empty[InactiveRelationship]
-            // TODO WG - check - that looks so wrong to rerun any value, should be an exception
-            Nil
-        }
-    }
-  }
-
-  // HIP API #EPID1521 Create/Update Agent Relationship (agent)
-  def getInactiveRelationships(arn: Arn)(implicit request: RequestHeader): Future[Seq[InactiveRelationship]] = {
-    val encodedAgentId = UriEncoding.encodePathSegment(arn.value, "UTF-8")
-    val now = LocalDate.now().toString
-    val from: String = LocalDate.now().minusDays(showInactiveRelationshipsDays).toString
-    val regime = "AGSV"
-    implicit val reads: Reads[InactiveRelationship] = InactiveRelationship.hipReads
-
-    val url =
-      url"$baseUrl/etmp/RESTAdapter/rosm/agent-relationship?arn=$encodedAgentId&isAnAgent=true&activeOnly=false&regime=$regime&dateFrom=$from&dateTo=$now"
-
-    val cacheKey = s"${arn.value}-$now"
-    agentCacheProvider.agentTrackPageCache(cacheKey) {
-      getWithHipHeaders(
-        s"GetInactiveRelationships",
-        url,
-        () => headers.makeSubscriptionHeaders()
-      ).map {
-        case Right(response) => (response.json \ "relationshipDisplayResponse").as[Seq[InactiveRelationship]].filter(isNotActive)
-        case Left(errorResponse) =>
-          errorResponse.statusCode match {
-            case Status.BAD_REQUEST | Status.NOT_FOUND => Nil
-            case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("suspended") => Nil
-            case Status.UNPROCESSABLE_ENTITY if errorResponse.getMessage.contains("009") => Nil
-            case _ =>
-              logger.error(s"Error in HIP 'GetInactiveRelationships' with error: ${errorResponse.getMessage}")
-              Seq.empty[InactiveRelationship]
-              // TODO WG - check - that looks so wrong to rerun any value, should be an exception
-              Nil
-          }
-      }
-    }
-  }
   // API#5266 https://admin.tax.service.gov.uk/integration-hub/apis/details/e54e8843-c146-4551-a499-c93ecac4c6fd#Endpoints
   def getNinoFor(mtdId: MtdItId)(implicit request: RequestHeader): Future[Option[Nino]] = {
     val encodedMtdId = UriEncoding.encodePathSegment(mtdId.value, "UTF-8")

@@ -28,7 +28,6 @@ import uk.gov.hmrc.agentclientrelationships.model.ActiveRelationship
 import uk.gov.hmrc.agentclientrelationships.model.InactiveRelationship
 import uk.gov.hmrc.agentclientrelationships.model.RelationshipFailureResponse
 import uk.gov.hmrc.agentclientrelationships.model.stride.ClientRelationship
-import uk.gov.hmrc.agentclientrelationships.util.HttpApiMonitor
 import uk.gov.hmrc.agentclientrelationships.util.HttpReadsImplicits._
 import uk.gov.hmrc.agentclientrelationships.util.RequestSupport._
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
@@ -50,8 +49,7 @@ class AgentFiRelationshipConnector @Inject() (
   appConfig: AppConfig,
   httpClient: HttpClientV2,
   val metrics: Metrics
-)(implicit val ec: ExecutionContext)
-extends HttpApiMonitor {
+)(implicit val ec: ExecutionContext) {
 
   private def afiRelationshipUrl(
     arn: Arn,

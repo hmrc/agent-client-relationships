@@ -119,10 +119,6 @@ with RequestAwareLogging {
       case otherError => EitherT.leftT[Future, Seq[ClientRelationship]](otherError)
     }
 
-  def getInactiveRelationshipsForAgent(
-    arn: Arn
-  )(implicit request: RequestHeader): Future[Seq[InactiveRelationship]] = hipConnector.getInactiveRelationships(arn)
-
   def getActiveRelationshipsForClient(
     identifiers: Map[Service, TaxIdentifier]
   )(implicit request: RequestHeader): Future[Map[Service, Seq[Arn]]] = Future
@@ -137,32 +133,5 @@ with RequestAwareLogging {
         .groupBy(_._1)
         .map { case (k, v) => (k, v.map(_._2)) }
     )
-
-  def getInactiveRelationshipsForClient(
-    identifiers: Map[Service, TaxIdentifier]
-  )(implicit request: RequestHeader): Future[Seq[InactiveRelationship]] = Future
-    .traverse(appConfig.supportedServicesWithoutPir) { service =>
-      identifiers.get(service) match {
-        case Some(taxId) => getInactiveRelationshipsForClient(taxId, service)
-        case None => Future.successful(Seq.empty)
-      }
-    }
-    .map(_.flatten)
-
-  def getInactiveRelationshipsForClient(
-    taxIdentifier: TaxIdentifier,
-    service: Service
-  )(implicit request: RequestHeader): Future[Seq[InactiveRelationship]] =
-    // if it is one of the tax ids that we support...
-    if (
-      appConfig.supportedServicesWithoutPir
-        .exists(_.supportedClientIdType.enrolmentId == ClientIdentifier(taxIdentifier).enrolmentId)
-    ) {
-      hipConnector.getInactiveClientRelationships(taxIdentifier, service)
-    }
-    else { // otherwise...
-      logger.warn(s"Unsupported Identifier ${taxIdentifier.getClass.getSimpleName}")
-      Future.successful(Seq.empty)
-    }
 
 }

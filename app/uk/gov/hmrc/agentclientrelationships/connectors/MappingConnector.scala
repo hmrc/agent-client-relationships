@@ -21,7 +21,6 @@ import play.api.libs.json._
 import play.api.mvc.RequestHeader
 import play.api.http.Status
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.util.HttpApiMonitor
 import uk.gov.hmrc.agentclientrelationships.util.RequestSupport.hc
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.domain.AgentCode
@@ -72,8 +71,7 @@ class MappingConnector @Inject() (
   val metrics: Metrics,
   val ec: ExecutionContext
 )
-extends HttpApiMonitor
-with RequestAwareLogging {
+extends RequestAwareLogging {
 
   def getSaAgentReferencesFor(arn: Arn)(implicit rh: RequestHeader): Future[Seq[SaAgentReference]] = httpClient
     .get(url"${appConfig.agentMappingUrl}/agent-mapping/mappings/${arn.value}")
