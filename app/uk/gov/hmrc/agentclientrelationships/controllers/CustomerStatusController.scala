@@ -23,13 +23,9 @@ import play.api.mvc.ControllerComponents
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.AgentFiRelationshipConnector
-import uk.gov.hmrc.agentclientrelationships.model.Accepted
 import uk.gov.hmrc.agentclientrelationships.model.CustomerStatus
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentsWithNino
-import uk.gov.hmrc.agentclientrelationships.model.Invitation
-import uk.gov.hmrc.agentclientrelationships.model.InvitationStatus
 import uk.gov.hmrc.agentclientrelationships.model.PartialAuth
-import uk.gov.hmrc.agentclientrelationships.model.PartialAuthRelationship
 import uk.gov.hmrc.agentclientrelationships.model.Pending
 import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
 import uk.gov.hmrc.agentclientrelationships.services.AgentCacheProvider
