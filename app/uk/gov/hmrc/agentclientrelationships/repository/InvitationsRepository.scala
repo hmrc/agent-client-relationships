@@ -101,6 +101,13 @@ extends PlayMongoRepository[Invitation](
       Indexes.ascending("created"),
       IndexOptions().name("timeToLive").expireAfter(appConfig.invitationsTtl, TimeUnit.DAYS)
     ),
+    IndexModel(
+      Indexes.compoundIndex(
+        Indexes.ascending(arnKey),
+        Indexes.descending("created")
+      ),
+      IndexOptions().name("arnCreatedIdx")
+    ),
     IndexModel(Indexes.ascending(clientIdKey)),
     IndexModel(Indexes.ascending(suppliedClientIdKey)),
     IndexModel(Indexes.ascending(statusKey)),
