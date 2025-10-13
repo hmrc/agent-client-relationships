@@ -1,0 +1,9 @@
+sequenceDiagram
+    autonumber
+    participant Upstream
+    participant agent-client-relationships
+    participant Database
+
+    Upstream->>+agent-client-relationships: PUT /cleanup-invitation-status
+    agent-client-relationships->>Database: Update: Find invitation and set status to 'RelationshipEnded'.
+    agent-client-relationships-->>-Upstream: Final Response

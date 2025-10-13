@@ -1,0 +1,895 @@
+openapi: 3.0.3
+info:
+  title: Agent Client Relationships API
+  description: |
+    The Agent Client Relationships API manages the relationships between tax agents and their clients within the HMRC Agents Platform. 
+
+    This API provides functionality for:
+    - Managing agent-client relationship invitations and authorizations
+    - Checking existing relationships between agents and clients
+    - Handling client onboarding and authorization workflows
+    - Managing relationship terminations and cleanup
+
+    The API supports multiple HMRC services including MTD-IT, MTD-VAT, and others, with comprehensive authentication and authorization controls.
+  version: 1.0.0
+  contact:
+    name: HMRC Agents Platform Team
+    email: agents-platform@hmrc.gov.uk
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+
+servers:
+  - url: http://localhost:9434
+    description: Local development server
+
+tags:
+  - name: Agent Relationships
+    description: Operations for managing agent-client relationships
+  - name: Client Relationships
+    description: Operations for client-side relationship management
+  - name: Invitations
+    description: Operations for managing authorization invitations
+  - name: Agent Details
+    description: Operations for retrieving agent information
+  - name: Client Details
+    description: Operations for retrieving client information
+  - name: Stride Operations
+    description: Internal HMRC Stride operations for support staff
+  - name: API Endpoints
+    description: Alternative API endpoints for external integrations
+
+paths:
+  # Agent Relationships Endpoints
+  /agent/{arn}/service/{service}/client/{clientIdType}/{clientId}:
+    get:
+      tags:
+        - Agent Relationships
+      summary: Check for agent-client relationship
+      description: Checks if a relationship exists between an agent and a client for a specific service
+      operationId: checkForRelationship
+      parameters:
+        - name: arn
+          in: path
+          required: true
+          description: Agent Reference Number
+          schema:
+            type: string
+            pattern: "^[A-Z]ARN[0-9]{7}$"
+            example: TARN0000001
+        - name: service
+          in: path
+          required: true
+          description: HMRC service identifier
+          schema:
+            type: string
+            enum:
+              [
+                HMRC-MTD-IT,
+                HMRC-MTD-VAT,
+                HMRC-TERS-ORG,
+                HMRC-TERSNT-ORG,
+                HMRC-CGT-PD,
+                HMRC-PPT-ORG,
+              ]
+        - name: clientIdType
+          in: path
+          required: true
+          description: Type of client identifier
+          schema:
+            type: string
+            enum: [ni, utr, vrn, urn, crn, cgtRef]
+        - name: clientId
+          in: path
+          required: true
+          description: Client identifier value
+          schema:
+            type: string
+        - name: userId
+          in: query
+          required: false
+          description: Optional user ID for tracking purposes
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Relationship status retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RelationshipStatus"
+        "404":
+          description: Relationship not found
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /agent/relationships/inactive:
+    get:
+      tags:
+        - Agent Relationships
+      summary: Get inactive relationships for agent
+      description: Retrieves all inactive (terminated) relationships for the authenticated agent
+      operationId: getInactiveRelationshipsAgent
+      responses:
+        "200":
+          description: Inactive relationships retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/InactiveRelationship"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /agent/{arn}/terminate:
+    delete:
+      tags:
+        - Agent Relationships
+      summary: Terminate all agent relationships
+      description: Terminates all of an agent's client relationships. This is a destructive operation.
+      operationId: terminateAgent
+      parameters:
+        - name: arn
+          in: path
+          required: true
+          description: Agent Reference Number
+          schema:
+            type: string
+            pattern: "^[A-Z]ARN[0-9]{7}$"
+      responses:
+        "204":
+          description: Agent relationships terminated successfully
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /agent/{arn}/client/{nino}/legacy-mapped-relationship:
+    get:
+      tags:
+        - Agent Relationships
+      summary: Check legacy SA relationship mapping
+      description: Checks if a client has a legacy SA relationship in CESA that has been mapped to the agent's ARN
+      operationId: getLegacySaRelationshipStatus
+      parameters:
+        - name: arn
+          in: path
+          required: true
+          description: Agent Reference Number
+          schema:
+            type: string
+        - name: nino
+          in: path
+          required: true
+          description: Client's National Insurance Number
+          schema:
+            type: string
+            pattern: "^[A-Z]{2}[0-9]{6}[A-D]$"
+      responses:
+        "200":
+          description: Legacy relationship status retrieved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LegacyRelationshipStatus"
+
+  # Client Relationships Endpoints
+  /client/relationships/active:
+    get:
+      tags:
+        - Client Relationships
+      summary: Get active relationships for client
+      description: Retrieves all active relationships for the authenticated client across all their enrolled services
+      operationId: getActiveRelationshipsForClient
+      responses:
+        "200":
+          description: Active relationships retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActiveRelationship"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /client/relationships/inactive:
+    get:
+      tags:
+        - Client Relationships
+      summary: Get inactive relationships for client
+      description: Retrieves all inactive (terminated) relationships for the authenticated client
+      operationId: getInactiveRelationshipsForClient
+      responses:
+        "200":
+          description: Inactive relationships retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/InactiveRelationship"
+
+  /client/relationships/service/{service}:
+    get:
+      tags:
+        - Client Relationships
+      summary: Get relationship by service
+      description: Retrieves the active agent relationship for a specific service for the authenticated client
+      operationId: getRelationshipsByServiceViaClient
+      parameters:
+        - name: service
+          in: path
+          required: true
+          description: HMRC service identifier
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Relationship retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActiveRelationship"
+
+  /client/authorisations-relationships:
+    get:
+      tags:
+        - Client Relationships
+      summary: Get client tax agents data
+      description: Retrieves comprehensive tax agent relationship data for the client
+      operationId: findClientTaxAgentsData
+      responses:
+        "200":
+          description: Client tax agents data retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientTaxAgentsData"
+
+  # Agent Details Endpoints
+  /agent/{arn}/details:
+    get:
+      tags:
+        - Agent Details
+      summary: Get agent details
+      description: Retrieves public details about an agent, such as their name and address
+      operationId: getAgentDetails
+      parameters:
+        - name: arn
+          in: path
+          required: true
+          description: Agent Reference Number
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Agent details retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgentDetails"
+        "404":
+          description: Agent not found
+
+  # Client Details Endpoints
+  /client/{service}/details/{clientId}:
+    get:
+      tags:
+        - Client Details
+      summary: Get client details
+      description: Retrieves details for a specific client
+      operationId: findClientDetails
+      parameters:
+        - name: service
+          in: path
+          required: true
+          description: HMRC service identifier
+          schema:
+            type: string
+        - name: clientId
+          in: path
+          required: true
+          description: Client identifier
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Client details retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientDetails"
+
+  # Invitation Management Endpoints
+  /agent/{arn}/authorisation-request:
+    post:
+      tags:
+        - Invitations
+      summary: Create agent invitation
+      description: Allows an agent to create a new authorization request (invitation) for a client
+      operationId: createInvitation
+      parameters:
+        - name: arn
+          in: path
+          required: true
+          description: Agent Reference Number
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateInvitationRequest"
+      responses:
+        "201":
+          description: Invitation created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvitationResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /client/authorisation-response/reject/{invitationId}:
+    put:
+      tags:
+        - Invitations
+      summary: Reject invitation
+      description: Allows a client to reject a pending authorization request (invitation)
+      operationId: rejectInvitation
+      parameters:
+        - name: invitationId
+          in: path
+          required: true
+          description: Unique invitation identifier
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Invitation rejected successfully
+        "404":
+          description: Invitation not found
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /authorisation-response/accept/{invitationId}:
+    put:
+      tags:
+        - Invitations
+      summary: Accept invitation
+      description: Allows acceptance of an authorization invitation
+      operationId: accept
+      parameters:
+        - name: invitationId
+          in: path
+          required: true
+          description: Unique invitation identifier
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Invitation accepted successfully
+        "404":
+          description: Invitation not found
+
+  /agent/cancel-invitation/{invitationId}:
+    put:
+      tags:
+        - Invitations
+      summary: Cancel invitation
+      description: Allows an agent to cancel a pending authorization request they have previously sent
+      operationId: cancelInvitation
+      parameters:
+        - name: invitationId
+          in: path
+          required: true
+          description: Unique invitation identifier
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Invitation cancelled successfully
+        "404":
+          description: Invitation not found
+
+  /agent/{arn}/authorisation-request-info/{invitationId}:
+    get:
+      tags:
+        - Invitations
+      summary: Get invitation info for agent
+      description: Retrieves detailed information about a specific invitation for an agent
+      operationId: getInvitationInfoForAgent
+      parameters:
+        - name: arn
+          in: path
+          required: true
+          description: Agent Reference Number
+          schema:
+            type: string
+        - name: invitationId
+          in: path
+          required: true
+          description: Unique invitation identifier
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Invitation information retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvitationInfo"
+
+  /client/authorisation-request-info/{invitationId}:
+    get:
+      tags:
+        - Invitations
+      summary: Get invitation info for client
+      description: Retrieves detailed information about a specific invitation for a client
+      operationId: getInvitationInfoForClient
+      parameters:
+        - name: invitationId
+          in: path
+          required: true
+          description: Unique invitation identifier
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Invitation information retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvitationInfo"
+
+  /agent/{arn}/authorisation-requests:
+    get:
+      tags:
+        - Invitations
+      summary: Track agent requests
+      description: Retrieves and tracks authorization requests for an agent with optional filtering
+      operationId: trackRequests
+      parameters:
+        - name: arn
+          in: path
+          required: true
+          description: Agent Reference Number
+          schema:
+            type: string
+        - name: statusFilter
+          in: query
+          required: false
+          description: Filter by invitation status
+          schema:
+            type: string
+            enum: [Pending, Accepted, Rejected, Cancelled, Expired]
+        - name: clientName
+          in: query
+          required: false
+          description: Filter by client name
+          schema:
+            type: string
+        - name: pageNumber
+          in: query
+          required: false
+          description: Page number for pagination
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          required: false
+          description: Number of items per page
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: Authorization requests retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedInvitations"
+
+  # Customer Status
+  /customer-status:
+    get:
+      tags:
+        - Client Relationships
+      summary: Get customer status
+      description: Provides a summary of the client's relationship status, including pending invitations, historical invitations, and active relationships
+      operationId: customerStatus
+      responses:
+        "200":
+          description: Customer status retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerStatus"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  # Cleanup and Utilities
+  /cleanup-invitation-status:
+    put:
+      tags:
+        - Invitations
+      summary: Cleanup invitation status
+      description: Performs cleanup operations on invitation statuses
+      operationId: deauthoriseInvitation
+      responses:
+        "204":
+          description: Invitation status cleaned up successfully
+
+  /agent/{arn}/remove-authorisation:
+    post:
+      tags:
+        - Agent Relationships
+      summary: Remove authorization
+      description: Removes an existing authorization between an agent and client
+      operationId: removeAuthorisation
+      parameters:
+        - name: arn
+          in: path
+          required: true
+          description: Agent Reference Number
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RemoveAuthorisationRequest"
+      responses:
+        "204":
+          description: Authorization removed successfully
+        "404":
+          description: Authorization not found
+
+  # ITSA Post Signup
+  /itsa-post-signup/create-relationship/{nino}:
+    post:
+      tags:
+        - Client Relationships
+      summary: Create ITSA relationship post-signup
+      description: Creates an ITSA relationship for a client after they have signed up
+      operationId: itsaPostSignupCreateRelationship
+      parameters:
+        - name: nino
+          in: path
+          required: true
+          description: Client's National Insurance Number
+          schema:
+            type: string
+      responses:
+        "201":
+          description: ITSA relationship created successfully
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  # Trust Operations
+  /invitations/trusts-enrolment-orchestrator/{urn}/update:
+    post:
+      tags:
+        - Invitations
+      summary: Replace URN with UTR
+      description: Updates a trust-related invitation by replacing the temporary URN with the permanent UTR
+      operationId: replaceUrnWithUtr
+      parameters:
+        - name: urn
+          in: path
+          required: true
+          description: Unique Reference Number to be replaced
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                utr:
+                  type: string
+                  description: The UTR to replace the URN with
+              required:
+                - utr
+      responses:
+        "204":
+          description: URN replaced with UTR successfully
+        "404":
+          description: Invitation not found
+
+components:
+  schemas:
+    RelationshipStatus:
+      type: object
+      properties:
+        relationshipExists:
+          type: boolean
+          description: Whether a relationship exists between the agent and client
+        relationshipDate:
+          type: string
+          format: date
+          description: Date when the relationship was established
+
+    InactiveRelationship:
+      type: object
+      properties:
+        arn:
+          type: string
+          description: Agent Reference Number
+        service:
+          type: string
+          description: HMRC service identifier
+        clientId:
+          type: string
+          description: Client identifier
+        clientIdType:
+          type: string
+          description: Type of client identifier
+        endedDate:
+          type: string
+          format: date-time
+          description: When the relationship ended
+
+    ActiveRelationship:
+      type: object
+      properties:
+        arn:
+          type: string
+          description: Agent Reference Number
+        service:
+          type: string
+          description: HMRC service identifier
+        clientId:
+          type: string
+          description: Client identifier
+        clientIdType:
+          type: string
+          description: Type of client identifier
+        startDate:
+          type: string
+          format: date-time
+          description: When the relationship started
+
+    LegacyRelationshipStatus:
+      type: object
+      properties:
+        hasMappedRelationship:
+          type: boolean
+          description: Whether a legacy SA relationship has been mapped
+        mappedDate:
+          type: string
+          format: date
+          description: Date when the mapping occurred
+
+    AgentDetails:
+      type: object
+      properties:
+        agencyName:
+          type: string
+          description: Name of the agent's agency
+        agencyAddress:
+          $ref: "#/components/schemas/Address"
+        agencyEmail:
+          type: string
+          format: email
+          description: Agent's email address
+
+    Address:
+      type: object
+      properties:
+        addressLine1:
+          type: string
+        addressLine2:
+          type: string
+        addressLine3:
+          type: string
+        addressLine4:
+          type: string
+        postcode:
+          type: string
+        countryCode:
+          type: string
+
+    ClientDetails:
+      type: object
+      properties:
+        clientName:
+          type: string
+          description: Name of the client
+        clientType:
+          type: string
+          enum: [personal, business]
+          description: Type of client
+
+    ClientTaxAgentsData:
+      type: object
+      properties:
+        relationships:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActiveRelationship"
+
+    InvitationResponse:
+      type: object
+      properties:
+        invitationId:
+          type: string
+          description: Unique identifier for the created invitation
+        status:
+          type: string
+          enum: [Pending]
+          description: Current status of the invitation
+        expiryDate:
+          type: string
+          format: date
+          description: Date when the invitation expires
+
+    CreateInvitationRequest:
+      type: object
+      properties:
+        service:
+          type: string
+          description: HMRC service identifier
+        clientId:
+          type: string
+          description: Client identifier
+        clientIdType:
+          type: string
+          description: Type of client identifier
+        clientName:
+          type: string
+          description: Client's name
+      required:
+        - service
+        - clientId
+        - clientIdType
+
+    InvitationInfo:
+      type: object
+      properties:
+        invitationId:
+          type: string
+          description: Unique invitation identifier
+        arn:
+          type: string
+          description: Agent Reference Number
+        service:
+          type: string
+          description: HMRC service identifier
+        clientId:
+          type: string
+          description: Client identifier
+        clientName:
+          type: string
+          description: Client's name
+        agencyName:
+          type: string
+          description: Agent's agency name
+        status:
+          type: string
+          enum: [Pending, Accepted, Rejected, Cancelled, Expired, PartialAuth]
+        created:
+          type: string
+          format: date-time
+        expiryDate:
+          type: string
+          format: date
+
+    PaginatedInvitations:
+      type: object
+      properties:
+        invitations:
+          type: array
+          items:
+            $ref: "#/components/schemas/InvitationInfo"
+        totalCount:
+          type: integer
+          description: Total number of invitations
+        pageNumber:
+          type: integer
+          description: Current page number
+        pageSize:
+          type: integer
+          description: Number of items per page
+
+    CustomerStatus:
+      type: object
+      properties:
+        hasPendingInvitations:
+          type: boolean
+          description: Whether the customer has pending invitations
+        hasInvitationsHistory:
+          type: boolean
+          description: Whether the customer has any invitation history
+        hasExistingRelationships:
+          type: boolean
+          description: Whether the customer has existing relationships
+
+    RemoveAuthorisationRequest:
+      type: object
+      properties:
+        service:
+          type: string
+          description: HMRC service identifier
+        clientId:
+          type: string
+          description: Client identifier
+        clientIdType:
+          type: string
+          description: Type of client identifier
+      required:
+        - service
+        - clientId
+        - clientIdType
+
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+          description: Error code
+        message:
+          type: string
+          description: Error message
+        details:
+          type: array
+          items:
+            type: string
+          description: Additional error details
+
+  responses:
+    BadRequest:
+      description: Bad request - invalid parameters or request body
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+    Unauthorized:
+      description: Unauthorized - authentication required
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+    Forbidden:
+      description: Forbidden - insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Bearer token authentication using OAuth 2.0
+
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: API key authentication
+
+security:
+  - BearerAuth: []
+  - ApiKeyAuth: []

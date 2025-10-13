@@ -1,0 +1,10 @@
+sequenceDiagram
+    autonumber
+    participant Upstream
+    participant agent-client-relationships
+    participant hip
+
+    Upstream->>+agent-client-relationships: GET /client/relationships/active
+    agent-client-relationships->>+hip: GET /hip/relationships/agent/:arn/service/:service/client/:clientId
+    hip-->>-agent-client-relationships: Response
+    agent-client-relationships-->>-Upstream: Final Response
