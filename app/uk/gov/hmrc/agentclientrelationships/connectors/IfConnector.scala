@@ -25,7 +25,6 @@ import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsFai
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsNotFound
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ErrorRetrievingClientDetails
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa.ItsaBusinessDetails
-import uk.gov.hmrc.agentclientrelationships.util.HttpApiMonitor
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.agentclientrelationships.util.RequestSupport._
 import uk.gov.hmrc.agentclientrelationships.model.identifiers._
@@ -54,8 +53,7 @@ class IfConnector @Inject() (
   val metrics: Metrics,
   val ec: ExecutionContext
 )
-extends HttpApiMonitor
-with RequestAwareLogging {
+extends RequestAwareLogging {
 
   private val ifBaseUrl = appConfig.ifPlatformBaseUrl
 

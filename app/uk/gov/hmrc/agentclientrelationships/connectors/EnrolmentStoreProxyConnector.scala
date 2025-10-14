@@ -29,7 +29,6 @@ import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
 import uk.gov.hmrc.agentclientrelationships.support.TaxIdentifierSupport._
-import uk.gov.hmrc.agentclientrelationships.util.HttpApiMonitor
 import uk.gov.hmrc.agentclientrelationships.util.RequestSupport.hc
 import uk.gov.hmrc.agentclientrelationships.model.identifiers._
 import uk.gov.hmrc.domain.AgentCode
@@ -81,8 +80,7 @@ class EnrolmentStoreProxyConnector @Inject() (
   val metrics: Metrics,
   appConfig: AppConfig
 )(implicit val ec: ExecutionContext)
-extends HttpApiMonitor
-with RequestAwareLogging {
+extends RequestAwareLogging {
 
   val espBaseUrl = appConfig.enrolmentStoreProxyUrl
   val teBaseUrl = appConfig.taxEnrolmentsUrl

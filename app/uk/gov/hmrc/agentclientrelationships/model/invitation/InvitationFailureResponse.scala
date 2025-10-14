@@ -95,11 +95,6 @@ object InvitationFailureResponse {
     )
   }
 
-  case object EnrolmentKeyNotFound
-  extends InvitationFailureResponse {
-    def getResult(message: String): Result = BadRequest
-  }
-
   case class RelationshipDeleteFailed(msg: String)
   extends InvitationFailureResponse {
     def getResult(message: String): Result = InternalServerError(toJson(msg))
@@ -108,13 +103,6 @@ object InvitationFailureResponse {
   case object NoPendingInvitation
   extends InvitationFailureResponse {
     def getResult(message: String): Result = NotFound(message)
-  }
-
-  case object UnsupportedStatusChange
-  extends InvitationFailureResponse {
-    def getResult(message: String): Result = BadRequest(
-      toJson(ErrorBody("UNSUPPORTED_STATUS_CHANGE", "Not supported invitation status change"))
-    )
   }
 
   case class UpdateStatusFailed(msg: String)

@@ -1,14 +1,8 @@
 
 GET           /agent/:arn/service/:service/client/:clientIdType/:clientId    @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.checkForRelationship(arn: Arn, service: String, clientIdType: String, clientId: String, userId: Option[String] ?= None)
 
-GET           /agent/relationships/inactive                                  @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getInactiveRelationshipsAgent
-
 DELETE        /agent/:arn/terminate                                          @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.terminateAgent(arn: Arn)
-GET           /agent/:arn/client/:nino/legacy-mapped-relationship            @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getLegacySaRelationshipStatus(arn: Arn, nino: Nino)
 
-GET           /client/relationships/active                                   @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getActiveRelationshipsForClient
-GET           /client/relationships/inactive                                 @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getInactiveRelationshipsForClient
-GET           /client/relationships/service/:service                         @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getRelationshipsByServiceViaClient(service: String)
 GET           /client/authorisations-relationships                           @uk.gov.hmrc.agentclientrelationships.controllers.ClientTaxAgentsDataController.findClientTaxAgentsData
 
 GET           /client/:service/details/:clientId                             @uk.gov.hmrc.agentclientrelationships.controllers.ClientDetailsController.findClientDetails(service: String, clientId: String)
@@ -37,7 +31,6 @@ GET           /customer-status                                               @uk
 PUT           /cleanup-invitation-status                                     @uk.gov.hmrc.agentclientrelationships.controllers.CleanUpInvitationStatusController.deauthoriseInvitation
 
 # stride endpoints
-GET           /relationships/service/:service/client/:clientIdType/:clientId @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.getRelationships(service: String, clientIdType: String, clientId: String)
 POST          /stride/active-relationships                                   @uk.gov.hmrc.agentclientrelationships.controllers.StrideClientDetailsController.getActiveRelationships
 GET           /stride/client-details/service/:service/client/:clientIdType/:clientId       @uk.gov.hmrc.agentclientrelationships.controllers.StrideClientDetailsController.get(service: String, clientIdType: String, clientId: String)
 GET           /stride/irv-relationships/:nino                                @uk.gov.hmrc.agentclientrelationships.controllers.StrideClientDetailsController.getIrvRelationships(nino: String)
