@@ -69,8 +69,6 @@ with HipStub {
       appConfig
     )
 
-  override def additionalConfig: Map[String, Any] = Map("hip.BusinessDetails.enabled" -> true)
-
   def setupCommonStubs(request: FakeRequest[?]): Unit = {
     givenAuthorisedAsValidAgent(request, "XARN1234567")
     givenAuditConnector()

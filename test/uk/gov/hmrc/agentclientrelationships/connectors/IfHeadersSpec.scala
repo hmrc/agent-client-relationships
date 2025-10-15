@@ -37,7 +37,7 @@ with MockitoSugar {
 
     implicit val request = FakeRequest()
     when(correlationIdGenerator.makeCorrelationId()(any[RequestHeader])).thenReturn("testCorrelationId")
-    when(appConfig.ifEnvironment).thenReturn("testEnv")
+    when(appConfig.ifsEnvironment).thenReturn("testEnv")
 
     ifHeaders.makeHeaders("testAuthToken").toMap shouldBe
       Map(

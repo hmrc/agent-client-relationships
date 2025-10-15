@@ -45,7 +45,7 @@ class CheckRelationshipsService @Inject() (
   es: EnrolmentStoreProxyConnector,
   ap: AgentPermissionsConnector,
   agentAssuranceService: AgentAssuranceService,
-  ifOrHipConnector: IfOrHipConnector,
+  hipConnector: HipConnector,
   groupSearch: UsersGroupsSearchConnector,
   partialAuthRepository: PartialAuthRepository,
   agentFiRelationshipConnector: AgentFiRelationshipConnector,
@@ -144,7 +144,7 @@ with RequestAwareLogging {
             Some(ExistingMainAgent(agencyName = agent.agencyDetails.agencyName, sameAgent = p.arn == invitation.arn))
           )
       case None =>
-        ifOrHipConnector
+        hipConnector
           .getMtdIdFor(Nino(invitation.clientId))
           .flatMap {
             case Some(mtdItId) =>

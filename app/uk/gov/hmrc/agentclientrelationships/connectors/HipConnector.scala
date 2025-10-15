@@ -246,8 +246,7 @@ extends RequestAwareLogging {
 
   // API#5266 https://admin.tax.service.gov.uk/integration-hub/apis/details/e54e8843-c146-4551-a499-c93ecac4c6fd#Endpoints
   def getItsaBusinessDetails(nino: String)(implicit
-    request: RequestHeader,
-    ec: ExecutionContext
+    request: RequestHeader
   ): Future[Either[ClientDetailsFailureResponse, ItsaBusinessDetails]] = {
     val encodedNino = UriEncoding.encodePathSegment(nino, "UTF-8")
     val url = new URL(s"$baseUrl/etmp/RESTAdapter/itsa/taxpayer/business-details?nino=$encodedNino")
@@ -301,8 +300,7 @@ extends RequestAwareLogging {
     body: JsValue,
     getHeaders: () => Seq[(String, String)]
   )(implicit
-    request: RequestHeader,
-    ec: ExecutionContext
+    request: RequestHeader
   ): Future[Either[UpstreamErrorResponse, HttpResponse]] = httpClient
     .post(url)
     .setHeader(getHeaders(): _*)

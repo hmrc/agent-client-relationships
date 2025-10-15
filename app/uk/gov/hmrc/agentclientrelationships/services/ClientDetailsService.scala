@@ -20,7 +20,7 @@ import cats.data.EitherT
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.ClientDetailsConnector
-import uk.gov.hmrc.agentclientrelationships.connectors.IfOrHipConnector
+import uk.gov.hmrc.agentclientrelationships.connectors.HipConnector
 import uk.gov.hmrc.agentclientrelationships.model.CitizenDetails
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientStatus._
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.KnownFactType._
@@ -42,7 +42,7 @@ import scala.concurrent.Future
 @Singleton
 class ClientDetailsService @Inject() (
   clientDetailsConnector: ClientDetailsConnector,
-  ifOrHipConnector: IfOrHipConnector,
+  hipConnector: HipConnector,
   appConfig: AppConfig
 )(implicit ec: ExecutionContext)
 extends RequestAwareLogging {
@@ -134,7 +134,7 @@ extends RequestAwareLogging {
 
   private def getItsaClientDetails(nino: String)(implicit
     request: RequestHeader
-  ): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] = ifOrHipConnector
+  ): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] = hipConnector
     .getItsaBusinessDetails(nino)
     .flatMap {
       case Right(details @ ItsaBusinessDetails(

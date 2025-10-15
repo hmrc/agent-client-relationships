@@ -36,8 +36,6 @@ with AuthorisationAcceptItsaBehaviours
 with HipStub
 with EmailStubs {
 
-  override def additionalConfig: Map[String, Any] = Map("hip.BusinessDetails.enabled" -> true)
-
   override val invitationRepo: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
   override val partialAuthRepository: PartialAuthRepository = app.injector.instanceOf[PartialAuthRepository]
   override val messagesApi: MessagesApi = app.injector.instanceOf[MessagesApi]

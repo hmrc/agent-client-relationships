@@ -26,8 +26,6 @@ with RelationshipsControllerVATBehaviours
 with RelationshipsControllerITSABehaviours
 with HipStub {
 
-  override def additionalConfig: Map[String, Any] = Map("hip.BusinessDetails.enabled" -> true)
-
   // Income Tax
   behave like relationshipsControllerGetISpec(
     Service.MtdIt.id,
