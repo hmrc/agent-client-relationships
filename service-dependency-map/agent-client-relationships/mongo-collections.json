@@ -1,0 +1,308 @@
+{
+    "serviceName": "agent-client-relationships",
+    "collections": [
+        {
+            "name": "invitations",
+            "repositoryFile": "InvitationsRepository.scala",
+            "purpose": "This is the primary collection for managing the agent-client invitation workflow. It stores records of invitations sent by agents to clients, allowing the service to track the status of an invitation from creation to acceptance or expiration.",
+            "schema": [
+                {
+                    "field": "invitationId",
+                    "description": "A unique identifier for the invitation."
+                },
+                {
+                    "field": "arn",
+                    "description": "The Agent Reference Number of the agent who created the invitation."
+                },
+                {
+                    "field": "clientId",
+                    "description": "The client's identifier (e.g., NINO, UTR) - encrypted in storage."
+                },
+                {
+                    "field": "clientIdType",
+                    "description": "The type of client identifier (e.g., 'ni', 'utr')."
+                },
+                {
+                    "field": "suppliedClientId",
+                    "description": "The original client ID as supplied by the agent - encrypted in storage."
+                },
+                {
+                    "field": "suppliedClientIdType",
+                    "description": "The type of the supplied client identifier."
+                },
+                {
+                    "field": "service",
+                    "description": "The HMRC service the invitation pertains to (e.g., 'HMRC-MTD-IT', 'HMRC-MTD-VAT')."
+                },
+                {
+                    "field": "clientName",
+                    "description": "The name of the client - encrypted in storage."
+                },
+                {
+                    "field": "agencyName",
+                    "description": "The name of the agent's agency - encrypted in storage."
+                },
+                {
+                    "field": "agencyEmail",
+                    "description": "The agent's email address - encrypted in storage."
+                },
+                {
+                    "field": "status",
+                    "description": "The current state of the invitation (e.g., 'Pending', 'Accepted', 'Rejected', 'Expired', 'PartialAuth')."
+                },
+                {
+                    "field": "relationshipEndedBy",
+                    "description": "Who ended the relationship (if applicable)."
+                },
+                {
+                    "field": "clientType",
+                    "description": "The type of client (optional)."
+                },
+                {
+                    "field": "created",
+                    "description": "Timestamp of when the invitation was created."
+                },
+                {
+                    "field": "lastUpdated",
+                    "description": "Timestamp of the last status change."
+                },
+                {
+                    "field": "expiryDate",
+                    "description": "The date when the invitation will automatically expire."
+                },
+                {
+                    "field": "warningEmailSent",
+                    "description": "Boolean indicating if a warning email has been sent."
+                },
+                {
+                    "field": "expiredEmailSent",
+                    "description": "Boolean indicating if an expiry email has been sent."
+                }
+            ],
+            "sampleDocument": {
+                "invitationId": "B944641C423A42528B89E43A516E3132",
+                "arn": "TARN0000001",
+                "clientId": "[ENCRYPTED]",
+                "clientIdType": "ni",
+                "suppliedClientId": "[ENCRYPTED]",
+                "suppliedClientIdType": "ni",
+                "service": "HMRC-MTD-IT",
+                "clientName": "[ENCRYPTED]",
+                "agencyName": "[ENCRYPTED]",
+                "agencyEmail": "[ENCRYPTED]",
+                "warningEmailSent": false,
+                "expiredEmailSent": false,
+                "status": "Pending",
+                "relationshipEndedBy": null,
+                "clientType": "personal",
+                "created": {
+                    "$date": "2025-09-11T10:00:00.000Z"
+                },
+                "lastUpdated": {
+                    "$date": "2025-09-11T10:00:00.000Z"
+                },
+                "expiryDate": "2025-10-02"
+            }
+        },
+        {
+            "name": "partial-auth",
+            "repositoryFile": "PartialAuthRepository.scala",
+            "purpose": "This collection stores temporary relationship records during the ITSA (Income Tax Self Assessment) signup process. It tracks partial authorizations between agents and clients before they are converted to full relationships when the client completes their MTD-IT signup.",
+            "schema": [
+                {
+                    "field": "created",
+                    "description": "Timestamp of when the partial auth record was created."
+                },
+                {
+                    "field": "arn",
+                    "description": "The Agent Reference Number."
+                },
+                {
+                    "field": "service",
+                    "description": "The HMRC service (typically 'HMRC-MTD-IT' or 'HMRC-MTD-IT-SUPP')."
+                },
+                {
+                    "field": "nino",
+                    "description": "The client's National Insurance Number - encrypted in storage."
+                },
+                {
+                    "field": "active",
+                    "description": "Boolean indicating if the partial auth is currently active."
+                },
+                {
+                    "field": "lastUpdated",
+                    "description": "Timestamp of the last update to this record."
+                }
+            ],
+            "sampleDocument": {
+                "created": {
+                    "$date": "2025-09-11T10:00:00.000Z"
+                },
+                "arn": "TARN0000001",
+                "service": "HMRC-MTD-IT",
+                "nino": "[ENCRYPTED]",
+                "active": true,
+                "lastUpdated": {
+                    "$date": "2025-09-11T10:00:00.000Z"
+                }
+            }
+        },
+        {
+            "name": "agent-reference",
+            "repositoryFile": "AgentReferenceRepository.scala",
+            "purpose": "This collection stores a mapping between an agent's 'uid' (Government Gateway user identifier) and their 'arn' (Agent Reference Number), along with normalized agent names for invitation link validation.",
+            "schema": [
+                {
+                    "field": "uid",
+                    "description": "The agent's Government Gateway unique identifier."
+                },
+                {
+                    "field": "arn",
+                    "description": "The agent's Agent Reference Number."
+                },
+                {
+                    "field": "normalisedAgentNames",
+                    "description": "Array of normalized versions of the agent's name - encrypted in storage."
+                }
+            ],
+            "sampleDocument": {
+                "uid": "some-unique-gateway-id",
+                "arn": "TARN0000001",
+                "normalisedAgentNames": [
+                    "[ENCRYPTED]",
+                    "[ENCRYPTED]"
+                ]
+            }
+        },
+        {
+            "name": "relationship-copy-record",
+            "repositoryFile": "RelationshipCopyRecordRepository.scala",
+            "purpose": "This collection tracks the progress of copying client relationships from legacy HMRC systems to the modernized enrolment-store-proxy (ES) and ETMP systems. It's part of the migration strategy to the new agent services platform.",
+            "schema": [
+                {
+                    "field": "arn",
+                    "description": "The Agent Reference Number."
+                },
+                {
+                    "field": "enrolmentKey",
+                    "description": "The enrolment key identifying the client's service enrollment."
+                },
+                {
+                    "field": "references",
+                    "description": "Optional set of relationship references."
+                },
+                {
+                    "field": "dateTime",
+                    "description": "Timestamp of when the copy record was created."
+                },
+                {
+                    "field": "syncToETMPStatus",
+                    "description": "Status of synchronization to ETMP system ('Success', 'Failed', 'InProgress')."
+                },
+                {
+                    "field": "syncToESStatus",
+                    "description": "Status of synchronization to Enrolment Store ('Success', 'Failed', 'InProgress')."
+                }
+            ],
+            "sampleDocument": {
+                "arn": "TARN0000001",
+                "enrolmentKey": "HMRC-MTD-VAT~VRN~101747641",
+                "references": [
+                    {
+                        "credId": "cred-123",
+                        "timestamp": {
+                            "$date": "2025-09-11T10:00:00.000Z"
+                        }
+                    }
+                ],
+                "dateTime": {
+                    "$date": "2025-09-11T10:00:00.000Z"
+                },
+                "syncToETMPStatus": "Success",
+                "syncToESStatus": "Success"
+            }
+        },
+        {
+            "name": "delete-record",
+            "repositoryFile": "DeleteRecordRepository.scala",
+            "purpose": "This collection tracks requests to remove or 'de-authorize' agent-client relationships. When a relationship is terminated, a record is stored here to manage the cleanup of corresponding enrolments in downstream systems and track recovery attempts.",
+            "schema": [
+                {
+                    "field": "arn",
+                    "description": "The Agent Reference Number."
+                },
+                {
+                    "field": "enrolmentKey",
+                    "description": "The enrolment key identifying the service enrollment to be deleted."
+                },
+                {
+                    "field": "dateTime",
+                    "description": "Timestamp of when the delete record was created."
+                },
+                {
+                    "field": "syncToETMPStatus",
+                    "description": "Status of deletion synchronization with ETMP system."
+                },
+                {
+                    "field": "syncToESStatus",
+                    "description": "Status of deletion synchronization with Enrolment Store."
+                },
+                {
+                    "field": "lastRecoveryAttempt",
+                    "description": "Timestamp of the last recovery attempt (if any)."
+                },
+                {
+                    "field": "numberOfAttempts",
+                    "description": "Number of recovery attempts made."
+                },
+                {
+                    "field": "headerCarrier",
+                    "description": "Optional HTTP headers for request context."
+                },
+                {
+                    "field": "relationshipEndedBy",
+                    "description": "Who initiated the relationship termination."
+                }
+            ],
+            "sampleDocument": {
+                "arn": "TARN0000001",
+                "enrolmentKey": "HMRC-MTD-IT~MTDITID~XXIT00000000001",
+                "dateTime": {
+                    "$date": "2025-09-11T11:00:00.000Z"
+                },
+                "syncToETMPStatus": "InProgress",
+                "syncToESStatus": "Success",
+                "lastRecoveryAttempt": {
+                    "$date": "2025-09-11T12:00:00.000Z"
+                },
+                "numberOfAttempts": 1,
+                "headerCarrier": {
+                    "sessionId": "session-123",
+                    "authorization": "Bearer token-456"
+                },
+                "relationshipEndedBy": "Agent"
+            }
+        },
+        {
+            "name": "recovery-schedule",
+            "repositoryFile": "RecoveryScheduleRepository.scala",
+            "purpose": "This collection manages scheduled recovery tasks for the relationship copy and deletion operations. It provides a simple scheduling mechanism to retry failed operations at specified times, making the system resilient to temporary failures.",
+            "schema": [
+                {
+                    "field": "uid",
+                    "description": "A unique identifier for the recovery record (UUID)."
+                },
+                {
+                    "field": "runAt",
+                    "description": "The timestamp when the next recovery operation should be executed."
+                }
+            ],
+            "sampleDocument": {
+                "uid": "550e8400-e29b-41d4-a716-446655440000",
+                "runAt": {
+                    "$date": "2025-09-11T12:00:00.000Z"
+                }
+            }
+        }
+    ]
+}

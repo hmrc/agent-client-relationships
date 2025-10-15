@@ -1,0 +1,52 @@
+{
+    "microservice": "agent-client-relationships",
+    "controller": "RemoveAuthorisationController",
+    "apis": [
+        {
+            "endpoint": "POST /agent/:arn/remove-authorisation",
+            "description": "Allows an agent or a Stride user to remove an existing authorisation (relationship).",
+            "interactions": [
+                {
+                    "step": 1,
+                    "type": "API Call",
+                    "service": "agent-fi-relationship",
+                    "method": "DELETE",
+                    "path": "/agent-fi-relationship/relationships/agent/:arn/service/:service/client/:clientId",
+                    "database": null,
+                    "operation": null,
+                    "description": "For PIR service, delete the relationship in agent-fi-relationship."
+                },
+                {
+                    "step": 2,
+                    "type": "Database",
+                    "service": null,
+                    "method": null,
+                    "path": null,
+                    "database": "agent-client-relationships-db (partial-auth)",
+                    "operation": "Delete",
+                    "description": "For Alt-ITSA, remove the partial-auth record."
+                },
+                {
+                    "step": 3,
+                    "type": "Database",
+                    "service": null,
+                    "method": null,
+                    "path": null,
+                    "database": "agent-client-relationships-db (invitations)",
+                    "operation": "Update",
+                    "description": "For all services, find the original invitation and mark it as relationship ended."
+                },
+                {
+                    "step": 4,
+                    "type": "API Call",
+                    "service": "enrolment-store-proxy",
+                    "method": "DELETE",
+                    "path": "/enrolment-store-proxy/enrolment-store/groups/:groupId/enrolments/:enrolmentKey",
+                    "database": null,
+                    "operation": null,
+                    "description": "For default services, de-allocate the client's enrolment from the agent's group."
+                }
+            ]
+        }
+    ]
+}

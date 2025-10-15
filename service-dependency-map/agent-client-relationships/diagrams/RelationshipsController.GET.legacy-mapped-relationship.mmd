@@ -1,0 +1,13 @@
+sequenceDiagram
+    autonumber
+    participant Upstream
+    participant agent-client-relationships
+    participant des
+    participant agent-mapping
+
+    Upstream->>+agent-client-relationships: GET /agent/:arn/client/:nino/legacy-mapped-relationship
+    agent-client-relationships->>+des: GET /registration/individual/nino/:nino
+    des-->>-agent-client-relationships: Response
+    agent-client-relationships->>+agent-mapping: GET /agent-mapping/mappings/sa/:arn
+    agent-mapping-->>-agent-client-relationships: Response
+    agent-client-relationships-->>-Upstream: Final Response

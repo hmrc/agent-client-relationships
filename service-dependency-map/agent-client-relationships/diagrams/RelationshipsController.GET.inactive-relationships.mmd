@@ -1,0 +1,9 @@
+sequenceDiagram
+    autonumber
+    participant Upstream
+    participant agent-client-relationships
+    participant Database
+
+    Upstream->>+agent-client-relationships: GET /agent/relationships/inactive
+    agent-client-relationships->>Database: Read: Find all invitations for the agent's ARN that have a status of 'Accepted' and have an 'ended' date.
+    agent-client-relationships-->>-Upstream: Final Response

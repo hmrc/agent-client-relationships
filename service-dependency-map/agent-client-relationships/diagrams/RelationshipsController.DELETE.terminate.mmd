@@ -1,0 +1,13 @@
+sequenceDiagram
+    autonumber
+    participant Upstream
+    participant agent-client-relationships
+    participant enrolment-store-proxy
+    participant Database
+
+    Upstream->>+agent-client-relationships: DELETE /agent/:arn/terminate
+    agent-client-relationships->>Database: Read: Find all active relationships for the given ARN.
+    agent-client-relationships->>+enrolment-store-proxy: DELETE /enrolment-store-proxy/enrolment-store/groups/:groupId/enrolments/:enrolmentKey
+    enrolment-store-proxy-->>-agent-client-relationships: Response
+    agent-client-relationships->>Database: Update: For each active relationship, mark the invitation as 'Accepted' and set relationship ended.
+    agent-client-relationships-->>-Upstream: Final Response

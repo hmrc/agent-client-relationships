@@ -1,0 +1,13 @@
+sequenceDiagram
+    autonumber
+    participant Upstream
+    participant agent-client-relationships
+    participant agent-fi-relationship
+    participant agent-assurance
+
+    Upstream->>+agent-client-relationships: GET /stride/irv-relationships/:nino
+    agent-client-relationships->>+agent-fi-relationship: GET /agent-fi-relationship/irv-active-relationship/client/:nino
+    agent-fi-relationship-->>-agent-client-relationships: Response
+    agent-client-relationships->>+agent-assurance: GET /agent-assurance/agent-details/:arn
+    agent-assurance-->>-agent-client-relationships: Response
+    agent-client-relationships-->>-Upstream: Final Response

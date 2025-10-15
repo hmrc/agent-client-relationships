@@ -1,0 +1,9 @@
+sequenceDiagram
+    autonumber
+    participant Upstream
+    participant agent-client-relationships
+    participant Database
+
+    Upstream->>+agent-client-relationships: POST /invitations/trusts-enrolment-orchestrator/:urn/update
+    agent-client-relationships->>Database: Update: Find the invitation by the URN and update it with the new UTR.
+    agent-client-relationships-->>-Upstream: Final Response

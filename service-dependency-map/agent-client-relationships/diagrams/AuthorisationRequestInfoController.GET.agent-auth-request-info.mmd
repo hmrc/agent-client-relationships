@@ -1,0 +1,10 @@
+sequenceDiagram
+    autonumber
+    participant Upstream
+    participant agent-client-relationships
+    participant Database
+
+    Upstream->>+agent-client-relationships: GET /agent/:arn/authorisation-request-info/:invitationId
+    agent-client-relationships->>Database: Read: Find the invitation by its ID and agent's ARN.
+    agent-client-relationships->>Database: Read: Create a new agent reference record to generate an invitation link.
+    agent-client-relationships-->>-Upstream: Final Response

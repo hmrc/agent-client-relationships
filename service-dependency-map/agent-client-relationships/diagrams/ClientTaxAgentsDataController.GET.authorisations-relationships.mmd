@@ -1,0 +1,15 @@
+sequenceDiagram
+    autonumber
+    participant Upstream
+    participant agent-client-relationships
+    participant hip
+    participant Database
+    participant agent-assurance
+
+    Upstream->>+agent-client-relationships: GET /client/authorisations-relationships
+    agent-client-relationships->>+hip: GET /hip/relationships/agent/:arn/service/:service/client/:clientId
+    hip-->>-agent-client-relationships: Response
+    agent-client-relationships->>Database: Read: Find pending and accepted invitations for the client.
+    agent-client-relationships->>+agent-assurance: GET /agent-assurance/agent-details/:arn
+    agent-assurance-->>-agent-client-relationships: Response
+    agent-client-relationships-->>-Upstream: Final Response
