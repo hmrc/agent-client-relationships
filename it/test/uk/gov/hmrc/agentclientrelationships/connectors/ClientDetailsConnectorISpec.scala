@@ -38,44 +38,47 @@ import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsNot
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ErrorRetrievingClientDetails
 import uk.gov.hmrc.agentclientrelationships.stubs.ClientDetailsStub
 import uk.gov.hmrc.agentclientrelationships.stubs.DataStreamStub
-import uk.gov.hmrc.agentclientrelationships.stubs.IfStub
+import uk.gov.hmrc.agentclientrelationships.stubs.HipStub
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 import uk.gov.hmrc.agentclientrelationships.support.WireMockSupport
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
+import uk.gov.hmrc.domain.Nino
 
 import java.time.LocalDate
 
-class ClientDetailsConnectorIfISpec
+class ClientDetailsConnectorISpec
 extends UnitSpec
 with GuiceOneServerPerSuite
 with WireMockSupport
 with DataStreamStub
 with ClientDetailsStub
-with IfStub {
+with HipStub {
 
   override lazy val app: Application = appBuilder.build()
 
   protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder().configure(
     "microservice.services.citizen-details.port" -> wireMockPort,
+    "microservice.services.ifs.port" -> wireMockPort,
+    "microservice.services.hip.port" -> wireMockPort,
     "microservice.services.if.port" -> wireMockPort,
-    "microservice.services.eis.port" -> wireMockPort,
     "microservice.services.des.port" -> wireMockPort,
     "auditing.consumer.baseUri.host" -> wireMockHost,
     "auditing.consumer.baseUri.port" -> wireMockPort,
-    "hip.BusinessDetails.enabled" -> false,
     "features.overseas-itsa-enabled" -> true
   )
 
   implicit val request: RequestHeader = FakeRequest()
 
   val connector: ClientDetailsConnector = app.injector.instanceOf[ClientDetailsConnector]
-  val ifOrHipConnector: IfOrHipConnector = app.injector.instanceOf[IfOrHipConnector]
+  val hipConnector: HipConnector = app.injector.instanceOf[HipConnector]
+  private val greatBritain: String = "GREAT BRITAIN"
 
   ".getItsaDesignatoryDetails" should {
 
     "return designatory details when receiving a 200 status" in {
       givenAuditConnector()
       givenItsaDesignatoryDetailsExists("AA000001B")
-      await(connector.getItsaDesignatoryDetails("AA000001B")) shouldBe Right(ItsaDesignatoryDetails(Some("AA1 1AA"), Some("GREAT BRITAIN")))
+      await(connector.getItsaDesignatoryDetails("AA000001B")) shouldBe Right(ItsaDesignatoryDetails(Some("AA1 1AA"), Some(greatBritain)))
     }
 
     "return a ClientDetailsNotFound error when receiving a 404 status" in {
@@ -117,52 +120,6 @@ with IfStub {
       givenItsaCitizenDetailsError("AA000001B", INTERNAL_SERVER_ERROR)
       await(connector.getItsaCitizenDetails("AA000001B")) shouldBe
         Left(ErrorRetrievingClientDetails(INTERNAL_SERVER_ERROR, "Unexpected error during 'getItsaCitizenDetails'"))
-    }
-  }
-
-  ".getItsaBusinessDetails" should {
-
-    "return business details when receiving a 200 status" in {
-      givenAuditConnector()
-      givenItsaBusinessDetailsExists("nino", "AA000001B")
-      await(ifOrHipConnector.getItsaBusinessDetails("AA000001B")) shouldBe Right(
-        ItsaBusinessDetails(
-          "Erling Haal",
-          Some("AA1 1AA"),
-          "GB"
-        )
-      )
-    }
-
-    "return the first set of business details when receiving multiple" in {
-      givenAuditConnector()
-      givenMultipleItsaBusinessDetailsExists("AA000001B")
-      await(ifOrHipConnector.getItsaBusinessDetails("AA000001B")) shouldBe Right(
-        ItsaBusinessDetails(
-          "Erling Haal",
-          Some("AA1 1AA"),
-          "GB"
-        )
-      )
-    }
-
-    "return a ClientDetailsNotFound error when no items are returned in the businessData array" in {
-      givenAuditConnector()
-      givenEmptyItsaBusinessDetailsExists("AA000001B")
-      await(ifOrHipConnector.getItsaBusinessDetails("AA000001B")) shouldBe Left(ClientDetailsNotFound)
-    }
-
-    "return a ClientDetailsNotFound error when receiving a 404 status" in {
-      givenAuditConnector()
-      givenItsaBusinessDetailsError("AA000001B", NOT_FOUND)
-      await(ifOrHipConnector.getItsaBusinessDetails("AA000001B")) shouldBe Left(ClientDetailsNotFound)
-    }
-
-    "return an ErrorRetrievingClientDetails error when receiving an unexpected status" in {
-      givenAuditConnector()
-      givenItsaBusinessDetailsError("AA000001B", INTERNAL_SERVER_ERROR)
-      await(ifOrHipConnector.getItsaBusinessDetails("AA000001B")) shouldBe
-        Left(ErrorRetrievingClientDetails(INTERNAL_SERVER_ERROR, "Unexpected error during 'getItsaBusinessDetails'"))
     }
   }
 

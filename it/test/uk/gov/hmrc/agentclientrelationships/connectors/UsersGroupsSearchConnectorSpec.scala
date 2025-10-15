@@ -57,9 +57,7 @@ with UsersGroupsSearchStubs {
     "features.copy-relationship.mtd-it" -> true,
     "features.recovery-enable" -> false,
     "agent.cache.expires" -> "1 millis",
-    "agent.cache.enabled" -> true,
-    "agent.trackPage.cache.expires" -> "1 millis",
-    "agent.trackPage.cache.enabled" -> true
+    "agent.cache.enabled" -> true
   )
 
   implicit val request: RequestHeader = FakeRequest()

@@ -31,8 +31,7 @@ with HipStub
 with TestData {
 
   override def additionalConfig: Map[String, Any] = Map(
-    "hip.enabled" -> true,
-    "hip.BusinessDetails.enabled" -> true
+    "hip.enabled" -> true
   )
 
   val controller: ApiCheckRelationshipController = app.injector.instanceOf[ApiCheckRelationshipController]

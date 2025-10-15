@@ -65,7 +65,7 @@ with ResettingMockitoSugar {
   val metrics = mock[Metrics]
   private val mockPartialAuthRepo = mock[PartialAuthRepository]
   private val mockAgentAssuranceService = mock[AgentAssuranceService]
-  private val mockIfOrHipConnector = mock[IfOrHipConnector]
+  private val mockHipConnector = mock[HipConnector]
   private val mockAgentFiConnector = mock[AgentFiRelationshipConnector]
 
   implicit val request: RequestHeader = FakeRequest()
@@ -93,7 +93,7 @@ with ResettingMockitoSugar {
             es,
             ap,
             mockAgentAssuranceService,
-            mockIfOrHipConnector,
+            mockHipConnector,
             gs,
             mockPartialAuthRepo,
             mockAgentFiConnector,
@@ -130,7 +130,7 @@ with ResettingMockitoSugar {
             es,
             ap,
             mockAgentAssuranceService,
-            mockIfOrHipConnector,
+            mockHipConnector,
             gs,
             mockPartialAuthRepo,
             mockAgentFiConnector,
@@ -167,7 +167,7 @@ with ResettingMockitoSugar {
             es,
             ap,
             mockAgentAssuranceService,
-            mockIfOrHipConnector,
+            mockHipConnector,
             gs,
             mockPartialAuthRepo,
             mockAgentFiConnector,
@@ -200,7 +200,7 @@ with ResettingMockitoSugar {
             es,
             ap,
             mockAgentAssuranceService,
-            mockIfOrHipConnector,
+            mockHipConnector,
             gs,
             mockPartialAuthRepo,
             mockAgentFiConnector,
@@ -237,7 +237,7 @@ with ResettingMockitoSugar {
             es,
             ap,
             mockAgentAssuranceService,
-            mockIfOrHipConnector,
+            mockHipConnector,
             gs,
             mockPartialAuthRepo,
             mockAgentFiConnector,
@@ -273,7 +273,7 @@ with ResettingMockitoSugar {
             es,
             ap,
             mockAgentAssuranceService,
-            mockIfOrHipConnector,
+            mockHipConnector,
             gs,
             mockPartialAuthRepo,
             mockAgentFiConnector,
@@ -306,7 +306,7 @@ with ResettingMockitoSugar {
             es,
             ap,
             mockAgentAssuranceService,
-            mockIfOrHipConnector,
+            mockHipConnector,
             gs,
             mockPartialAuthRepo,
             mockAgentFiConnector,

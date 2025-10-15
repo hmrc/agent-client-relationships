@@ -106,7 +106,7 @@ extends CheckAndCopyResult {
 @Singleton
 class CheckAndCopyRelationshipsService @Inject() (
   es: EnrolmentStoreProxyConnector,
-  ifOrHipConnector: IfOrHipConnector,
+  hipConnector: HipConnector,
   des: DesConnector,
   mapping: MappingConnector,
   ugs: UsersGroupsSearchConnector,
@@ -291,7 +291,7 @@ with RequestAwareLogging {
     implicit val currentUser: CurrentUser = CurrentUser(credentials = None, affinityGroup = Some(Agent))
 
     for {
-      mNino <- mNino.fold(ifOrHipConnector.getNinoFor(mtdItId))(ni => Future.successful(Some(ni)))
+      mNino <- mNino.fold(hipConnector.getNinoFor(mtdItId))(ni => Future.successful(Some(ni)))
       mPartialAuth <- findPartialAuth(arn, mNino)
       createFromPartialAuthRes <-
         mPartialAuth.fold[Future[CheckAndCopyResult]](Future.successful(AltItsaNotFoundOrFailed))(partialAuth =>

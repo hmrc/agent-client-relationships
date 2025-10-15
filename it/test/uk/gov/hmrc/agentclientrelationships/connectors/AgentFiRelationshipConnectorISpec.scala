@@ -64,9 +64,7 @@ with AfiRelationshipStub {
     "features.copy-relationship.mtd-it" -> true,
     "features.recovery-enable" -> false,
     "agent.cache.expires" -> "1 millis",
-    "agent.cache.enabled" -> false,
-    "agent.trackPage.cache.expires" -> "1 millis",
-    "agent.trackPage.cache.enabled" -> false
+    "agent.cache.enabled" -> false
   )
 
   private implicit val request: RequestHeader = FakeRequest()

@@ -53,8 +53,7 @@ with HipStub
 with TestData {
 
   override def additionalConfig: Map[String, Any] = Map(
-    "hip.enabled" -> true,
-    "hip.BusinessDetails.enabled" -> true
+    "hip.enabled" -> true
   )
   val invitationLinkService: InvitationLinkService = app.injector.instanceOf[InvitationLinkService]
   val agentAssuranceService: AgentAssuranceService = app.injector.instanceOf[AgentAssuranceService]

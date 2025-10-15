@@ -101,7 +101,6 @@ with ResettingMockitoSugar {
 
   val es = resettingMock[EnrolmentStoreProxyConnector]
   val des = resettingMock[DesConnector]
-  val ifOrHipConnector = resettingMock[IfOrHipConnector]
   val hipConnector = resettingMock[HipConnector]
   val mapping = resettingMock[MappingConnector]
   val ugs = resettingMock[UsersGroupsSearchConnector]
@@ -146,7 +145,7 @@ with ResettingMockitoSugar {
   val relationshipsService =
     new CheckAndCopyRelationshipsService(
       es,
-      ifOrHipConnector,
+      hipConnector,
       des,
       mapping,
       ugs,
@@ -554,7 +553,7 @@ with ResettingMockitoSugar {
       val relationshipsService =
         new CheckAndCopyRelationshipsService(
           es,
-          ifOrHipConnector,
+          hipConnector,
           des,
           mapping,
           ugs,
@@ -603,7 +602,7 @@ with ResettingMockitoSugar {
       val relationshipsService =
         new CheckAndCopyRelationshipsService(
           es,
-          ifOrHipConnector,
+          hipConnector,
           des,
           mapping,
           ugs,
@@ -643,13 +642,13 @@ with ResettingMockitoSugar {
   }
 
   private def cesaRelationshipDoesNotExist(): OngoingStubbing[Future[Seq[SaAgentReference]]] = {
-    when(ifOrHipConnector.getNinoFor(eqs(mtdItId))(any[RequestHeader]())).thenReturn(Future successful Some(nino))
+    when(hipConnector.getNinoFor(eqs(mtdItId))(any[RequestHeader]())).thenReturn(Future successful Some(nino))
     when(des.getClientSaAgentSaReferences(eqs(nino))(any[RequestHeader]())).thenReturn(Future successful Seq())
     when(mapping.getSaAgentReferencesFor(eqs(arn))(any[RequestHeader]())).thenReturn(Future successful Seq())
   }
 
   private def mappingServiceUnavailable(): OngoingStubbing[Future[Seq[SaAgentReference]]] = {
-    when(ifOrHipConnector.getNinoFor(eqs(mtdItId))(any[RequestHeader]())).thenReturn(Future successful Some(nino))
+    when(hipConnector.getNinoFor(eqs(mtdItId))(any[RequestHeader]())).thenReturn(Future successful Some(nino))
     when(des.getClientSaAgentSaReferences(eqs(nino))(any[RequestHeader]())).thenReturn(
       Future successful Seq(saAgentRef)
     )
@@ -688,7 +687,7 @@ with ResettingMockitoSugar {
   }
 
   private def ninoExists(): OngoingStubbing[Future[Option[Nino]]] = when(
-    ifOrHipConnector.getNinoFor(eqs(mtdItId))(any[RequestHeader]())
+    hipConnector.getNinoFor(eqs(mtdItId))(any[RequestHeader]())
   ).thenReturn(Future successful Some(nino))
 
   private def partialAuthExists(service: String): OngoingStubbing[Future[Option[PartialAuthRelationship]]] = when(
@@ -730,7 +729,7 @@ with ResettingMockitoSugar {
   ).thenReturn(Future.successful(None))
 
   private def cesaRelationshipExists(): OngoingStubbing[Future[Seq[SaAgentReference]]] = {
-    when(ifOrHipConnector.getNinoFor(eqs(mtdItId))(any[RequestHeader]())).thenReturn(Future successful Some(nino))
+    when(hipConnector.getNinoFor(eqs(mtdItId))(any[RequestHeader]())).thenReturn(Future successful Some(nino))
     when(des.getClientSaAgentSaReferences(eqs(nino))(any[RequestHeader]())).thenReturn(
       Future successful Seq(saAgentRef)
     )

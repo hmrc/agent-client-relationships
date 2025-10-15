@@ -32,7 +32,7 @@ class IfHeaders @Inject() (
 
   def makeHeaders(authToken: String)(implicit requestHeader: RequestHeader): Seq[(String, String)] =
     CommonHeaders() ++ Seq(
-      Environment -> appConfig.ifEnvironment,
+      Environment -> appConfig.ifsEnvironment,
       CorrelationId -> randomUuidGenerator.makeCorrelationId(),
       HeaderNames.AUTHORIZATION -> s"Bearer $authToken"
     )

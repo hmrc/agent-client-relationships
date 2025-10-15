@@ -62,8 +62,6 @@ with EmailStubs
 with HipStub
 with TestData {
 
-  override def additionalConfig: Map[String, Any] = Map("hip.BusinessDetails.enabled" -> true)
-
   val invitationService: InvitationService = app.injector.instanceOf[InvitationService]
   val validationService: ValidationService = app.injector.instanceOf[ValidationService]
   val auditService: AuditService = app.injector.instanceOf[AuditService]

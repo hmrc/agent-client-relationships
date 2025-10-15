@@ -69,24 +69,22 @@ class AppConfig @Inject() (
   val desEnv = getConfigString("des.environment")
   val desToken = getConfigString("des.authorization-token")
 
-  val ifPlatformBaseUrl = servicesConfig.baseUrl("if")
+  val ifsPlatformBaseUrl = servicesConfig.baseUrl("ifs")
 
   /** Itegration Framework (If) Environment
     */
-  val ifEnvironment: String = getConfigString("if.environment")
+  val ifsEnvironment: String = getConfigString("ifs.environment")
 
-  val ifAPI1171Token = getConfigString("if.authorization-api1171-token")
-  val ifAPI1712Token = getConfigString("if.authorization-api1712-token")
-  val ifAPI1495Token = getConfigString("if.authorization-api1495-token")
-  val ifAPI2143Token = getConfigString("if.authorization-api2143-token")
+  val ifsAPI1712Token = getConfigString("ifs.authorization-api1712-token")
+  val ifsAPI1495Token = getConfigString("ifs.authorization-api1495-token")
+  val ifsAPI2143Token = getConfigString("ifs.authorization-api2143-token")
 
   val hipPlatformBaseUrl = servicesConfig.baseUrl("hip")
   val hipAuthToken = getConfigString("hip.authorization-token")
-  val hipBusinessDetailsEnabled = servicesConfig.getBoolean("hip.BusinessDetails.enabled")
 
-  val eisBaseUrl = servicesConfig.baseUrl("eis")
-  val eisEnvironment = getConfigString("eis.environment")
-  val eisAuthToken = getConfigString("eis.authorization-token")
+  val ifBaseUrl = servicesConfig.baseUrl("if")
+  val ifEnvironment = getConfigString("if.environment")
+  val ifAuthToken = getConfigString("if.authorization-token")
 
   val agentMappingUrl = servicesConfig.baseUrl("agent-mapping")
 
@@ -102,8 +100,6 @@ class AppConfig @Inject() (
   val agentAssuranceBaseUrl: String = servicesConfig.baseUrl("agent-assurance")
 
   val emailBaseUrl: String = servicesConfig.baseUrl("email")
-
-  val inactiveRelationshipShowLastDays = servicesConfig.getInt("inactive-relationships.show-last-days")
 
   val oldAuthStrideRole = URLDecoder.decode(servicesConfig.getString("old.auth.stride.role"), "utf-8")
 
