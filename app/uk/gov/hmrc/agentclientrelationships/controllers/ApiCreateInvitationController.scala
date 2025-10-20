@@ -26,7 +26,7 @@ import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.audit.AuditService
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.connectors.IfOrHipConnector
+import uk.gov.hmrc.agentclientrelationships.connectors.HipConnector
 import uk.gov.hmrc.agentclientrelationships.model.Invitation
 import uk.gov.hmrc.agentclientrelationships.model.Pending
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsNotFound
@@ -56,7 +56,7 @@ import scala.concurrent.Future
 
 @Singleton
 class ApiCreateInvitationController @Inject() (
-  ifOrHipConnector: IfOrHipConnector,
+  hipConnector: HipConnector,
   clientDetailsService: ClientDetailsService,
   apiKnownFactsCheckService: ApiKnownFactsCheckService,
   checkRelationshipsService: CheckRelationshipsOrchestratorService,
@@ -209,7 +209,7 @@ with AuthActions {
   ): Future[Either[ApiFailureResponse, ClientId]] =
     (service, suppliedClientId.typeId) match {
       case (MtdIt | MtdItSupp, NinoType.id) =>
-        ifOrHipConnector
+        hipConnector
           .getMtdIdFor(Nino(suppliedClientId.value))
           .map(
             _.fold[Either[ApiFailureResponse, ClientId]](Right(suppliedClientId))(mdtId =>

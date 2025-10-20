@@ -26,7 +26,7 @@ import play.api.libs.json.Json.toJson
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.audit.AuditService
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.connectors.IfOrHipConnector
+import uk.gov.hmrc.agentclientrelationships.connectors.HipConnector
 import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiCreateInvitationRequest
 import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiFailureResponse.ErrorBody
@@ -56,13 +56,12 @@ with HipStub
 with TestData {
 
   override def additionalConfig: Map[String, Any] = Map(
-    "hip.enabled" -> true,
-    "hip.BusinessDetails.enabled" -> true
+    "hip.enabled" -> true
   )
 
   val auditService: AuditService = app.injector.instanceOf[AuditService]
   val authConnector: AuthConnector = app.injector.instanceOf[AuthConnector]
-  val ifOrHipConnector: IfOrHipConnector = app.injector.instanceOf[IfOrHipConnector]
+  val hipConnector: HipConnector = app.injector.instanceOf[HipConnector]
   val clientDetailsService: ClientDetailsService = app.injector.instanceOf[ClientDetailsService]
   val knowFactsCheckService: ApiKnownFactsCheckService = app.injector.instanceOf[ApiKnownFactsCheckService]
   val checkRelationshipsService: CheckRelationshipsOrchestratorService = app.injector.instanceOf[CheckRelationshipsOrchestratorService]
@@ -79,7 +78,7 @@ with TestData {
 
   val controller =
     new ApiCreateInvitationController(
-      ifOrHipConnector,
+      hipConnector,
       clientDetailsService,
       knowFactsCheckService,
       checkRelationshipsService,

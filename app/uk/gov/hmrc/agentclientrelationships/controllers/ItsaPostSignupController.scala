@@ -24,7 +24,7 @@ import play.api.mvc.ControllerComponents
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.connectors.IfOrHipConnector
+import uk.gov.hmrc.agentclientrelationships.connectors.HipConnector
 import uk.gov.hmrc.agentclientrelationships.services.AltItsaCreateRelationshipSuccess
 import uk.gov.hmrc.agentclientrelationships.services.AltItsaNotFoundOrFailed
 import uk.gov.hmrc.agentclientrelationships.services.CheckAndCopyRelationshipsService
@@ -43,7 +43,7 @@ import scala.concurrent.Future
 
 @Singleton
 class ItsaPostSignupController @Inject() (
-  ifOrHipConnector: IfOrHipConnector,
+  hipConnector: HipConnector,
   checkAndCopyRelationshipsService: CheckAndCopyRelationshipsService,
   val authConnector: AuthConnector,
   val appConfig: AppConfig,
@@ -57,7 +57,7 @@ with RequestAwareLogging {
 
   def itsaPostSignupCreateRelationship(nino: Nino): Action[AnyContent] = Action.async { implicit request =>
     withAuthorisedAsAgent { arn =>
-      ifOrHipConnector
+      hipConnector
         .getMtdIdFor(nino)
         .flatMap {
           case Some(mtdItId) =>

@@ -37,7 +37,6 @@ import scala.concurrent.Future
 
 @Singleton
 class FindRelationshipsService @Inject() (
-  ifOrHipConnector: IfOrHipConnector,
   hipConnector: HipConnector,
   appConfig: AppConfig,
   val metrics: Metrics
@@ -50,7 +49,7 @@ with RequestAwareLogging {
     service: Service
   )(implicit request: RequestHeader): Future[Option[ActiveRelationship]] =
     for {
-      mtdItId <- ifOrHipConnector.getMtdIdFor(nino)
+      mtdItId <- hipConnector.getMtdIdFor(nino)
       relationships <-
         mtdItId.fold(Future.successful(Option.empty[ActiveRelationship]))(
           hipConnector.getActiveClientRelationships(_, service)
@@ -64,7 +63,7 @@ with RequestAwareLogging {
     (
       for {
         mtdItId <- EitherT.fromOptionF(
-          ifOrHipConnector.getMtdIdFor(nino),
+          hipConnector.getMtdIdFor(nino),
           RelationshipFailureResponse.TaxIdentifierError
         )
         relationships <- EitherT(hipConnector.getAllRelationships(taxIdentifier = mtdItId, activeOnly = activeOnly))

@@ -17,7 +17,6 @@
 package uk.gov.hmrc.agentclientrelationships.services
 
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
-import uk.gov.hmrc.agentclientrelationships.connectors.IfOrHipConnector
 import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.ClientRegistrationNotFound
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.InvalidClientId
@@ -36,6 +35,7 @@ import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 import uk.gov.hmrc.auth.core.AffinityGroup
 import uk.gov.hmrc.domain.Nino
 import play.api.mvc.RequestHeader
+import uk.gov.hmrc.agentclientrelationships.connectors.HipConnector
 
 import java.time.Instant
 import javax.inject.Inject
@@ -50,7 +50,7 @@ class RemoveAuthorisationService @Inject() (
   deleteService: DeleteRelationshipsService,
   partialAuthRepository: PartialAuthRepository,
   invitationsRepository: InvitationsRepository,
-  ifOrHipConnector: IfOrHipConnector
+  hipConnector: HipConnector
 )(implicit ec: ExecutionContext)
 extends RequestAwareLogging {
 
@@ -123,7 +123,7 @@ extends RequestAwareLogging {
   )(implicit request: RequestHeader): Future[Either[InvitationFailureResponse, EnrolmentKey]] =
     (service, suppliedClientId.typeId) match {
       case (MtdIt | MtdItSupp, NinoType.id) =>
-        ifOrHipConnector
+        hipConnector
           .getMtdIdFor(Nino(suppliedClientId.value))
           .map {
             case Some(mtdItId) => Right(EnrolmentKey(service, mtdItId))

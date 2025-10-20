@@ -49,7 +49,7 @@ class CheckRelationshipsOrchestratorService @Inject() (
   checkOldAndCopyService: CheckAndCopyRelationshipsService,
   validationService: ValidationService,
   deleteService: DeleteRelationshipsService,
-  ifOrHipConnector: IfOrHipConnector,
+  hipConnector: HipConnector,
   agentFiRelationshipConnector: AgentFiRelationshipConnector,
   agentAssuranceService: AgentAssuranceService
 )(implicit executionContext: ExecutionContext)
@@ -213,7 +213,7 @@ with RequestAwareLogging {
     }
   private def withMtdItId(clientId: String)(
     proceed: MtdItId => Future[CheckRelationshipResult]
-  )(implicit request: RequestHeader): Future[CheckRelationshipResult] = ifOrHipConnector
+  )(implicit request: RequestHeader): Future[CheckRelationshipResult] = hipConnector
     .getMtdIdFor(Nino(clientId))
     .flatMap {
       case Some(mtdItId) => proceed(mtdItId)

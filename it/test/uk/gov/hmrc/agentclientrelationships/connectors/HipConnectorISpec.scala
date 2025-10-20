@@ -19,32 +19,32 @@ package uk.gov.hmrc.agentclientrelationships.connectors
 import com.github.tomakehurst.wiremock.client.WireMock._
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
+import play.api.http.Status.INTERNAL_SERVER_ERROR
+import play.api.http.Status.NOT_FOUND
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.mvc.RequestHeader
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
-import play.utils.UriEncoding
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.helpers.HipHeaders
 import uk.gov.hmrc.agentclientrelationships.model.ActiveRelationship
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.InactiveRelationship
 import uk.gov.hmrc.agentclientrelationships.model.RegistrationRelationshipResponse
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.CapitalGains
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa.ItsaBusinessDetails
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsNotFound
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ErrorRetrievingClientDetails
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Cbc
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdIt
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdItSupp
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Pillar2
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Ppt
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Trust
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.TrustNT
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Vat
 import uk.gov.hmrc.agentclientrelationships.model.identifiers._
 import uk.gov.hmrc.agentclientrelationships.services.AgentCacheProvider
 import uk.gov.hmrc.agentclientrelationships.stubs.DataStreamStub
 import uk.gov.hmrc.agentclientrelationships.stubs.HipStub
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 import uk.gov.hmrc.agentclientrelationships.support.WireMockSupport
+import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.http.client.HttpClientV2
@@ -84,11 +84,8 @@ with DataStreamStub {
     "features.recovery-enable" -> false,
     "agent.cache.expires" -> "1 millis",
     "agent.cache.enabled" -> false,
-    "agent.trackPage.cache.expires" -> "1 millis",
-    "agent.trackPage.cache.enabled" -> false,
     "microservice.services.hip.port" -> wireMockPort,
-    "microservice.services.hip.authorization-token" -> "token",
-    "hip.BusinessDetails.enabled" -> true
+    "microservice.services.hip.authorization-token" -> "token"
   )
 
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
@@ -604,6 +601,54 @@ with DataStreamStub {
     "return true when the end date is equal to the current date" in {
       givenAuditConnector()
       hipConnector.isNotActive(endsAtCurrentDateRelationship) shouldBe true
+    }
+  }
+
+  ".getItsaBusinessDetails" should {
+
+    "return business details when receiving a 200 status" in {
+      givenAuditConnector()
+      givenMtdItsaBusinessDetailsExists(Nino("AA000001B"), MtdItId("XAIT0000111122"))
+      await(hipConnector.getItsaBusinessDetails("AA000001B")) shouldBe Right(
+        ItsaBusinessDetails(
+          "Erling Haal",
+          Some("AA1 1AA"),
+          "GB"
+        )
+      )
+    }
+
+    "return the first set of business details when receiving multiple" in {
+      givenAuditConnector()
+      givenMultipleItsaBusinessDetailsExists("AA000001B")
+      await(hipConnector.getItsaBusinessDetails("AA000001B")) shouldBe Right(
+        ItsaBusinessDetails(
+          "Erling Haal",
+          Some("AA1 1AA"),
+          "GB"
+        )
+      )
+    }
+
+    "return a ClientDetailsNotFound error when no items are returned in the businessData array" in {
+      givenAuditConnector()
+      givenEmptyItsaBusinessDetailsExists("AA000001B")
+      await(hipConnector.getItsaBusinessDetails("AA000001B")) shouldBe Left(ClientDetailsNotFound)
+    }
+
+    "return a ClientDetailsNotFound error when receiving a 404 status" in {
+      givenAuditConnector()
+      givenItsaBusinessDetailsError("AA000001B", NOT_FOUND)
+      await(hipConnector.getItsaBusinessDetails("AA000001B")) shouldBe Left(ClientDetailsNotFound)
+    }
+
+    "return an ErrorRetrievingClientDetails error when receiving an unexpected status" in {
+      givenAuditConnector()
+      givenItsaBusinessDetailsError("AA000001B", INTERNAL_SERVER_ERROR)
+      await(hipConnector.getItsaBusinessDetails("AA000001B")) should matchPattern {
+        case Left(ErrorRetrievingClientDetails(INTERNAL_SERVER_ERROR, msg))
+            if msg.startsWith("Unexpected error during 'getItsaBusinessDetails'") =>
+      }
     }
   }
 
