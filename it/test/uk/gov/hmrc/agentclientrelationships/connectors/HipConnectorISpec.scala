@@ -297,6 +297,7 @@ with DataStreamStub {
     }
 
     "throw an IllegalArgumentException when the tax identifier is not supported" in {
+      givenAuditConnector()
       an[IllegalArgumentException] should be thrownBy await(
         hipConnector.createAgentRelationship(EnrolmentKey("foo"), Arn("bar"))
       )
@@ -309,8 +310,8 @@ with DataStreamStub {
     }
 
     "return nothing when IF is unavailable" in {
-      givenReturnsServiceUnavailable()
       givenAuditConnector()
+      givenReturnsServiceUnavailable()
       intercept[UpstreamErrorResponse](await(hipConnector.createAgentRelationship(vatEnrolmentKey, Arn("someArn"))))
     }
   }
@@ -377,12 +378,14 @@ with DataStreamStub {
     }
 
     "throw an IllegalArgumentException when the tax identifier is not supported" in {
+      givenAuditConnector()
       an[IllegalArgumentException] should be thrownBy await(
         hipConnector.deleteAgentRelationship(EnrolmentKey("foo"), Arn("bar"))
       )
     }
 
     "return an exception when HIP has returned an error" in {
+      givenAuditConnector()
       givenReturnsServerError()
       an[UpstreamErrorResponse] should be thrownBy await(
         hipConnector.deleteAgentRelationship(vatEnrolmentKey, Arn("someArn"))
@@ -390,6 +393,7 @@ with DataStreamStub {
     }
 
     "return an exception when HIP is unavailable" in {
+      givenAuditConnector()
       givenReturnsServiceUnavailable()
       an[UpstreamErrorResponse] should be thrownBy await(
         hipConnector.deleteAgentRelationship(vatEnrolmentKey, Arn("someArn"))

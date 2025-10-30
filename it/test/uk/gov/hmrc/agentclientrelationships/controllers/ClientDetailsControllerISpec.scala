@@ -90,6 +90,7 @@ with HipStub {
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
           givenMtdItsaBusinessDetailsExists(Nino("AA000001B"), MtdItId("XAIT0000111122"))
           givenNinoItsaBusinessDetailsExists(MtdItId("XAIT0000111122"), Nino("AA000001B"))
+          givenClientHasNoRelationshipWithAnyAgentInCESA(nino = Nino("AA000001B"))
 
           val result = doGetRequest(request.uri)
           result.status shouldBe 200
@@ -109,6 +110,7 @@ with HipStub {
           givenNinoItsaBusinessDetailsExists(MtdItId("XAIT0000111122"), Nino("AA000001B"))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
+          givenClientHasNoRelationshipWithAnyAgentInCESA(nino = Nino("AA000001B"))
 
           await(
             invitationsRepo.create(
@@ -142,6 +144,7 @@ with HipStub {
           givenNinoItsaBusinessDetailsExists(MtdItId("XAIT0000111122"), Nino("AA000001B"))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
+          givenClientHasNoRelationshipWithAnyAgentInCESA(nino = Nino("AA000001B"))
           await(
             invitationsRepo.create(
               "XARN1234567",
@@ -194,6 +197,7 @@ with HipStub {
           givenNinoItsaBusinessDetailsExists(MtdItId("XAIT0000111122"), Nino("AA000001B"))
           givenDelegatedGroupIdsExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")), Set("foo"))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")))
+          givenClientHasNoRelationshipWithAnyAgentInCESA(nino = Nino("AA000001B"))
 
           val result = doGetRequest(request.uri)
           result.status shouldBe 200
@@ -453,6 +457,8 @@ with HipStub {
     "return 401 status if the user is not authorised" in {
       val request = FakeRequest("GET", "/agent-client-relationships/client/HMRC-MTD-VAT/details/101747641")
       requestIsNotAuthenticated()
+      givenAuditConnector()
+      givenVatCustomerInfoExists("101747641")
 
       val result = doGetRequest(request.uri)
       result.status shouldBe 401

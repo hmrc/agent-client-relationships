@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.controllers
 
+import play.api.http.Status.NOT_FOUND
 import play.api.libs.json.Json.toJson
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.api.ApiCheckRelationshipRequest
@@ -27,6 +28,7 @@ import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service._
 class ApiCheckRelationshipControllerISpec
 extends BaseControllerISpec
 with ClientDetailsStub
+with CitizenDetailsStub
 with HipStub
 with TestData {
 
@@ -104,6 +106,7 @@ with TestData {
       givenAgentRecordFound(arn, agentRecordResponse)
       givenItsaBusinessDetailsError(nino.value, 404)
       givenUserAuthorised()
+      givenCitizenDetailsError(nino.value, NOT_FOUND)
 
       val testData = ApiCheckRelationshipRequest(
         HMRCMTDIT,
