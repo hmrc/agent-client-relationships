@@ -84,7 +84,13 @@ extends PlayMongoRepository[Invitation](
   collectionName = "invitations",
   domainFormat = Invitation.mongoFormat,
   indexes = Seq(
-    IndexModel(Indexes.ascending(arnKey), IndexOptions().name("arnIndex")),
+    IndexModel(
+      Indexes.compoundIndex(
+        Indexes.ascending(arnKey),
+        Indexes.descending("created")
+      ),
+      IndexOptions().name("arnCreatedIdx")
+    ),
     IndexModel(Indexes.ascending(invitationIdKey), IndexOptions().name("invitationIdIndex").unique(true)),
     IndexModel(
       Indexes.ascending(
@@ -100,13 +106,6 @@ extends PlayMongoRepository[Invitation](
     IndexModel(
       Indexes.ascending("created"),
       IndexOptions().name("timeToLive").expireAfter(appConfig.invitationsTtl, TimeUnit.DAYS)
-    ),
-    IndexModel(
-      Indexes.compoundIndex(
-        Indexes.ascending(arnKey),
-        Indexes.descending("created")
-      ),
-      IndexOptions().name("arnCreatedIdx")
     ),
     IndexModel(Indexes.ascending(clientIdKey)),
     IndexModel(Indexes.ascending(suppliedClientIdKey)),
