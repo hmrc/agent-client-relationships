@@ -71,6 +71,12 @@ with HipStub {
   implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
   implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
 
+  val itsaServiceKeys = Json.arr(
+    "HMRC-MTD-IT",
+    "HMRC-PT",
+    "HMRC-NI"
+  )
+
   "validate invitation link" should {
 
     "return 200 status and valid JSON when agent reference and details are found and agent is not suspended " in {
@@ -180,15 +186,7 @@ with HipStub {
 
     "return 200 status and appropriate JSON body when a matching agent and invitation is found" in {
       givenAuditConnector()
-      givenAuthorisedAsClient(
-        fakeRequest,
-        mtdItId,
-        vrn,
-        utr,
-        urn,
-        pptRef,
-        cgtRef
-      )
+      givenUserIsSubscribedClient(nino)
       givenAgentRecordFound(arn, agentRecordResponse)
       givenDelegatedGroupIdsNotExistFor(mtdItEnrolmentKey)
       await(agentReferenceRepo.create(agentReferenceRecord))
@@ -197,7 +195,7 @@ with HipStub {
           arn.value,
           MtdIt,
           mtdItId,
-          mtdItId,
+          nino,
           "Erling Haal",
           "testAgentName",
           "agent@email.com",
@@ -206,7 +204,7 @@ with HipStub {
         )
       )
 
-      val requestBody = Json.obj("uid" -> uid, "serviceKeys" -> Json.arr("HMRC-MTD-IT"))
+      val requestBody = Json.obj("uid" -> uid, "serviceKeys" -> itsaServiceKeys)
       val result = doAgentPostRequest(fakeRequest.uri, requestBody)
       val expectedResponse = ValidateInvitationResponse(
         pendingInvitation.invitationId,
@@ -224,15 +222,7 @@ with HipStub {
 
     "return 200 status and appropriate JSON body when a matching agent and invitation plus existing main agent is found" in {
       givenAuditConnector()
-      givenAuthorisedAsClient(
-        fakeRequest,
-        mtdItId,
-        vrn,
-        utr,
-        urn,
-        pptRef,
-        cgtRef
-      )
+      givenUserIsSubscribedClient(nino)
       givenAgentRecordFound(arn, agentRecordResponse)
       givenDelegatedGroupIdsExistFor(mtdItEnrolmentKey, Set(testExistingAgentGroup))
       givenGetAgentReferenceNumberFor(testExistingAgentGroup, existingAgentArn.value)
@@ -244,7 +234,7 @@ with HipStub {
           arn.value,
           MtdIt,
           mtdItId,
-          mtdItId,
+          nino,
           "Erling Haal",
           "testAgentName",
           "agent@email.com",
@@ -253,7 +243,7 @@ with HipStub {
         )
       )
 
-      val requestBody = Json.obj("uid" -> uid, "serviceKeys" -> Json.arr("HMRC-MTD-IT"))
+      val requestBody = Json.obj("uid" -> uid, "serviceKeys" -> itsaServiceKeys)
       val result = doAgentPostRequest(fakeRequest.uri, requestBody)
       val expectedResponse = ValidateInvitationResponse(
         pendingInvitation.invitationId,
@@ -271,15 +261,7 @@ with HipStub {
 
     "return 200 status and appropriate JSON body when a matching agent and invitation plus existing same main agent is found" in {
       givenAuditConnector()
-      givenAuthorisedAsClient(
-        fakeRequest,
-        mtdItId,
-        vrn,
-        utr,
-        urn,
-        pptRef,
-        cgtRef
-      )
+      givenUserIsSubscribedClient(nino)
       givenAgentRecordFound(existingAgentArn, existingAgentRecordResponse)
       givenDelegatedGroupIdsExistFor(mtdItEnrolmentKey, Set(testExistingAgentGroup))
       givenGetAgentReferenceNumberFor(testExistingAgentGroup, existingAgentArn.value)
@@ -300,7 +282,7 @@ with HipStub {
         )
       )
 
-      val requestBody = Json.obj("uid" -> existingAgentUid, "serviceKeys" -> Json.arr("HMRC-MTD-IT"))
+      val requestBody = Json.obj("uid" -> existingAgentUid, "serviceKeys" -> itsaServiceKeys)
       val result = doAgentPostRequest(fakeRequest.uri, requestBody)
       val expectedResponse = ValidateInvitationResponse(
         pendingInvitation.invitationId,
@@ -318,7 +300,7 @@ with HipStub {
 
     "return 200 status and correct JSON when a matching agent, invitation and existing main agent with partial auth is found" in {
       givenAuditConnector()
-      givenAuthorisedAsClientWithNino(fakeRequest, nino)
+      givenUserIsSubscribedClient(nino)
       await(
         partialAuthRepo.create(
           created = Instant.now(),
@@ -371,7 +353,7 @@ with HipStub {
 
     "return 200 status and correct JSON when a matching agent, invitation and existing same main agent with partial auth is found" in {
       givenAuditConnector()
-      givenAuthorisedAsClientWithNino(fakeRequest, nino)
+      givenUserIsSubscribedClient(nino)
       await(
         partialAuthRepo.create(
           created = Instant.now(),
@@ -416,15 +398,7 @@ with HipStub {
 
     "return 200 status and appropriate JSON body when a matching agent and invitation for ITSA supporting agent is found" in {
       givenAuditConnector()
-      givenAuthorisedAsClient(
-        fakeRequest,
-        mtdItId,
-        vrn,
-        utr,
-        urn,
-        pptRef,
-        cgtRef
-      )
+      givenUserIsSubscribedClient(nino)
       givenAgentRecordFound(arn, agentRecordResponse)
       givenDelegatedGroupIdsNotExistFor(mtdItEnrolmentKey)
       await(agentReferenceRepo.create(agentReferenceRecord))
@@ -442,7 +416,7 @@ with HipStub {
         )
       )
 
-      val requestBody = Json.obj("uid" -> uid, "serviceKeys" -> Json.arr("HMRC-MTD-IT"))
+      val requestBody = Json.obj("uid" -> uid, "serviceKeys" -> itsaServiceKeys)
       val result = doAgentPostRequest(fakeRequest.uri, requestBody)
       val expectedResponse = ValidateInvitationResponse(
         pendingInvitation.invitationId,
@@ -514,15 +488,7 @@ with HipStub {
 
       "the agent is suspended" in {
         givenAuditConnector()
-        givenAuthorisedAsClient(
-          fakeRequest,
-          mtdItId,
-          vrn,
-          utr,
-          urn,
-          pptRef,
-          cgtRef
-        )
+        givenUserIsSubscribedClient(nino)
         givenAgentRecordFound(arn, suspendedAgentRecordResponse)
         givenDelegatedGroupIdsNotExistFor(mtdItEnrolmentKey)
         await(agentReferenceRepo.create(agentReferenceRecord))
@@ -531,7 +497,7 @@ with HipStub {
             arn.value,
             MtdIt,
             mtdItId,
-            mtdItId,
+            nino,
             "Erling Haal",
             "testAgentName",
             "agent@email.com",
@@ -540,7 +506,7 @@ with HipStub {
           )
         )
 
-        val requestBody = Json.obj("uid" -> uid, "serviceKeys" -> Json.arr("HMRC-MTD-IT"))
+        val requestBody = Json.obj("uid" -> uid, "serviceKeys" -> itsaServiceKeys)
         val result = doAgentPostRequest(fakeRequest.uri, requestBody)
 
         result.status shouldBe 403
@@ -548,15 +514,7 @@ with HipStub {
 
       "the provided service key does not exist in the client's enrolments" in {
         givenAuditConnector()
-        givenAuthorisedAsClient(
-          fakeRequest,
-          mtdItId,
-          vrn,
-          utr,
-          urn,
-          pptRef,
-          cgtRef
-        )
+        givenUserIsSubscribedClient(nino)
         givenAgentRecordFound(arn, agentRecordResponse)
         await(agentReferenceRepo.create(agentReferenceRecord))
         await(
@@ -564,7 +522,7 @@ with HipStub {
             arn.value,
             MtdIt,
             mtdItId,
-            mtdItId,
+            nino,
             "Erling Haal",
             "testAgentName",
             "agent@email.com",
@@ -584,19 +542,11 @@ with HipStub {
 
       "no invitations were found in the invitations collection for the given agent" in {
         givenAuditConnector()
-        givenAuthorisedAsClient(
-          fakeRequest,
-          mtdItId,
-          vrn,
-          utr,
-          urn,
-          pptRef,
-          cgtRef
-        )
+        givenUserIsSubscribedClient(nino)
         givenAgentRecordFound(arn, agentRecordResponse)
         await(agentReferenceRepo.create(agentReferenceRecord))
 
-        val requestBody = Json.obj("uid" -> uid, "serviceKeys" -> Json.arr("HMRC-MTD-IT"))
+        val requestBody = Json.obj("uid" -> uid, "serviceKeys" -> itsaServiceKeys)
         val result = doAgentPostRequest(fakeRequest.uri, requestBody)
 
         result.status shouldBe 404
@@ -604,15 +554,7 @@ with HipStub {
 
       "the provided service key does not match with an existing invitation" in {
         givenAuditConnector()
-        givenAuthorisedAsClient(
-          fakeRequest,
-          mtdItId,
-          vrn,
-          utr,
-          urn,
-          pptRef,
-          cgtRef
-        )
+        givenUserIsSubscribedClient(vrn)
         givenAgentRecordFound(arn, agentRecordResponse)
         await(agentReferenceRepo.create(agentReferenceRecord))
         await(
@@ -620,7 +562,7 @@ with HipStub {
             arn.value,
             MtdIt,
             mtdItId,
-            mtdItId,
+            nino,
             "Erling Haal",
             "testAgentName",
             "agent@email.com",
@@ -637,22 +579,14 @@ with HipStub {
 
       "the agent reference record could not be obtained for the given agent" in {
         givenAuditConnector()
-        givenAuthorisedAsClient(
-          fakeRequest,
-          mtdItId,
-          vrn,
-          utr,
-          urn,
-          pptRef,
-          cgtRef
-        )
+        givenUserIsSubscribedClient(nino)
         givenAgentDetailsErrorResponse(arn, NOT_FOUND)
         await(
           invitationsRepo.create(
             arn.value,
             MtdIt,
             mtdItId,
-            mtdItId,
+            nino,
             "Erling Haal",
             "testAgentName",
             "agent@email.com",
@@ -661,7 +595,7 @@ with HipStub {
           )
         )
 
-        val requestBody = Json.obj("uid" -> uid, "serviceKeys" -> Json.arr("HMRC-MTD-IT"))
+        val requestBody = Json.obj("uid" -> uid, "serviceKeys" -> itsaServiceKeys)
         val result = doAgentPostRequest(fakeRequest.uri, requestBody)
 
         result.status shouldBe 404

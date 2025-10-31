@@ -257,9 +257,9 @@ with RequestAwareLogging {
           in(serviceKey, services: _*),
           in(
             if (isSuppliedClientId)
-              "suppliedClientId"
+              suppliedClientIdKey
             else
-              "clientId",
+              clientIdKey,
             clientIds.map(_.replaceAll(" ", "")).map(encryptedString): _*
           )
         )

@@ -31,6 +31,7 @@ import uk.gov.hmrc.agentclientrelationships.model.Invitation
 import uk.gov.hmrc.agentclientrelationships.model.Pending
 import uk.gov.hmrc.agentclientrelationships.services._
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.ClientIdType
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.ClientIdentifier
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
@@ -59,6 +60,7 @@ with RequestAwareLogging {
 
   private val strideRoles = Seq(appConfig.oldAuthStrideRole, appConfig.newAuthStrideRole)
 
+  // scalastyle:off method.length
   def accept(invitationId: String): Action[AnyContent] = Action.async { implicit request =>
     invitationService
       .findInvitation(invitationId)
@@ -83,7 +85,7 @@ with RequestAwareLogging {
             result <-
               authorisedUser(
                 None,
-                enrolment.oneTaxIdentifier(),
+                ClientIdentifier(invitation.suppliedClientId, invitation.suppliedClientIdType).underlying,
                 strideRoles
               ) { implicit currentUser =>
                 authorisationAcceptService

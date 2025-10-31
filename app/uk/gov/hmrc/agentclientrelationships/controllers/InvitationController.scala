@@ -144,7 +144,7 @@ with AuthActions {
             result <-
               authorisedUser(
                 None,
-                enrolment.oneTaxIdentifier(),
+                ClientIdentifier(invitation.suppliedClientId, invitation.suppliedClientIdType).underlying,
                 strideRoles
               ) { currentUser =>
                 invitationService
