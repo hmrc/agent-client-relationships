@@ -21,6 +21,7 @@ import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.model.EmailInformation
+import uk.gov.hmrc.agentclientrelationships.stubs.DataStreamStub
 import uk.gov.hmrc.agentclientrelationships.stubs.EmailStubs
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 import uk.gov.hmrc.agentclientrelationships.support.WireMockSupport
@@ -31,7 +32,8 @@ class EmailConnectorISpec
 extends UnitSpec
 with GuiceOneServerPerSuite
 with WireMockSupport
-with EmailStubs {
+with EmailStubs
+with DataStreamStub {
 
   override lazy val app: Application = appBuilder.build()
 
@@ -54,6 +56,7 @@ with EmailStubs {
     )
 
     "return true when the email service responds with a 202" in {
+      givenAuditConnector()
       givenEmailSent(emailInfo)
 
       val result = await(connector.sendEmail(emailInfo))
@@ -62,6 +65,7 @@ with EmailStubs {
     }
 
     "return false when the email service responds with an unexpected status" in {
+      givenAuditConnector()
       givenEmailSent(emailInfo, SERVICE_UNAVAILABLE)
 
       val result = await(connector.sendEmail(emailInfo))

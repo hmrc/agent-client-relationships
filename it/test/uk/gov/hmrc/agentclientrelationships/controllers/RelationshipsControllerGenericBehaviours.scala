@@ -113,6 +113,7 @@ trait RelationshipsControllerGenericBehaviours {
       // UNHAPPY PATHS
 
       "return 404 when credentials are not found in es" in {
+        givenNinoIsUnknownFor(mtdItId)
         givenPrincipalGroupIdNotExistsFor(agentEnrolmentKey(arn))
         givenGroupInfo("foo", "bar")
         givenAgentIsAllocatedAndAssignedToClient(enrolmentKey, "bar")

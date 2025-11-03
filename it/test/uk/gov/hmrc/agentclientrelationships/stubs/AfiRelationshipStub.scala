@@ -18,6 +18,7 @@ package uk.gov.hmrc.agentclientrelationships.stubs
 
 import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.stubbing.StubMapping
+import play.api.http.Status.NOT_FOUND
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 
 import java.time.LocalDateTime
@@ -83,6 +84,15 @@ trait AfiRelationshipStub {
   ) = stubFor(
     delete(urlEqualTo(s"/agent-fi-relationship/relationships/agent/${arn.value}/service/$service/client/$clientId"))
       .willReturn(aResponse().withStatus(200))
+  )
+
+  def givenAfiRelationshipNotFound(
+    arn: Arn,
+    service: String,
+    clientId: String
+  ) = stubFor(
+    get(urlEqualTo(s"/agent-fi-relationship/relationships/agent/${arn.value}/service/$service/client/$clientId"))
+      .willReturn(aResponse().withStatus(NOT_FOUND))
   )
 
   def givenTerminateAfiRelationshipFails(

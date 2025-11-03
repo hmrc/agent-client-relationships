@@ -36,7 +36,9 @@ import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
 import uk.gov.hmrc.agentclientrelationships.services.EmailService
 import uk.gov.hmrc.agentclientrelationships.services.MongoLockService
+import uk.gov.hmrc.agentclientrelationships.stubs.DataStreamStub
 import uk.gov.hmrc.agentclientrelationships.stubs.EmailStubs
+import uk.gov.hmrc.agentclientrelationships.stubs.EnrolmentStoreProxyStubs
 import uk.gov.hmrc.agentclientrelationships.util.DateTimeHelper
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Vat
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Vrn
@@ -52,7 +54,9 @@ with MongoApp
 with GuiceOneServerPerSuite
 with WireMockSupport
 with BeforeAndAfterEach
-with EmailStubs {
+with EmailStubs
+with DataStreamStub
+with EnrolmentStoreProxyStubs {
 
   protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder()
     .configure(
@@ -106,6 +110,8 @@ with EmailStubs {
   "WarningEmailActor" should {
 
     "send warning emails for each ARN, and update the warningEmailSent flag to true" in {
+      givenAuditConnector()
+      givenPrincipalGroupIdNotExistsFor(EnrolmentKey(s"HMRC-AS-AGENT~AgentReferenceNumber~AARN0000002"))
       val differentAgentInvitation = baseInvitation.copy(
         arn = "TARN7654321",
         agencyName = "Will Fence",
@@ -194,6 +200,8 @@ with EmailStubs {
   "ExpiredEmailActor" should {
 
     "send expired emails for each invitation, update the status to Expired and the expiredEmailSent flag to true" in {
+      givenAuditConnector()
+      givenPrincipalGroupIdNotExistsFor(EnrolmentKey(s"HMRC-AS-AGENT~AgentReferenceNumber~AARN0000002"))
       val nonExpiredInvitation = baseInvitation.copy(warningEmailSent = true)
       val expiredInvitation = baseInvitation.copy(invitationId = "2", expiryDate = LocalDate.now().minusDays(1L))
       val expiredInvitationDiffAgent = expiredInvitation
@@ -245,6 +253,8 @@ with EmailStubs {
     }
 
     "set the status to Expired even when an email fails to send" in {
+      givenAuditConnector()
+      givenPrincipalGroupIdNotExistsFor(EnrolmentKey(s"HMRC-AS-AGENT~AgentReferenceNumber~AARN0000002"))
       val invitation = baseInvitation.copy(expiryDate = LocalDate.now().minusDays(1L))
       await(invitationsRepository.collection.insertOne(invitation).toFuture())
       await(invitationsRepository.findAllForExpiredEmail.toFuture()).size shouldBe 1

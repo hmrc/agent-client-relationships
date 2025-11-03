@@ -289,6 +289,7 @@ with AuthStub {
     }
 
     "return 401 when auth token is missing" in {
+      givenAuditConnector()
       requestIsNotAuthenticated()
 
       await(repo.findBy(arn, enrolmentKey)) shouldBe empty

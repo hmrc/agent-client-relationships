@@ -53,7 +53,8 @@ class ApiCreateInvitationControllerISpec
 extends BaseControllerISpec
 with ClientDetailsStub
 with HipStub
-with TestData {
+with TestData
+with CitizenDetailsStub {
 
   override def additionalConfig: Map[String, Any] = Map(
     "hip.enabled" -> true
@@ -206,6 +207,7 @@ with TestData {
     // Expected tests
     allServices.keySet.foreach(taxService =>
       s"return 201 status and valid JSON when invitation is created for $taxService" in {
+        givenClientHasNoRelationshipWithAnyAgentInCESA(nino = nino)
         val inputData: ApiCreateInvitationRequest = allServices(taxService)
 
         val clientId =
@@ -245,6 +247,7 @@ with TestData {
     s"return UnprocessableEntity status and valid JSON CLIENT_REGISTRATION_NOT_FOUND when invitation is created for Alt Itsa - no client mtdItId" in {
       val inputData: ApiCreateInvitationRequest = baseInvitationInputData
 
+      givenCitizenDetailsError(nino.value, 404)
       getStandardStubForCreateInvitation(HMRCMTDIT)
       givenMtdItIdIsUnKnownFor(nino)
       givenNinoIsUnknownFor(mtdItId)
@@ -332,6 +335,7 @@ with TestData {
     }
 
     s"return 201 status and valid JSON for ITSA request when Rejected request already exists in repo" in {
+      givenClientHasNoRelationshipWithAnyAgentInCESA(nino = nino)
       val taxService = HMRCMTDIT
       val inputData: ApiCreateInvitationRequest = baseInvitationInputData
 
@@ -405,6 +409,7 @@ with TestData {
       val taxIdentifier = mtdItId
       val clientId = mtdItId.value
 
+      givenClientHasNoRelationshipWithAnyAgentInCESA(nino = nino)
       getStandardStubForCreateInvitation(HMRCMTDIT)
       getActiveRelationshipsViaClient(taxIdentifier, arn)
       givenDelegatedGroupIdsExistFor(EnrolmentKey(HMRCMTDITSUPP, taxIdentifier), Set("foo"))
@@ -473,6 +478,7 @@ with TestData {
     s"return UNPROCESSABLE_ENTITY status and valid JSON CLIENT_REGISTRATION_NOT_FOUND when invitation is created for Alt Itsa - no client mtdItId and PartialAuth relationship exists" in {
       val inputData: ApiCreateInvitationRequest = baseInvitationInputData
 
+      givenCitizenDetailsError(nino.value, 404)
       getStandardStubForCreateInvitation(HMRCMTDIT)
       givenMtdItIdIsUnKnownFor(nino)
       givenNinoIsUnknownFor(mtdItId)
@@ -664,6 +670,7 @@ with TestData {
 
         givenAuditConnector()
         givenUserAuthorised()
+        givenMtdItIdIsUnKnownFor(nino)
         val expectedJson: JsValue = Json.toJson(
           toJson(
             ErrorBody(
