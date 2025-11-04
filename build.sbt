@@ -42,6 +42,7 @@ lazy val root = (project in file("."))
     Test / scalafmtOnCompile := true,
     Compile / doc / scalacOptions := Seq(), //this will allow to have warnings in `doc` task
     Test / doc / scalacOptions := Seq(), //this will allow to have warnings in `doc` task
+    Test / logBuffered := false
   )
   .enablePlugins(PlayScala, SbtDistributablesPlugin)
 
@@ -52,7 +53,8 @@ lazy val it = project
   .settings(libraryDependencies ++= AppDependencies.test)
   .settings(
     Compile / scalafmtOnCompile := true,
-    Test / scalafmtOnCompile := true
+    Test / scalafmtOnCompile := true,
+    Test / logBuffered := false
   )
 
 

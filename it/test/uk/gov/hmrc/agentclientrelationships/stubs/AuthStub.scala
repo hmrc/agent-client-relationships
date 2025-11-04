@@ -378,7 +378,7 @@ trait AuthStub {
   ): AuthStub = {
     val (service, key, value) =
       identifier match {
-        case Nino(v) => ("HMRC-NI", "NINO", v)
+        case Nino(v) => ("HMRC-PT", "NINO", v)
         case MtdItId(v) => ("HMRC-MTD-IT", "MTDITID", v)
         case Vrn(v) => ("HMRC-MTD-VAT", "VRN", v)
         case Utr(v) => ("HMRC-TERS-ORG", "SAUTR", v)
@@ -405,27 +405,6 @@ trait AuthStub {
                        |  "identifiers": [{
                        |			"key": "$key",
                        |			"value": "$value"
-                       |		}],
-                       |		"state": "Activated"
-                       |	}, {
-                       |		"key": "HMCE-VAT-AGNT",
-                       |		"identifiers": [{
-                       |			"key": "AgentRefNo",
-                       |			"value": "V3264H"
-                       |		}],
-                       |		"state": "Activated"
-                       |	}, {
-                       |		"key": "HMRC-AGENT-AGENT",
-                       |		"identifiers": [{
-                       |			"key": "AgentRefNumber",
-                       |			"value": "JARN1234567"
-                       |		}],
-                       |		"state": "Activated"
-                       |	}, {
-                       |		"key": "IR-SA-AGENT",
-                       |		"identifiers": [{
-                       |			"key": "IRAgentReference",
-                       |			"value": "V3264H"
                        |		}],
                        |		"state": "Activated"
                        |	}],

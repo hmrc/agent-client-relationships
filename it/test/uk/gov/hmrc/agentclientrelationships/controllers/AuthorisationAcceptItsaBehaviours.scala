@@ -71,7 +71,7 @@ trait AuthorisationAcceptItsaBehaviours {
       s"return 201 when client accept ${serviceIdAccept} invitation and $serviceIdCheck relationship do not exists" in {
 
         // OAuth
-        givenUserIsSubscribedClient(clientId)
+        givenUserIsSubscribedClient(suppliedClientId)
 
         val enrolmentKeyAccept = EnrolmentKey(Service.forId(serviceIdAccept), clientId)
         val enrolmentKeyToCheck = EnrolmentKey(Service.forId(serviceIdCheck), clientId)
@@ -143,7 +143,7 @@ trait AuthorisationAcceptItsaBehaviours {
       s"return 201 when accept ${serviceIdAccept} invitation and ES relationship exists for $serviceIdCheck " in {
 
         // OAuth
-        givenUserIsSubscribedClient(clientId)
+        givenUserIsSubscribedClient(suppliedClientId)
 
         val enrolmentKeyAccept = EnrolmentKey(Service.forId(serviceIdAccept), clientId)
         val enrolmentKeyToCheck = EnrolmentKey(Service.forId(serviceIdCheck), clientId)
