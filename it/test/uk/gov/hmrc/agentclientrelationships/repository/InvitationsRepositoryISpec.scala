@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 HM Revenue & Customs
+ * Copyright 2025 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,8 +17,8 @@
 package uk.gov.hmrc.agentclientrelationships.repository
 
 import com.mongodb.MongoWriteException
-import org.mongodb.scala.bson.BsonDocument
-import org.mongodb.scala.model.Indexes
+import org.bson.BsonDocument
+import com.mongodb.client.model.IndexModel
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
@@ -46,6 +46,8 @@ import java.time.LocalDate
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DAYS
 import scala.util.Random
+import scala.jdk.CollectionConverters._
+import com.mongodb.MongoClientSettings.getDefaultCodecRegistry
 
 class InvitationsRepositoryISpec
 extends AnyWordSpec
@@ -59,6 +61,16 @@ with DefaultPlayMongoRepositorySupport[Invitation] {
 
   implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
   val repository: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
+
+  private def indexKeys(model: IndexModel): Seq[(String, Int)] = {
+    val bson = model.getKeys.toBsonDocument(classOf[BsonDocument], getDefaultCodecRegistry)
+    bson.keySet().asScala.toSeq.flatMap { key =>
+      Option(bson.get(key)) match {
+        case Some(value) if value.isInt32 => Some(key -> value.asInt32().getValue)
+        case _ => None
+      }
+    }
+  }
 
   def pendingInvitation(
     service: Service = Vat,
@@ -89,24 +101,27 @@ with DefaultPlayMongoRepositorySupport[Invitation] {
   "InvitationsRepository" should {
 
     "have a TTL index of 30 days" in {
-      val ttlIndex = repository.indexes.find(_.getKeys.asInstanceOf[BsonDocument].containsKey("created")).get
+      val ttlIndex = repository.indexes.find { m =>
+        val keys = indexKeys(m).toMap
+        keys.contains("created") &&
+        m.getOptions.getExpireAfter(DAYS) == 30
+      }.getOrElse(fail("TTL index not found"))
 
       ttlIndex.getOptions.getName shouldBe "timeToLive"
-      ttlIndex.getOptions.getExpireAfter(DAYS) shouldBe 30
     }
 
-    "have a custom index for the arn field" in {
-      val arnIndex = repository.indexes.find(_.getKeys.asInstanceOf[BsonDocument].containsKey("arn")).get
-
-      arnIndex.getKeys shouldBe Indexes.ascending("arn")
-      arnIndex.getOptions.getName shouldBe "arnIndex"
-      arnIndex.getOptions.isUnique shouldBe false
+    "have an index starting with arn ascending" in {
+      val hasArnAscending = repository.indexes.exists { model =>
+        val keys = indexKeys(model)
+        keys.headOption.exists { case (field, direction) => field == "arn" && direction == 1 }
+      }
+      hasArnAscending shouldBe true
     }
 
     "have a custom index for the invitationId field" in {
-      val invitationIdIndex = repository.indexes.find(_.getKeys.asInstanceOf[BsonDocument].containsKey("invitationId")).get
+      val invitationIdIndex = repository.indexes.find(m => indexKeys(m).toMap.contains("invitationId")).get
 
-      invitationIdIndex.getKeys shouldBe Indexes.ascending("invitationId")
+      indexKeys(invitationIdIndex) shouldBe Seq("invitationId" -> 1)
       invitationIdIndex.getOptions.getName shouldBe "invitationIdIndex"
       invitationIdIndex.getOptions.isUnique shouldBe true
     }

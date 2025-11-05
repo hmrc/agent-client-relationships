@@ -84,7 +84,13 @@ extends PlayMongoRepository[Invitation](
   collectionName = "invitations",
   domainFormat = Invitation.mongoFormat,
   indexes = Seq(
-    IndexModel(Indexes.ascending(arnKey), IndexOptions().name("arnIndex")),
+    IndexModel(
+      Indexes.compoundIndex(
+        Indexes.ascending(arnKey),
+        Indexes.descending("created")
+      ),
+      IndexOptions().name("arnCreatedIdx")
+    ),
     IndexModel(Indexes.ascending(invitationIdKey), IndexOptions().name("invitationIdIndex").unique(true)),
     IndexModel(
       Indexes.ascending(
