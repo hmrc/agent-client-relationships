@@ -177,7 +177,7 @@ with RequestAwareLogging {
           agentUser.agentCode
         )
         _ = auditData.set(enrolmentDelegatedKey, true)
-        _ <- agentUserClientDetailsConnector.cacheRefresh(arn)
+        _ = agentUserClientDetailsConnector.cacheRefresh(arn)
         _ <- updateEsSyncStatus(Success)
       } yield Done
     ).recoverWith {
@@ -234,6 +234,7 @@ with RequestAwareLogging {
                     deleteRecordRepository
                       .remove(removedArn, enrolmentKey)
                       .map { updated =>
+                        agentUserClientDetailsConnector.cacheRefresh(removedArn)
                         if (updated > 0) {
                           auditService.auditForAgentReplacement(removedArn, enrolmentKey)
                           true

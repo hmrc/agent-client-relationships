@@ -192,7 +192,7 @@ with Logging {
             case false => Future.successful(false)
           }
         _ = auditData.set(enrolmentDeallocatedKey, enrolmentDeallocated)
-        _ <- agentUserClientDetailsConnector.cacheRefresh(arn)
+        _ = agentUserClientDetailsConnector.cacheRefresh(arn)
         _ =
           if (!enrolmentDeallocated)
             logger.warn(s"[DeleteRelationshipsService] ES record not found for ${arn.value}, $enrolmentKey")
