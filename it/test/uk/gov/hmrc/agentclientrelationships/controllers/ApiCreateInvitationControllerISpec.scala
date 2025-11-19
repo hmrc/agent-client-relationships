@@ -161,7 +161,6 @@ with CitizenDetailsStub {
     }
 
     if (taxService == HMRCMTDVAT) {
-      givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMCE-VATDEC-ORG~VATRegNo~101747641"))
       givenDelegatedGroupIdsNotExistFor(EnrolmentKey(taxService, vrn))
       givenVatCustomerInfoExists(vrn = vrn.value, regDate = "2020-01-01")
     }

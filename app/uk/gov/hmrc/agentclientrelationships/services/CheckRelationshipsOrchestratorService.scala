@@ -24,14 +24,12 @@ import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys.credIdKey
 import uk.gov.hmrc.agentclientrelationships.connectors._
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.UserId
-import uk.gov.hmrc.agentclientrelationships.support.AdminNotFound
 import uk.gov.hmrc.agentclientrelationships.support.Monitoring
 import uk.gov.hmrc.agentclientrelationships.support.RelationshipDeletePending
 import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Vrn
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
@@ -80,8 +78,6 @@ with RequestAwareLogging {
             EnrolmentKey(service, mtdItId)
           )
         }
-      // Legacy VAT enrolment check
-      case ("HMCE-VATDEC-ORG", "vrn", _) if Vrn.isValid(clientId) => checkWithVrn(arn, Vrn(clientId))
       // PIR relationships are done through agent-fi-relationships
       case (Service.PersonalIncomeRecord.id, _, _) =>
         checkAgentFiRelationship(
@@ -153,12 +149,6 @@ with RequestAwareLogging {
 
     result.recoverWith {
       case RelationshipNotFound(errorCode) =>
-        checkOldRelationship(
-          arn,
-          enrolmentKey,
-          errorCode
-        )
-      case AdminNotFound(errorCode) =>
         checkOldRelationship(
           arn,
           enrolmentKey,
@@ -250,27 +240,6 @@ with RequestAwareLogging {
           logger.warn(
             s"checkWithNino: lookupCesaForOldRelationship failed for arn: ${arn.value}, nino: $nino, ${ex.getMessage}"
           )
-          CheckRelationshipNotFound()
-      }
-  }
-
-  private def checkWithVrn(
-    arn: Arn,
-    vrn: Vrn
-  )(implicit request: RequestHeader): Future[CheckRelationshipResult] = {
-    implicit val auditData: AuditData = new AuditData()
-    auditData.set(arnKey, arn)
-
-    checkOldAndCopyService
-      .lookupESForOldRelationship(arn, vrn)
-      .map {
-        case references if references.nonEmpty => CheckRelationshipFound
-        case _ => CheckRelationshipNotFound()
-      }
-      .recover {
-        case upS: UpstreamErrorResponse => throw upS
-        case NonFatal(_) =>
-          logger.warn("checkWithVrn: lookupESForOldRelationship failed")
           CheckRelationshipNotFound()
       }
   }

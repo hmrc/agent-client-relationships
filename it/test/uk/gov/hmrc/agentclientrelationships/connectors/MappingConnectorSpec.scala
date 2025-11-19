@@ -100,19 +100,6 @@ with DataStreamStub {
       givenAuditConnector()
       await(mappingConnector.getSaAgentReferencesFor(arn)) shouldBe empty
     }
-
-    "return agent codes for some known ARN" in {
-      givenArnIsKnownFor(arn, AgentCode("foo"))
-      givenAuditConnector()
-      await(mappingConnector.getAgentCodesFor(arn)) shouldBe Seq(AgentCode("foo"))
-    }
-
-    "return multiple agent codes for some known ARN" in {
-      val oldAgentCodes = Seq(AgentCode("001"), AgentCode("002"))
-      givenArnIsKnownForAgentCodes(arn, oldAgentCodes)
-      givenAuditConnector()
-      await(mappingConnector.getAgentCodesFor(arn)) shouldBe oldAgentCodes
-    }
   }
 
 }

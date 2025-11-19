@@ -325,7 +325,6 @@ with HipStub {
           setupCommonStubs(request)
           givenVatCustomerInfoExists("101747641")
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-VAT", Vrn("101747641")))
-          givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMCE-VATDEC-ORG~VATRegNo~101747641"))
 
           val result = doGetRequest(request.uri)
           result.status shouldBe 200
@@ -342,7 +341,6 @@ with HipStub {
           setupCommonStubs(request)
           givenVatCustomerInfoExists("101747641")
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-VAT", Vrn("101747641")))
-          givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMCE-VATDEC-ORG~VATRegNo~101747641"))
           await(
             invitationsRepo.create(
               "XARN1234567",

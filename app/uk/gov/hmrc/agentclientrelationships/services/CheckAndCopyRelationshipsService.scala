@@ -417,37 +417,6 @@ with RequestAwareLogging {
       Future successful true
   )
 
-  def lookupESForOldRelationship(
-    arn: Arn,
-    clientVrn: Vrn
-  )(implicit
-    request: RequestHeader,
-    auditData: AuditData
-  ): Future[Set[AgentCode]] = {
-    auditData.set("vrn", clientVrn)
-
-    for {
-      agentGroupIds <- es.getDelegatedGroupIdsForHMCEVATDECORG(clientVrn)
-      groupInfos = agentGroupIds.map(ugs.getGroupInfo)
-      agentCodes <- Future
-        .sequence(groupInfos)
-        .map { setOptions: Set[Option[GroupInfo]] =>
-          setOptions
-            .flatMap { maybeGroup =>
-              maybeGroup.map(_.agentCode)
-            }
-            .collect { case Some(ac) => ac }
-        }
-      matching <-
-        intersection[AgentCode](agentCodes.toSeq) {
-          mapping.getAgentCodesFor(arn)
-        }
-      _ = auditData.set("oldAgentCodes", matching.map(_.value).mkString(","))
-      _ = auditData.set("ESRelationship", matching.nonEmpty)
-      _ <- auditService.sendCheckEsAuditEvent()
-    } yield matching
-  }
-
   def intersection[A](referenceIds: Seq[A])(mappingServiceCall: => Future[Seq[A]])(implicit request: RequestHeader): Future[Set[A]] = {
     val referenceIdSet = referenceIds.toSet
 
