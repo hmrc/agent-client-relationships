@@ -58,16 +58,7 @@ with HipStub {
   val checkRelationshipsService: CheckRelationshipsOrchestratorService = app.injector
     .instanceOf[CheckRelationshipsOrchestratorService]
 
-  val controller =
-    new ClientDetailsController(
-      clientDetailsService,
-      checkRelationshipsService,
-      invitationsRepo,
-      partialAuthRepo,
-      authConnector,
-      stubControllerComponents(),
-      appConfig
-    )
+  val controller: ClientDetailsController = app.injector.instanceOf[ClientDetailsController]
 
   def setupCommonStubs(request: FakeRequest[?]): Unit = {
     givenAuthorisedAsValidAgent(request, "XARN1234567")

@@ -17,6 +17,7 @@
 package uk.gov.hmrc.agentclientrelationships.controllers
 
 import com.google.inject.AbstractModule
+import org.mongodb.scala.bson.BsonDocument
 import org.scalatest.concurrent.IntegrationPatience
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
@@ -47,6 +48,8 @@ import uk.gov.hmrc.http.HttpResponse
 import uk.gov.hmrc.mongo.CurrentTimestampSupport
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.test.MongoSupport
+
+import scala.concurrent.Future
 
 trait BaseControllerISpec
 extends UnitSpec
@@ -127,7 +130,11 @@ with IntegrationPatience {
   override def beforeEach() = {
     super.beforeEach()
     givenAuditConnector()
-    await(mongoComponent.database.drop().toFuture())
+    await(mongoComponent.database.listCollectionNames().toFuture().flatMap { collections =>
+      Future.sequence(collections.map { name =>
+        mongoComponent.database.getCollection(name).deleteMany(BsonDocument()).toFuture()
+      })
+    })
   }
 
   val arn = Arn("AARN0000002")
@@ -154,6 +161,8 @@ with IntegrationPatience {
   val mtdItSuppEnrolmentKey: LocalEnrolmentKey = LocalEnrolmentKey(Service.MtdItSupp, mtdItId)
   val mtdItIdUriEncoded: String = UriEncoding.encodePathSegment(mtdItId.value, "UTF-8")
   val vrn = Vrn("101747641")
+  val vrn2 = Vrn("101747642")
+  val vrn3 = Vrn("101747643")
   val testVatRegDate = "2020-01-01"
   val vatEnrolmentKey: LocalEnrolmentKey = LocalEnrolmentKey(Service.Vat, vrn)
   val vrnUriEncoded: String = UriEncoding.encodePathSegment(vrn.value, "UTF-8")

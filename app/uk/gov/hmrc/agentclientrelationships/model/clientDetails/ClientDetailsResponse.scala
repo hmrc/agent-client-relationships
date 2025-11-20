@@ -29,8 +29,8 @@ case class ClientDetailsResponse(
   knownFactType: Option[KnownFactType],
   hasPendingInvitation: Boolean = false,
   hasExistingRelationshipFor: Option[String] = None,
-  isMapped: Boolean = false,
-  clientsLegacyRelationships: Seq[String] = Seq.empty
+  isMapped: Option[Boolean] = None,
+  clientsLegacyRelationships: Option[Seq[String]] = None
 ) {
   def containsKnownFact(knownFact: String): Boolean = knownFacts
     .map(_.replaceAll("\\s", "").toUpperCase)

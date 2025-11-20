@@ -116,9 +116,9 @@ with AuthActions {
                   case None if Nino.isValid(clientId) && refinedService.equals(HMRCMTDIT) =>
                     checkAndCopyRelationshipsService
                       .lookupCesaForOldRelationship(arn, Nino(clientId)).map {
-                        case (mappedRef, legacyRefs) => (mappedRef.nonEmpty, legacyRefs.map(_.value))
+                        case (mappedRef, legacyRefs) => (Some(mappedRef.nonEmpty), Some(legacyRefs.map(_.value)))
                       }
-                  case _ => Future.successful((false, Seq()))
+                  case _ => Future.successful((None, None))
                 }
             } yield Ok(
               Json.toJson(
