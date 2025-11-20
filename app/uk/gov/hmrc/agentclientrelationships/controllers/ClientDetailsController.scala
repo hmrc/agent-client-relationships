@@ -68,7 +68,7 @@ with AuthActions {
 
   private val multiAgentServices: Map[String, String] = Map(HMRCMTDIT -> HMRCMTDITSUPP)
 
-  // scalastyle:off method.length
+  // scalastyle:off method.length cyclomatic.complexity
   def findClientDetails(
     service: String,
     clientId: String
@@ -112,8 +112,8 @@ with AuthActions {
               pendingInvitation = pendingInvitationMain || pendingInvitationSupp
               currentRelationship = currentRelationshipMain.orElse(currentRelationshipSupp)
               (isMapped, legacyRelationships) <-
-                (currentRelationship, clientId) match {
-                  case (None, clientId) if Nino.isValid(clientId) =>
+                currentRelationship match {
+                  case None if Nino.isValid(clientId) && refinedService.equals(HMRCMTDIT) =>
                     checkAndCopyRelationshipsService
                       .lookupCesaForOldRelationship(arn, Nino(clientId)).map {
                         case (mappedRef, legacyRefs) => (mappedRef.nonEmpty, legacyRefs.map(_.value))
