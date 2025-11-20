@@ -74,7 +74,7 @@ class MappingConnector @Inject() (
 extends RequestAwareLogging {
 
   def getSaAgentReferencesFor(arn: Arn)(implicit rh: RequestHeader): Future[Seq[SaAgentReference]] = httpClient
-    .get(url"${appConfig.agentMappingUrl}/agent-mapping/mappings/${arn.value}")
+    .get(url"${appConfig.agentMappingUrl}/agent-mapping/mappings/sa/${arn.value}")
     .execute[HttpResponse]
     .map { response =>
       // TODO: Fix error handling
