@@ -1,0 +1,91 @@
+sequenceDiagram
+    participant Agent
+    participant CDC as ClientDetailsController
+    participant CDS as ClientDetailsService
+    participant CD as citizen-details
+    participant HIP as IF/HIP
+    participant CRS as CheckRelationshipsOrchestratorService
+    participant IR as InvitationsRepository
+    participant PAuth as PartialAuthRepository
+
+    Agent->>+CDC: GET /client/:service/details/:clientId
+    Note over CDC: withAuthorisedAsAgent(arn)<br/>Agent authentication
+
+    CDC->>+CDS: findClientDetails(service, clientId)
+
+    alt Service is HMRC-MTD-IT or HMRC-MTD-IT-SUPP
+        CDS->>+HIP: getItsaBusinessDetails(clientId as NINO)
+        HIP-->>-CDS: ItsaBusinessDetails (name, address, overseas status)
+    else Service is HMRC-MTD-VAT or HMCE-VATDEC-ORG
+        CDS->>+HIP: getVatCustomerDetails(clientId as VRN)
+        HIP-->>-CDS: VatCustomerDetails (name, address, registration date)
+    else Service is HMRC-TERS-ORG or HMRC-TERSNT-ORG
+        CDS->>+HIP: getTrustDetails(clientId as UTR/URN)
+        HIP-->>-CDS: TrustDetails (name, address)
+    else Service is PERSONAL-INCOME-RECORD
+        CDS->>+CD: getCitizenDetails(clientId as NINO)
+        CD-->>-CDS: CitizenDetails (name, address, date of birth)
+    else Service is HMRC-CGT-PD
+        CDS->>+HIP: getCgtSubscriptionDetails(clientId as CGT ref)
+        HIP-->>-CDS: CgtSubscriptionDetails (name, address, overseas status)
+    else Service is HMRC-PPT-ORG
+        CDS->>+HIP: getPptSubscriptionDetails(clientId as PPT ref)
+        HIP-->>-CDS: PptSubscriptionDetails (name, address)
+    else Service is HMRC-CBC-ORG
+        CDS->>+HIP: getCbcSubscriptionDetails(clientId as CBC ID)
+        HIP-->>-CDS: CbcSubscriptionDetails (name, email, overseas status)
+    else Service is HMRC-PILLAR2-ORG
+        CDS->>+HIP: getPillar2SubscriptionDetails(clientId as PLR ID)
+        HIP-->>-CDS: Pillar2SubscriptionDetails (name, address)
+    end
+
+    CDS->>CDS: Extract name, known facts (postcode/country),<br/>overseas status, known fact type
+    CDS-->>-CDC: ClientDetailsResponse
+
+    alt CBC-ORG and isOverseas=true
+        CDC->>CDC: Refine service to HMRC-CBC-NONUKORG
+    end
+
+    par Check pending invitation (main service)
+        CDC->>+IR: findAllForAgent(arn, service, clientId, isSuppliedClientId=true)
+        Note over IR: Query MongoDB invitations collection
+        IR-->>-CDC: Seq[Invitation]
+        CDC->>CDC: Check if any status == Pending
+    and Check pending invitation (supporting service if applicable)
+        alt Service is HMRC-MTD-IT
+            CDC->>+IR: findAllForAgent(arn, HMRC-MTD-IT-SUPP, clientId, isSuppliedClientId=true)
+            IR-->>-CDC: Seq[Invitation]
+            CDC->>CDC: Check if any status == Pending
+        end
+    and Check existing relationship (main service)
+        CDC->>+CRS: checkForRelationship(arn, service, clientIdType, clientId, userId=None)
+        Note over CRS: Uses full ACR01 flow
+        CRS-->>-CDC: CheckRelationshipFound/NotFound
+
+        alt Not found AND service is HMRC-MTD-IT or HMRC-MTD-IT-SUPP
+            CDC->>+PAuth: findActive(service, nino, arn)
+            Note over PAuth: Query MongoDB partial_auth collection
+            PAuth-->>-CDC: Option[PartialAuth]
+        end
+    and Check existing relationship (supporting service if applicable)
+        alt Service is HMRC-MTD-IT
+            CDC->>+CRS: checkForRelationship(arn, HMRC-MTD-IT-SUPP, clientIdType, clientId, userId=None)
+            CRS-->>-CDC: CheckRelationshipFound/NotFound
+
+            alt Not found
+                CDC->>+PAuth: findActive(HMRC-MTD-IT-SUPP, nino, arn)
+                PAuth-->>-CDC: Option[PartialAuth]
+            end
+        end
+    end
+
+    CDC->>CDC: Combine results:<br/>- hasPendingInvitation (main OR supp)<br/>- hasExistingRelationshipFor (main OR supp)
+
+    alt ClientDetailsResponse found
+        CDC-->>Agent: 200 OK with enriched ClientDetailsResponse
+    else ClientDetailsNotFound
+        CDC-->>Agent: 404 Not Found
+    else ErrorRetrievingClientDetails
+        CDC-->>-Agent: 500 Internal Server Error (RuntimeException)
+    end
+

@@ -1,0 +1,100 @@
+sequenceDiagram
+    participant ExtSys as External System
+    participant ACIC as ApiCreateInvitationController
+    participant VS as ValidationService
+    participant AAS as AgentAssuranceService
+    participant AM as Agent Maintainer
+    participant IR as InvitationsRepository
+    participant IFOrHIP as IF/HIP Connector
+    participant CDS as ClientDetailsService
+    participant DES as DES
+    participant AKFCS as ApiKnownFactsCheckService
+    participant CROS as CheckRelationshipsOrchestratorService
+    participant PAuthRepo as PartialAuthRepository
+
+    ExtSys->>ACIC: POST /api/{arn}/invitation<br/>[ApiCreateInvitationRequest]
+    activate ACIC
+
+    Note over ACIC: OAuth2 authentication check
+
+    Note over ACIC: Parse and validate request body JSON
+
+    ACIC->>VS: Validate service, suppliedClientId, clientType
+    activate VS
+
+    alt Invalid payload
+        VS-->>ACIC: Validation error
+    else Valid payload
+        VS-->>ACIC: Parsed: service, suppliedClientId, clientType
+    end
+
+    deactivate VS
+
+    alt Invalid payload - return error
+        Note over ACIC: Validation failed - will return 400
+        ACIC-->>ExtSys: 400 Bad Request - INVALID_PAYLOAD
+    else Valid payload - continue processing
+        Note over ACIC: Continue with invitation creation
+
+        alt MTD-IT or MTD-IT-SUPP with NINO
+            ACIC->>IFOrHIP: getMtdIdFor(nino)
+            activate IFOrHIP
+            IFOrHIP-->>ACIC: MtdItId or None
+            deactivate IFOrHIP
+        end
+
+        ACIC->>IR: findAllForAgent(arn, service, clientId)
+        activate IR
+        IR-->>ACIC: Existing invitations
+        deactivate IR
+
+        ACIC->>IR: findAllForAgent(arn, MTD-IT-SUPP, clientId)
+        activate IR
+        IR-->>ACIC: Existing SUPP invitations
+        deactivate IR
+
+        ACIC->>AAS: getNonSuspendedAgentRecord(arn)
+        activate AAS
+        AAS->>AM: GET /agent-maintainer/agent/{arn}
+        activate AM
+        AM-->>AAS: AgentRecord
+        deactivate AM
+        AAS-->>ACIC: AgentRecord or None
+        deactivate AAS
+
+        ACIC->>CDS: findClientDetails(service, suppliedClientId)
+        activate CDS
+        CDS->>DES: Service-specific endpoint
+        activate DES
+        DES-->>CDS: Client details
+        deactivate DES
+        CDS-->>ACIC: ClientDetailsResponse or Error
+        deactivate CDS
+
+        ACIC->>AKFCS: checkKnownFacts(knownFact, clientDetails)
+        activate AKFCS
+        AKFCS-->>ACIC: Valid or Error
+        deactivate AKFCS
+
+        ACIC->>CROS: checkForRelationship(arn, service, clientIdType, clientId)
+        activate CROS
+        CROS-->>ACIC: CheckRelationshipNotFound or Found
+        deactivate CROS
+
+        ACIC->>PAuthRepo: findActive(service, nino, arn)
+        activate PAuthRepo
+        PAuthRepo-->>ACIC: None or Some(PartialAuth)
+        deactivate PAuthRepo
+
+        ACIC->>IR: create(invitation)
+        activate IR
+        IR-->>ACIC: Invitation or Error
+        deactivate IR
+
+        Note over ACIC: Process result and send response
+        ACIC-->>ExtSys: 201/403/422 Response
+    end
+
+    Note over ACIC: Request complete
+    deactivate ACIC
+

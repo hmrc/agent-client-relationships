@@ -1,0 +1,92 @@
+sequenceDiagram
+    participant Client
+    participant ILC as InvitationLinkController
+    participant ILS as InvitationLinkService
+    participant ARR as AgentReferenceRepository
+    participant AAS as agent-assurance
+    participant IS as InvitationService
+    participant IR as InvitationsRepository
+    participant CRS as CheckRelationshipsService
+    participant ESP as Enrolment Store Proxy<br/>EACD
+    participant AFRC as agent-fi-relationship
+    participant AMS as agent-assurance
+
+    Client->>+ILC: POST /client/validate-invitation<br/>{uid, serviceKeys}
+    Note over ILC: withAuthorisedClientForServiceKeys(serviceKeys)<br/>Validates client has required enrolments
+
+    ILC->>ILC: Extract enrolments from auth<br/>(client's tax identifiers)
+
+    ILC->>+ILS: validateInvitationRequest(uid)
+    ILS->>+ARR: findBy(uid)
+    ARR-->>-ILS: Option[AgentReferenceRecord]
+
+    alt UID not found
+        ILS-->>ILC: Left(AgentReferenceDataNotFound)
+        ILC-->>Client: 404 Not Found
+    else UID found
+        ILS->>+AAS: getNonSuspendedAgentRecord(arn)
+        AAS-->>-ILS: Option[AgentDetailsDesResponse]
+
+        alt Agent suspended
+            ILS-->>ILC: Left(AgentSuspended)
+            ILC-->>Client: 403 Forbidden
+        else Agent not suspended
+            ILS-->>-ILC: Right(ValidateLinkResponse(arn, agencyName))
+
+            ILC->>ILC: Build servicesToSearch from enrolments<br/>(handle HMRC-NI/PT → HMRC-MTD-IT/PIR)
+            ILC->>ILC: Extract clientIds from enrolments
+
+            ILC->>+IS: findAllForAgent(arn, servicesToSearch, clientIds)
+            IS->>+IR: findAllForAgent(arn, services, clientIds, isSuppliedClientId=true)
+            Note over IR: Query MongoDB invitations<br/>for matching invitations
+            IR-->>-IS: Seq[Invitation]
+            IS-->>-ILC: Seq[Invitation]
+
+            alt No invitations found
+                ILC-->>Client: 404 Not Found
+            else Invitations found
+                ILC->>ILC: Select invitation:<br/>1. Pending invitation if exists<br/>2. Else most recently created
+
+                ILC->>+CRS: findCurrentMainAgent(invitation, enrolment)
+
+                alt MTD-IT or MTD-IT-SUPP with NINO
+                    CRS->>CRS: findMainAgentForNino(invitation)
+                    Note over CRS: Checks EACD, partial_auth, and mappings
+                else PIR service
+                    CRS->>+AFRC: findIrvActiveRelationshipForClient(clientId)
+                    AFRC-->>-CRS: Seq[ClientRelationship]
+                    alt Relationship found
+                        CRS->>+AMS: getAgentRecord(arn)
+                        AMS-->>-CRS: AgentDetails
+                        CRS-->>ILC: Some(ExistingMainAgent)
+                    end
+                else CBC-ORG with enrolment
+                    CRS->>+ESP: getDelegatedGroupIdsFor(enrolmentKey)
+                    ESP-->>-CRS: Group IDs
+                    CRS->>+ESP: getPrincipalGroupIdFor(groupId)
+                    ESP-->>-CRS: ARN
+                    alt ARN found
+                        CRS->>+AMS: getAgentRecord(arn)
+                        AMS-->>-CRS: AgentDetails
+                        CRS-->>ILC: Some(ExistingMainAgent)
+                    end
+                else Other services
+                    CRS->>CRS: Build enrolment key from invitation
+                    CRS->>+ESP: getDelegatedGroupIdsFor(enrolmentKey)
+                    ESP-->>-CRS: Group IDs
+                    CRS->>+ESP: getPrincipalGroupIdFor(groupId)
+                    ESP-->>-CRS: ARN
+                    alt ARN found
+                        CRS->>+AMS: getAgentRecord(arn)
+                        AMS-->>-CRS: AgentDetails
+                        CRS-->>-ILC: Some(ExistingMainAgent)
+                    end
+                end
+
+                ILC->>ILC: Build ValidateInvitationResponse:<br/>- invitationId, service, agencyName<br/>- status, lastUpdated<br/>- existingMainAgent (if found)<br/>- clientType
+
+                ILC-->>-Client: 200 OK with ValidateInvitationResponse
+            end
+        end
+    end
+

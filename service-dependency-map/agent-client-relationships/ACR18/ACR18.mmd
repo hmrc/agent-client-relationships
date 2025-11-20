@@ -1,0 +1,56 @@
+sequenceDiagram
+    participant Client
+    participant ARIC as AuthorisationRequestInfoController
+    participant AA as AuthActions
+    participant IS as InvitationService
+    participant ILS as InvitationLinkService
+    participant IR as InvitationsRepository
+    participant AAS as AgentAssuranceService
+    participant ARR as AgentReferenceRepository
+    participant Mongo as MongoDB
+
+    Client->>+ARIC: GET /agent/{arn}/authorisation-request-info/{invitationId}
+    Note over ARIC: withAuthorisedAsAgent
+    ARIC->>+AA: Authenticate agent
+    AA-->>-ARIC: Authenticated
+
+    ARIC->>+IS: findInvitationForAgent(arn, invitationId)
+    IS->>+IR: findOneByIdForAgent(arn, invitationId)
+    IR->>+Mongo: Query invitations collection<br/>(arn + invitationId)
+    Mongo-->>-IR: Invitation document
+    IR-->>-IS: Option[Invitation]
+    IS-->>-ARIC: Option[Invitation]
+
+    alt Invitation Found
+        ARIC->>+ILS: createLink(arn)
+        ILS->>+AAS: getAgentRecord(arn)
+        AAS-->>-ILS: AgentDetailsDesResponse
+        Note over ILS: Normalize agency name
+
+        ILS->>+ARR: findByArn(arn)
+        ARR->>+Mongo: Query agent-reference collection
+        Mongo-->>-ARR: Option[AgentReferenceRecord]
+        ARR-->>-ILS: Option[AgentReferenceRecord]
+
+        alt Agent Reference Exists
+            Note over ILS: Check if normalized name exists
+            alt Normalized Name Not in List
+                ILS->>+ARR: updateAgentName(uid, normalizedName)
+                ARR->>+Mongo: Update normalisedAgentNames array
+                Mongo-->>-ARR: Updated
+                ARR-->>-ILS: Unit
+            end
+        else Agent Reference Does Not Exist
+            Note over ILS: Generate new UID
+            ILS->>+ARR: create(AgentReferenceRecord)
+            ARR->>+Mongo: Insert new agent-reference document
+            Mongo-->>-ARR: Created
+            ARR-->>-ILS: Unit
+        end
+
+        ILS-->>-ARIC: CreateLinkResponse(uid, normalizedName)
+        Note over ARIC: Construct AuthorisationRequestInfo
+        ARIC-->>-Client: 200 OK - Invitation + Link
+    else Invitation Not Found
+        ARIC-->>-Client: 404 Not Found
+    end

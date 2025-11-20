@@ -1,0 +1,117 @@
+{
+    "apiId": "ACR16",
+    "apiTitle": "Accept Authorization Request (Create Relationship)",
+    "description": "MOST COMPLEX ENDPOINT - Allows client or Stride user to accept pending invitation and CREATE the actual agent-client relationship. Unlike ACR15 (simple status update), this creates relationships in EACD (via allocateEnrolmentToAgent) and/or ETMP (via HIP), handles special logic for MTD-IT/MTD-IT-SUPP/PIR/Alt-ITSA, deauthorizes existing agents, manages partial auth, updates invitation status, sends emails, updates friendly names, and audits events. Can return 423 Locked if relationship creation is locked.",
+    "method": "PUT",
+    "path": "/authorisation-response/accept/{invitationId}",
+    "complexity": "VERY HIGH - Multiple service-specific flows, relationship creation in EACD/ETMP, deauth logic, partial auth handling",
+    "pathParameters": {
+        "invitationId": "Unique invitation identifier"
+    },
+    "responses": {
+        "204": "No Content - invitation accepted and relationship created",
+        "423": "Locked - relationship creation is locked (CreateRelationshipLocked)",
+        "403": "Forbidden - invitation not found, not pending, or user not authorized",
+        "401": "Unauthorized - user not authenticated",
+        "500": "Internal Server Error - various failures"
+    },
+    "authentication": "Two-phase: lookup invitation, then authorisedUser validates client OR Stride user",
+    "audience": "internal",
+    "controller": "AuthorisationAcceptController",
+    "controllerMethod": "accept",
+    "keyServices": [
+        "AuthorisationAcceptService - orchestrates complex acceptance flow",
+        "CreateRelationshipsService - creates relationships in EACD and ETMP",
+        "ItsaDeauthAndCleanupService - handles MTD-IT/MTD-IT-SUPP deauth",
+        "PartialAuthRepository - manages IR-SA partial authorizations",
+        "agent-fi-relationship - handles PIR relationships",
+        "FriendlyNameService - updates client friendly names"
+    ],
+    "externalDependencies": [
+        "EACD (Enrolment Store Proxy) - allocateEnrolmentToAgent creates delegation",
+        "ETMP via HIP - creates tax service relationships",
+        "agent-fi-relationship - creates PIR relationships",
+        "EmailService - sends acceptance confirmation"
+    ],
+    "databaseCollections": [
+        "invitations - UPDATE status to Accepted or PartialAuth",
+        "partial_auth - CREATE for Alt-ITSA, DELETE for deauth"
+    ],
+    "serviceSpecificFlows": {
+        "PIR": {
+            "description": "Personal Income Record via agent-fi-relationship",
+            "flow": "agent-fi-relationship.createRelationship() - handles own deauth",
+            "note": "Does NOT use CreateRelationshipsService"
+        },
+        "MTD-IT_Alt-ITSA": {
+            "description": "Alternative ITSA (IR-SA partial authorization)",
+            "flow": "Deauth existing partial auth → Create new partial auth record",
+            "status": "PartialAuth (not Accepted)",
+            "note": "Uses PartialAuthRepository, not CreateRelationshipsService"
+        },
+        "MTD-IT-SUPP_Alt-ITSA": {
+            "description": "Supporting ITSA with Alt-ITSA",
+            "flow": "Create partial auth record (no deauth)",
+            "status": "PartialAuth",
+            "note": "Does NOT deauth current agent"
+        },
+        "MTD-IT_Normal": {
+            "description": "Main ITSA (full authorization)",
+            "flow": "Deauth partial auth → deleteSameAgentRelationship → CreateRelationshipsService (EACD + ETMP)",
+            "status": "Accepted",
+            "note": "Automatically deauths current ITSA agent, manually deauth alt-itsa"
+        },
+        "MTD-IT-SUPP_Normal": {
+            "description": "Supporting ITSA",
+            "flow": "deleteSameAgentRelationship → CreateRelationshipsService",
+            "status": "Accepted"
+        },
+        "Other_Services": {
+            "description": "VAT, Trusts, CGT, PPT, CBC, Pillar2",
+            "flow": "CreateRelationshipsService (EACD allocateEnrolmentToAgent + ETMP via HIP)",
+            "status": "Accepted"
+        }
+    },
+    "businessLogic": {
+        "deleteSameAgentRelationship": {
+            "description": "For MTD-IT/MTD-IT-SUPP: removes existing main/supp relationship for SAME agent",
+            "reason": "Prevents agent having both main and supp for same client",
+            "services": "Only MTD-IT and MTD-IT-SUPP"
+        },
+        "deauthAcceptedInvitations": {
+            "description": "Deauthorizes other accepted invitations for this client/service",
+            "execution": "Async (non-blocking)",
+            "reason": "Client can only have one active agent per service"
+        },
+        "partialAuth": {
+            "description": "IR-SA partial authorization for Alt-ITSA",
+            "status": "PartialAuth (not Accepted)",
+            "storage": "MongoDB partial_auth collection",
+            "deauth": "Existing partial auth deactivated before creating new"
+        },
+        "createRelationshipLocked": {
+            "description": "Relationship creation can be locked",
+            "response": "423 Locked",
+            "recovery": "Client should retry later"
+        }
+    },
+    "importantNotes": [
+        "⚠️ MOST COMPLEX ENDPOINT - Multiple service-specific flows",
+        "⚠️ CREATES ACTUAL RELATIONSHIPS - In EACD and/or ETMP",
+        "✅ Service-specific logic for PIR, MTD-IT, MTD-IT-SUPP, Alt-ITSA, others",
+        "✅ Deauthorizes existing agents (service-specific)",
+        "✅ Handles partial auth (Alt-ITSA) separately from full auth",
+        "✅ Can return 423 Locked if relationship creation locked",
+        "✅ Updates invitation status to Accepted or PartialAuth",
+        "✅ Sends acceptance email (async)",
+        "✅ Updates friendly name (async)",
+        "✅ Audits event with relationship creation details",
+        "⚠️ NOT ATOMIC - Multiple steps, can partially fail",
+        "⚠️ Complex deauth logic varies by service"
+    ],
+    "comparisonWithACR15": {
+        "ACR15_reject": "Simple - update status, email, audit",
+        "ACR16_accept": "Complex - create relationships in EACD/ETMP, service-specific flows, deauth logic, partial auth, can return 423 Locked"
+    }
+}
+

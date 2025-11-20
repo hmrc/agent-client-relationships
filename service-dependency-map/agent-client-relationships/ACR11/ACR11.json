@@ -1,0 +1,316 @@
+{
+    "apiId": "ACR11",
+    "apiTitle": "Create/Get Agent Invitation Link",
+    "description": "Creates or retrieves an agent's invitation link by generating/fetching a unique identifier (UID) and normalized agent name. This is an idempotent operation - first call creates a new record with generated UID, subsequent calls return the existing UID. If the agent's agency name has changed, the new normalized name is added to the record's array while preserving old names (so old links continue to work). Used by agents to get their shareable invitation link URL.",
+    "method": "GET",
+    "path": "/agent/agent-link",
+    "pathParameters": {},
+    "queryParameters": {},
+    "responses": {
+        "200": "Returns CreateLinkResponse with UID and normalized agent name",
+        "401": "Unauthorized - agent not authenticated",
+        "500": "Internal Server Error - error retrieving agent record or database error"
+    },
+    "authentication": "Agent authentication via withAuthorisedAsAgent",
+    "audience": "internal",
+    "controller": "InvitationLinkController",
+    "controllerMethod": "createLink",
+    "services": [
+        {
+            "name": "InvitationLinkService",
+            "alias": "ILS",
+            "method": "createLink",
+            "description": "Orchestrates: get agent details, normalize name, find/create record, update if name changed"
+        },
+        {
+            "name": "agent-assurance",
+            "alias": "AAS",
+            "method": "getAgentRecord",
+            "description": "Retrieves agent details including current agency name"
+        },
+        {
+            "name": "AgentReferenceRepository",
+            "alias": "ARR",
+            "methods": ["findByArn", "create", "updateAgentName"],
+            "description": "MongoDB operations for agent-reference collection"
+        }
+    ],
+    "interactions": [
+        {
+            "step": 1,
+            "actor": "InvitationLinkController (ILC)",
+            "action": "authenticates",
+            "target": "Agent",
+            "method": "withAuthorisedAsAgent",
+            "description": "Validates agent authentication and extracts ARN"
+        },
+        {
+            "step": 2,
+            "actor": "InvitationLinkController (ILC)",
+            "action": "calls service",
+            "target": "InvitationLinkService (ILS)",
+            "method": "createLink",
+            "description": "Delegates to service layer with ARN"
+        },
+        {
+            "step": 3,
+            "actor": "InvitationLinkService (ILS)",
+            "action": "calls external service",
+            "target": "agent-assurance (AAS)",
+            "method": "getAgentRecord",
+            "description": "Retrieves current agent details including agency name"
+        },
+        {
+            "step": 4,
+            "actor": "agent-assurance (AAS)",
+            "action": "returns data",
+            "target": "InvitationLinkService (ILS)",
+            "description": "Returns AgentDetailsDesResponse with agency details"
+        },
+        {
+            "step": 5,
+            "actor": "InvitationLinkService (ILS)",
+            "action": "normalizes name",
+            "target": "InvitationLinkService (ILS)",
+            "method": "normaliseAgentName",
+            "description": "Converts agency name to URL-safe format"
+        },
+        {
+            "step": 6,
+            "actor": "InvitationLinkService (ILS)",
+            "action": "calls repository",
+            "target": "AgentReferenceRepository (ARR)",
+            "method": "findByArn",
+            "description": "Looks for existing agent reference record"
+        },
+        {
+            "step": 7,
+            "actor": "AgentReferenceRepository (ARR)",
+            "action": "queries database",
+            "target": "MongoDB (agent-reference collection)",
+            "query": "{\"arn\": \"{arn}\"}",
+            "description": "Searches for existing record by ARN"
+        },
+        {
+            "step": 8,
+            "actor": "AgentReferenceRepository (ARR)",
+            "action": "returns result",
+            "target": "InvitationLinkService (ILS)",
+            "description": "Returns Option[AgentReferenceRecord]"
+        },
+        {
+            "step": 9,
+            "actor": "InvitationLinkService (ILS)",
+            "action": "branches on result",
+            "target": "InvitationLinkService (ILS)",
+            "description": "If record exists: check/update name. If not: create new record"
+        },
+        {
+            "step": "9a",
+            "actor": "InvitationLinkService (ILS)",
+            "action": "creates record",
+            "target": "AgentReferenceRepository (ARR)",
+            "method": "create",
+            "description": "Creates new record with generated UID",
+            "conditional": "if record does not exist (first time)"
+        },
+        {
+            "step": "9b",
+            "actor": "InvitationLinkService (ILS)",
+            "action": "updates record",
+            "target": "AgentReferenceRepository (ARR)",
+            "method": "updateAgentName",
+            "description": "Adds new normalized name to array",
+            "conditional": "if record exists AND name changed"
+        },
+        {
+            "step": 10,
+            "actor": "InvitationLinkService (ILS)",
+            "action": "returns result",
+            "target": "InvitationLinkController (ILC)",
+            "description": "Returns CreateLinkResponse(uid, normalizedName)"
+        },
+        {
+            "step": 11,
+            "actor": "InvitationLinkController (ILC)",
+            "action": "returns response",
+            "target": "Agent",
+            "description": "Returns 200 OK with JSON"
+        }
+    ],
+    "externalDependencies": [
+        {
+            "name": "agent-assurance",
+            "description": "Provides current agent details including agency name",
+            "method": "getAgentRecord",
+            "note": "Note: Uses getAgentRecord (not getNonSuspendedAgentRecord) - returns details even if suspended"
+        }
+    ],
+    "databaseCollections": [
+        {
+            "name": "agent-reference",
+            "operations": ["READ", "INSERT", "UPDATE"],
+            "description": "Stores agent invitation link records",
+            "fields": {
+                "uid": "8-character unique identifier (generated on first call)",
+                "arn": "Agent Reference Number (unique index)",
+                "normalisedAgentNames": "Array of normalized agent names (grows when agency name changes)"
+            },
+            "indexes": [
+                "uid (unique)",
+                "arn (unique)"
+            ],
+            "ttl": "No TTL - records persist indefinitely"
+        }
+    ],
+    "responseModel": {
+        "CreateLinkResponse": {
+            "uid": "8-character unique identifier for the invitation link",
+            "normalizedAgentName": "Current normalized version of agent's agency name"
+        },
+        "example": {
+            "uid": "abc12345",
+            "normalizedAgentName": "abc-accountants-ltd"
+        }
+    },
+    "businessLogic": {
+        "idempotency": {
+            "description": "Idempotent operation - safe to call multiple times",
+            "firstCall": "Generates new UID, creates record with [normalizedName]",
+            "subsequentCalls": "Returns existing UID, updates name array if agency name changed"
+        },
+        "uidGeneration": {
+            "description": "UID generated only on first call when record doesn't exist",
+            "method": "RandomStringUtils.secure().next(8, codetable)",
+            "characterSet": "Lowercase alphanumeric",
+            "length": "8 characters",
+            "example": "abc12345"
+        },
+        "nameNormalization": {
+            "description": "Agency name converted to URL-safe format",
+            "algorithm": [
+                "Convert to lowercase",
+                "Replace whitespace (\\s+) with hyphens",
+                "Remove all non-alphanumeric characters except hyphens"
+            ],
+            "example": "ABC Accountants Ltd → abc-accountants-ltd"
+        },
+        "nameArrayUpdate": {
+            "description": "When agency name changes, new normalized name is added to array",
+            "operation": "$addToSet on normalisedAgentNames array",
+            "benefit": "Old invitation links continue to work",
+            "example": "First call: ['abc-accountants-ltd'], After name change: ['abc-accountants-ltd', 'abc-accountancy-services-ltd']"
+        },
+        "lookupStrategy": {
+            "step1": "Look up by ARN (unique index)",
+            "step2a": "If found: check if current normalized name in array",
+            "step2b": "If not found: create new record with generated UID",
+            "step3": "If name not in array: update with $addToSet"
+        },
+        "encryption": {
+            "note": "normalisedAgentNames are encrypted in MongoDB using AES encryption"
+        }
+    },
+    "useCases": [
+        {
+            "scenario": "Agent creates invitation link for first time",
+            "flow": [
+                "Agent calls ACR11",
+                "No record exists for ARN",
+                "New UID generated (e.g., 'abc12345')",
+                "New record created with UID and [normalized name]",
+                "Returns UID and normalized name"
+            ],
+            "response": {
+                "uid": "abc12345",
+                "normalizedAgentName": "abc-accountants-ltd"
+            },
+            "frontend_action": "Display link: https://tax.service.gov.uk/invite?uid=abc12345&agent=abc-accountants-ltd"
+        },
+        {
+            "scenario": "Agent retrieves existing invitation link",
+            "flow": [
+                "Agent calls ACR11",
+                "Record exists for ARN",
+                "Current normalized name already in array",
+                "Returns existing UID and current normalized name"
+            ],
+            "response": {
+                "uid": "abc12345",
+                "normalizedAgentName": "abc-accountants-ltd"
+            },
+            "note": "Same UID as before - idempotent"
+        },
+        {
+            "scenario": "Agent's agency name has changed",
+            "flow": [
+                "Agent calls ACR11",
+                "Record exists with old name in array",
+                "New normalized name not in array",
+                "Adds new name to array with $addToSet",
+                "Returns existing UID with new normalized name"
+            ],
+            "before": {
+                "uid": "abc12345",
+                "normalisedAgentNames": ["abc-accountants-ltd"]
+            },
+            "after": {
+                "uid": "abc12345",
+                "normalisedAgentNames": ["abc-accountants-ltd", "abc-accountancy-services-ltd"]
+            },
+            "response": {
+                "uid": "abc12345",
+                "normalizedAgentName": "abc-accountancy-services-ltd"
+            },
+            "frontend_action": "Display new link with new name, but old links still work"
+        },
+        {
+            "scenario": "Agent generates link for sharing",
+            "frontend_action": "Agent dashboard shows: 'Your invitation link: https://tax.service.gov.uk/invite?uid=abc12345&agent=abc-accountants-ltd' with copy button"
+        }
+    ],
+    "errorHandling": [
+        {
+            "scenario": "Agent not authenticated",
+            "response": "401 Unauthorized"
+        },
+        {
+            "scenario": "Error retrieving agent record from agent-assurance",
+            "response": "500 Internal Server Error (exception propagated)"
+        },
+        {
+            "scenario": "Database error during create/update",
+            "response": "500 Internal Server Error (exception propagated)"
+        }
+    ],
+    "importantNotes": [
+        "✅ Idempotent - safe to call multiple times",
+        "✅ Agent authentication required (unlike ACR10 which is public)",
+        "✅ UID generated only once (on first call)",
+        "✅ Subsequent calls return same UID",
+        "✅ Agency name changes result in array updates",
+        "✅ Old invitation links continue to work after name change",
+        "✅ Uses getAgentRecord (not getNonSuspendedAgentRecord) - works even if agent suspended",
+        "✅ No TTL on records - links persist indefinitely",
+        "✅ normalisedAgentNames encrypted in MongoDB",
+        "✅ ARN has unique index - one record per agent",
+        "⚠️ Returns current normalized name (not all names in array)",
+        "⚠️ $addToSet used for updates - no duplicates in array"
+    ],
+    "comparisonWithACR10": {
+        "ACR10_validateLink": {
+            "purpose": "Client validates agent invitation link",
+            "authentication": "None (public endpoint)",
+            "operation": "Read-only lookup",
+            "checks": "UID + name match + suspension check"
+        },
+        "ACR11_createLink": {
+            "purpose": "Agent creates/retrieves invitation link",
+            "authentication": "Agent authentication required",
+            "operation": "Create/Update record",
+            "checks": "No suspension check (works even if suspended)"
+        },
+        "relationship": "ACR11 creates the links that ACR10 validates"
+    }
+}
+

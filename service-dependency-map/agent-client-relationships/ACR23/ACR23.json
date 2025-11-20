@@ -1,0 +1,129 @@
+{
+    "apiId": "ACR23",
+    "apiTitle": "Update Trust Invitation - Replace URN with UTR",
+    "description": "Updates a trust-related invitation by replacing the temporary URN with the permanent UTR after trust registration completes. This endpoint is called by the Trusts Enrolment Orchestrator when a trust moves from non-taxable (URN) to taxable (UTR) status. It updates the invitation record to change the service from HMRC-TERSNT-ORG to HMRC-TERS-ORG and the identifier from URN to UTR.",
+    "method": "POST",
+    "path": "/agent-client-relationships/invitations/trusts-enrolment-orchestrator/{urn}/update",
+    "pathParameters": {
+        "urn": "Unique Reference Number (URN) - temporary identifier for non-taxable trusts (format: XXTRUST12345678)"
+    },
+    "queryParameters": {},
+    "requestBody": {
+        "UtrRequest": {
+            "utr": "Unique Taxpayer Reference (UTR) - permanent 10-digit identifier for taxable trusts"
+        },
+        "example": {
+            "utr": "1234567890"
+        }
+    },
+    "responses": {
+        "204": "No Content - Invitation successfully updated from URN to UTR",
+        "400": "Bad Request - Invalid JSON in request body",
+        "404": "Not Found - No invitation found with the specified URN for service HMRC-TERSNT-ORG",
+        "500": "Internal Server Error"
+    },
+    "authentication": "None - This is an internal endpoint called by the Trusts Enrolment Orchestrator",
+    "audience": "internal",
+    "controller": "InvitationController",
+    "controllerMethod": "replaceUrnWithUtr",
+    "services": [
+        {
+            "name": "InvitationService",
+            "alias": "IS",
+            "method": "updateInvitation",
+            "description": "Orchestrates the update of the invitation record"
+        },
+        {
+            "name": "InvitationsRepository",
+            "alias": "IR",
+            "method": "updateInvitation",
+            "description": "Performs the MongoDB update operation"
+        }
+    ],
+    "interactions": "See ACR23.mmd for complete sequence diagram",
+    "externalDependencies": [],
+    "databaseCollections": [
+        {
+            "name": "invitations",
+            "operation": "UPDATE",
+            "description": "Finds invitation by service=HMRC-TERSNT-ORG, clientId=urn, clientIdType=URN and updates to service=HMRC-TERS-ORG, clientId=utr, clientIdType=SAUTR. Also updates suppliedClientId, suppliedClientIdType, and lastUpdated timestamp."
+        }
+    ],
+    "responseModel": {
+        "Success": "No content returned (204)",
+        "NotFound": "No body returned (404)"
+    },
+    "businessLogic": {
+        "serviceTransition": {
+            "description": "Converts trust invitation from non-taxable to taxable",
+            "logic": "Updates the MongoDB record to change: service from HMRC-TERSNT-ORG (TrustNT) to HMRC-TERS-ORG (Trust), clientIdType from URN to SAUTR, and the actual client ID value from URN to UTR. The suppliedClientId fields are also updated to match."
+        },
+        "updateOperation": {
+            "description": "Database update with specific matching criteria",
+            "logic": "Uses MongoDB updateOne() with filters: service=HMRC-TERSNT-ORG, clientId=urn (encrypted), clientIdType=URN. Updates multiple fields atomically and sets lastUpdated timestamp."
+        },
+        "returnLogic": {
+            "description": "Success determined by modified count",
+            "logic": "Returns 204 if exactly one document was modified (modified count = 1), returns 404 if no documents were modified (invitation not found)"
+        }
+    },
+    "errorHandling": [
+        {
+            "scenario": "Invitation not found with specified URN",
+            "response": "404 Not Found",
+            "message": "No body",
+            "note": "This occurs when there is no invitation record with service=HMRC-TERSNT-ORG and the provided URN"
+        },
+        {
+            "scenario": "Invalid JSON in request body",
+            "response": "400 Bad Request",
+            "message": "Invalid JSON",
+            "note": "Request body must be valid JSON with a 'utr' field"
+        },
+        {
+            "scenario": "Missing 'utr' field in request",
+            "response": "400 Bad Request",
+            "message": "Error parsing JSON",
+            "note": "The 'utr' field is required in the request body"
+        }
+    ],
+    "useCases": [
+        {
+            "scenario": "Trust registration completes - URN to UTR transition",
+            "flow": [
+                "Trusts Enrolment Orchestrator completes trust registration",
+                "New UTR is assigned to the previously non-taxable trust",
+                "Orchestrator calls this endpoint with URN and new UTR",
+                "Invitation record is updated from HMRC-TERSNT-ORG/URN to HMRC-TERS-ORG/UTR",
+                "Future invitation acceptance will use the permanent UTR"
+            ],
+            "response": {
+                "status": 204
+            },
+            "frontend_action": "No frontend action - this is a backend-to-backend call"
+        },
+        {
+            "scenario": "Attempt to update non-existent invitation",
+            "flow": [
+                "Trusts Enrolment Orchestrator calls with URN that doesn't exist",
+                "Database query finds no matching invitation",
+                "404 returned"
+            ],
+            "response": {
+                "status": 404
+            },
+            "frontend_action": "Orchestrator should log the error and potentially alert"
+        }
+    ],
+    "importantNotes": [
+        "✅ This is a backend-to-backend endpoint called by the Trusts Enrolment Orchestrator",
+        "✅ No authentication required - it's an internal service call",
+        "✅ The endpoint is specifically for trust service transitions from non-taxable to taxable",
+        "✅ Updates are atomic - all fields updated in a single MongoDB operation",
+        "✅ Both clientId and suppliedClientId fields are updated to the new UTR",
+        "⚠️ Only works for HMRC-TERSNT-ORG to HMRC-TERS-ORG transitions",
+        "⚠️ The URN must match an existing invitation with service=HMRC-TERSNT-ORG",
+        "⚠️ Does not validate the format of the URN or UTR - assumes orchestrator provides valid values",
+        "⚠️ Returns 404 for any invitation not found - does not distinguish between different reasons for not finding the invitation"
+    ]
+}

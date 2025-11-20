@@ -1,0 +1,29 @@
+sequenceDiagram
+    participant Client
+    participant IC as InvitationController
+    participant IS as InvitationService
+    participant IR as InvitationsRepository
+    participant Mongo as MongoDB<br/>invitations
+
+    Client->>+IC: POST /invitations/trusts-enrolment-orchestrator/{urn}/update
+    Note over IC: Extract UTR from request body
+
+    IC->>+IS: updateInvitation(TrustNT.enrolmentKey,<br/>urn, UrnType.id,<br/>Trust.enrolmentKey,<br/>utr, UtrType.id)
+
+    IS->>+IR: updateInvitation(service, clientId,<br/>clientIdType, newService,<br/>newClientId, newClientIdType)
+
+    IR->>+Mongo: updateOne() - Find by service=HMRC-TERSNT-ORG,<br/>clientId=urn, clientIdType=URN
+    Note over Mongo: Updates:<br/>- service: HMRC-TERS-ORG<br/>- clientId: utr<br/>- clientIdType: SAUTR<br/>- suppliedClientId: utr<br/>- suppliedClientIdType: SAUTR<br/>- lastUpdated: now
+
+    alt Invitation found and updated
+        Mongo-->>-IR: Modified count = 1
+        IR-->>-IS: true
+        IS-->>-IC: true
+        IC-->>-Client: 204 No Content
+    else Invitation not found
+        Mongo-->>IR: Modified count = 0
+        IR-->>IS: false
+        IS-->>IC: false
+        IC-->>Client: 404 Not Found
+    end
+

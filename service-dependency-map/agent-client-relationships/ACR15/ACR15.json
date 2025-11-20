@@ -1,0 +1,318 @@
+{
+    "apiId": "ACR15",
+    "apiTitle": "Reject Authorization Request (Invitation)",
+    "description": "Allows a client or Stride user to reject a pending authorization request (invitation) from an agent. The endpoint first looks up the invitation, validates it's in Pending status, then authenticates that the user is the intended client or an authorized Stride user. On successful rejection, updates the invitation status to Rejected, sends notification email to the agent, and audits the event. Uses similar authentication pattern to ACR13 (lookup first, then validate user).",
+    "method": "PUT",
+    "path": "/client/authorisation-response/reject/{invitationId}",
+    "pathParameters": {
+        "invitationId": "Unique invitation identifier (e.g., ABBBBBBBBBBBB)"
+    },
+    "queryParameters": {},
+    "responses": {
+        "204": "No Content - invitation successfully rejected",
+        "403": "Forbidden - invitation not found, not pending, or user not authorized",
+        "401": "Unauthorized - user not authenticated"
+    },
+    "authentication": "Two-phase: (1) Lookup invitation, (2) authorisedUser validates user is client OR Stride user",
+    "audience": "internal",
+    "controller": "InvitationController",
+    "controllerMethod": "rejectInvitation",
+    "services": [
+        {
+            "name": "InvitationService",
+            "alias": "IS",
+            "methods": ["findInvitation", "rejectInvitation"],
+            "description": "Finds invitation and orchestrates rejection (update status + send email)"
+        },
+        {
+            "name": "InvitationsRepository",
+            "alias": "IR",
+            "methods": ["findOneById", "updateStatus"],
+            "description": "MongoDB operations for invitation lookup and status update"
+        },
+        {
+            "name": "ValidationService",
+            "alias": "VS",
+            "method": "validateForEnrolmentKey",
+            "description": "Converts invitation details to enrolment key for authorization check"
+        },
+        {
+            "name": "EmailService",
+            "alias": "ES",
+            "method": "sendRejectedEmail",
+            "description": "Sends notification email to agent about rejection"
+        },
+        {
+            "name": "AuditService",
+            "alias": "AS",
+            "method": "sendRespondToInvitationAuditEvent",
+            "description": "Audits the rejection event"
+        }
+    ],
+    "interactions": [
+        {
+            "step": 1,
+            "actor": "InvitationController (IC)",
+            "action": "receives request",
+            "target": "Client",
+            "description": "No authentication check at this point"
+        },
+        {
+            "step": 2,
+            "actor": "InvitationController (IC)",
+            "action": "calls service",
+            "target": "InvitationService (IS)",
+            "method": "findInvitation",
+            "description": "Looks up invitation by ID"
+        },
+        {
+            "step": 3,
+            "actor": "InvitationService (IS)",
+            "action": "calls repository",
+            "target": "InvitationsRepository (IR)",
+            "method": "findOneById",
+            "description": "Queries MongoDB"
+        },
+        {
+            "step": 4,
+            "actor": "InvitationsRepository (IR)",
+            "action": "queries database",
+            "target": "MongoDB (invitations collection)",
+            "query": "{\"invitationId\": \"{invitationId}\"}",
+            "description": "Finds invitation by ID"
+        },
+        {
+            "step": 5,
+            "actor": "InvitationController (IC)",
+            "action": "validates status",
+            "target": "InvitationController (IC)",
+            "description": "Checks invitation.status == Pending"
+        },
+        {
+            "step": 6,
+            "actor": "InvitationController (IC)",
+            "action": "calls validation service",
+            "target": "ValidationService (VS)",
+            "method": "validateForEnrolmentKey",
+            "description": "Converts invitation to enrolment key",
+            "conditional": "only if invitation found and pending"
+        },
+        {
+            "step": 7,
+            "actor": "InvitationController (IC)",
+            "action": "validates authorization",
+            "target": "InvitationController (IC)",
+            "method": "authorisedUser",
+            "description": "Validates user is client (with matching clientId) OR Stride user"
+        },
+        {
+            "step": 8,
+            "actor": "InvitationController (IC)",
+            "action": "calls service",
+            "target": "InvitationService (IS)",
+            "method": "rejectInvitation",
+            "description": "Initiates rejection process",
+            "conditional": "only if user authorized"
+        },
+        {
+            "step": 9,
+            "actor": "InvitationService (IS)",
+            "action": "calls repository",
+            "target": "InvitationsRepository (IR)",
+            "method": "updateStatus",
+            "description": "Updates invitation status to Rejected"
+        },
+        {
+            "step": 10,
+            "actor": "InvitationsRepository (IR)",
+            "action": "updates database",
+            "target": "MongoDB (invitations collection)",
+            "operation": "updateOne $set status=Rejected, lastUpdated=now",
+            "description": "Persists rejection"
+        },
+        {
+            "step": 11,
+            "actor": "InvitationService (IS)",
+            "action": "calls email service",
+            "target": "EmailService (ES)",
+            "method": "sendRejectedEmail",
+            "description": "Notifies agent of rejection"
+        },
+        {
+            "step": 12,
+            "actor": "InvitationController (IC)",
+            "action": "calls audit service",
+            "target": "AuditService (AS)",
+            "method": "sendRespondToInvitationAuditEvent",
+            "description": "Audits rejection with accepted=false"
+        },
+        {
+            "step": 13,
+            "actor": "InvitationController (IC)",
+            "action": "returns response",
+            "target": "Client",
+            "description": "Returns 204 No Content"
+        }
+    ],
+    "externalDependencies": [
+        {
+            "name": "EmailService",
+            "description": "Sends rejection notification email to agent",
+            "note": "Email sent asynchronously after status update"
+        }
+    ],
+    "databaseCollections": [
+        {
+            "name": "invitations",
+            "operations": ["READ", "UPDATE"],
+            "description": "Looks up invitation and updates status to Rejected with new lastUpdated timestamp"
+        }
+    ],
+    "authenticationDetails": {
+        "method": "authorisedUser",
+        "timing": "AFTER invitation lookup and status check (unusual pattern)",
+        "validates": "User is either: (1) Client with matching clientId, OR (2) Stride user with required roles",
+        "providers": ["GovernmentGateway", "PrivilegedApplication (Stride)"],
+        "retrieves": "allEnrolments and affinityGroup and credentials",
+        "notAuthorizedResponse": "403 Forbidden (NoPermissionToPerformOperation)",
+        "strideRoles": ["maintain_agent_relationships"]
+    },
+    "businessLogic": {
+        "authenticationFlow": {
+            "description": "Similar to ACR13 - lookup first, then validate",
+            "phase1": "Lookup invitation (no auth)",
+            "phase2": "Validate status == Pending",
+            "phase3": "Build enrolment key from invitation",
+            "phase4": "Validate user is client OR Stride user",
+            "reason": "Allows distinguishing between different error conditions"
+        },
+        "statusValidation": {
+            "description": "Can only reject Pending invitations",
+            "rejected_statuses": "Accepted, Rejected, Expired, Cancelled",
+            "error": "Returns 403 Forbidden (NoPendingInvitation) if not Pending"
+        },
+        "rejectionProcess": {
+            "step1": "Update status to Rejected in MongoDB",
+            "step2": "Update lastUpdated timestamp",
+            "step3": "Send rejection email to agent",
+            "step4": "Audit the rejection event",
+            "sequential": "Email and audit happen after status update (not in transaction)"
+        },
+        "clientIdMatching": {
+            "description": "Client authorization checks if user has enrolment matching invitation's clientId",
+            "process": "Uses ValidationService to convert invitation to enrolment key, then checks user has matching enrolment"
+        },
+        "errorHandling": {
+            "validationError": "Throws RuntimeException if invitation can't be parsed into enrolment",
+            "note": "Could fail if invitation has invalid service/clientIdType combination"
+        }
+    },
+    "errorHandling": [
+        {
+            "scenario": "Invitation not found",
+            "response": "403 Forbidden (NoPendingInvitation)",
+            "logged": "Pending Invitation not found for invitationId '{invitationId}'"
+        },
+        {
+            "scenario": "Invitation status is not Pending",
+            "response": "403 Forbidden (NoPendingInvitation)",
+            "logged": "Pending Invitation not found for invitationId '{invitationId}'",
+            "note": "Same response as not found - doesn't reveal invitation exists"
+        },
+        {
+            "scenario": "User not the client OR Stride user",
+            "response": "403 Forbidden (NoPermissionToPerformOperation)",
+            "note": "User authenticated but not authorized for this invitation"
+        },
+        {
+            "scenario": "User not authenticated",
+            "response": "401 Unauthorized"
+        },
+        {
+            "scenario": "Invalid invitation details (can't parse to enrolment)",
+            "response": "500 Internal Server Error (RuntimeException)",
+            "note": "Unexpected error condition"
+        }
+    ],
+    "useCases": [
+        {
+            "scenario": "Client rejects pending invitation",
+            "flow": [
+                "Client authenticated with MTD-IT enrolment",
+                "PUT /client/authorisation-response/reject/ABBBBBBBBBBBB",
+                "Invitation found with status=Pending",
+                "Client has enrolment matching invitation's clientId",
+                "Status updated to Rejected",
+                "Email sent to agent",
+                "Audit event recorded",
+                "Returns 204"
+            ],
+            "response": "204 No Content",
+            "frontend_action": "Show 'You have successfully rejected the invitation from [Agent Name]'"
+        },
+        {
+            "scenario": "Stride user rejects invitation on behalf of client",
+            "flow": [
+                "Stride user authenticated with maintain_agent_relationships role",
+                "PUT /client/authorisation-response/reject/CCCCCCCCCCCCC",
+                "Invitation found with status=Pending",
+                "Stride role validated",
+                "Status updated to Rejected",
+                "Email sent to agent",
+                "Audit event recorded with isStride=true"
+            ],
+            "response": "204 No Content",
+            "frontend_action": "Stride dashboard shows 'Invitation rejected'"
+        },
+        {
+            "scenario": "Client tries to reject already rejected invitation",
+            "response": "403 Forbidden (NoPendingInvitation)",
+            "frontend_action": "Show 'This invitation cannot be rejected (not pending)'"
+        },
+        {
+            "scenario": "Client tries to reject expired invitation",
+            "response": "403 Forbidden (NoPendingInvitation)",
+            "frontend_action": "Show 'This invitation has expired and cannot be rejected'"
+        },
+        {
+            "scenario": "Wrong client tries to reject invitation",
+            "flow": [
+                "Client A authenticated",
+                "Tries to reject invitation for Client B",
+                "Authorization fails"
+            ],
+            "response": "403 Forbidden",
+            "frontend_action": "Show 'You are not authorized to reject this invitation'"
+        }
+    ],
+    "importantNotes": [
+        "⚠️ UNUSUAL AUTH PATTERN: Lookup and status check before authentication (like ACR13)",
+        "✅ Client OR Stride user can reject",
+        "✅ Can only reject Pending invitations",
+        "✅ Updates status to Rejected in MongoDB",
+        "✅ Sends rejection email to agent",
+        "✅ Audits rejection event",
+        "✅ Returns 204 No Content on success (no body)",
+        "✅ Email and audit happen AFTER status update (not atomic)",
+        "⚠️ Throws RuntimeException if invitation can't be parsed to enrolment",
+        "⚠️ Same 403 response for not found AND not pending (security - doesn't reveal existence)",
+        "✅ Stride roles: maintain_agent_relationships"
+    ],
+    "comparisonWithACR16": {
+        "ACR15_reject": {
+            "purpose": "Reject invitation",
+            "final_status": "Rejected",
+            "complexity": "Low - update status + email + audit",
+            "relationship_creation": "No",
+            "path": "/client/authorisation-response/reject/:invitationId"
+        },
+        "ACR16_accept": {
+            "purpose": "Accept invitation and create relationship",
+            "final_status": "Accepted",
+            "complexity": "High - creates relationship in EACD/ETMP",
+            "relationship_creation": "Yes",
+            "path": "/authorisation-response/accept/:invitationId"
+        }
+    }
+}
+

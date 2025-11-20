@@ -1,0 +1,41 @@
+sequenceDiagram
+    participant Caller as Internal Service/Admin
+    participant RC as RelationshipsController
+    participant ATS as AgentTerminationService
+    participant DRR as DeleteRecordRepository
+    participant RCRR as RelationshipCopyRecordRepository
+    participant Mongo as MongoDB
+
+    Caller->>+RC: DELETE /agent/:arn/terminate
+    Note over RC: withBasicAuth(expectedAuth)<br/>Validates HTTP Basic Auth credentials
+
+    alt Valid Basic Auth
+        RC->>+ATS: terminateAgent(arn)
+
+        par Delete from delete-record collection
+            ATS->>+DRR: terminateAgent(arn)
+            DRR->>+Mongo: deleteMany({"arn": arn})<br/>Collection: delete_record
+            Mongo-->>-DRR: DeleteResult with count
+            DRR-->>-ATS: Right(deletedCount)
+        and Delete from relationship-copy-record collection
+            ATS->>+RCRR: terminateAgent(arn)
+            RCRR->>+Mongo: deleteMany({"arn": arn})<br/>Collection: relationship_copy_record
+            Mongo-->>-RCRR: DeleteResult with count
+            RCRR-->>-ATS: Right(deletedCount)
+        end
+
+        ATS->>ATS: Build TerminationResponse with deletion counts
+        ATS-->>-RC: TerminationResponse
+
+        RC-->>Caller: 200 OK with JSON response
+    else Invalid/Missing Basic Auth
+        RC-->>-Caller: 401 Unauthorized
+    end
+
+    alt MongoDB Error
+        Mongo-->>DRR: MongoWriteException
+        DRR-->>ATS: Left(errorMessage)
+        ATS-->>RC: EitherT.Left(error)
+        RC-->>Caller: 500 Internal Server Error
+    end
+

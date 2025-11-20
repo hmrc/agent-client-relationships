@@ -1,0 +1,59 @@
+sequenceDiagram
+    participant Client
+    participant RC as RelationshipsController
+    participant FRS as FindRelationshipsService
+    participant HIP as IF/HIP (HipConnector)
+    participant ETMP as ETMP (via HIP REST Adapter)
+
+    Client->>+RC: GET /client/relationships/active
+    Note over RC: withAuthorisedAsClient<br/>Extract enrolments from Gov Gateway auth
+
+    RC->>RC: Build Map[Service, TaxIdentifier]<br/>from client's enrolments
+    Note over RC: For each supported service,<br/>extract tax identifier from enrolment
+
+    RC->>+FRS: getActiveRelationshipsForClient(identifiers)
+
+    loop For each supportedService (excluding PIR)
+        alt Client has enrolment for this service
+            FRS->>FRS: Extract tax identifier for service
+            FRS->>+HIP: getActiveClientRelationships(taxId, service)
+
+            HIP->>HIP: Build HIP URL with:<br/>- taxIdentifier<br/>- authProfile for service<br/>- activeOnly=true
+
+            HIP->>+ETMP: GET /etmp/RESTAdapter/rosm/agent-relationship<br/>?idType={idType}&refNumber={taxId}<br/>&auth-profile={authProfile}&active-only=true
+            Note over HIP,ETMP: Includes HIP subscription headers
+
+            alt Success (200 OK)
+                ETMP-->>-HIP: relationshipDisplayResponse array
+                HIP->>HIP: Filter to find first isActive relationship<br/>(dateFrom <= today, dateTo empty or future)
+                HIP-->>-FRS: Option[ActiveRelationship]
+
+                alt ActiveRelationship found
+                    FRS->>FRS: Extract ARN from relationship
+                    FRS->>FRS: Add (Service, ARN) to results
+                end
+            else Client Error (400/404)
+                ETMP-->>HIP: Error response
+                HIP-->>FRS: None
+            else Agent Suspended (422 with "suspended")
+                ETMP-->>HIP: Unprocessable Entity
+                HIP-->>FRS: None
+            else ETMP Error Code 009 (422)
+                ETMP-->>HIP: Unprocessable Entity
+                HIP-->>FRS: None
+            else Other Error
+                ETMP-->>HIP: Error response
+                Note over HIP: Log error
+                HIP-->>FRS: None
+            end
+        else No enrolment for this service
+            FRS->>FRS: Skip this service
+        end
+    end
+
+    FRS->>FRS: Group results by Service<br/>Map[Service, Seq[ARN]]
+    FRS-->>-RC: Map[Service, Seq[ARN]]
+
+    RC->>RC: Convert Service keys to service IDs<br/>Map[String, Seq[ARN]]
+    RC-->>-Client: 200 OK with JSON
+

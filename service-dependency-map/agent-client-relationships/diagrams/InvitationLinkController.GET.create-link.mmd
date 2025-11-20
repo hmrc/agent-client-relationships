@@ -1,9 +1,0 @@
-sequenceDiagram
-    autonumber
-    participant Upstream
-    participant agent-client-relationships
-    participant Database
-
-    Upstream->>+agent-client-relationships: GET /agent/agent-link
-    agent-client-relationships->>Database: Create: Create a new agent reference record with a unique ID.
-    agent-client-relationships-->>-Upstream: Final Response

@@ -1,0 +1,427 @@
+{
+    "apiId": "ACR31",
+    "apiTitle": "API Create Invitation",
+    "description": "VERY HIGH COMPLEXITY - Allows an external authenticated system (OAuth2) to create an agent authorization invitation on behalf of an agent. Performs extensive validation including: payload validation, agent suspension check, client registration check, known facts verification, duplicate invitation check, existing relationship check (including PartialAuth for ITSA). For MTD-IT/MTD-IT-SUPP with NINO, converts to MtdItId via IF. Creates invitation record in MongoDB with expiry date. Used by third-party platforms integrating with HMRC agent services. Requires OAuth2 authentication with appropriate scopes.",
+    "method": "POST",
+    "path": "/api/{arn}/invitation",
+    "pathParameters": {
+        "arn": "Agent Reference Number (must be valid ARN format, e.g., AARN1234567)"
+    },
+    "queryParameters": {},
+    "requestBody": {
+        "ApiCreateInvitationRequest": {
+            "service": "Service identifier (e.g., HMRC-MTD-IT, HMRC-MTD-VAT, HMRC-TERS-ORG) - must be in API supported services list",
+            "suppliedClientId": "Client identifier value (e.g., NINO for MTD-IT, VRN for VAT) - must match service type and be valid format",
+            "knownFact": "Known fact for verification (e.g., postcode for MTD-IT, VAT registration date for VAT)",
+            "clientType": "Optional client type: 'personal', 'business', or 'trust'"
+        },
+        "example": {
+            "service": "HMRC-MTD-IT",
+            "suppliedClientId": "AB123456C",
+            "knownFact": "AA11AA",
+            "clientType": "personal"
+        }
+    },
+    "responses": {
+        "201": "Created - Invitation successfully created, returns invitationId",
+        "400": "Bad Request - Invalid JSON payload (INVALID_PAYLOAD)",
+        "401": "Unauthorized - OAuth2 authentication failed",
+        "403": "Forbidden - Agent suspended (AGENT_SUSPENDED) or known facts do not match",
+        "422": "Unprocessable Entity - Business logic validation failed",
+        "500": "Internal Server Error"
+    },
+    "authentication": "OAuth2 with appropriate scopes for creating invitations",
+    "audience": "external",
+    "controller": "ApiCreateInvitationController",
+    "controllerMethod": "createInvitation",
+    "services": [
+        {
+            "name": "ValidationService",
+            "alias": "VS",
+            "method": "Inline validation methods",
+            "description": "Validates service is supported, clientId format matches service, clientType is valid"
+        },
+        {
+            "name": "IfOrHipConnector",
+            "alias": "IFOrHIP",
+            "method": "getMtdIdFor",
+            "description": "For MTD-IT/MTD-IT-SUPP with NINO: converts NINO to MtdItId via IF. If no MtdItId, uses NINO as clientId"
+        },
+        {
+            "name": "InvitationsRepository",
+            "alias": "IR",
+            "method": "findAllForAgent, create",
+            "description": "Checks for existing pending invitations, creates new invitation record in MongoDB"
+        },
+        {
+            "name": "AgentAssuranceService",
+            "alias": "AAS",
+            "method": "getNonSuspendedAgentRecord",
+            "description": "Retrieves agent record from Agent Maintainer, filters out suspended agents"
+        },
+        {
+            "name": "ClientDetailsService",
+            "alias": "CDS",
+            "method": "findClientDetails",
+            "description": "Retrieves client details from DES based on service and client identifier"
+        },
+        {
+            "name": "ApiKnownFactsCheckService",
+            "alias": "AKFCS",
+            "method": "checkKnownFacts",
+            "description": "Verifies supplied known fact matches client details from DES"
+        },
+        {
+            "name": "CheckRelationshipsOrchestratorService",
+            "alias": "CROS",
+            "method": "checkForRelationship",
+            "description": "Checks HIP/ETMP for existing active relationship between agent and client"
+        },
+        {
+            "name": "PartialAuthRepository",
+            "alias": "PAuthRepo",
+            "method": "findActive",
+            "description": "For ITSA services only: checks MongoDB for existing PartialAuth relationship"
+        }
+    ],
+    "interactions": "See ACR31.mmd for complete sequence diagram",
+    "externalDependencies": [
+        {
+            "name": "IF (Integration Framework)",
+            "description": "Converts NINO to MtdItId for MTD-IT/MTD-IT-SUPP services",
+            "method": "getMtdIdFor",
+            "note": "Only called for MTD-IT and MTD-IT-SUPP with NINO. If no MtdItId found, uses NINO as clientId"
+        },
+        {
+            "name": "Agent Maintainer",
+            "description": "Retrieves agent record including suspension status and agency details",
+            "method": "GET /agent-maintainer/agent/{arn}",
+            "note": "Called via AgentAssuranceService. Returns 403 if agent suspended"
+        },
+        {
+            "name": "DES (Multiple endpoints)",
+            "description": "Retrieves client details based on service type",
+            "method": "getCitizenDetails, getVrnDisplayDetails, getTrustDetails, getCgtSubscriptionDetails, getPptSubscriptionDetails, getCbcSubscriptionDetails, getPillar2SubscriptionDetails",
+            "note": "Different endpoint per service. Returns client name and status. VAT returns insolvency status"
+        },
+        {
+            "name": "HIP (ETMP)",
+            "description": "Checks for existing active relationship via CheckRelationshipsOrchestratorService",
+            "method": "GET /registration/relationship",
+            "note": "Returns ALREADY_AUTHORISED if relationship already exists"
+        }
+    ],
+    "databaseCollections": [
+        {
+            "name": "invitations",
+            "operation": "READ, WRITE",
+            "description": "Checks for existing pending invitations (including cross-check between MTD-IT and MTD-IT-SUPP). Creates new invitation with expiry date"
+        },
+        {
+            "name": "partial-auth",
+            "operation": "READ",
+            "description": "For ITSA services only: checks if PartialAuth relationship already exists between agent and client"
+        }
+    ],
+    "responseModel": {
+        "CreateInvitationResponse": {
+            "invitationId": "Unique invitation ID (UUID format)"
+        },
+        "example": {
+            "invitationId": "ABCD1234567890EFGH"
+        }
+    },
+    "businessLogic": {
+        "payloadValidation": {
+            "description": "Multi-step validation of request payload",
+            "logic": "Validates service is in API supported services list, suppliedClientId format matches service requirements and is valid, clientType is one of: personal, business, trust (if provided)"
+        },
+        "mtdItIdConversion": {
+            "description": "For MTD-IT/MTD-IT-SUPP with NINO: converts to MtdItId",
+            "logic": "Calls IF getMtdIdFor. If MtdItId found, uses that as clientId. If not found, uses NINO as clientId. This allows invitations for clients not yet enrolled in MTD-IT"
+        },
+        "duplicateInvitationCheck": {
+            "description": "Checks for existing pending invitations to prevent duplicates",
+            "logic": "Queries invitations collection for pending invitations for same agent, service, and client. For MTD-IT, also checks MTD-IT-SUPP and vice versa (can't have both pending simultaneously). Returns DUPLICATE_AUTHORISATION_REQUEST with existing invitationId if found"
+        },
+        "agentSuspensionCheck": {
+            "description": "Verifies agent is not suspended",
+            "logic": "Calls AgentAssuranceService.getNonSuspendedAgentRecord. Returns AGENT_SUSPENDED (403) if agent is suspended. Also retrieves agency name and email for invitation"
+        },
+        "clientRegistrationCheck": {
+            "description": "Verifies client is registered for the service",
+            "logic": "Calls ClientDetailsService.findClientDetails which queries appropriate DES endpoint. Returns CLIENT_REGISTRATION_NOT_FOUND (422) if not found. For VAT, also checks insolvency status and returns VAT_CLIENT_INSOLVENT if insolvent"
+        },
+        "knownFactsVerification": {
+            "description": "Verifies supplied known fact matches client details",
+            "logic": "ApiKnownFactsCheckService compares supplied knownFact with client details from DES. For MTD-IT: validates postcode format and match. For VAT: validates VAT registration date format and match. Returns appropriate error (403) if mismatch"
+        },
+        "existingRelationshipCheck": {
+            "description": "Checks if relationship already exists",
+            "logic": "CheckRelationshipsOrchestratorService queries HIP/ETMP for active relationship. For ITSA, also checks PartialAuthRepository for existing PartialAuth. Returns ALREADY_AUTHORISED (422) if relationship exists"
+        },
+        "invitationCreation": {
+            "description": "Creates invitation record in MongoDB",
+            "logic": "Calculates expiry date (current time + configured duration). Creates invitation with status=Pending. Handles race condition with duplicate key error from MongoDB. Sends audit event on success"
+        },
+        "oauth2Authorization": {
+            "description": "Requires OAuth2 authentication",
+            "logic": "External system must be authenticated via OAuth2 with appropriate scopes for creating invitations"
+        }
+    },
+    "errorHandling": [
+        {
+            "scenario": "Invalid JSON payload structure",
+            "response": "400 Bad Request",
+            "message": "INVALID_PAYLOAD",
+            "note": "Request body doesn't match ApiCreateInvitationRequest schema"
+        },
+        {
+            "scenario": "Unsupported service",
+            "response": "422 Unprocessable Entity",
+            "message": "UNSUPPORTED_SERVICE",
+            "note": "Service not in API supported services list"
+        },
+        {
+            "scenario": "Invalid client ID format",
+            "response": "422 Unprocessable Entity",
+            "message": "CLIENT_ID_INVALID_FORMAT",
+            "note": "ClientId doesn't match expected format for service (e.g., invalid NINO format)"
+        },
+        {
+            "scenario": "Client ID doesn't match service",
+            "response": "422 Unprocessable Entity",
+            "message": "CLIENT_ID_DOES_NOT_MATCH_SERVICE",
+            "note": "ClientId type doesn't match service requirements"
+        },
+        {
+            "scenario": "Unsupported client type",
+            "response": "422 Unprocessable Entity",
+            "message": "UNSUPPORTED_CLIENT_TYPE",
+            "note": "ClientType not one of: personal, business, trust"
+        },
+        {
+            "scenario": "OAuth2 authentication failure",
+            "response": "401 Unauthorized",
+            "message": "N/A",
+            "note": "External system not authenticated"
+        },
+        {
+            "scenario": "Agent suspended",
+            "response": "403 Forbidden",
+            "message": "AGENT_SUSPENDED",
+            "note": "Agent's suspension status in Agent Maintainer"
+        },
+        {
+            "scenario": "Client not registered for service",
+            "response": "422 Unprocessable Entity",
+            "message": "CLIENT_REGISTRATION_NOT_FOUND",
+            "note": "Client not found in DES for the service"
+        },
+        {
+            "scenario": "VAT client insolvent",
+            "response": "422 Unprocessable Entity",
+            "message": "VAT_CLIENT_INSOLVENT",
+            "note": "VAT client has insolvency status in DES"
+        },
+        {
+            "scenario": "Invalid postcode format (MTD-IT)",
+            "response": "403 Forbidden",
+            "message": "POSTCODE_FORMAT_INVALID",
+            "note": "Known fact postcode format invalid"
+        },
+        {
+            "scenario": "Postcode doesn't match (MTD-IT)",
+            "response": "403 Forbidden",
+            "message": "POSTCODE_DOES_NOT_MATCH",
+            "note": "Supplied postcode doesn't match client's postcode in DES"
+        },
+        {
+            "scenario": "Invalid VAT registration date format",
+            "response": "403 Forbidden",
+            "message": "VAT_REG_DATE_FORMAT_INVALID",
+            "note": "Known fact VAT registration date format invalid"
+        },
+        {
+            "scenario": "VAT registration date doesn't match",
+            "response": "403 Forbidden",
+            "message": "VAT_REG_DATE_DOES_NOT_MATCH",
+            "note": "Supplied date doesn't match client's VAT registration date"
+        },
+        {
+            "scenario": "Pending invitation already exists",
+            "response": "422 Unprocessable Entity",
+            "message": "DUPLICATE_AUTHORISATION_REQUEST (with invitationId)",
+            "note": "Pending invitation already exists for same agent, service, and client"
+        },
+        {
+            "scenario": "Relationship already exists in HIP",
+            "response": "422 Unprocessable Entity",
+            "message": "ALREADY_AUTHORISED",
+            "note": "Active relationship already exists in HIP/ETMP"
+        },
+        {
+            "scenario": "PartialAuth already exists (ITSA)",
+            "response": "422 Unprocessable Entity",
+            "message": "ALREADY_AUTHORISED",
+            "note": "PartialAuth relationship already exists in MongoDB"
+        },
+        {
+            "scenario": "MongoDB duplicate key error (race condition)",
+            "response": "422 Unprocessable Entity",
+            "message": "DUPLICATE_AUTHORISATION_REQUEST (without invitationId)",
+            "note": "Concurrent request created invitation between check and insert"
+        },
+        {
+            "scenario": "Other internal errors",
+            "response": "500 Internal Server Error",
+            "message": "Generic error",
+            "note": "Unexpected failures"
+        }
+    ],
+    "useCases": [
+        {
+            "scenario": "External platform creates MTD-IT invitation",
+            "flow": [
+                "External system authenticates via OAuth2",
+                "Submits POST with service=HMRC-MTD-IT, suppliedClientId=NINO, knownFact=postcode",
+                "Payload validation passes",
+                "NINO converted to MtdItId via IF (or kept as NINO if no MtdItId)",
+                "No pending invitations exist",
+                "Agent not suspended",
+                "Client found in DES with matching postcode",
+                "No existing relationship in HIP",
+                "No existing PartialAuth",
+                "Invitation created with expiry date",
+                "201 Created with invitationId"
+            ],
+            "response": {
+                "invitationId": "ABCD1234567890EFGH"
+            },
+            "frontend_action": "Store invitationId, display success message to agent"
+        },
+        {
+            "scenario": "Duplicate invitation attempt",
+            "flow": [
+                "External system submits invitation request",
+                "Validation passes",
+                "Pending invitation already exists for same agent, service, client",
+                "422 Unprocessable Entity returned with existing invitationId"
+            ],
+            "response": {
+                "code": "DUPLICATE_AUTHORISATION_REQUEST",
+                "message": "An authorisation request for this service has already been created and is awaiting the client's response.",
+                "invitationId": "EXISTING1234567890"
+            },
+            "frontend_action": "Show 'Invitation already pending' with link to existing invitation"
+        },
+        {
+            "scenario": "Agent suspended",
+            "flow": [
+                "External system submits request",
+                "Payload validation passes",
+                "Agent Maintainer returns suspended status",
+                "403 Forbidden returned"
+            ],
+            "response": {
+                "code": "AGENT_SUSPENDED",
+                "message": "The agent's account is suspended."
+            },
+            "frontend_action": "Show 'Agent account suspended' error"
+        },
+        {
+            "scenario": "Known fact mismatch (postcode)",
+            "flow": [
+                "External system submits MTD-IT invitation",
+                "Validations pass, client found",
+                "Supplied postcode doesn't match client's postcode in DES",
+                "403 Forbidden returned"
+            ],
+            "response": {
+                "code": "POSTCODE_DOES_NOT_MATCH",
+                "message": "The postcode provided does not match HMRC's record for the client."
+            },
+            "frontend_action": "Show 'Postcode mismatch' error, ask agent to verify"
+        },
+        {
+            "scenario": "Relationship already exists",
+            "flow": [
+                "External system submits request",
+                "All validations pass",
+                "HIP check finds existing active relationship",
+                "422 Unprocessable Entity returned"
+            ],
+            "response": {
+                "code": "ALREADY_AUTHORISED",
+                "message": "An authorisation already exists for this agent and client."
+            },
+            "frontend_action": "Show 'Already authorised' message"
+        },
+        {
+            "scenario": "VAT client insolvent",
+            "flow": [
+                "External system submits VAT invitation",
+                "Validations pass",
+                "DES returns VAT client with insolvency status",
+                "422 Unprocessable Entity returned"
+            ],
+            "response": {
+                "code": "VAT_CLIENT_INSOLVENT",
+                "message": "The VAT client is insolvent."
+            },
+            "frontend_action": "Show 'Client insolvent, cannot create invitation'"
+        },
+        {
+            "scenario": "Client not registered",
+            "flow": [
+                "External system submits request",
+                "Validations pass",
+                "DES returns 404 for client",
+                "422 Unprocessable Entity returned"
+            ],
+            "response": {
+                "code": "CLIENT_REGISTRATION_NOT_FOUND",
+                "message": "The Client's MTDfB registration or SAUTR (if alt-itsa is enabled) was not found."
+            },
+            "frontend_action": "Show 'Client not registered for this service'"
+        },
+        {
+            "scenario": "MTD-IT invitation when MTD-IT-SUPP pending",
+            "flow": [
+                "External system requests MTD-IT invitation",
+                "Validation passes",
+                "Pending MTD-IT-SUPP invitation exists for same agent and client",
+                "422 Unprocessable Entity returned"
+            ],
+            "response": {
+                "code": "DUPLICATE_AUTHORISATION_REQUEST",
+                "message": "An authorisation request for this service has already been created and is awaiting the client's response.",
+                "invitationId": "SUPP1234567890ABCD"
+            },
+            "frontend_action": "Show 'Related MTD-IT-SUPP invitation pending'"
+        }
+    ],
+    "importantNotes": [
+        "✅ VERY HIGH COMPLEXITY - extensive validation pipeline with multiple external dependencies",
+        "✅ External API endpoint - OAuth2 authentication required",
+        "✅ Used by third-party platforms integrating with HMRC",
+        "✅ For MTD-IT/MTD-IT-SUPP: converts NINO to MtdItId via IF (or uses NINO if no MtdItId)",
+        "✅ Cross-checks MTD-IT and MTD-IT-SUPP for duplicate invitations",
+        "✅ Returns existing invitationId in DUPLICATE_AUTHORISATION_REQUEST error",
+        "✅ Creates invitation with calculated expiry date",
+        "✅ Sends audit event on successful creation",
+        "✅ Validates known facts (postcode for MTD-IT, VAT reg date for VAT)",
+        "✅ Checks both HIP and PartialAuth for existing ITSA relationships",
+        "⚠️ Agent suspension check returns 403 (not 422)",
+        "⚠️ Known fact mismatch returns 403 (not 422)",
+        "⚠️ Business rule violations return 422 Unprocessable Entity",
+        "⚠️ Duplicate key error from MongoDB handled as race condition",
+        "⚠️ VAT clients: checks insolvency status",
+        "⚠️ MTD-IT without MtdItId: uses NINO as clientId (allows pre-enrollment invitations)",
+        "⚠️ No relationship is created at this point - only invitation",
+        "⚠️ Client must accept invitation for relationship to be created",
+        "⚠️ Performance: Multiple sequential validations and external calls",
+        "⚠️ Each validation failure terminates early (fail-fast approach)"
+    ]
+}
+

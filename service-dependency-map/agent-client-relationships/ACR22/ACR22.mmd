@@ -1,0 +1,121 @@
+sequenceDiagram
+    participant Client
+    participant IPSC as ItsaPostSignupController
+    participant AA as AuthActions
+    participant HIP as HIP/IF
+    participant CACRS as CheckAndCopyRelationshipsService
+    participant PAuth as PartialAuthRepository
+    participant CRS as CreateRelationshipsService
+    participant IR as InvitationsRepository
+    participant IDCS as ItsaDeauthAndCleanupService
+    participant DES as DES
+    participant EACD as Enrolment Store Proxy<br/>EACD
+    participant Mongo as MongoDB
+    participant AS as AuditService
+
+    Client->>+IPSC: POST /itsa-post-signup/create-relationship/{nino}
+    Note over IPSC: withAuthorisedAsAgent
+    IPSC->>+AA: Authenticate agent
+    AA-->>-IPSC: Authenticated as arn
+
+    IPSC->>+HIP: getMtdIdFor(nino)
+    HIP-->>-IPSC: Option[MtdItId]
+
+    alt MTDITID Not Found
+        IPSC-->>Client: 404 Not Found<br/>"no MTDITID found for nino"
+    else MTDITID Found
+        IPSC->>+CACRS: tryCreateITSARelationshipFromPartialAuthOrCopyAcross(arn, mtdItId, None, Some(nino))
+
+        Note over CACRS: Check for partial auth
+        CACRS->>+PAuth: findActive(nino, arn)
+        PAuth->>+Mongo: Query partial-auth collection
+        Mongo-->>-PAuth: Option[PartialAuthRelationship]
+        PAuth-->>-CACRS: Option[service]
+
+        alt Partial Auth Found
+            Note over CACRS: Create relationship from partial auth
+            CACRS->>+CRS: createRelationship(arn, enrolmentKey, Set.empty, failIfAllocateAgentInESFails=true)
+
+            CRS->>+EACD: getPrincipalGroupIdFor(arn)
+            EACD-->>-CRS: groupId
+
+            CRS->>+Mongo: Create relationship-copy-record
+            Mongo-->>-CRS: Created
+
+            CRS->>+EACD: allocateEnrolmentToAgent(groupId, enrolmentKey, arn)
+            EACD-->>-CRS: Boolean
+
+            CRS->>+HIP: createAgentRelationship(arn, mtdItId, service)
+            HIP-->>-CRS: Option[String]
+
+            CRS->>+Mongo: Delete relationship-copy-record
+            Mongo-->>-CRS: Deleted
+            CRS-->>-CACRS: Option[Done]
+
+            alt Relationship Created Successfully
+                Note over CACRS: End partial auth
+                CACRS->>+PAuth: deleteActivePartialAuth(service, nino, arn)
+                PAuth->>+Mongo: Delete partial-auth record
+                Mongo-->>-PAuth: Boolean
+                PAuth-->>-CACRS: Boolean
+
+                CACRS->>+IR: updatePartialAuthToAcceptedStatus(arn, service, nino, mtdItId)
+                IR->>+Mongo: Update invitations (PartialAuth -> Accepted)
+                Mongo-->>-IR: Option[Unit]
+                IR-->>-CACRS: Option[Unit]
+
+                Note over CACRS: Cleanup same-agent relationships
+                CACRS->>+IDCS: deleteSameAgentRelationship(service, arn, mtdItId, nino)
+                IDCS-->>-CACRS: Boolean
+
+                CACRS-->>-IPSC: AltItsaCreateRelationshipSuccess(service)
+                IPSC-->>Client: 201 Created<br/>{"service": "HMRC-MTD-IT"}
+            else Relationship Creation Failed
+                CACRS-->>-IPSC: AltItsaNotFoundOrFailed
+                IPSC-->>Client: 404 Not Found<br/>"no partial auth"
+            end
+
+        else No Partial Auth - Check Legacy SA
+            Note over CACRS: Check eligibility for copy across
+
+            CACRS->>+DES: getClientSaAgentSaReferences(nino)
+            DES-->>-CACRS: Set[SaAgentReference]
+
+            alt Legacy SA Relationships Exist
+                CACRS->>+CRS: createRelationship(arn, enrolmentKey, references, failIfAllocateAgentInESFails=true)
+
+                CRS->>+EACD: getPrincipalGroupIdFor(arn)
+                EACD-->>-CRS: groupId
+
+                CRS->>+Mongo: Create relationship-copy-record
+                Mongo-->>-CRS: Created
+
+                CRS->>+EACD: allocateEnrolmentToAgent(groupId, enrolmentKey, arn)
+                EACD-->>-CRS: Boolean
+
+                CRS->>+HIP: createAgentRelationship(arn, mtdItId, HMRC-MTD-IT)
+                HIP-->>-CRS: Option[String]
+
+                CRS->>+Mongo: Delete relationship-copy-record
+                Mongo-->>-CRS: Deleted
+                CRS-->>-CACRS: Option[Done]
+
+                alt Copy Successful
+                    Note over CACRS: Cleanup same-agent relationships
+                    CACRS->>+IDCS: deleteSameAgentRelationship(HMRC-MTD-IT, arn, mtdItId, nino)
+                    IDCS-->>-CACRS: Boolean
+
+                    CACRS-->>-IPSC: FoundAndCopied
+                    IPSC-->>Client: 201 Created<br/>{"service": "HMRC-MTD-IT"}
+                else Copy Failed or Locked
+                    CACRS-->>-IPSC: FoundButLockedCouldNotCopy / FoundAndFailedToCopy
+                    IPSC-->>Client: 500 Internal Server Error
+                end
+            else No Legacy SA Relationships
+                CACRS-->>-IPSC: NotFound
+                IPSC-->>Client: 404 Not Found<br/>"no partial-auth and no legacy SA relationship"
+            end
+        end
+    end
+    deactivate IPSC
+

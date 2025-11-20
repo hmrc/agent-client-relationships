@@ -1,0 +1,74 @@
+sequenceDiagram
+    participant Stride as Stride User
+    participant RC as RelationshipsController
+    participant VS as ValidationService
+    participant ESP as Enrolment Store Proxy<br/>EACD
+    participant FRS as FindRelationshipsService
+    participant IFOrHIP as IF/HIP Connector
+    participant HIP as HIP<br/>(ETMP)
+
+    Stride->>+RC: GET /relationships/service/{service}/client/{clientIdType}/{clientId}
+
+    Note over RC: Parse path parameters
+
+    RC->>+VS: validateForEnrolmentKey(service, clientIdType, clientId)
+
+    alt Special cases (IR-SA, MTD-IT, PIR, VAT, CBC)
+        VS-->>RC: Valid EnrolmentKey
+    else Normal supported service
+        VS->>VS: validateSupportedServiceForEnrolmentKey
+        VS-->>RC: Valid EnrolmentKey
+    else CBC service
+        VS->>+ESP: queryKnownFacts(HMRC-CBC-ORG)
+        alt CBC-ORG exists
+            ESP-->>-VS: UTR found
+            VS-->>RC: EnrolmentKey with UTR
+        else Try CBC-NONUK-ORG
+            ESP-->>VS: Not found
+            VS->>ESP: queryKnownFacts(HMRC-CBC-NONUK-ORG)
+            ESP-->>VS: Success
+            VS-->>RC: EnrolmentKey (CBC-NONUK-ORG)
+        end
+    else Unsupported service
+        VS-->>RC: Error: Unknown service
+        RC-->>Stride: 400 Bad Request
+    end
+
+    Note over VS: Validation complete
+    VS-->>-RC: EnrolmentKey or Error
+
+    RC->>RC: authorisedWithStride(stride roles)
+
+    alt ITSA Services (MTD-IT or MTD-IT-SUPP)
+        RC->>+FRS: getItsaRelationshipForClient(nino, service)
+        FRS->>+IFOrHIP: getMtdIdFor(nino)
+        IFOrHIP-->>-FRS: MtdItId
+
+        alt MtdItId found
+            FRS->>+IFOrHIP: getActiveClientRelationships(mtdItId, service)
+            IFOrHIP->>+HIP: GET /registration/relationship (with auth profile)
+            HIP-->>-IFOrHIP: relationshipDisplayResponse
+            IFOrHIP-->>-FRS: ActiveRelationship or None
+            FRS-->>-RC: Some(relationship) or None
+        else No MtdItId
+            FRS-->>RC: None
+        end
+    else Other Services
+        RC->>+FRS: getActiveRelationshipsForClient(taxIdentifier, service)
+
+        alt Supported service type
+            FRS->>+IFOrHIP: getActiveClientRelationships(taxIdentifier, service)
+            IFOrHIP->>+HIP: GET /registration/relationship (with auth profile)
+            HIP-->>-IFOrHIP: relationshipDisplayResponse
+            IFOrHIP-->>-FRS: ActiveRelationship or None
+            FRS-->>-RC: Some(relationship) or None
+        else Unsupported identifier type
+            FRS-->>RC: None
+        end
+    end
+
+    alt Relationship found
+        RC-->>-Stride: 200 OK with relationship JSON
+    else No relationship found
+        RC-->>Stride: 404 Not Found
+    end

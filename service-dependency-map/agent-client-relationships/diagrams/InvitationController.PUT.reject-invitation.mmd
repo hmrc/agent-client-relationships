@@ -1,9 +1,0 @@
-sequenceDiagram
-    autonumber
-    participant Upstream
-    participant agent-client-relationships
-    participant Database
-
-    Upstream->>+agent-client-relationships: PUT /client/authorisation-response/reject/:invitationId
-    agent-client-relationships->>Database: Update: Find the invitation by ID and update its status to 'Rejected'.
-    agent-client-relationships-->>-Upstream: Final Response

@@ -1,0 +1,43 @@
+sequenceDiagram
+    participant Client
+    participant ILC as InvitationLinkController
+    participant ILS as InvitationLinkService
+    participant ARR as AgentReferenceRepository
+    participant Mongo as MongoDB<br/>(agent-reference collection)
+    participant AAS as agent-assurance
+
+    Client->>+ILC: GET /agent/agent-reference/uid/:uid/:normalizedAgentName
+    Note over ILC: No authentication required<br/>(public endpoint for client access)
+
+    ILC->>+ILS: validateLink(uid, normalizedAgentName)
+
+    ILS->>+ARR: findBy(uid)
+    ARR->>+Mongo: find({"uid": uid})
+    Mongo-->>-ARR: AgentReferenceRecord or None
+    ARR-->>-ILS: Option[AgentReferenceRecord]
+
+    alt AgentReferenceRecord not found
+        ILS-->>ILC: Left(AgentReferenceDataNotFound)
+        ILC-->>Client: 404 Not Found
+    else AgentReferenceRecord found
+        ILS->>ILS: validateNormalizedAgentName(record.normalisedAgentNames, normalizedAgentName)
+
+        alt Normalized name matches
+            ILS->>+AAS: getNonSuspendedAgentRecord(record.arn)
+            Note over AAS: GET /agent-assurance/agent-record/:arn<br/>Returns None if suspended
+            AAS-->>-ILS: Option[AgentDetailsDesResponse]
+
+            alt Agent suspended
+                ILS-->>ILC: Left(AgentSuspended)
+                ILC-->>Client: 403 Forbidden
+            else Agent not suspended
+                ILS->>ILS: Extract agency name from agent details
+                ILS-->>-ILC: Right(ValidateLinkResponse(arn, agencyName))
+                ILC-->>-Client: 200 OK with agent details
+            end
+        else Normalized name does not match
+            ILS-->>ILC: Left(NormalizedAgentNameNotMatched)
+            ILC-->>Client: 404 Not Found
+        end
+    end
+

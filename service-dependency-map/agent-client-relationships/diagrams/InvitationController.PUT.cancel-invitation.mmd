@@ -1,9 +1,0 @@
-sequenceDiagram
-    autonumber
-    participant Upstream
-    participant agent-client-relationships
-    participant Database
-
-    Upstream->>+agent-client-relationships: PUT /agent/cancel-invitation/:invitationId
-    agent-client-relationships->>Database: Update: Find the invitation by ID and agent's ARN, and update its status to 'Cancelled'.
-    agent-client-relationships-->>-Upstream: Final Response

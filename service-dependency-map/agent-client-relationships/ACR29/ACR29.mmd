@@ -1,0 +1,106 @@
+sequenceDiagram
+    participant Stride as Stride User
+    participant SCDC as StrideClientDetailsController
+    participant SCDS as StrideClientDetailsService
+    participant VS as ValidationService
+    participant AFIRC as AgentFiRelationshipConnector
+    participant AF as Agent-Fi-Relationship
+    participant CDS as ClientDetailsService
+    participant DES as DES<br/>(Citizen Details)
+    participant AM as Agent Maintainer
+
+    Stride->>SCDC: GET /stride/irv-relationships/{nino}
+    activate SCDC
+
+    Note over SCDC: Stride authorization check
+
+    SCDC->>SCDS: findActiveIrvRelationships(nino)
+    activate SCDS
+
+    SCDS->>VS: validateForTaxIdentifier(NinoType.id, nino)
+    activate VS
+
+    alt Valid NINO
+        VS-->>SCDS: TaxIdentifier(Nino)
+    else Invalid NINO
+        VS-->>SCDS: Error
+    end
+
+    deactivate VS
+
+    alt Invalid NINO - return error
+        SCDS-->>SCDC: Left(TaxIdentifierError)
+        deactivate SCDS
+        SCDC-->>Stride: 400 Bad Request
+    else Valid NINO - continue processing
+
+        SCDS->>AFIRC: findIrvActiveRelationshipForClient(nino)
+        activate AFIRC
+
+        AFIRC->>AF: GET /relationships/active<br/>service=PERSONAL-INCOME-RECORD
+        activate AF
+
+        alt IRV relationships found
+            AF-->>AFIRC: ClientRelationships
+        else No relationships found
+            AF-->>AFIRC: 404 Not Found
+        else Relationship suspended
+            AF-->>AFIRC: Suspended status
+        end
+
+        deactivate AF
+
+        alt Success
+            AFIRC-->>SCDS: Right(ClientRelationships)
+            Note over SCDS: Relationships retrieved
+        else Not found (recovered)
+            AFIRC-->>SCDS: Left(RelationshipNotFound)
+            Note over SCDS: Recovered as empty sequence
+        else Suspended (recovered)
+            AFIRC-->>SCDS: Left(RelationshipSuspended)
+            Note over SCDS: Recovered as empty sequence
+        end
+
+        deactivate AFIRC
+
+        loop For each relationship
+            SCDS->>AM: getAgentRecord(arn)
+            activate AM
+            AM-->>SCDS: AgentRecord with agentName
+            deactivate AM
+            Note over SCDS: Build ClientRelationshipWithAgentName
+        end
+
+        SCDS->>CDS: findClientDetails("PERSONAL-INCOME-RECORD", nino)
+        activate CDS
+
+        CDS->>DES: getCitizenDetails(nino)
+        activate DES
+
+        alt Client found
+            DES-->>CDS: Citizen name
+        else Client not found
+            DES-->>CDS: 404 Not Found
+        else DES error
+            DES-->>CDS: 500 Error
+        end
+
+        deactivate DES
+
+        alt Success
+            CDS-->>SCDS: Right(ClientDetailsResponse)
+            Note over SCDS: Build IrvRelationships response
+            SCDS-->>SCDC: Right(IrvRelationships)
+            SCDC-->>Stride: 200 OK - IRV relationships
+        else Not found
+            CDS-->>SCDS: Left(ClientDetailsNotFound)
+            SCDS-->>SCDC: Left(ClientDetailsNotFound)
+            SCDC-->>Stride: 404 Not Found
+        else Error
+            CDS-->>SCDS: Left(ErrorRetrievingClientDetails)
+            SCDS-->>SCDC: Left(ErrorRetrievingClientDetails)
+            SCDC-->>Stride: 500 Internal Server Error
+        end
+        deactivate SCDC
+        deactivate CDS
+    end

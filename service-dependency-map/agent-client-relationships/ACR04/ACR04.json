@@ -1,0 +1,250 @@
+{
+    "apiId": "ACR04",
+    "apiTitle": "Check Legacy SA Relationship Mapping Status",
+    "description": "Checks if a client has a legacy Self Assessment (SA) relationship in CESA (the legacy tax system) and whether that relationship has been mapped to the agent's modern ARN. This endpoint is used by agent-invitations-frontend to determine the status of legacy relationships during the invitation process. Returns different status codes to indicate: no legacy relationship (404), legacy relationship exists but not mapped (200), or legacy relationship exists and is mapped (204).",
+    "method": "GET",
+    "path": "/agent/{arn}/client/{nino}/legacy-mapped-relationship",
+    "pathParameters": {
+        "arn": "Agent Reference Number in format [A-Z]ARN[0-9]{7}",
+        "nino": "Client's National Insurance Number"
+    },
+    "queryParameters": {},
+    "responses": {
+        "204": "No Content - Legacy SA relationship found in CESA AND it is mapped to the agent's ARN",
+        "200": "OK - Legacy SA relationship found in CESA but NOT mapped to the agent's ARN",
+        "404": "Not Found - No legacy SA relationship found in CESA for this client",
+        "401": "Unauthorized - Agent authentication failed"
+    },
+    "authentication": "Agent authentication via withAuthorisedAsAgent",
+    "audience": "internal",
+    "controller": "RelationshipsController",
+    "controllerMethod": "getLegacySaRelationshipStatus",
+    "usedBy": [
+        "agent-invitations-frontend"
+    ],
+    "services": [
+        {
+            "name": "DesConnector",
+            "alias": "DES",
+            "method": "getClientSaAgentSaReferences",
+            "description": "Queries CESA for client's active SA agent references"
+        },
+        {
+            "name": "CheckAndCopyRelationshipsService",
+            "alias": "CACRS",
+            "method": "intersection",
+            "description": "Calculates intersection between client's SA refs and agent's mapped SA refs"
+        },
+        {
+            "name": "MappingConnector",
+            "alias": "AM",
+            "method": "getSaAgentReferencesFor",
+            "description": "Retrieves SA agent references that have been mapped to the ARN"
+        },
+        {
+            "name": "AuditService",
+            "method": "sendCheckCesaAndPartialAuthAuditEvent",
+            "description": "Sends audit event when mapped legacy relationship is found"
+        }
+    ],
+    "interactions": [
+        {
+            "step": 1,
+            "actor": "RelationshipsController (RC)",
+            "action": "authenticates",
+            "target": "Agent",
+            "method": "withAuthorisedAsAgent",
+            "description": "Validates agent authentication and extracts ARN from enrolment"
+        },
+        {
+            "step": 2,
+            "actor": "RelationshipsController (RC)",
+            "action": "sets audit data",
+            "target": "AuditData",
+            "description": "Prepares audit data with ARN, NINO, service=mtd-it, howCreated=hasLegacyMapping"
+        },
+        {
+            "step": 3,
+            "actor": "RelationshipsController (RC)",
+            "action": "calls connector",
+            "target": "DesConnector (DES)",
+            "method": "getClientSaAgentSaReferences",
+            "description": "Retrieves client's active SA agent references from CESA"
+        },
+        {
+            "step": 4,
+            "actor": "DesConnector (DES)",
+            "action": "calls external API",
+            "target": "DES/ETMP",
+            "endpoint": "/registration/relationship/nino/{nino}",
+            "method": "GET",
+            "description": "Queries CESA for all agent relationships for the NINO"
+        },
+        {
+            "step": 5,
+            "actor": "DesConnector (DES)",
+            "action": "filters results",
+            "target": "DesConnector (DES)",
+            "description": "Filters to only active agents (hasAgent=true, agentCeasedDate is empty)"
+        },
+        {
+            "step": 6,
+            "actor": "DesConnector (DES)",
+            "action": "returns data",
+            "target": "RelationshipsController (RC)",
+            "description": "Returns Seq[SaAgentReference] with active agent references"
+        },
+        {
+            "step": 7,
+            "actor": "RelationshipsController (RC)",
+            "action": "calls service",
+            "target": "CheckAndCopyRelationshipsService (CACRS)",
+            "method": "intersection",
+            "description": "Calculates intersection between client's refs and agent's mapped refs",
+            "conditional": "only if client has SA agent references (non-empty)"
+        },
+        {
+            "step": 8,
+            "actor": "CheckAndCopyRelationshipsService (CACRS)",
+            "action": "calls connector",
+            "target": "MappingConnector (AM)",
+            "method": "getSaAgentReferencesFor",
+            "description": "Retrieves SA agent references mapped to the ARN"
+        },
+        {
+            "step": 9,
+            "actor": "MappingConnector (AM)",
+            "action": "calls external API",
+            "target": "agent-mapping",
+            "endpoint": "/agent-mapping/mappings/{arn}",
+            "method": "GET",
+            "description": "Queries agent-mapping service for SA mappings"
+        },
+        {
+            "step": 10,
+            "actor": "MappingConnector (AM)",
+            "action": "returns data",
+            "target": "CheckAndCopyRelationshipsService (CACRS)",
+            "description": "Returns Seq[SaAgentReference] or empty if 404/error"
+        },
+        {
+            "step": 11,
+            "actor": "CheckAndCopyRelationshipsService (CACRS)",
+            "action": "calculates intersection",
+            "target": "CheckAndCopyRelationshipsService (CACRS)",
+            "description": "Returns Set of matching SA agent references (intersection)"
+        },
+        {
+            "step": 12,
+            "actor": "RelationshipsController (RC)",
+            "action": "evaluates result",
+            "target": "RelationshipsController (RC)",
+            "description": "Determines response based on whether intersection is non-empty"
+        },
+        {
+            "step": 13,
+            "actor": "RelationshipsController (RC)",
+            "action": "sends audit event",
+            "target": "AuditService",
+            "method": "sendCheckCesaAndPartialAuthAuditEvent",
+            "description": "Audits when mapped relationship found with matching SA refs",
+            "conditional": "only if matching references found (non-empty intersection)"
+        },
+        {
+            "step": 14,
+            "actor": "RelationshipsController (RC)",
+            "action": "returns response",
+            "target": "Agent",
+            "description": "Returns 204/200/404 based on relationship mapping status"
+        }
+    ],
+    "externalDependencies": [
+        {
+            "name": "DES/ETMP",
+            "alias": "DES",
+            "description": "Data Exchange Service - stores legacy CESA SA agent relationships"
+        },
+        {
+            "name": "agent-mapping",
+            "alias": "AM",
+            "description": "Service that maintains mappings between modern ARNs and legacy SA agent references"
+        }
+    ],
+    "databaseCollections": [],
+    "responseLogic": {
+        "204_NoContent": {
+            "condition": "clientRefs.nonEmpty AND (clientRefs ∩ agentMappedRefs).nonEmpty",
+            "meaning": "Legacy SA relationship exists in CESA AND it has been mapped to the agent's ARN"
+        },
+        "200_OK": {
+            "condition": "clientRefs.nonEmpty AND ((clientRefs ∩ agentMappedRefs).isEmpty OR mapping service returned 404)",
+            "meaning": "Legacy SA relationship exists in CESA but has NOT been mapped to the agent's ARN"
+        },
+        "404_NotFound": {
+            "condition": "clientRefs.isEmpty",
+            "meaning": "No legacy SA relationship found in CESA for this client"
+        }
+    },
+    "auditDetails": {
+        "event": "CheckCesaAndPartialAuth",
+        "triggeredWhen": "Mapped legacy relationship found (204 response)",
+        "auditData": {
+            "arn": "Agent Reference Number",
+            "nino": "Client's NINO",
+            "service": "Always 'mtd-it'",
+            "clientIdType": "Always 'nino'",
+            "howRelationshipCreated": "Always 'hasLegacyMapping'",
+            "saAgentRef": "Comma-separated list of matching SA agent references",
+            "cesaRelationship": "true (since relationship was found)"
+        }
+    },
+    "errorHandling": [
+        {
+            "scenario": "DES returns non-200 status",
+            "handling": "Logs error, returns empty Seq (treated as no legacy relationship) → 404"
+        },
+        {
+            "scenario": "agent-mapping returns 404",
+            "handling": "Caught in recover block, returns 200 (relationship exists but not mapped)"
+        },
+        {
+            "scenario": "agent-mapping returns other error",
+            "handling": "Logs error, returns empty Seq (treated as no mapping) → 200"
+        },
+        {
+            "scenario": "Agent authentication fails",
+            "handling": "Returns 401 Unauthorized via withAuthorisedAsAgent"
+        }
+    ],
+    "businessLogic": {
+        "cesaFiltering": "Only considers active SA agent relationships where hasAgent=true and agentCeasedDate is empty",
+        "intersectionLogic": "Finds common SA agent references between what client has in CESA and what agent has mapped",
+        "emptyClientRefs": "If client has no SA agent refs in CESA, immediately returns 404",
+        "emptyAgentMappings": "If agent has no mapped SA refs, or 404 from mapping service, returns 200",
+        "matchFound": "If any SA agent ref matches between client and agent, returns 204 with audit"
+    },
+    "useCases": [
+        {
+            "scenario": "Agent inviting existing client with legacy relationship",
+            "response": "204 if mapped, 200 if not mapped - frontend can show appropriate message"
+        },
+        {
+            "scenario": "Agent inviting new client with no legacy relationship",
+            "response": "404 - frontend proceeds with new invitation flow"
+        },
+        {
+            "scenario": "Migration status check",
+            "response": "Helps determine if legacy SA relationships have been migrated to modern ARN system"
+        }
+    ],
+    "importantNotes": [
+        "This endpoint is specifically for SA (Self Assessment) relationships - not for other tax regimes",
+        "The endpoint checks CESA (legacy system) not EACD (modern system)",
+        "A 204 response means the agent can access the client through their legacy mapping",
+        "A 200 response means there's a legacy relationship but agent needs to establish new modern relationship",
+        "Used during invitation process to detect and handle pre-existing legacy relationships",
+        "The audit event is only sent when a mapped relationship is confirmed (204)",
+        "DES filtering ensures only active agent relationships are considered (no ceased agents)"
+    ]
+}
+

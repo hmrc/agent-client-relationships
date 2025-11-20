@@ -1,0 +1,62 @@
+sequenceDiagram
+    participant Client as External System
+    participant ACRC as ApiCheckRelationshipController
+    participant AAS as AgentAssuranceService
+    participant AA as Agent Assurance
+    participant CDS as ClientDetailsService
+    participant DESIF as DES/IF
+    participant CROS as CheckRelationshipsOrchestratorService
+
+    Client->>ACRC: POST /api/{arn}/relationship<br/>{service, clientId, knownFact}
+    Note over ACRC: OAuth2 Authentication Check
+
+    ACRC->>AAS: getNonSuspendedAgentRecord(arn)
+    AAS->>AA: GET /agent-assurance/agent/{arn}
+
+    alt Agent Not Suspended
+        AA-->>AAS: Agent record
+        AAS-->>ACRC: Some(agentRecord)
+
+        ACRC->>CDS: findClientDetails(service, clientId)
+        CDS->>DESIF: Get client details<br/>(service-specific endpoint)
+
+        alt Client Registered
+            DESIF-->>CDS: Client details
+            CDS-->>ACRC: Right(clientDetails)
+
+            alt Known Fact Matches
+                Note over ACRC: clientDetails.containsKnownFact(knownFact)
+
+                alt Client Not Insolvent
+                    Note over ACRC: clientDetails.status.isEmpty
+
+                    ACRC->>CROS: checkForRelationship(arn, service, clientId)
+                    Note over CROS: Full ACR01 relationship check<br/>Queries: EACD, UGS, Agent Permissions,<br/>IF/HIP, DES, Agent Mapping, Agent FI
+
+                    alt Relationship Found
+                        CROS-->>ACRC: CheckRelationshipFound
+                        ACRC-->>Client: 204 No Content
+                    else Relationship Not Found
+                        CROS-->>ACRC: CheckRelationshipNotFound
+                        ACRC-->>Client: 404 RELATIONSHIP_NOT_FOUND
+                    end
+
+                else Client Is Insolvent
+                    ACRC-->>Client: 423 CLIENT_INSOLVENT
+                end
+
+            else Known Fact Does Not Match
+                ACRC-->>Client: 403 KNOWN_FACT_DOES_NOT_MATCH
+            end
+
+        else Client Not Registered
+            DESIF-->>CDS: Not found
+            CDS-->>ACRC: Left(error)
+            ACRC-->>Client: 404 CLIENT_REGISTRATION_NOT_FOUND
+        end
+
+    else Agent Suspended
+        AA-->>AAS: None
+        AAS-->>ACRC: None
+        ACRC-->>Client: 403 AGENT_SUSPENDED
+    end

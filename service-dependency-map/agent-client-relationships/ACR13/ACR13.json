@@ -1,0 +1,286 @@
+{
+    "apiId": "ACR13",
+    "apiTitle": "Get Authorization Request Info for Client",
+    "description": "Retrieves information about a specific authorization request (invitation) for a client. This endpoint first looks up the invitation by ID, then validates that the authenticated user is either the agent who sent the invitation OR the client to whom the invitation was sent. Returns agent name, service, and invitation status. Used by clients to view details of invitations they have received. Note: Authentication happens AFTER invitation lookup (not before), which is unusual.",
+    "method": "GET",
+    "path": "/client/authorisation-request-info/{invitationId}",
+    "pathParameters": {
+        "invitationId": "Unique invitation identifier (e.g., ABBBBBBBBBBBB)"
+    },
+    "queryParameters": {},
+    "responses": {
+        "200": "Returns AuthorisationRequestInfoForClient with agent name, service, and status",
+        "404": "Not Found - invitation not found",
+        "403": "Forbidden - user not authorized (not the agent OR the client for this invitation)"
+    },
+    "authentication": "Two-phase: (1) No auth to lookup invitation, (2) authorisedUser validates user is agent OR client after lookup",
+    "audience": "internal",
+    "controller": "AuthorisationRequestInfoController",
+    "controllerMethod": "getForClient",
+    "services": [
+        {
+            "name": "InvitationService",
+            "alias": "IS",
+            "method": "findInvitationForClient",
+            "description": "Queries MongoDB for invitation by ID"
+        },
+        {
+            "name": "InvitationsRepository",
+            "alias": "IR",
+            "method": "findOneByIdForClient",
+            "description": "MongoDB query for invitation"
+        },
+        {
+            "name": "agent-assurance",
+            "alias": "AAS",
+            "method": "getAgentRecord",
+            "description": "Retrieves agent details including agency name (returns details even if agent suspended)"
+        }
+    ],
+    "interactions": [
+        {
+            "step": 1,
+            "actor": "AuthorisationRequestInfoController (ARI)",
+            "action": "receives request",
+            "target": "Client",
+            "description": "No authentication check at this point"
+        },
+        {
+            "step": 2,
+            "actor": "AuthorisationRequestInfoController (ARI)",
+            "action": "calls service",
+            "target": "InvitationService (IS)",
+            "method": "findInvitationForClient",
+            "description": "Looks up invitation by ID"
+        },
+        {
+            "step": 3,
+            "actor": "InvitationService (IS)",
+            "action": "calls repository",
+            "target": "InvitationsRepository (IR)",
+            "method": "findOneByIdForClient",
+            "description": "Queries MongoDB"
+        },
+        {
+            "step": 4,
+            "actor": "InvitationsRepository (IR)",
+            "action": "queries database",
+            "target": "MongoDB (invitations collection)",
+            "query": "{\"invitationId\": \"{invitationId}\"}",
+            "description": "Finds invitation by ID"
+        },
+        {
+            "step": 5,
+            "actor": "InvitationsRepository (IR)",
+            "action": "returns result",
+            "target": "InvitationService (IS)",
+            "description": "Returns Option[Invitation]"
+        },
+        {
+            "step": 6,
+            "actor": "InvitationService (IS)",
+            "action": "returns result",
+            "target": "AuthorisationRequestInfoController (ARI)",
+            "description": "Returns Option[Invitation]"
+        },
+        {
+            "step": 7,
+            "actor": "AuthorisationRequestInfoController (ARI)",
+            "action": "validates authorization",
+            "target": "AuthorisationRequestInfoController (ARI)",
+            "method": "authorisedUser",
+            "description": "Validates user is agent (with ARN) OR client (with matching clientId)",
+            "conditional": "only if invitation found"
+        },
+        {
+            "step": 8,
+            "actor": "AuthorisationRequestInfoController (ARI)",
+            "action": "calls external service",
+            "target": "agent-assurance (AAS)",
+            "method": "getAgentRecord",
+            "description": "Retrieves agent details including agency name",
+            "conditional": "only if user authorized"
+        },
+        {
+            "step": 9,
+            "actor": "agent-assurance (AAS)",
+            "action": "returns data",
+            "target": "AuthorisationRequestInfoController (ARI)",
+            "description": "Returns AgentDetailsDesResponse"
+        },
+        {
+            "step": 10,
+            "actor": "AuthorisationRequestInfoController (ARI)",
+            "action": "builds response",
+            "target": "AuthorisationRequestInfoController (ARI)",
+            "description": "Creates AuthorisationRequestInfoForClient with agent name, service, status"
+        },
+        {
+            "step": 11,
+            "actor": "AuthorisationRequestInfoController (ARI)",
+            "action": "returns response",
+            "target": "Client",
+            "description": "Returns 200 OK with JSON"
+        }
+    ],
+    "externalDependencies": [
+        {
+            "name": "agent-assurance",
+            "description": "Provides agent details including agency name",
+            "method": "getAgentRecord",
+            "note": "Returns details even if agent suspended (not getNonSuspendedAgentRecord)"
+        }
+    ],
+    "databaseCollections": [
+        {
+            "name": "invitations",
+            "operation": "READ",
+            "description": "Queries for invitation by invitationId"
+        }
+    ],
+    "authenticationDetails": {
+        "method": "authorisedUser",
+        "timing": "AFTER invitation lookup (unusual pattern)",
+        "validates": "User is either: (1) Agent with matching ARN, OR (2) Client with matching clientId",
+        "providers": ["GovernmentGateway", "PrivilegedApplication (Stride)"],
+        "retrieves": "allEnrolments and affinityGroup and credentials",
+        "notAuthorizedResponse": "403 Forbidden (NoPermissionToPerformOperation)"
+    },
+    "responseModel": {
+        "AuthorisationRequestInfoForClient": {
+            "agentName": "Agent's agency name from agent-assurance",
+            "service": "Service identifier from invitation",
+            "status": "Invitation status (Pending, Accepted, Rejected, Expired, Cancelled)"
+        },
+        "example": {
+            "agentName": "ABC Accountants Ltd",
+            "service": "HMRC-MTD-IT",
+            "status": "Pending"
+        }
+    },
+    "businessLogic": {
+        "authenticationFlow": {
+            "description": "Unusual two-phase authentication",
+            "phase1": "No auth check - allow lookup of invitation",
+            "phase2": "After invitation found, validate user is agent OR client",
+            "reason": "Allows checking if invitation exists before enforcing authorization"
+        },
+        "authorizedUsers": {
+            "agent": "Agent with ARN matching invitation.arn (HMRC-AS-AGENT enrolment)",
+            "client": "Client with tax identifier matching invitation.clientId",
+            "stride": "Stride users with required roles (strideRoles parameter is empty [], so effectively not used here)"
+        },
+        "clientIdMatching": {
+            "description": "Client authorization checks if user has enrolment matching the invitation's clientId",
+            "process": "Extracts tax identifier from invitation.clientId and invitation.clientIdType, checks if user has matching enrolment"
+        },
+        "agentDetails": {
+            "description": "Always retrieves fresh agent details from agent-assurance",
+            "method": "getAgentRecord (not getNonSuspendedAgentRecord)",
+            "note": "Returns details even if agent is suspended"
+        }
+    },
+    "errorHandling": [
+        {
+            "scenario": "Invitation not found",
+            "response": "404 Not Found",
+            "note": "Invitation ID doesn't exist in database"
+        },
+        {
+            "scenario": "User not the agent OR client for this invitation",
+            "response": "403 Forbidden (NoPermissionToPerformOperation)",
+            "note": "User authenticated but not authorized to view this specific invitation"
+        },
+        {
+            "scenario": "User not authenticated",
+            "response": "401 Unauthorized",
+            "note": "Standard auth failure"
+        }
+    ],
+    "useCases": [
+        {
+            "scenario": "Client views pending invitation details",
+            "flow": [
+                "Client authenticated with MTD-IT enrolment",
+                "GET /client/authorisation-request-info/ABBBBBBBBBBBB",
+                "Invitation found with matching clientId",
+                "Client has enrolment matching invitation's clientId",
+                "Agent details retrieved",
+                "Returns agent name and invitation status"
+            ],
+            "response": {
+                "agentName": "ABC Accountants Ltd",
+                "service": "HMRC-MTD-IT",
+                "status": "Pending"
+            },
+            "frontend_action": "Display 'ABC Accountants Ltd has invited you to authorize them for Making Tax Digital for Income Tax. Status: Pending'"
+        },
+        {
+            "scenario": "Agent views invitation they sent",
+            "flow": [
+                "Agent authenticated with ARN matching invitation",
+                "GET /client/authorisation-request-info/ABBBBBBBBBBBB",
+                "Invitation found",
+                "Agent ARN matches invitation.arn",
+                "Returns invitation details"
+            ],
+            "response": {
+                "agentName": "ABC Accountants Ltd",
+                "service": "HMRC-MTD-VAT",
+                "status": "Accepted"
+            },
+            "frontend_action": "Agent dashboard shows 'Invitation to client for VAT - Status: Accepted'"
+        },
+        {
+            "scenario": "User tries to view invitation for different client",
+            "flow": [
+                "User authenticated but clientId doesn't match invitation",
+                "Invitation found",
+                "Authorization check fails",
+                "Returns 403"
+            ],
+            "response": "403 Forbidden",
+            "frontend_action": "Show 'You are not authorized to view this invitation'"
+        },
+        {
+            "scenario": "Invalid invitation ID",
+            "response": "404 Not Found",
+            "frontend_action": "Show 'Invitation not found'"
+        },
+        {
+            "scenario": "Client views expired invitation",
+            "response": {
+                "agentName": "XYZ Tax Services",
+                "service": "HMRC-CGT-PD",
+                "status": "Expired"
+            },
+            "frontend_action": "Show 'This invitation from XYZ Tax Services has expired'"
+        }
+    ],
+    "importantNotes": [
+        "⚠️ UNUSUAL AUTH PATTERN: Authentication happens AFTER invitation lookup (not before)",
+        "✅ Flexible authorization: Agent OR Client can view",
+        "✅ Agent view: Agent can see invitations they sent",
+        "✅ Client view: Client can see invitations they received",
+        "✅ Uses getAgentRecord (not getNonSuspendedAgentRecord) - returns details even if agent suspended",
+        "✅ Simple response: Only agent name, service, and status (minimal info)",
+        "✅ No enrolment validation: Only checks if user is agent OR client",
+        "⚠️ Stride roles parameter is empty [] - Stride users can't actually use this",
+        "⚠️ Returns details for ANY status (Pending, Accepted, Rejected, Expired, Cancelled)"
+    ],
+    "comparisonWithSimilarEndpoints": {
+        "ACR12_validateInvitationForClient": {
+            "purpose": "Validate invitation for client with comprehensive checks",
+            "authentication": "Client only (with service enrolment validation)",
+            "returns": "Full invitation details with existing agent check",
+            "complexity": "High - checks existing relationships"
+        },
+        "ACR13_getForClient": {
+            "purpose": "Get basic invitation info for agent OR client",
+            "authentication": "Agent OR Client (after invitation lookup)",
+            "returns": "Minimal info - agent name, service, status",
+            "complexity": "Low - simple lookup and return"
+        }
+    }
+}
+

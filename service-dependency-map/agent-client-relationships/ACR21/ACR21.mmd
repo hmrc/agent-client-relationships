@@ -1,0 +1,41 @@
+sequenceDiagram
+    participant Client
+    participant IC as InvitationController
+    participant AA as AuthActions
+    participant IS as InvitationService
+    participant IR as InvitationsRepository
+    participant Mongo as MongoDB
+
+    Client->>+IC: PUT /agent/cancel-invitation/{invitationId}
+    Note over IC: withAuthorisedAsAgent
+    IC->>+AA: Authenticate agent
+    AA-->>-IC: Authenticated as authArn
+
+    IC->>+IS: cancelInvitation(authArn, invitationId)
+    IS->>+IR: cancelByIdForAgent(arn, invitationId)
+
+    IR->>+Mongo: Find invitation by invitationId
+    Mongo-->>-IR: Option[Invitation]
+
+    alt Invitation Not Found
+        IR-->>IS: NotFound
+        IS-->>IC: Left(InvitationNotFound)
+        IC-->>Client: 404 Not Found
+    else Invitation Found
+        alt Status is not Pending
+            IR-->>IS: WrongInvitationStatus
+            IS-->>IC: Left(InvalidInvitationStatus)
+            IC-->>Client: 403 Forbidden (InvalidInvitationStatus)
+        else ARN does not match authenticated agent
+            IR-->>IS: NoPermission
+            IS-->>IC: Left(NoPermissionOnAgency)
+            IC-->>Client: 403 Forbidden (NoPermissionOnAgency)
+        else Status is Pending and ARN matches
+            IR->>+Mongo: Update invitation<br/>(status=Cancelled, lastUpdated=now)
+            Mongo-->>-IR: Updated
+            IR-->>-IS: Success
+            IS-->>-IC: Right(Unit)
+            IC-->>-Client: 204 No Content
+        end
+    end
+

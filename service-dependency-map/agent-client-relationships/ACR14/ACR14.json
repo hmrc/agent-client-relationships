@@ -1,0 +1,209 @@
+{
+    "apiId": "ACR14",
+    "apiTitle": "Get Agent Details",
+    "description": "Retrieves public details about an agent including agency name, email, and suspension status. This is a simple passthrough endpoint that queries agent-assurance for agent information. Used by agent-facing applications to display agent's own details or by other services to retrieve agent information. Returns details even if the agent is suspended. Requires agent authentication.",
+    "method": "GET",
+    "path": "/agent/{arn}/details",
+    "pathParameters": {
+        "arn": "Agent Reference Number (e.g., TARN0000001)"
+    },
+    "queryParameters": {},
+    "responses": {
+        "200": "Returns AgentDetailsDesResponse with agency details and suspension status",
+        "401": "Unauthorized - agent not authenticated"
+    },
+    "authentication": "Agent authentication via withAuthorisedAsAgent",
+    "audience": "internal",
+    "controller": "AgentDetailsController",
+    "controllerMethod": "getAgentDetails",
+    "services": [
+        {
+            "name": "AgentAssuranceService",
+            "alias": "AAS",
+            "method": "getAgentRecord",
+            "description": "Retrieves agent record from agent-assurance including agency details and suspension status"
+        }
+    ],
+    "interactions": [
+        {
+            "step": 1,
+            "actor": "AgentDetailsController (ADC)",
+            "action": "authenticates",
+            "target": "Agent",
+            "method": "withAuthorisedAsAgent",
+            "description": "Validates agent authentication"
+        },
+        {
+            "step": 2,
+            "actor": "AgentDetailsController (ADC)",
+            "action": "calls external service",
+            "target": "agent-assurance (AAS)",
+            "method": "getAgentRecord",
+            "description": "Retrieves agent details from agent-assurance"
+        },
+        {
+            "step": 3,
+            "actor": "agent-assurance (AAS)",
+            "action": "returns data",
+            "target": "AgentDetailsController (ADC)",
+            "description": "Returns AgentDetailsDesResponse with agency details and suspension info"
+        },
+        {
+            "step": 4,
+            "actor": "AgentDetailsController (ADC)",
+            "action": "returns response",
+            "target": "Agent",
+            "description": "Returns 200 OK with JSON"
+        }
+    ],
+    "externalDependencies": [
+        {
+            "name": "agent-assurance",
+            "description": "Provides agent record including agency details and suspension status",
+            "method": "getAgentRecord",
+            "endpoint": "/agent-assurance/agent-record/:arn",
+            "note": "Uses getAgentRecord (not getNonSuspendedAgentRecord) - returns details even if agent suspended"
+        }
+    ],
+    "databaseCollections": [],
+    "responseModel": {
+        "AgentDetailsDesResponse": {
+            "agencyDetails": "AgencyDetails object with name and email",
+            "suspensionDetails": "Optional SuspensionDetails object (present if agent suspended)"
+        },
+        "AgencyDetails": {
+            "agencyName": "Agent's trading name",
+            "agencyEmail": "Agent's contact email"
+        },
+        "SuspensionDetails": {
+            "suspensionStatus": "true if suspended",
+            "regimes": "Array of suspended tax regimes (e.g., ['ITSA', 'VATC'])"
+        },
+        "example": {
+            "agencyDetails": {
+                "agencyName": "ABC Accountants Ltd",
+                "agencyEmail": "info@abcaccountants.co.uk"
+            },
+            "suspensionDetails": null
+        },
+        "example_suspended": {
+            "agencyDetails": {
+                "agencyName": "Suspended Agent Ltd",
+                "agencyEmail": "contact@suspendedagent.co.uk"
+            },
+            "suspensionDetails": {
+                "suspensionStatus": true,
+                "regimes": ["ITSA", "VATC"]
+            }
+        }
+    },
+    "businessLogic": {
+        "passthrough": {
+            "description": "Simple passthrough endpoint - no business logic",
+            "flow": "Authenticate agent → Query agent-assurance → Return response"
+        },
+        "arnParameter": {
+            "description": "ARN is passed as path parameter",
+            "note": "Agent must be authenticated but ARN in path can be any ARN (not validated against authenticated agent)"
+        },
+        "suspensionStatus": {
+            "description": "Returns suspension details if agent is suspended",
+            "method": "getAgentRecord (not getNonSuspendedAgentRecord)",
+            "note": "Does NOT filter out suspended agents - returns details regardless of suspension status"
+        },
+        "noValidation": {
+            "description": "No validation that ARN matches authenticated agent",
+            "implication": "Any authenticated agent can query details of any other agent"
+        }
+    },
+    "errorHandling": [
+        {
+            "scenario": "Agent not authenticated",
+            "response": "401 Unauthorized"
+        },
+        {
+            "scenario": "ARN not found in agent-assurance",
+            "response": "Likely throws exception or returns error from agent-assurance",
+            "note": "Error handling not explicit in controller - relies on agent-assurance error handling"
+        }
+    ],
+    "useCases": [
+        {
+            "scenario": "Agent views their own details in dashboard",
+            "request": "GET /agent/TARN0000001/details",
+            "authenticated_arn": "TARN0000001",
+            "response": {
+                "agencyDetails": {
+                    "agencyName": "ABC Accountants Ltd",
+                    "agencyEmail": "info@abcaccountants.co.uk"
+                },
+                "suspensionDetails": null
+            },
+            "frontend_action": "Display agent's name and email in profile section"
+        },
+        {
+            "scenario": "Agent checks if they are suspended",
+            "response": {
+                "agencyDetails": {
+                    "agencyName": "My Agency",
+                    "agencyEmail": "contact@myagency.co.uk"
+                },
+                "suspensionDetails": {
+                    "suspensionStatus": true,
+                    "regimes": ["ITSA"]
+                }
+            },
+            "frontend_action": "Show warning: 'Your agency is currently suspended for Making Tax Digital for Income Tax'"
+        },
+        {
+            "scenario": "Agent looks up another agent's details",
+            "request": "GET /agent/TARN0000002/details",
+            "authenticated_arn": "TARN0000001",
+            "note": "Agent TARN0000001 can query details of agent TARN0000002",
+            "response": {
+                "agencyDetails": {
+                    "agencyName": "Other Agent Ltd",
+                    "agencyEmail": "info@otheragent.co.uk"
+                },
+                "suspensionDetails": null
+            },
+            "frontend_action": "Display other agent's details"
+        },
+        {
+            "scenario": "Service needs agent name for display",
+            "use": "Internal service calls this endpoint to get agent name for showing to clients",
+            "example": "Client viewing invitation needs to see agent name"
+        }
+    ],
+    "importantNotes": [
+        "✅ Simple passthrough endpoint - no complex logic",
+        "✅ Agent authentication required (withAuthorisedAsAgent)",
+        "✅ Returns details even if agent suspended",
+        "✅ Uses getAgentRecord (not getNonSuspendedAgentRecord)",
+        "⚠️ No validation that ARN matches authenticated agent",
+        "⚠️ Any authenticated agent can query any other agent's details",
+        "✅ Includes suspension details if agent is suspended",
+        "✅ Returns agency name and email",
+        "⚠️ No explicit error handling for ARN not found",
+        "⚠️ No caching - queries agent-assurance on every call"
+    ],
+    "securityConsiderations": {
+        "anyAgentCanQuery": {
+            "description": "No validation that ARN matches authenticated agent",
+            "implication": "Agent A can query details of Agent B, C, D...",
+            "severity": "Low - only returns public agency details",
+            "justification": "Agency name and email are considered public information"
+        }
+    },
+    "comparisonWithSimilarCalls": {
+        "getAgentRecord_vs_getNonSuspendedAgentRecord": {
+            "getAgentRecord": "Returns details regardless of suspension status (used by ACR14)",
+            "getNonSuspendedAgentRecord": "Returns None if agent suspended (used by ACR10, ACR12)"
+        },
+        "internal_vs_external": {
+            "ACR14": "Internal endpoint - returns full AgentDetailsDesResponse",
+            "agent-assurance_direct": "External service - ACR14 is passthrough wrapper"
+        }
+    }
+}
+

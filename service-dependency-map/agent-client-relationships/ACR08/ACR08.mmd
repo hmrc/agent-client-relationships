@@ -1,0 +1,97 @@
+sequenceDiagram
+    participant Client
+    participant CTADC as ClientTaxAgentsDataController
+    participant CTADS as ClientTaxAgentsDataService
+    participant IR as InvitationsRepository
+    participant PAuth as PartialAuthRepository
+    participant FRS as FindRelationshipsService
+    participant AFRC as agent-fi-relationship
+    participant HIP as IF/HIP (HipConnector)
+    participant ETMP
+    participant ILS as InvitationLinkService
+    participant AAS as agent-assurance
+
+    Client->>+CTADC: GET /client/authorisations-relationships
+    Note over CTADC: withAuthorisedAsClientWithNino<br/>Extract enrolments + NINO from Gov Gateway
+
+    CTADC->>CTADC: Build client IDs from enrolments<br/>Build identifiers map<br/>Include NINO in client IDs
+
+    CTADC->>+CTADS: getClientTaxAgentsData(enrolmentsWithNino)
+
+    par Get all invitations
+        CTADS->>+IR: findAllBy(clientIds)
+        Note over IR: Query MongoDB invitations collection<br/>for all client IDs (including NINO)
+        IR-->>-CTADS: Seq[Invitation]
+    and Get all authorisations (relationships)
+        loop For each service in identifiers map
+            alt Service is PIR (NINO)
+                CTADS->>+AFRC: findIrvActiveRelationshipForClient(nino)
+                AFRC-->>-CTADS: Seq[ClientRelationship]
+                CTADS->>+AFRC: findIrvInactiveRelationshipForClient(nino)
+                AFRC-->>-CTADS: Seq[ClientRelationship]
+            else Other services
+                CTADS->>+FRS: getAllRelationshipsForClient(taxId, activeOnly=false)
+                FRS->>+HIP: getAllRelationships(taxId, activeOnly=false)
+                HIP->>+ETMP: GET /etmp/RESTAdapter/rosm/agent-relationship<br/>?idType={type}&refNumber={id}&active-only=false
+                ETMP-->>-HIP: relationshipDisplayResponse array
+                HIP-->>-FRS: Seq[ClientRelationship]
+                FRS-->>-CTADS: Seq[ClientRelationship]
+            end
+        end
+    and Get partial auth records
+        alt Client has NINO
+            CTADS->>+PAuth: findByNino(nino)
+            Note over PAuth: Query MongoDB partial_auth collection
+            PAuth-->>-CTADS: Seq[PartialAuth]
+        end
+    end
+
+    CTADS->>CTADS: Combine all authorisations<br/>(relationships + partial auth)
+
+    par Build agent authorisations data
+        loop For each unique ARN in active relationships
+            CTADS->>+ILS: findAgentDetailsByArn(arn)
+            ILS->>+AAS: getAgentRecordWithChecks(arn)
+            AAS-->>-ILS: Option[AgentDetails]
+            ILS-->>-CTADS: AgentDetailsDesResponse
+
+            CTADS->>CTADS: Filter out suspended agents<br/>Build Authorisation objects
+        end
+    and Build agent invitations data
+        loop For each unique ARN in invitations
+            CTADS->>+ILS: findAgentDetailsByArn(arn)
+            ILS->>+AAS: getAgentRecordWithChecks(arn)
+            AAS-->>-ILS: Option[AgentDetails]
+            ILS-->>-CTADS: AgentDetailsDesResponse
+
+            CTADS->>CTADS: Filter out suspended agents<br/>Build AgentInvitation objects
+        end
+    and Build authorisation events
+        CTADS->>CTADS: Extract events from:<br/>- Expired/Rejected/Cancelled invitations<br/>- Accepted authorisations (dateFrom)<br/>- DeAuthorised events (dateTo)
+
+        loop For each unique ARN in events
+            CTADS->>+ILS: findAgentDetailsByArn(arn)
+            ILS->>+AAS: getAgentRecordWithChecks(arn)
+            AAS-->>-ILS: Option[AgentDetails]
+            ILS-->>-CTADS: AgentDetailsDesResponse
+
+            CTADS->>CTADS: Filter out suspended agents<br/>Build AuthorisationEvent objects
+        end
+    end
+
+    CTADS->>CTADS: Build ClientTaxAgentsData:<br/>- agentsInvitations<br/>- agentsAuthorisations<br/>- authorisationEvents
+
+    CTADS-->>-CTADC: Right(ClientTaxAgentsData)
+
+    alt Success
+        CTADC-->>Client: 200 OK with comprehensive JSON
+    else Error retrieving agent details
+        CTADC-->>Client: 503 Service Unavailable
+    else Error retrieving relationships
+        CTADC-->>Client: 503 Service Unavailable
+    else Bad request
+        CTADC-->>Client: 400 Bad Request
+    else Other error
+        CTADC-->>-Client: 500 Internal Server Error
+    end
+

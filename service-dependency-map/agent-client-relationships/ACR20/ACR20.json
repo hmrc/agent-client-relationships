@@ -1,0 +1,294 @@
+{
+    "apiId": "ACR20",
+    "apiTitle": "Remove Agent Authorisation",
+    "description": "⚠️ HIGH COMPLEXITY ENDPOINT - Removes/terminates an existing authorisation between an agent and client. Handles three distinct flows based on service type: 1) PIR (Personal Income Record) - delegates to agent-fi-relationship service, 2) Alt-ITSA (MTD-IT/MTD-IT-SUPP with NINO) - deauthorises partial auth and updates invitations, 3) All other services - performs full relationship deletion including EACD enrolment deallocation and ETMP relationship removal. Uses recovery mechanism with delete-record tracking for resilience. Not atomic - can partially succeed if EACD or ETMP operations fail.",
+    "method": "POST",
+    "path": "/agent-client-relationships/agent/{arn}/remove-authorisation",
+    "pathParameters": {
+        "arn": "Agent Reference Number"
+    },
+    "queryParameters": {},
+    "requestBody": {
+        "RemoveAuthorisationRequest": {
+            "clientId": "Client identifier (NINO, MTDITID, VRN, UTR, URN, CGT reference, PLR ID, etc.)",
+            "service": "Service code (HMRC-MTD-IT, HMRC-MTD-VAT, PERSONAL-INCOME-RECORD, etc.)"
+        },
+        "example": {
+            "clientId": "AB123456C",
+            "service": "HMRC-MTD-IT"
+        }
+    },
+    "responses": {
+        "204": "No Content - Authorisation successfully removed",
+        "400": "Bad Request - Invalid service or client ID format",
+        "401": "Unauthorized - Authentication failed",
+        "403": "Forbidden - Not authorized to remove this relationship (agent/client/stride only)",
+        "404": "Not Found - Relationship does not exist in EACD or ETMP",
+        "423": "Locked - Relationship deletion already in progress (try again later)",
+        "500": "Internal Server Error - Deletion operation failed"
+    },
+    "authentication": "Flexible authentication via authorisedUser - supports agent (HMRC-AS-AGENT), client (with matching client ID), or Stride roles (maintain_agent_relationships, maintain_agent_manually_assure)",
+    "audience": "internal",
+    "controller": "RemoveAuthorisationController",
+    "controllerMethod": "removeAuthorisation",
+    "services": [
+        {
+            "name": "RemoveAuthorisationService",
+            "alias": "RAS",
+            "method": "validateRequest, deauthPartialAuth, deauthAltItsaInvitation, replaceEnrolmentKeyForItsa",
+            "description": "Validates request and handles alt-ITSA specific deauthorisation logic"
+        },
+        {
+            "name": "ValidationService",
+            "alias": "VS",
+            "method": "validateForEnrolmentKey",
+            "description": "Validates client ID and constructs enrolment key"
+        },
+        {
+            "name": "DeleteRelationshipsService",
+            "alias": "DRS",
+            "method": "deleteRelationship, setRelationshipEnded",
+            "description": "Orchestrates relationship deletion across EACD, ETMP, and invitations database with recovery mechanism"
+        },
+        {
+            "name": "AuditService",
+            "alias": "AS",
+            "method": "auditForPirTermination, sendTerminatePartialAuthAuditEvent, sendTerminateRelationshipAuditEvent",
+            "description": "Sends audit events for different termination types"
+        }
+    ],
+    "interactions": "See ACR20.mmd for complete sequence diagram with three distinct service flows",
+    "externalDependencies": [
+        {
+            "name": "EACD (Enrolment Store Proxy)",
+            "description": "Retrieves principal group ID and deallocates enrolment from agent's group",
+            "method": "getPrincipalGroupIdFor, deallocateEnrolmentFromAgent",
+            "note": "Standard services only - not called for PIR or alt-ITSA"
+        },
+        {
+            "name": "HIP/IF (ETMP)",
+            "description": "Deletes agent-client relationship in tax platform. Also converts NINO to MTDITID for alt-ITSA",
+            "method": "deleteAgentRelationship, getMtdIdFor",
+            "note": "Standard services call deleteAgentRelationship. Alt-ITSA calls getMtdIdFor for enrolment key replacement"
+        },
+        {
+            "name": "Agent FI Relationship",
+            "description": "Handles relationship deletion for Personal Income Record service",
+            "method": "deleteRelationship",
+            "note": "PIR service only"
+        }
+    ],
+    "databaseCollections": [
+        {
+            "name": "invitations",
+            "operation": "UPDATE",
+            "description": "All services: Updates invitation status to Deauthorised and sets relationshipEndedBy field. Alt-ITSA: specifically updates PartialAuth status invitations"
+        },
+        {
+            "name": "partial-auth",
+            "operation": "UPDATE",
+            "description": "Alt-ITSA only: Sets expiryDate to current time to deauthorise partial auth relationship"
+        },
+        {
+            "name": "delete-record",
+            "operation": "INSERT/READ/UPDATE/DELETE",
+            "description": "Standard services only: Tracks deletion progress for recovery. Created at start, updated during EACD/ETMP operations, deleted on completion. Used to resume incomplete deletions"
+        }
+    ],
+    "responseModel": {
+        "success": "204 No Content - no response body",
+        "error": {
+            "code": "Error code string",
+            "message": "Error description"
+        }
+    },
+    "businessLogic": {
+        "serviceTypeRouting": {
+            "description": "Three completely different flows based on service type",
+            "logic": "1) PIR: Delegates to agent-fi-relationship service, updates local invitations, audits. 2) Alt-ITSA (MTD-IT/MTD-IT-SUPP with NINO): Deauthorises partial-auth, updates PartialAuth invitations to Deauthorised. 3) All other services: Full deletion including EACD enrolment deallocation, ETMP relationship removal, invitation updates, with recovery mechanism."
+        },
+        "pirFlow": {
+            "description": "Personal Income Record service uses separate microservice",
+            "logic": "Calls agent-fi-relationship DELETE endpoint. On success, sets invitation relationshipEndedBy and status. Sends PIR-specific audit event. Does NOT call EACD or ETMP directly."
+        },
+        "altItsaFlow": {
+            "description": "Alternative ITSA (MTD-IT/MTD-IT-SUPP with NINO supplied)",
+            "logic": "1. Deauthorises partial-auth by setting expiryDate to now. 2. Updates all PartialAuth invitations to Deauthorised status. 3. Sends partial auth audit event. Does NOT call EACD or ETMP for relationship deletion (partial auth is invitation-only, not full relationship)."
+        },
+        "standardFlow": {
+            "description": "Most services use full relationship deletion flow",
+            "logic": "1. Check for existing delete-record (recovery mode). 2. Acquire recovery lock. 3. Get agent's principal group ID from EACD. 4. Create delete-record for tracking. 5. Deallocate enrolment from agent group in EACD (tracked with sync status). 6. Delete relationship in ETMP (tracked with sync status). 7. Remove delete-record. 8. Update invitations to Deauthorised. 9. Send audit event."
+        },
+        "recoveryMechanism": {
+            "description": "Resilient deletion with recovery from partial failures",
+            "logic": "Uses delete-record collection to track deletion state. Each step (EACD sync, ETMP sync) has status (InProgress/Success/Failed). If deletion fails midway, record persists. Next deletion attempt for same arn+enrolmentKey finds existing record and resumes. Uses MongoLockService recovery lock to prevent concurrent operations. Timeout configured via appConfig.recoveryTimeout."
+        },
+        "enrolmentKeyReplacement": {
+            "description": "Alt-ITSA converts NINO to MTDITID for enrolment key",
+            "logic": "For MTD-IT/MTD-IT-SUPP services with NINO supplied, calls IF/HIP to get MTDITID. Replaces enrolment key identifier with MTDITID if found, otherwise uses supplied NINO. This ensures correct enrolment key for relationship operations."
+        },
+        "authenticationFlexibility": {
+            "description": "Supports agent, client, or Stride authentication",
+            "logic": "Uses authorisedUser which accepts: 1) Agent authenticated with matching ARN, 2) Client authenticated with matching client ID, 3) Stride user with maintain_agent_relationships or maintain_agent_manually_assure roles. This allows agents, clients, and HMRC staff to terminate relationships."
+        },
+        "relationshipEndedByTracking": {
+            "description": "Tracks who initiated the termination",
+            "logic": "Determines user type from affinity group: Agent -> 'Agent', Individual/Organisation -> 'Client', None/Stride -> 'HMRC'. Stores in invitation relationshipEndedBy field for audit trail."
+        }
+    },
+    "errorHandling": [
+        {
+            "scenario": "Unsupported service code",
+            "response": "400 Bad Request (UnsupportedService)",
+            "message": "Unsupported service \"<service>\"",
+            "note": "Service must be in supported services list"
+        },
+        {
+            "scenario": "Invalid client ID format for service",
+            "response": "400 Bad Request (InvalidClientId)",
+            "message": "Invalid clientId \"<clientId>\", for service type \"<service>\"",
+            "note": "Client ID must match expected format for service (e.g., valid NINO, VRN, etc.)"
+        },
+        {
+            "scenario": "Client registration not found (ITSA NINO to MTDITID lookup fails)",
+            "response": "400 Bad Request (ClientRegistrationNotFound)",
+            "message": "The Client's MTDfB registration or SAUTR was not found",
+            "note": "Alt-ITSA flow only - occurs when IF/HIP getMtdIdFor fails"
+        },
+        {
+            "scenario": "Relationship not found in EACD or ETMP",
+            "response": "404 Not Found (RelationshipNotFound)",
+            "message": "RELATIONSHIP_NOT_FOUND",
+            "note": "Neither EACD nor ETMP had the relationship (both returned false/empty)"
+        },
+        {
+            "scenario": "Deletion already in progress for this arn+enrolmentKey",
+            "response": "423 Locked (RelationshipDeletionInProgress)",
+            "message": "RELATIONSHIP_DELETION_IN_PROGRESS",
+            "note": "Another process is currently deleting this relationship. Client should retry later."
+        },
+        {
+            "scenario": "EACD or ETMP deletion fails with error",
+            "response": "500 Internal Server Error (RelationshipDeleteFailed)",
+            "message": "Error message from upstream service",
+            "note": "Partial deletion may have occurred. Delete-record persists for recovery."
+        },
+        {
+            "scenario": "PIR deletion returns false (not found)",
+            "response": "404 Not Found (RelationshipNotFound)",
+            "message": "Empty response body",
+            "note": "Agent FI Relationship service did not find the PIR relationship"
+        }
+    ],
+    "useCases": [
+        {
+            "scenario": "Agent terminates relationship with client (standard service)",
+            "flow": [
+                "Agent authenticates and POST request with client ID and service",
+                "System validates request and constructs enrolment key",
+                "Creates delete-record for tracking",
+                "Deallocates enrolment from agent's group in EACD",
+                "Removes relationship from ETMP",
+                "Updates invitation to Deauthorised status",
+                "Removes delete-record",
+                "Sends audit event"
+            ],
+            "response": {
+                "status": 204,
+                "body": null
+            },
+            "frontend_action": "Show success message. Remove client from agent's client list. Relationship is now terminated."
+        },
+        {
+            "scenario": "Client terminates relationship with agent",
+            "flow": [
+                "Client authenticates with matching client ID",
+                "System performs same deletion as agent-initiated",
+                "Sets relationshipEndedBy to 'Client'"
+            ],
+            "response": {
+                "status": 204,
+                "body": null
+            },
+            "frontend_action": "Show success message. Agent no longer has access to client's tax information."
+        },
+        {
+            "scenario": "HMRC Stride user terminates relationship",
+            "flow": [
+                "Stride user with maintain_agent_relationships role",
+                "System performs deletion",
+                "Sets relationshipEndedBy to 'HMRC'"
+            ],
+            "response": {
+                "status": 204,
+                "body": null
+            },
+            "frontend_action": "Show success message. Relationship terminated by HMRC."
+        },
+        {
+            "scenario": "Agent terminates alt-ITSA partial auth",
+            "flow": [
+                "Agent POST request with NINO and HMRC-MTD-IT service",
+                "System identifies alt-ITSA flow",
+                "Deauthorises partial-auth (sets expiryDate to now)",
+                "Updates PartialAuth invitations to Deauthorised",
+                "Sends partial auth audit event"
+            ],
+            "response": {
+                "status": 204,
+                "body": null
+            },
+            "frontend_action": "Show success message. Partial authorisation terminated. Full authorisation (if exists) unaffected."
+        },
+        {
+            "scenario": "Agent terminates PIR relationship",
+            "flow": [
+                "Agent POST request with client ID and PERSONAL-INCOME-RECORD service",
+                "System delegates to agent-fi-relationship service",
+                "Updates local invitation record",
+                "Sends PIR audit event"
+            ],
+            "response": {
+                "status": 204,
+                "body": null
+            },
+            "frontend_action": "Show success message. PIR access removed."
+        },
+        {
+            "scenario": "Deletion fails midway - recovery on retry",
+            "flow": [
+                "Initial deletion starts, creates delete-record",
+                "EACD deallocation succeeds, status updated to Success",
+                "ETMP deletion fails, status updated to Failed",
+                "Delete-record persists",
+                "Agent retries deletion",
+                "System finds existing delete-record",
+                "Resumes from ETMP step",
+                "Completes deletion and removes delete-record"
+            ],
+            "response": {
+                "status": 204,
+                "body": null
+            },
+            "frontend_action": "Initial attempt shows error. Retry succeeds. Relationship terminated."
+        }
+    ],
+    "importantNotes": [
+        "⚠️ HIGH COMPLEXITY - Three completely different flows based on service type",
+        "⚠️ NOT ATOMIC - EACD and ETMP operations can partially succeed",
+        "⚠️ Uses recovery mechanism - failed deletions can be resumed via delete-record",
+        "⚠️ Returns 423 Locked if deletion already in progress (not 409 Conflict)",
+        "⚠️ Returns 404 if relationship not found in BOTH EACD and ETMP (doesn't reveal which)",
+        "⚠️ PIR service delegates to agent-fi-relationship microservice",
+        "⚠️ Alt-ITSA only updates partial-auth and invitations (no EACD/ETMP calls)",
+        "⚠️ Standard flow deallocates from EACD and removes from ETMP",
+        "⚠️ Supports agent, client, AND Stride authentication (flexible authorisedUser)",
+        "⚠️ Alt-ITSA converts NINO to MTDITID via IF/HIP for enrolment key",
+        "✅ Tracks who ended relationship (Agent/Client/HMRC) in invitations",
+        "✅ Recovery lock prevents concurrent deletions of same relationship",
+        "✅ Delete-record sync status tracks EACD and ETMP separately",
+        "✅ Sends different audit events based on service type (PIR, partial auth, standard)",
+        "✅ All flows update invitations collection to Deauthorised status"
+    ]
+}
+

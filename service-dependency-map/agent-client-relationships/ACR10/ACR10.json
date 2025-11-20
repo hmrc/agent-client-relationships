@@ -1,0 +1,275 @@
+{
+    "apiId": "ACR10",
+    "apiTitle": "Validate Agent Invitation Link",
+    "description": "Validates an agent's invitation link using a unique identifier (UID) and normalized agent name. This is a public endpoint (no authentication required) used when clients click on agent-shared invitation links. Verifies the link exists, the agent name matches, and the agent is not suspended before returning agent details. The normalized agent name provides additional security by requiring knowledge of the agent's name to access the link.",
+    "method": "GET",
+    "path": "/agent/agent-reference/uid/{uid}/{normalizedAgentName}",
+    "pathParameters": {
+        "uid": "8-character unique identifier for the agent's invitation link",
+        "normalizedAgentName": "Normalized version of agent's name (lowercase, spaces→hyphens, special chars removed)"
+    },
+    "queryParameters": {},
+    "responses": {
+        "200": "Valid link - returns ValidateLinkResponse with ARN and agency name",
+        "404": "Not Found - UID not found or normalized agent name does not match",
+        "403": "Forbidden - Agent is suspended"
+    },
+    "authentication": "None - public endpoint accessible to clients without authentication",
+    "audience": "internal",
+    "controller": "InvitationLinkController",
+    "controllerMethod": "validateLink",
+    "services": [
+        {
+            "name": "InvitationLinkService",
+            "alias": "ILS",
+            "method": "validateLink",
+            "description": "Orchestrates validation: find record, validate name, check suspension, extract agency name"
+        },
+        {
+            "name": "AgentReferenceRepository",
+            "alias": "ARR",
+            "method": "findBy",
+            "description": "Queries MongoDB agent-reference collection for UID"
+        },
+        {
+            "name": "agent-assurance",
+            "alias": "AAS",
+            "method": "getNonSuspendedAgentRecord",
+            "description": "Checks agent suspension status and retrieves agent details"
+        }
+    ],
+    "interactions": [
+        {
+            "step": 1,
+            "actor": "InvitationLinkController (ILC)",
+            "action": "receives request",
+            "target": "Client",
+            "description": "Public endpoint - no authentication check"
+        },
+        {
+            "step": 2,
+            "actor": "InvitationLinkController (ILC)",
+            "action": "calls service",
+            "target": "InvitationLinkService (ILS)",
+            "method": "validateLink",
+            "description": "Delegates validation to service layer"
+        },
+        {
+            "step": 3,
+            "actor": "InvitationLinkService (ILS)",
+            "action": "calls repository",
+            "target": "AgentReferenceRepository (ARR)",
+            "method": "findBy",
+            "description": "Looks up agent reference record by UID"
+        },
+        {
+            "step": 4,
+            "actor": "AgentReferenceRepository (ARR)",
+            "action": "queries database",
+            "target": "MongoDB (agent-reference collection)",
+            "query": "{\"uid\": \"{uid}\"}",
+            "description": "Finds agent reference record"
+        },
+        {
+            "step": 5,
+            "actor": "AgentReferenceRepository (ARR)",
+            "action": "returns result",
+            "target": "InvitationLinkService (ILS)",
+            "description": "Returns Option[AgentReferenceRecord]"
+        },
+        {
+            "step": 6,
+            "actor": "InvitationLinkService (ILS)",
+            "action": "validates name",
+            "target": "InvitationLinkService (ILS)",
+            "method": "validateNormalizedAgentName",
+            "description": "Checks if normalizedAgentName is in record's normalisedAgentNames array"
+        },
+        {
+            "step": 7,
+            "actor": "InvitationLinkService (ILS)",
+            "action": "calls external service",
+            "target": "agent-assurance (AAS)",
+            "method": "getNonSuspendedAgentRecord",
+            "description": "Retrieves agent details and checks suspension status",
+            "conditional": "only if UID found and name matches"
+        },
+        {
+            "step": 8,
+            "actor": "agent-assurance (AAS)",
+            "action": "returns result",
+            "target": "InvitationLinkService (ILS)",
+            "description": "Returns Option[AgentDetailsDesResponse] (None if suspended)"
+        },
+        {
+            "step": 9,
+            "actor": "InvitationLinkService (ILS)",
+            "action": "extracts agency name",
+            "target": "InvitationLinkService (ILS)",
+            "description": "Extracts agency name from agent details response"
+        },
+        {
+            "step": 10,
+            "actor": "InvitationLinkService (ILS)",
+            "action": "returns result",
+            "target": "InvitationLinkController (ILC)",
+            "description": "Returns Either[InvitationLinkFailureResponse, ValidateLinkResponse]"
+        },
+        {
+            "step": 11,
+            "actor": "InvitationLinkController (ILC)",
+            "action": "returns response",
+            "target": "Client",
+            "description": "Maps Either to HTTP response: 200/404/403"
+        }
+    ],
+    "externalDependencies": [
+        {
+            "name": "agent-assurance",
+            "description": "Checks agent suspension status and provides agent details",
+            "method": "getNonSuspendedAgentRecord",
+            "returns": "None if agent suspended, Some(AgentDetailsDesResponse) otherwise"
+        }
+    ],
+    "databaseCollections": [
+        {
+            "name": "agent-reference",
+            "operation": "READ",
+            "description": "Stores agent invitation link records with UID, ARN, and normalized agent names",
+            "fields": {
+                "uid": "8-character unique identifier",
+                "arn": "Agent Reference Number",
+                "normalisedAgentNames": "Array of normalized agent names (agent can have multiple due to name changes)"
+            },
+            "indexes": [
+                "uid (unique)",
+                "arn (unique)"
+            ],
+            "ttl": "No TTL - records persist indefinitely for static agent links"
+        }
+    ],
+    "responseModel": {
+        "ValidateLinkResponse": {
+            "arn": "Agent Reference Number (e.g., TARN0000001)",
+            "agencyName": "Agent's agency name from agent-assurance"
+        },
+        "example": {
+            "arn": "TARN0000001",
+            "agencyName": "ABC Accountants Ltd"
+        }
+    },
+    "businessLogic": {
+        "uidGeneration": {
+            "description": "UID is 8-character random string using specific character set",
+            "method": "RandomStringUtils.secure().next(8, codetable)",
+            "note": "Generated during createLink operation (separate endpoint)"
+        },
+        "nameNormalization": {
+            "description": "Agent name is normalized to create URL-safe string",
+            "algorithm": [
+                "Convert to lowercase",
+                "Replace whitespace with hyphens",
+                "Remove all non-alphanumeric characters except hyphens"
+            ],
+            "example": "ABC Accountants Ltd → abc-accountants-ltd"
+        },
+        "multipleNames": {
+            "description": "Agent can have multiple normalized names in record",
+            "reason": "Agent agency name may change over time, old links should still work",
+            "storage": "Array of normalisedAgentNames in MongoDB"
+        },
+        "validation": {
+            "step1": "Lookup UID in agent-reference collection",
+            "step2": "Check if provided normalizedAgentName is in record's normalisedAgentNames array",
+            "step3": "Check if agent is suspended via agent-assurance",
+            "step4": "Extract and return agency name"
+        },
+        "encryption": {
+            "note": "normalisedAgentNames are encrypted in MongoDB using AES encryption",
+            "implementation": "PlayMongoRepository with crypto"
+        }
+    },
+    "errorHandling": [
+        {
+            "error": "AgentReferenceDataNotFound",
+            "condition": "UID not found in agent-reference collection",
+            "response": "404 Not Found",
+            "logged": "Agent Reference Record not found for uid: {uid}"
+        },
+        {
+            "error": "NormalizedAgentNameNotMatched",
+            "condition": "Provided normalizedAgentName not in record's normalisedAgentNames array",
+            "response": "404 Not Found",
+            "logged": "Agent Reference Record not found for uid: {uid}",
+            "note": "Same log message as UID not found for security (don't reveal if UID exists)"
+        },
+        {
+            "error": "AgentSuspended",
+            "condition": "agent-assurance returns None (agent suspended)",
+            "response": "403 Forbidden",
+            "logged": "Agent is suspended for uid: {uid}"
+        }
+    ],
+    "securityConsiderations": {
+        "twoFactorValidation": "Requires both UID and normalized agent name - prevents link guessing",
+        "urlSafeNames": "Normalized names are URL-safe (no special characters)",
+        "noAuthentication": "Public endpoint - accessible without login for client convenience",
+        "suspensionCheck": "Always checks agent suspension status before returning details",
+        "encryptedStorage": "Normalized names encrypted in MongoDB",
+        "consistentErrors": "404 returned for both UID not found and name mismatch (don't reveal UID validity)"
+    },
+    "useCases": [
+        {
+            "scenario": "Client clicks agent's invitation link",
+            "url": "https://example.com/invite?uid=ABC12345&agent=abc-accountants-ltd",
+            "flow": "Frontend calls ACR10 → receives agent name → displays 'ABC Accountants Ltd wants to act as your agent'",
+            "response": "200 OK with agent details"
+        },
+        {
+            "scenario": "Client tries invalid/expired link",
+            "response": "404 Not Found",
+            "frontend_action": "Show 'Invalid or expired invitation link'"
+        },
+        {
+            "scenario": "Client tries link with wrong agent name",
+            "url": "https://example.com/invite?uid=ABC12345&agent=wrong-name",
+            "response": "404 Not Found",
+            "note": "Security feature - requires knowledge of agent name"
+        },
+        {
+            "scenario": "Client tries link for suspended agent",
+            "response": "403 Forbidden",
+            "frontend_action": "Show 'This agent is currently suspended'"
+        },
+        {
+            "scenario": "Agent changes agency name",
+            "note": "Old links continue to work because old normalized name remains in normalisedAgentNames array",
+            "behavior": "New links use new normalized name, but both old and new names are valid"
+        }
+    ],
+    "importantNotes": [
+        "✅ Public endpoint - no authentication required",
+        "✅ Two-factor validation - both UID and normalized name must match",
+        "✅ UID is 8-character random string (lowercase alphanumeric)",
+        "✅ Normalized names support multiple values (for agency name changes)",
+        "✅ Always checks agent suspension status",
+        "✅ No TTL on agent-reference records - links persist indefinitely",
+        "✅ normalisedAgentNames are encrypted in MongoDB",
+        "✅ Consistent 404 responses for security (don't reveal if UID valid)",
+        "⚠️ Name normalization: lowercase, spaces→hyphens, remove special chars",
+        "⚠️ Agent can have multiple normalized names in array"
+    ],
+    "relatedEndpoints": {
+        "createLink": {
+            "description": "Agent creates/retrieves their invitation link (generates UID)",
+            "authentication": "Agent authentication required",
+            "note": "Referenced in controller but separate endpoint"
+        },
+        "validateInvitationForClient": {
+            "description": "Client validates invitation and checks for existing relationships",
+            "authentication": "Client authentication required",
+            "note": "More comprehensive validation including invitation status checks"
+        }
+    }
+}
+

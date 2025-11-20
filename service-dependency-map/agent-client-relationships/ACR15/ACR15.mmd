@@ -1,0 +1,53 @@
+sequenceDiagram
+    participant Client
+    participant IC as InvitationController
+    participant IS as InvitationService
+    participant IR as InvitationsRepository
+    participant Mongo as MongoDB<br/>(invitations collection)
+    participant VS as ValidationService
+    participant ES as EmailService
+    participant AS as AuditService
+
+    Client->>+IC: PUT /client/authorisation-response/reject/:invitationId
+    Note over IC: No initial auth check<br/>(auth happens after invitation lookup)
+
+    IC->>+IS: findInvitation(invitationId)
+    IS->>+IR: findOneById(invitationId)
+    IR->>+Mongo: findOne({"invitationId": invitationId})
+    Mongo-->>-IR: Invitation or None
+    IR-->>-IS: Option[Invitation]
+    IS-->>-IC: Option[Invitation]
+
+    alt Invitation not found OR status not Pending
+        IC-->>Client: 403 Forbidden<br/>(NoPendingInvitation)
+    else Invitation found and status is Pending
+        IC->>+VS: validateForEnrolmentKey(service, clientIdType, clientId)
+        VS-->>-IC: Either[Error, EnrolmentKey]
+
+        IC->>IC: authorisedUser(None, clientTaxId, strideRoles)
+        Note over IC: Validates user is:<br/>- Client with matching clientId, OR<br/>- Stride user with required roles
+
+        alt User not authorized
+            IC-->>Client: 403 Forbidden<br/>(NoPermissionToPerformOperation)
+        else User authorized
+            IC->>+IS: rejectInvitation(invitationId)
+
+            IS->>+IR: updateStatus(invitationId, Rejected)
+            IR->>+Mongo: updateOne({"invitationId": invitationId},<br/>$set: {"status": "Rejected", "lastUpdated": now})
+            Mongo-->>-IR: Updated invitation
+            IR-->>-IS: Invitation
+
+            IS->>+ES: sendRejectedEmail(invitation)
+            Note over ES: Send email to agent<br/>notifying rejection
+            ES-->>-IS: Unit
+
+            IS-->>-IC: Invitation
+
+            IC->>+AS: sendRespondToInvitationAuditEvent(invitation, accepted=false, isStride)
+            Note over AS: Audit the rejection event
+            AS-->>-IC: Unit
+
+            IC-->>-Client: 204 No Content
+        end
+    end
+

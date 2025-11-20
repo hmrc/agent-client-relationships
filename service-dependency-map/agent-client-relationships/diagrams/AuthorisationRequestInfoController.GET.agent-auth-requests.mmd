@@ -1,9 +1,0 @@
-sequenceDiagram
-    autonumber
-    participant Upstream
-    participant agent-client-relationships
-    participant Database
-
-    Upstream->>+agent-client-relationships: GET /agent/:arn/authorisation-requests
-    agent-client-relationships->>Database: Read: Find invitations for the agent based on status, client name, and pagination parameters.
-    agent-client-relationships-->>-Upstream: Final Response

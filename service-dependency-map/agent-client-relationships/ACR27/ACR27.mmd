@@ -1,0 +1,116 @@
+sequenceDiagram
+    participant Stride as Stride User
+    participant SCDC as StrideClientDetailsController
+    participant SCDS as StrideClientDetailsService
+    participant VS as ValidationService
+    participant FRS as FindRelationshipsService
+    participant IFOrHIP as IF/HIP Connector
+    participant AFIRC as AgentFiRelationshipConnector
+    participant PAuthRepo as PartialAuthRepository
+    participant CDS as ClientDetailsService
+    participant AM as Agent Maintainer
+    participant HIP as HIP<br/>(ETMP)
+    participant CRS as Citizen Details<br/>DES
+    participant DRS as Designatory<br/>Details (DES)
+    participant AF as Agent-Fi-Relationship
+
+    Stride->>+SCDC: POST /stride/active-relationships<br/>[ClientsRelationshipsRequest]
+
+    Note over SCDC: Stride authorization check
+
+    SCDC->>+SCDS: findAllActiveRelationship(request)
+
+    Note over SCDS: Process each client in request.clientRelationshipRequest
+
+    loop For each ClientRelationshipRequest
+        SCDS->>+VS: validateForTaxIdentifier(clientIdType, clientId)
+        VS-->>-SCDS: TaxIdentifier or Error
+
+        alt NINO (MTD-IT, MTD-IT-SUPP, PIR, PartialAuth)
+            Note over SCDS: Special handling for NINO
+
+            par Get ITSA relationships
+                SCDS->>+FRS: getAllActiveItsaRelationshipForClient(nino, activeOnly=true)
+                FRS->>+IFOrHIP: getMtdIdFor(nino)
+                IFOrHIP-->>-FRS: MtdItId
+                FRS->>+IFOrHIP: getAllRelationships(mtdItId, activeOnly=true)
+                IFOrHIP->>+HIP: GET /registration/relationship
+                HIP-->>-IFOrHIP: ITSA + ITSA-SUPP relationships
+                IFOrHIP-->>-FRS: ClientRelationships
+                FRS-->>-SCDS: ITSA relationships (filtered active)
+            and Get IRV relationships
+                SCDS->>+AFIRC: findIrvActiveRelationshipForClient(nino)
+                AFIRC->>+AF: GET /relationships/active<br/>service=PERSONAL-INCOME-RECORD
+                AF-->>-AFIRC: Active IRV relationships
+                AFIRC-->>-SCDS: IRV ClientRelationships
+            and Get PartialAuth relationships
+                SCDS->>+PAuthRepo: findActiveByNino(nino)
+                PAuthRepo-->>-SCDS: PartialAuth records as ClientRelationships
+            end
+
+            Note over SCDS: Combine ITSA + IRV + PartialAuth
+
+        else Other tax identifiers (VRN, UTR, URN, CGT, PPT, CBC, PLR)
+            SCDS->>+FRS: getAllRelationshipsForClient(taxIdentifier, activeOnly=true)
+            FRS->>+IFOrHIP: getAllRelationships(taxIdentifier, activeOnly=true)
+            IFOrHIP->>+HIP: GET /registration/relationship
+            HIP-->>-IFOrHIP: Relationships for service
+            IFOrHIP-->>-FRS: ClientRelationships
+            FRS-->>-SCDS: Active relationships (filtered)
+        end
+
+        Note over SCDS: For each relationship, enrich with agent and client details
+
+        loop For each relationship
+            SCDS->>+AM: getAgentRecord(arn)
+            AM-->>-SCDS: AgentRecord with agentName
+        end
+
+        SCDS->>+CDS: findClientDetailsByTaxIdentifier(taxIdentifier)
+
+        alt NINO
+            CDS->>+CRS: getCitizenDetails(nino)
+            CRS-->>-CDS: Citizen name
+            CDS->>+DRS: getDesignatoryDetails(nino)
+            DRS-->>-CDS: Designatory details
+            CDS-->>SCDS: ClientDetailsResponse(name)
+        else VRN
+            CDS->>CRS: getVrnDisplayDetails(vrn)
+            CRS-->>CDS: Business/org name
+            CDS-->>SCDS: ClientDetailsResponse(name)
+        else UTR/URN (Trusts)
+            CDS->>CRS: getTrustDetails(utr/urn)
+            CRS-->>CDS: Trust name
+            CDS-->>SCDS: ClientDetailsResponse(name)
+        else CGT
+            CDS->>CRS: getCgtSubscriptionDetails(cgtRef)
+            CRS-->>CDS: CGT subscriber name
+            CDS-->>SCDS: ClientDetailsResponse(name)
+        else PPT
+            CDS->>CRS: getPptSubscriptionDetails(pptRef)
+            CRS-->>CDS: PPT subscriber name
+            CDS-->>SCDS: ClientDetailsResponse(name)
+        else CBC
+            CDS->>CRS: getCbcSubscriptionDetails(cbcId)
+            CRS-->>CDS: CBC subscriber name
+            CDS-->>SCDS: ClientDetailsResponse(name)
+        else PLR
+            CDS->>CRS: getPillar2SubscriptionDetails(plrId)
+            CRS-->>CDS: Pillar2 subscriber name
+            CDS-->>SCDS: ClientDetailsResponse(name)
+        end
+
+        Note over SCDS: Build ActiveClientRelationship objects<br/>(clientId, clientName, arn, agentName, service)
+    end
+
+    SCDS-->>-SCDC: Right(Seq[ActiveClientRelationship])
+
+    alt Success
+        SCDC-->>-Stride: 200 OK - ActiveClientsRelationshipResponse
+    else Validation error
+        SCDC-->>Stride: 400 Bad Request
+    else Client details not found
+        SCDC-->>Stride: 404 Not Found
+    else Service error
+        SCDC-->>Stride: 500 Internal Server Error
+    end

@@ -1,0 +1,214 @@
+{
+    "apiId": "ACR34",
+    "apiTitle": "API Check Relationship",
+    "description": "External OAuth2 API endpoint that checks if an active agent-client relationship exists for a specific service. Similar to ACR01 but designed for external platforms, with known fact verification instead of user authentication. Uses full ACR01 checkForRelationship flow via CheckRelationshipsOrchestratorService. Validates agent not suspended, client registered, and known fact matches before checking relationship.",
+    "method": "POST",
+    "path": "/api/{arn}/relationship",
+    "pathParameters": {
+        "arn": "Agent Reference Number - relationship must belong to this agent"
+    },
+    "queryParameters": {},
+    "requestBody": {
+        "ApiCheckRelationshipRequest": {
+            "service": "Service identifier (e.g., HMRC-MTD-IT, HMRC-MTD-VAT)",
+            "suppliedClientId": "Client identifier appropriate for the service (NINO, VRN, UTR, etc.)",
+            "knownFact": "Known fact for the client (e.g., postcode, date of birth) for verification"
+        },
+        "example": {
+            "service": "HMRC-MTD-VAT",
+            "suppliedClientId": "101747696",
+            "knownFact": "2007-05-18"
+        }
+    },
+    "responses": {
+        "204": "No Content - Active relationship exists",
+        "401": "Unauthorized - OAuth2 authentication failed",
+        "403": "Forbidden - AGENT_SUSPENDED (agent is suspended) or KNOWN_FACT_DOES_NOT_MATCH (known fact verification failed)",
+        "404": "Not Found - RELATIONSHIP_NOT_FOUND (no active relationship) or CLIENT_REGISTRATION_NOT_FOUND (client not registered for service)",
+        "423": "Locked - CLIENT_INSOLVENT (client has insolvent status)",
+        "500": "Internal Server Error"
+    },
+    "authentication": "OAuth2 (external system authentication)",
+    "audience": "external",
+    "controller": "ApiCheckRelationshipController",
+    "controllerMethod": "checkRelationship",
+    "services": [
+        {
+            "name": "AgentAssuranceService",
+            "alias": "AAS",
+            "method": "getNonSuspendedAgentRecord",
+            "description": "Verifies agent is not suspended before checking relationship"
+        },
+        {
+            "name": "ClientDetailsService",
+            "alias": "CDS",
+            "method": "findClientDetails",
+            "description": "Retrieves client registration details and validates known fact"
+        },
+        {
+            "name": "CheckRelationshipsOrchestratorService",
+            "alias": "CROS",
+            "method": "checkForRelationship",
+            "description": "Full ACR01 relationship check flow - queries EACD, UGS, Agent Permissions, DES, etc."
+        }
+    ],
+    "interactions": "See ACR34.mmd for complete sequence diagram",
+    "externalDependencies": [
+        {
+            "name": "Agent Assurance (agent-assurance)",
+            "alias": "AA",
+            "description": "Verifies agent is not suspended",
+            "method": "GET /agent-assurance/agent/{arn}",
+            "note": "Must not be suspended"
+        },
+        {
+            "name": "DES/IF (via ClientDetailsService)",
+            "description": "Retrieves client registration details for known fact verification",
+            "method": "Various endpoints per service (getVrnDisplayDetails, getCitizenDetails, etc.)",
+            "note": "Service-specific client detail endpoints"
+        },
+        {
+            "name": "Multiple services via CROS",
+            "description": "Full ACR01 relationship check including EACD, UGS, Agent Permissions, DES, Agent Mapping, Agent FI Relationship",
+            "method": "See ACR01 documentation",
+            "note": "Uses complete CheckRelationshipsOrchestratorService.checkForRelationship flow"
+        }
+    ],
+    "databaseCollections": [],
+    "responseModel": {
+        "Success": {
+            "status": "204 No Content",
+            "body": "Empty - relationship exists"
+        },
+        "Error": {
+            "status": "403/404/423/500",
+            "body": "JSON error response with code field"
+        },
+        "example": {
+            "error": {
+                "code": "RELATIONSHIP_NOT_FOUND"
+            }
+        }
+    },
+    "businessLogic": {
+        "agentSuspensionCheck": {
+            "description": "First validation - agent must not be suspended",
+            "logic": "Calls AgentAssuranceService.getNonSuspendedAgentRecord(arn) - returns AGENT_SUSPENDED if suspended"
+        },
+        "clientRegistrationCheck": {
+            "description": "Verifies client is registered for the specified service",
+            "logic": "Calls ClientDetailsService.findClientDetails - returns CLIENT_REGISTRATION_NOT_FOUND if not registered"
+        },
+        "knownFactVerification": {
+            "description": "Security check - validates provided known fact matches client record",
+            "logic": "Checks clientDetails.containsKnownFact(knownFact) - returns KNOWN_FACT_DOES_NOT_MATCH if mismatch"
+        },
+        "insolvencyCheck": {
+            "description": "Checks if client has insolvent status which blocks relationship operations",
+            "logic": "Checks clientDetails.status.nonEmpty - returns CLIENT_INSOLVENT if insolvent"
+        },
+        "relationshipCheck": {
+            "description": "Full ACR01 relationship check via orchestrator service",
+            "logic": "Calls CheckRelationshipsOrchestratorService.checkForRelationship with same logic as ACR01 - queries EACD, UGS, Agent Permissions, DES, etc."
+        }
+    },
+    "errorHandling": [
+        {
+            "scenario": "Agent is suspended",
+            "response": "403 Forbidden",
+            "message": "AGENT_SUSPENDED",
+            "note": "Prevents suspended agents from checking relationships"
+        },
+        {
+            "scenario": "Client not registered for service",
+            "response": "404 Not Found",
+            "message": "CLIENT_REGISTRATION_NOT_FOUND",
+            "note": "Client must be registered/subscribed to the tax service"
+        },
+        {
+            "scenario": "Known fact does not match",
+            "response": "403 Forbidden",
+            "message": "KNOWN_FACT_DOES_NOT_MATCH",
+            "note": "Security measure - provided known fact must match client record"
+        },
+        {
+            "scenario": "Client is insolvent",
+            "response": "423 Locked",
+            "message": "CLIENT_INSOLVENT",
+            "note": "Insolvent clients cannot have relationship operations performed"
+        },
+        {
+            "scenario": "No active relationship found",
+            "response": "404 Not Found",
+            "message": "RELATIONSHIP_NOT_FOUND",
+            "note": "No active relationship exists between agent and client for the service"
+        },
+        {
+            "scenario": "OAuth2 authentication fails",
+            "response": "401 Unauthorized",
+            "message": "Unauthorized",
+            "note": "External system authentication required"
+        }
+    ],
+    "useCases": [
+        {
+            "scenario": "External platform checks if relationship exists before performing operation",
+            "flow": [
+                "External system authenticates with OAuth2",
+                "Makes POST request with ARN, service, client ID, and known fact",
+                "System verifies agent is not suspended",
+                "System retrieves client registration details",
+                "System validates known fact matches client record",
+                "System checks client is not insolvent",
+                "System performs full ACR01 relationship check via orchestrator",
+                "Returns 204 No Content if relationship exists"
+            ],
+            "response": "204 No Content (empty body)",
+            "frontend_action": "Proceed with operation that requires active relationship"
+        },
+        {
+            "scenario": "Relationship does not exist",
+            "flow": [
+                "External system authenticates with OAuth2",
+                "Makes POST request with ARN, service, client ID, and known fact",
+                "System validates agent, client registration, and known fact",
+                "System performs relationship check - no relationship found",
+                "Returns 404 with RELATIONSHIP_NOT_FOUND"
+            ],
+            "response": {
+                "code": "RELATIONSHIP_NOT_FOUND"
+            },
+            "frontend_action": "Display error message or prompt to create invitation"
+        },
+        {
+            "scenario": "Known fact verification fails",
+            "flow": [
+                "External system authenticates with OAuth2",
+                "Makes POST request with incorrect known fact",
+                "System validates agent and retrieves client details",
+                "System detects known fact mismatch",
+                "Returns 403 with KNOWN_FACT_DOES_NOT_MATCH"
+            ],
+            "response": {
+                "code": "KNOWN_FACT_DOES_NOT_MATCH"
+            },
+            "frontend_action": "Display error - user must provide correct known fact"
+        }
+    ],
+    "importantNotes": [
+        "✅ External OAuth2 API for third-party platforms",
+        "✅ Similar to ACR01 but uses known fact instead of user authentication",
+        "✅ Uses full CheckRelationshipsOrchestratorService.checkForRelationship flow (same as ACR01)",
+        "✅ Validates agent not suspended before any operations",
+        "✅ Requires client registration check before relationship check",
+        "✅ Known fact verification provides additional security",
+        "✅ Returns 204 No Content (empty body) on success",
+        "✅ Checks for insolvent client status (423 response)",
+        "✅ Fail-fast validation approach - validates agent, then client, then known fact, then relationship",
+        "⚠️ Does NOT use agent reference records or UIDs",
+        "⚠️ Known fact must exactly match client record (case-sensitive for some fields)",
+        "⚠️ Client must be registered/subscribed to the service",
+        "⚠️ Uses same multi-source relationship check as ACR01 (EACD, UGS, Agent Permissions, DES, etc.)",
+        "⚠️ Designed for agent-authorisation-api integration"
+    ]
+}
