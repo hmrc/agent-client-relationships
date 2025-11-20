@@ -25,12 +25,12 @@ import uk.gov.hmrc.agentclientrelationships.connectors._
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.UserId
 import uk.gov.hmrc.agentclientrelationships.support.Monitoring
-import uk.gov.hmrc.agentclientrelationships.support.RelationshipDeletePending
 import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 import uk.gov.hmrc.domain.Nino
+import uk.gov.hmrc.domain.SaAgentReference
 import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
@@ -129,34 +129,29 @@ with RequestAwareLogging {
     auditData.set(arnKey, arn)
     maybeUserId.foreach(auditData.set(credIdKey, _))
 
-    val result =
-      for {
-        isClear <- deleteService.checkDeleteRecordAndEventuallyResume(arn, enrolmentKey)
-        res <-
-          if (isClear)
-            checkService.checkForRelationship(
-              arn,
-              maybeUserId,
-              enrolmentKey
-            )
-          else
-            Future.failed(RelationshipDeletePending())
-      } yield
-        if (res)
-          CheckRelationshipFound
-        else
-          throw RelationshipNotFound("RELATIONSHIP_NOT_FOUND")
-
-    result.recoverWith {
-      case RelationshipNotFound(errorCode) =>
-        checkOldRelationship(
+    deleteService.checkDeleteRecordAndEventuallyResume(arn, enrolmentKey).flatMap { isClear =>
+      if (isClear)
+        checkService.checkForRelationship(
           arn,
-          enrolmentKey,
-          errorCode
-        )
-      case e @ RelationshipDeletePending() =>
+          maybeUserId,
+          enrolmentKey
+        ).recover {
+          case _: RelationshipNotFound => false
+          case ex => throw ex
+        }.flatMap { res =>
+          if (res)
+            Future.successful(CheckRelationshipFound)
+          else
+            checkOldRelationship(
+              arn,
+              enrolmentKey,
+              "RELATIONSHIP_NOT_FOUND"
+            )
+        }
+      else {
         logger.warn("Denied access because relationship removal is pending.")
-        Future.successful(CheckRelationshipNotFound(e.getMessage))
+        Future.successful(CheckRelationshipNotFound("RELATIONSHIP_DELETE_PENDING"))
+      }
     }
   }
 

@@ -45,6 +45,7 @@ import scala.concurrent.Future
 class ClientDetailsController @Inject() (
   clientDetailsService: ClientDetailsService,
   checkRelationshipsService: CheckRelationshipsOrchestratorService,
+  checkAndCopyRelationshipsService: CheckAndCopyRelationshipsService,
   invitationsRepository: InvitationsRepository,
   partialAuthRepository: PartialAuthRepository,
   val authConnector: AuthConnector,
@@ -67,6 +68,7 @@ with AuthActions {
 
   private val multiAgentServices: Map[String, String] = Map(HMRCMTDIT -> HMRCMTDITSUPP)
 
+  // scalastyle:off method.length
   def findClientDetails(
     service: String,
     clientId: String
@@ -85,35 +87,46 @@ with AuthActions {
                 clientId
               )
               pendingInvitationSupp <-
-                if (multiAgentServices.contains(refinedService))
+                multiAgentServices.get(refinedService).fold(Future.successful(false))(
                   pendingInvitation(
                     arn,
-                    multiAgentServices(refinedService),
+                    _,
                     clientId
                   )
-                else
-                  Future.successful(false)
+                )
               currentRelationshipMain <- existingRelationship(
                 arn,
                 refinedService,
                 clientIdType,
                 clientId
               )
-              currentRelationshipSupp <-
-                if (multiAgentServices.contains(refinedService))
+              currentRelationshipSupp: Option[String] <-
+                multiAgentServices.get(refinedService).fold(Future.successful(Option.empty[String]))(
                   existingRelationship(
                     arn,
-                    multiAgentServices(refinedService),
+                    _,
                     clientIdType,
                     clientId
                   )
-                else
-                  Future.successful(None)
+                )
+              pendingInvitation = pendingInvitationMain || pendingInvitationSupp
+              currentRelationship = currentRelationshipMain.orElse(currentRelationshipSupp)
+              (isMapped, legacyRelationships) <-
+                (currentRelationship, clientId) match {
+                  case (None, clientId) if Nino.isValid(clientId) =>
+                    checkAndCopyRelationshipsService
+                      .lookupCesaForOldRelationship(arn, Nino(clientId)).map {
+                        case (mappedRef, legacyRefs) => (mappedRef.nonEmpty, legacyRefs.map(_.value))
+                      }
+                  case _ => Future.successful((false, Seq()))
+                }
             } yield Ok(
               Json.toJson(
                 clientDetails.copy(
-                  hasPendingInvitation = pendingInvitationMain || pendingInvitationSupp,
-                  hasExistingRelationshipFor = currentRelationshipMain.orElse(currentRelationshipSupp)
+                  hasPendingInvitation = pendingInvitation,
+                  hasExistingRelationshipFor = currentRelationship,
+                  isMapped = isMapped,
+                  clientsLegacyRelationships = legacyRelationships
                 )
               )
             )

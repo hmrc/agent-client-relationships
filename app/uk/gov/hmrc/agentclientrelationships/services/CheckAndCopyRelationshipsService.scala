@@ -154,6 +154,7 @@ with RequestAwareLogging {
     }
   }
 
+  // scalastyle:off method.length
   private def checkCesaAndCopy(
     arn: Arn,
     mtdItId: MtdItId,
@@ -175,8 +176,8 @@ with RequestAwareLogging {
           Future successful AlreadyCopiedDidNotCheck
         case maybeRelationshipCopyRecord @ _ =>
           for {
-            references <-
-              nino.fold[Future[Set[SaAgentReference]]](Future.successful(Set.empty))(
+            (references, _) <-
+              nino.fold[Future[(Set[SaAgentReference], Seq[SaAgentReference])]](Future.successful((Set(), Seq())))(
                 lookupCesaForOldRelationship(arn, _)
               )
             result <-
@@ -378,13 +379,13 @@ with RequestAwareLogging {
     nino: Nino
   )(implicit
     request: RequestHeader,
-    auditData: AuditData
-  ): Future[Set[SaAgentReference]] = {
+    auditData: AuditData = new AuditData()
+  ): Future[(Set[SaAgentReference], Seq[SaAgentReference])] = {
     auditData.set(ninoKey, nino)
     for {
-      references <- des.getClientSaAgentSaReferences(nino)
+      allReferences <- des.getClientSaAgentSaReferences(nino)
       matching <-
-        intersection(references) {
+        intersection(allReferences) {
           mapping.getSaAgentReferencesFor(arn)
         }
       _ = auditData.set(saAgentRefKey, matching.mkString(","))
@@ -392,7 +393,7 @@ with RequestAwareLogging {
     } yield {
       if (matching.nonEmpty)
         auditService.sendCheckCesaAndPartialAuthAuditEvent()
-      matching
+      (matching, allReferences)
     }
   }
 
@@ -403,7 +404,7 @@ with RequestAwareLogging {
     ec: ExecutionContext,
     request: RequestHeader,
     auditData: AuditData
-  ): Future[Boolean] = lookupCesaForOldRelationship(arn, nino).flatMap(matching =>
+  ): Future[Boolean] = lookupCesaForOldRelationship(arn, nino).flatMap { case (matching, _) =>
     if (matching.isEmpty) {
       partialAuthRepo
         .findActive(nino, arn)
@@ -415,7 +416,7 @@ with RequestAwareLogging {
     }
     else
       Future successful true
-  )
+  }
 
   def intersection[A](referenceIds: Seq[A])(mappingServiceCall: => Future[Seq[A]])(implicit request: RequestHeader): Future[Set[A]] = {
     val referenceIdSet = referenceIds.toSet
