@@ -336,3 +336,10 @@ POST /itsa-post-signup/create-relationship/AB123456C
 - **ACR15**: Accept Invitation - another way to create relationships (from client accepting invitation)
 - **ACR16**: Create Relationship (complex) - handles multiple service types with various flows
 
+---
+
+## Document Metadata
+
+**Last Updated:** 2025-11-20  
+**Git Commit SHA:** `b2138b4e3958677748c1820c3d715d4fbb9d3b2c`  
+**Analysis Version:** 1.0

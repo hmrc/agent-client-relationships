@@ -415,3 +415,10 @@ External system must be authenticated via OAuth2 with appropriate scopes for cre
 - **ACR14**: Agent Create Invitation - Internal agent-facing version
 - **ACR16**: Accept Invitation - Client accepts invitation to create relationship
 
+---
+
+## Document Metadata
+
+**Last Updated:** 2025-11-20  
+**Git Commit SHA:** `b2138b4e3958677748c1820c3d715d4fbb9d3b2c`  
+**Analysis Version:** 1.0

@@ -1,193 +1,198 @@
 {
-    "apiId": "ACR33",
-    "apiTitle": "API Get Invitations",
-    "description": "Allows an external authenticated system to retrieve all invitations for a specific agent ARN. Returns a bulk response containing the agent's uid, normalized agency name, and a list of all invitations filtered by API-supported services. Similar to ACR32 but returns multiple invitations instead of a single one.",
-    "method": "GET",
-    "path": "/api/{arn}/invitations",
-    "pathParameters": {
-        "arn": "Agent Reference Number - all invitations for this agent will be returned"
+  "apiId": "ACR33",
+  "apiTitle": "API Get Invitations",
+  "description": "Allows an external authenticated system to retrieve all invitations for a specific agent ARN. Returns a bulk response containing the agent's uid, normalized agency name, and a list of all invitations filtered by API-supported services. Similar to ACR32 but returns multiple invitations instead of a single one.",
+  "method": "GET",
+  "path": "/api/{arn}/invitations",
+  "pathParameters": {
+    "arn": "Agent Reference Number - all invitations for this agent will be returned"
+  },
+  "queryParameters": {},
+  "requestBody": {},
+  "responses": {
+    "200": "Success - returns ApiBulkInvitationsResponse with agent info and list of all invitations",
+    "401": "Unauthorized - OAuth2 authentication failed",
+    "404": "Not Found - Agent not found (via authorised())",
+    "422": "Unprocessable Entity - AGENT_SUSPENDED (agent is suspended)",
+    "500": "Internal Server Error"
+  },
+  "authentication": "OAuth2 (external system authentication)",
+  "audience": "external",
+  "controller": "ApiGetInvitationsController",
+  "controllerMethod": "getInvitations",
+  "services": [
+    {
+      "name": "AgentAssuranceService",
+      "alias": "AAS",
+      "method": "getNonSuspendedAgentRecord",
+      "description": "Fetches agent record from agent-assurance, returns None if suspended"
     },
-    "queryParameters": {},
-    "requestBody": {},
-    "responses": {
-        "200": "Success - returns ApiBulkInvitationsResponse with agent info and list of all invitations",
-        "401": "Unauthorized - OAuth2 authentication failed",
-        "404": "Not Found - Agent not found (via authorised())",
-        "422": "Unprocessable Entity - AGENT_SUSPENDED (agent is suspended)",
-        "500": "Internal Server Error"
+    {
+      "name": "InvitationLinkService",
+      "alias": "ILS",
+      "method": "normaliseAgentName, getAgentReferenceRecordByArn",
+      "description": "Normalizes agent name and gets/creates agent reference record with uid"
+    }
+  ],
+  "interactions": "See ACR33.mmd for complete sequence diagram",
+  "externalDependencies": [
+    {
+      "name": "Agent Assurance (agent-assurance)",
+      "alias": "AA",
+      "description": "Provides agent details including agency name",
+      "method": "GET /agent-assurance/agent/{arn}",
+      "note": "Must not be suspended"
+    }
+  ],
+  "databaseCollections": [
+    {
+      "name": "invitations",
+      "operation": "READ",
+      "description": "Find all invitations for ARN filtered by API-supported services"
     },
-    "authentication": "OAuth2 (external system authentication)",
-    "audience": "external",
-    "controller": "ApiGetInvitationsController",
-    "controllerMethod": "getInvitations",
-    "services": [
-        {
-            "name": "AgentAssuranceService",
-            "alias": "AAS",
-            "method": "getNonSuspendedAgentRecord",
-            "description": "Fetches agent record from agent-assurance, returns None if suspended"
-        },
-        {
-            "name": "InvitationLinkService",
-            "alias": "ILS",
-            "method": "normaliseAgentName, getAgentReferenceRecordByArn",
-            "description": "Normalizes agent name and gets/creates agent reference record with uid"
-        }
-    ],
-    "interactions": "See ACR33.mmd for complete sequence diagram",
-    "externalDependencies": [
-        {
-            "name": "Agent Assurance (agent-assurance)",
-            "alias": "AA",
-            "description": "Provides agent details including agency name",
-            "method": "GET /agent-assurance/agent/{arn}",
-            "note": "Must not be suspended"
-        }
-    ],
-    "databaseCollections": [
-        {
-            "name": "invitations",
-            "operation": "READ",
-            "description": "Find all invitations for ARN filtered by API-supported services"
-        },
-        {
-            "name": "agent-references",
-            "operation": "READ/INSERT",
-            "description": "Find agent reference record by ARN, create if not exists"
-        }
-    ],
-    "responseModel": {
-        "ApiBulkInvitationsResponse": {
-            "uid": "8-character unique identifier for the agent",
-            "normalizedAgentName": "Normalized version of the agency name",
-            "invitations": "Array of ApiBulkInvitationResponse objects"
-        },
-        "ApiBulkInvitationResponse": {
-            "created": "ISO 8601 timestamp when invitation was created",
-            "service": "Service type (e.g., HMRC-MTD-IT, HMRC-MTD-VAT)",
-            "status": "Invitation status (Pending, Accepted, Rejected, Expired, Cancelled, Partialauth)",
-            "expiresOn": "ISO 8601 date when invitation expires",
-            "invitationId": "Unique invitation identifier",
-            "lastUpdated": "ISO 8601 timestamp when invitation was last updated"
-        },
-        "example": {
-            "uid": "AB12CD34",
-            "normalizedAgentName": "acme-tax-agency",
-            "invitations": [
-                {
-                    "created": "2024-01-15T10:30:00Z",
-                    "service": "HMRC-MTD-IT",
-                    "status": "Pending",
-                    "expiresOn": "2024-02-14",
-                    "invitationId": "ABERULMHCKKW3",
-                    "lastUpdated": "2024-01-15T10:30:00Z"
-                },
-                {
-                    "created": "2024-01-16T14:20:00Z",
-                    "service": "HMRC-MTD-VAT",
-                    "status": "Accepted",
-                    "expiresOn": "2024-02-15",
-                    "invitationId": "CDEFULMHCKKW4",
-                    "lastUpdated": "2024-01-17T09:15:00Z"
-                }
-            ]
-        }
+    {
+      "name": "agent-references",
+      "operation": "READ/INSERT",
+      "description": "Find agent reference record by ARN, create if not exists"
+    }
+  ],
+  "responseModel": {
+    "ApiBulkInvitationsResponse": {
+      "uid": "8-character unique identifier for the agent",
+      "normalizedAgentName": "Normalized version of the agency name",
+      "invitations": "Array of ApiBulkInvitationResponse objects"
     },
-    "businessLogic": {
-        "agentSuspensionCheck": {
-            "description": "Checks if agent is suspended before returning invitations",
-            "logic": "Calls AgentAssuranceService.getNonSuspendedAgentRecord(arn) - returns AGENT_SUSPENDED if agent is suspended"
-        },
-        "serviceSupportCheck": {
-            "description": "Only returns invitations for API-supported services",
-            "logic": "Filters invitations by apiSupportedServices list configured in application.conf"
-        },
-        "agentReferenceRecordLookup": {
-            "description": "Gets or creates an agent reference record with a unique ID",
-            "logic": "Looks up by ARN in agent-references collection, creates new record with 8-char uid if not found"
-        },
-        "bulkRetrieval": {
-            "description": "Returns all invitations for the agent, not just one",
-            "logic": "Calls findAllForAgentService which queries all invitations matching ARN and supported services"
-        }
+    "ApiBulkInvitationResponse": {
+      "created": "ISO 8601 timestamp when invitation was created",
+      "service": "Service type (e.g., HMRC-MTD-IT, HMRC-MTD-VAT)",
+      "status": "Invitation status (Pending, Accepted, Rejected, Expired, Cancelled, Partialauth)",
+      "expiresOn": "ISO 8601 date when invitation expires",
+      "invitationId": "Unique invitation identifier",
+      "lastUpdated": "ISO 8601 timestamp when invitation was last updated"
     },
-    "errorHandling": [
+    "example": {
+      "uid": "AB12CD34",
+      "normalizedAgentName": "acme-tax-agency",
+      "invitations": [
         {
-            "scenario": "Agent is suspended",
-            "response": "422 Unprocessable Entity",
-            "message": "AGENT_SUSPENDED",
-            "note": "Prevents suspended agents from accessing invitations"
+          "created": "2024-01-15T10:30:00Z",
+          "service": "HMRC-MTD-IT",
+          "status": "Pending",
+          "expiresOn": "2024-02-14",
+          "invitationId": "ABERULMHCKKW3",
+          "lastUpdated": "2024-01-15T10:30:00Z"
         },
         {
-            "scenario": "OAuth2 authentication fails",
-            "response": "401 Unauthorized",
-            "message": "Unauthorized",
-            "note": "External system authentication required"
-        },
-        {
-            "scenario": "No invitations found",
-            "response": "200 OK",
-            "message": "Empty invitations array",
-            "note": "Returns successful response with empty array, not an error"
+          "created": "2024-01-16T14:20:00Z",
+          "service": "HMRC-MTD-VAT",
+          "status": "Accepted",
+          "expiresOn": "2024-02-15",
+          "invitationId": "CDEFULMHCKKW4",
+          "lastUpdated": "2024-01-17T09:15:00Z"
         }
-    ],
-    "useCases": [
-        {
-            "scenario": "External system retrieves all invitations for an agent",
-            "flow": [
-                "External system authenticates with OAuth2",
-                "Makes GET request with ARN",
-                "System verifies agent is not suspended",
-                "System gets/creates agent reference record",
-                "System queries all invitations for ARN filtered by API-supported services",
-                "Returns bulk response with agent info and invitation list"
-            ],
-            "response": {
-                "uid": "AB12CD34",
-                "normalizedAgentName": "acme-tax-agency",
-                "invitations": [
-                    {
-                        "created": "2024-01-15T10:30:00Z",
-                        "service": "HMRC-MTD-IT",
-                        "status": "Pending",
-                        "expiresOn": "2024-02-14",
-                        "invitationId": "ABERULMHCKKW3",
-                        "lastUpdated": "2024-01-15T10:30:00Z"
-                    }
-                ]
-            },
-            "frontend_action": "Display list of invitations to user"
-        },
-        {
-            "scenario": "Agent has no invitations",
-            "flow": [
-                "External system authenticates with OAuth2",
-                "Makes GET request with ARN",
-                "System verifies agent is not suspended",
-                "System gets/creates agent reference record",
-                "System queries invitations - finds none",
-                "Returns successful response with empty invitations array"
-            ],
-            "response": {
-                "uid": "AB12CD34",
-                "normalizedAgentName": "acme-tax-agency",
-                "invitations": []
-            },
-            "frontend_action": "Display 'No invitations' message to user"
-        }
-    ],
-    "importantNotes": [
-        "✅ Returns ALL invitations for the agent (bulk retrieval)",
-        "✅ Similar to ACR32 but retrieves multiple invitations instead of one",
-        "✅ Automatically filters by API-supported services only",
-        "✅ Returns agent uid and normalized name with the invitations",
-        "✅ Only returns invitations for non-suspended agents",
-        "✅ Automatically creates agent reference record if it doesn't exist",
-        "✅ Returns 200 OK with empty array if no invitations found (not an error)",
-        "⚠️ No query parameters for filtering - returns ALL invitations for the ARN",
-        "⚠️ Does not include clientId or individual invitation filtering",
-        "⚠️ Agent reference record uses 8-character secure random uid",
-        "⚠️ Normalized agent name is computed from the agent's agency name",
-        "⚠️ Invitations include all statuses (Pending, Accepted, Rejected, etc.)"
-    ]
+      ]
+    }
+  },
+  "businessLogic": {
+    "agentSuspensionCheck": {
+      "description": "Checks if agent is suspended before returning invitations",
+      "logic": "Calls AgentAssuranceService.getNonSuspendedAgentRecord(arn) - returns AGENT_SUSPENDED if agent is suspended"
+    },
+    "serviceSupportCheck": {
+      "description": "Only returns invitations for API-supported services",
+      "logic": "Filters invitations by apiSupportedServices list configured in application.conf"
+    },
+    "agentReferenceRecordLookup": {
+      "description": "Gets or creates an agent reference record with a unique ID",
+      "logic": "Looks up by ARN in agent-references collection, creates new record with 8-char uid if not found"
+    },
+    "bulkRetrieval": {
+      "description": "Returns all invitations for the agent, not just one",
+      "logic": "Calls findAllForAgentService which queries all invitations matching ARN and supported services"
+    }
+  },
+  "errorHandling": [
+    {
+      "scenario": "Agent is suspended",
+      "response": "422 Unprocessable Entity",
+      "message": "AGENT_SUSPENDED",
+      "note": "Prevents suspended agents from accessing invitations"
+    },
+    {
+      "scenario": "OAuth2 authentication fails",
+      "response": "401 Unauthorized",
+      "message": "Unauthorized",
+      "note": "External system authentication required"
+    },
+    {
+      "scenario": "No invitations found",
+      "response": "200 OK",
+      "message": "Empty invitations array",
+      "note": "Returns successful response with empty array, not an error"
+    }
+  ],
+  "useCases": [
+    {
+      "scenario": "External system retrieves all invitations for an agent",
+      "flow": [
+        "External system authenticates with OAuth2",
+        "Makes GET request with ARN",
+        "System verifies agent is not suspended",
+        "System gets/creates agent reference record",
+        "System queries all invitations for ARN filtered by API-supported services",
+        "Returns bulk response with agent info and invitation list"
+      ],
+      "response": {
+        "uid": "AB12CD34",
+        "normalizedAgentName": "acme-tax-agency",
+        "invitations": [
+          {
+            "created": "2024-01-15T10:30:00Z",
+            "service": "HMRC-MTD-IT",
+            "status": "Pending",
+            "expiresOn": "2024-02-14",
+            "invitationId": "ABERULMHCKKW3",
+            "lastUpdated": "2024-01-15T10:30:00Z"
+          }
+        ]
+      },
+      "frontend_action": "Display list of invitations to user"
+    },
+    {
+      "scenario": "Agent has no invitations",
+      "flow": [
+        "External system authenticates with OAuth2",
+        "Makes GET request with ARN",
+        "System verifies agent is not suspended",
+        "System gets/creates agent reference record",
+        "System queries invitations - finds none",
+        "Returns successful response with empty invitations array"
+      ],
+      "response": {
+        "uid": "AB12CD34",
+        "normalizedAgentName": "acme-tax-agency",
+        "invitations": []
+      },
+      "frontend_action": "Display 'No invitations' message to user"
+    }
+  ],
+  "importantNotes": [
+    "✅ Returns ALL invitations for the agent (bulk retrieval)",
+    "✅ Similar to ACR32 but retrieves multiple invitations instead of one",
+    "✅ Automatically filters by API-supported services only",
+    "✅ Returns agent uid and normalized name with the invitations",
+    "✅ Only returns invitations for non-suspended agents",
+    "✅ Automatically creates agent reference record if it doesn't exist",
+    "✅ Returns 200 OK with empty array if no invitations found (not an error)",
+    "⚠️ No query parameters for filtering - returns ALL invitations for the ARN",
+    "⚠️ Does not include clientId or individual invitation filtering",
+    "⚠️ Agent reference record uses 8-character secure random uid",
+    "⚠️ Normalized agent name is computed from the agent's agency name",
+    "⚠️ Invitations include all statuses (Pending, Accepted, Rejected, etc.)"
+  ],
+  "metadata": {
+    "lastUpdated": "2025-11-20",
+    "gitCommitSha": "b2138b4e3958677748c1820c3d715d4fbb9d3b2c",
+    "analysisVersion": "1.0"
+  }
 }

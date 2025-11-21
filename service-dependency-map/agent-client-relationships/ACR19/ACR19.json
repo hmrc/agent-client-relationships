@@ -1,224 +1,238 @@
 {
-    "apiId": "ACR19",
-    "apiTitle": "Track Agent Authorisation Requests",
-    "description": "Retrieves a paginated and filtered list of authorisation requests (invitations) for an agent. Returns requests with filtering by status and client name, along with metadata including all available client names, available status filters, total result count, and which filters were applied. Uses MongoDB aggregation pipeline with facets for efficient querying. This is the primary endpoint for agent dashboards to display and manage invitation history.",
-    "method": "GET",
-    "path": "/agent-client-relationships/agent/{arn}/authorisation-requests",
-    "pathParameters": {
-        "arn": "Agent Reference Number - must match the authenticated agent"
+  "apiId": "ACR19",
+  "apiTitle": "Track Agent Authorisation Requests",
+  "description": "Retrieves a paginated and filtered list of authorisation requests (invitations) for an agent. Returns requests with filtering by status and client name, along with metadata including all available client names, available status filters, total result count, and which filters were applied. Uses MongoDB aggregation pipeline with facets for efficient querying. This is the primary endpoint for agent dashboards to display and manage invitation history.",
+  "method": "GET",
+  "path": "/agent-client-relationships/agent/{arn}/authorisation-requests",
+  "pathParameters": {
+    "arn": "Agent Reference Number - must match the authenticated agent"
+  },
+  "queryParameters": {
+    "statusFilter": "Optional - Filter by invitation status (Pending, Accepted, Rejected, Expired, Cancelled, Deauthorised, PartialAuth). Note: 'Accepted' filter includes both Accepted and PartialAuth statuses",
+    "clientName": "Optional - Filter by exact client name (URL encoded)",
+    "pageNumber": "Required - Page number for pagination (1-based)",
+    "pageSize": "Required - Number of results per page"
+  },
+  "requestBody": {},
+  "responses": {
+    "200": "Success - Returns TrackRequestsResult with paginated invitations and metadata",
+    "401": "Unauthorized - Agent authentication failed",
+    "403": "Forbidden - Authenticated agent ARN does not match the ARN in the path"
+  },
+  "authentication": "Agent authentication via withAuthorisedAsAgent - requires valid agent enrolment (HMRC-AS-AGENT)",
+  "audience": "internal",
+  "controller": "AuthorisationRequestInfoController",
+  "controllerMethod": "trackRequests",
+  "services": [
+    {
+      "name": "InvitationService",
+      "alias": "IS",
+      "method": "trackRequests",
+      "description": "Passes through to repository for invitation tracking"
     },
-    "queryParameters": {
-        "statusFilter": "Optional - Filter by invitation status (Pending, Accepted, Rejected, Expired, Cancelled, Deauthorised, PartialAuth). Note: 'Accepted' filter includes both Accepted and PartialAuth statuses",
-        "clientName": "Optional - Filter by exact client name (URL encoded)",
-        "pageNumber": "Required - Page number for pagination (1-based)",
-        "pageSize": "Required - Number of results per page"
+    {
+      "name": "InvitationsRepository",
+      "alias": "IR",
+      "method": "trackRequests",
+      "description": "Executes MongoDB aggregation pipeline with facets to retrieve paginated results and metadata"
+    }
+  ],
+  "interactions": "See ACR19.mmd for complete sequence diagram",
+  "externalDependencies": [],
+  "databaseCollections": [
+    {
+      "name": "invitations",
+      "operation": "READ (Aggregation)",
+      "description": "Complex aggregation pipeline with facets: 1) Filter by ARN and sort by created descending. 2) Facet for unique client names. 3) Facet for available status filters. 4) Facet for total result count with filters applied. 5) Facet for paginated invitation results with filters, skip, and limit."
+    }
+  ],
+  "responseModel": {
+    "TrackRequestsResult": {
+      "pageNumber": "Current page number",
+      "requests": "Array of Invitation objects for the current page",
+      "clientNames": "Sorted array of all unique client names for this agent (for building filter UI)",
+      "availableFilters": "Sorted array of all available status values for this agent (for building filter UI)",
+      "filtersApplied": "Optional object showing which filters were applied (statusFilter and/or clientFilter)",
+      "totalResults": "Total count of results matching the applied filters"
     },
-    "requestBody": {},
-    "responses": {
-        "200": "Success - Returns TrackRequestsResult with paginated invitations and metadata",
-        "401": "Unauthorized - Agent authentication failed",
-        "403": "Forbidden - Authenticated agent ARN does not match the ARN in the path"
+    "Invitation": {
+      "invitationId": "Unique invitation identifier",
+      "arn": "Agent Reference Number",
+      "service": "Service code",
+      "clientId": "Client identifier",
+      "clientIdType": "Type of client identifier",
+      "suppliedClientId": "Original supplied client identifier",
+      "suppliedClientIdType": "Type of supplied identifier",
+      "clientName": "Name of the client",
+      "agencyName": "Name of the agency",
+      "agencyEmail": "Email address of the agency",
+      "warningEmailSent": "Whether warning email has been sent",
+      "expiredEmailSent": "Whether expired email has been sent",
+      "status": "Invitation status",
+      "relationshipEndedBy": "Optional - who ended the relationship",
+      "clientType": "Optional - personal or business",
+      "expiryDate": "Date when invitation expires",
+      "created": "Timestamp when invitation was created",
+      "lastUpdated": "Timestamp when invitation was last updated"
     },
-    "authentication": "Agent authentication via withAuthorisedAsAgent - requires valid agent enrolment (HMRC-AS-AGENT)",
-    "audience": "internal",
-    "controller": "AuthorisationRequestInfoController",
-    "controllerMethod": "trackRequests",
-    "services": [
+    "example": {
+      "pageNumber": 1,
+      "requests": [
         {
-            "name": "InvitationService",
-            "alias": "IS",
-            "method": "trackRequests",
-            "description": "Passes through to repository for invitation tracking"
-        },
-        {
-            "name": "InvitationsRepository",
-            "alias": "IR",
-            "method": "trackRequests",
-            "description": "Executes MongoDB aggregation pipeline with facets to retrieve paginated results and metadata"
+          "invitationId": "A1B2C3D4E5F6",
+          "arn": "TARN0000001",
+          "service": "HMRC-MTD-IT",
+          "clientId": "ABCDE1234567890",
+          "clientIdType": "MTDITID",
+          "suppliedClientId": "AB123456C",
+          "suppliedClientIdType": "NI",
+          "clientName": "John Smith",
+          "agencyName": "Test Agency Ltd",
+          "agencyEmail": "agent@test-agency.com",
+          "warningEmailSent": false,
+          "expiredEmailSent": false,
+          "status": "Pending",
+          "relationshipEndedBy": null,
+          "clientType": "personal",
+          "expiryDate": "2025-12-17",
+          "created": "2025-11-17T10:00:00Z",
+          "lastUpdated": "2025-11-17T10:00:00Z"
         }
-    ],
-    "interactions": "See ACR19.mmd for complete sequence diagram",
-    "externalDependencies": [],
-    "databaseCollections": [
-        {
-            "name": "invitations",
-            "operation": "READ (Aggregation)",
-            "description": "Complex aggregation pipeline with facets: 1) Filter by ARN and sort by created descending. 2) Facet for unique client names. 3) Facet for available status filters. 4) Facet for total result count with filters applied. 5) Facet for paginated invitation results with filters, skip, and limit."
-        }
-    ],
-    "responseModel": {
-        "TrackRequestsResult": {
-            "pageNumber": "Current page number",
-            "requests": "Array of Invitation objects for the current page",
-            "clientNames": "Sorted array of all unique client names for this agent (for building filter UI)",
-            "availableFilters": "Sorted array of all available status values for this agent (for building filter UI)",
-            "filtersApplied": "Optional object showing which filters were applied (statusFilter and/or clientFilter)",
-            "totalResults": "Total count of results matching the applied filters"
-        },
-        "Invitation": {
-            "invitationId": "Unique invitation identifier",
-            "arn": "Agent Reference Number",
-            "service": "Service code",
-            "clientId": "Client identifier",
-            "clientIdType": "Type of client identifier",
-            "suppliedClientId": "Original supplied client identifier",
-            "suppliedClientIdType": "Type of supplied identifier",
-            "clientName": "Name of the client",
-            "agencyName": "Name of the agency",
-            "agencyEmail": "Email address of the agency",
-            "warningEmailSent": "Whether warning email has been sent",
-            "expiredEmailSent": "Whether expired email has been sent",
-            "status": "Invitation status",
-            "relationshipEndedBy": "Optional - who ended the relationship",
-            "clientType": "Optional - personal or business",
-            "expiryDate": "Date when invitation expires",
-            "created": "Timestamp when invitation was created",
-            "lastUpdated": "Timestamp when invitation was last updated"
-        },
-        "example": {
-            "pageNumber": 1,
-            "requests": [
-                {
-                    "invitationId": "A1B2C3D4E5F6",
-                    "arn": "TARN0000001",
-                    "service": "HMRC-MTD-IT",
-                    "clientId": "ABCDE1234567890",
-                    "clientIdType": "MTDITID",
-                    "suppliedClientId": "AB123456C",
-                    "suppliedClientIdType": "NI",
-                    "clientName": "John Smith",
-                    "agencyName": "Test Agency Ltd",
-                    "agencyEmail": "agent@test-agency.com",
-                    "warningEmailSent": false,
-                    "expiredEmailSent": false,
-                    "status": "Pending",
-                    "relationshipEndedBy": null,
-                    "clientType": "personal",
-                    "expiryDate": "2025-12-17",
-                    "created": "2025-11-17T10:00:00Z",
-                    "lastUpdated": "2025-11-17T10:00:00Z"
-                }
-            ],
-            "clientNames": ["John Smith", "Jane Doe", "Bob Johnson"],
-            "availableFilters": ["Accepted", "Cancelled", "Pending", "Rejected"],
-            "filtersApplied": {
-                "statusFilter": "Pending"
-            },
-            "totalResults": 45
-        }
+      ],
+      "clientNames": [
+        "John Smith",
+        "Jane Doe",
+        "Bob Johnson"
+      ],
+      "availableFilters": [
+        "Accepted",
+        "Cancelled",
+        "Pending",
+        "Rejected"
+      ],
+      "filtersApplied": {
+        "statusFilter": "Pending"
+      },
+      "totalResults": 45
+    }
+  },
+  "businessLogic": {
+    "aggregationPipeline": {
+      "description": "Uses MongoDB aggregation with facets for efficient single-query retrieval",
+      "logic": "1. Filter by ARN to get all agent's invitations. 2. Sort by created timestamp descending (newest first). 3. Run faceted aggregation: a) clientNamesFacet - collects all unique client names, b) availableFiltersFacet - collects all unique status values, c) totalResultsFacet - counts results with filters applied, d) requests facet - returns paginated results with filters, skip, and limit applied."
     },
-    "businessLogic": {
-        "aggregationPipeline": {
-            "description": "Uses MongoDB aggregation with facets for efficient single-query retrieval",
-            "logic": "1. Filter by ARN to get all agent's invitations. 2. Sort by created timestamp descending (newest first). 3. Run faceted aggregation: a) clientNamesFacet - collects all unique client names, b) availableFiltersFacet - collects all unique status values, c) totalResultsFacet - counts results with filters applied, d) requests facet - returns paginated results with filters, skip, and limit applied."
-        },
-        "statusFiltering": {
-            "description": "Special handling for 'Accepted' status filter",
-            "logic": "When statusFilter is 'Accepted', the query includes both 'Accepted' and 'PartialAuth' statuses. This ensures alt-ITSA partial authorisations appear alongside accepted invitations. All other status filters match exactly."
-        },
-        "clientNameFiltering": {
-            "description": "Client name filtering with encryption and URL decoding",
-            "logic": "Client name is URL decoded and then matched against encrypted client name field in database. This allows exact matching on client names while maintaining data encryption at rest."
-        },
-        "pagination": {
-            "description": "Standard skip/limit pagination",
-            "logic": "Uses skip((pageNumber - 1) * pageSize) and limit(pageSize) in the requests facet. Total results count allows frontend to calculate total pages."
-        },
-        "filterMetadata": {
-            "description": "Returns metadata for building filter UI",
-            "logic": "clientNames array provides all unique client names for dropdown/autocomplete. availableFilters array provides all status values that exist for this agent. Both arrays are sorted for consistent UI display."
-        }
+    "statusFiltering": {
+      "description": "Special handling for 'Accepted' status filter",
+      "logic": "When statusFilter is 'Accepted', the query includes both 'Accepted' and 'PartialAuth' statuses. This ensures alt-ITSA partial authorisations appear alongside accepted invitations. All other status filters match exactly."
     },
-    "errorHandling": [
-        {
-            "scenario": "Authenticated agent ARN doesn't match path ARN",
-            "response": "403 Forbidden",
-            "message": "Standard auth failure response",
-            "note": "Agent can only track their own requests"
-        },
-        {
-            "scenario": "Agent not authenticated",
-            "response": "401 Unauthorized",
-            "message": "Standard auth failure response",
-            "note": "Missing or invalid agent credentials"
-        },
-        {
-            "scenario": "No invitations found",
-            "response": "200 OK with empty requests array",
-            "message": "Returns empty array with totalResults: 0",
-            "note": "Not an error - agent has no invitations matching criteria"
-        }
-    ],
-    "useCases": [
-        {
-            "scenario": "Agent views all pending invitations",
-            "flow": [
-                "Agent makes GET request with statusFilter=Pending, pageNumber=1, pageSize=20",
-                "System filters invitations by ARN and Pending status",
-                "Returns first 20 pending invitations sorted by creation date",
-                "Includes metadata for building filter UI"
-            ],
-            "response": {
-                "status": 200,
-                "body": "TrackRequestsResult with pending invitations"
-            },
-            "frontend_action": "Display pending invitations in table/list. Show pagination controls based on totalResults. Display filter dropdowns using clientNames and availableFilters metadata."
-        },
-        {
-            "scenario": "Agent searches for specific client",
-            "flow": [
-                "Agent enters client name in search box",
-                "Frontend URL-encodes client name and makes request",
-                "System filters by exact client name match",
-                "Returns all invitations for that client"
-            ],
-            "response": {
-                "status": 200,
-                "body": "TrackRequestsResult filtered by client name"
-            },
-            "frontend_action": "Display all invitations for the searched client. Show which filter is applied in filtersApplied field."
-        },
-        {
-            "scenario": "Agent views accepted invitations with pagination",
-            "flow": [
-                "Agent selects 'Accepted' filter",
-                "System includes both Accepted and PartialAuth statuses",
-                "Returns paginated results",
-                "Agent can navigate through pages"
-            ],
-            "response": {
-                "status": 200,
-                "body": "TrackRequestsResult with Accepted and PartialAuth invitations"
-            },
-            "frontend_action": "Display accepted invitations including alt-ITSA partial auths. Provide next/previous page navigation."
-        },
-        {
-            "scenario": "Agent dashboard initialization",
-            "flow": [
-                "Agent opens dashboard",
-                "Frontend makes request without filters (pageNumber=1, pageSize=20)",
-                "System returns recent invitations and all metadata",
-                "Frontend uses metadata to build filter dropdowns"
-            ],
-            "response": {
-                "status": 200,
-                "body": "TrackRequestsResult with metadata"
-            },
-            "frontend_action": "Display recent invitations. Populate status filter dropdown with availableFilters. Populate client name filter/search with clientNames."
-        }
-    ],
-    "importantNotes": [
-        "✅ Uses efficient MongoDB aggregation with facets (single query for data + metadata)",
-        "✅ Returns metadata for building filter UI (clientNames and availableFilters)",
-        "✅ Sorted by created timestamp descending (newest invitations first)",
-        "✅ Returns totalResults for calculating pagination UI",
-        "✅ Empty filters are treated as 'no filter' (returns all matching ARN)",
-        "✅ 'Accepted' status filter includes both Accepted and PartialAuth (for alt-ITSA)",
-        "⚠️ Agent can only view their own invitations (enforces ARN match)",
-        "⚠️ Client name must be URL-encoded and matches exactly against encrypted database values",
-        "⚠️ pageNumber is 1-based (first page is 1, not 0)",
-        "⚠️ filtersApplied field shows what filters were applied (useful for UI state)",
-        "⚠️ Returns 200 with empty array if no results (not 404)"
-    ]
+    "clientNameFiltering": {
+      "description": "Client name filtering with encryption and URL decoding",
+      "logic": "Client name is URL decoded and then matched against encrypted client name field in database. This allows exact matching on client names while maintaining data encryption at rest."
+    },
+    "pagination": {
+      "description": "Standard skip/limit pagination",
+      "logic": "Uses skip((pageNumber - 1) * pageSize) and limit(pageSize) in the requests facet. Total results count allows frontend to calculate total pages."
+    },
+    "filterMetadata": {
+      "description": "Returns metadata for building filter UI",
+      "logic": "clientNames array provides all unique client names for dropdown/autocomplete. availableFilters array provides all status values that exist for this agent. Both arrays are sorted for consistent UI display."
+    }
+  },
+  "errorHandling": [
+    {
+      "scenario": "Authenticated agent ARN doesn't match path ARN",
+      "response": "403 Forbidden",
+      "message": "Standard auth failure response",
+      "note": "Agent can only track their own requests"
+    },
+    {
+      "scenario": "Agent not authenticated",
+      "response": "401 Unauthorized",
+      "message": "Standard auth failure response",
+      "note": "Missing or invalid agent credentials"
+    },
+    {
+      "scenario": "No invitations found",
+      "response": "200 OK with empty requests array",
+      "message": "Returns empty array with totalResults: 0",
+      "note": "Not an error - agent has no invitations matching criteria"
+    }
+  ],
+  "useCases": [
+    {
+      "scenario": "Agent views all pending invitations",
+      "flow": [
+        "Agent makes GET request with statusFilter=Pending, pageNumber=1, pageSize=20",
+        "System filters invitations by ARN and Pending status",
+        "Returns first 20 pending invitations sorted by creation date",
+        "Includes metadata for building filter UI"
+      ],
+      "response": {
+        "status": 200,
+        "body": "TrackRequestsResult with pending invitations"
+      },
+      "frontend_action": "Display pending invitations in table/list. Show pagination controls based on totalResults. Display filter dropdowns using clientNames and availableFilters metadata."
+    },
+    {
+      "scenario": "Agent searches for specific client",
+      "flow": [
+        "Agent enters client name in search box",
+        "Frontend URL-encodes client name and makes request",
+        "System filters by exact client name match",
+        "Returns all invitations for that client"
+      ],
+      "response": {
+        "status": 200,
+        "body": "TrackRequestsResult filtered by client name"
+      },
+      "frontend_action": "Display all invitations for the searched client. Show which filter is applied in filtersApplied field."
+    },
+    {
+      "scenario": "Agent views accepted invitations with pagination",
+      "flow": [
+        "Agent selects 'Accepted' filter",
+        "System includes both Accepted and PartialAuth statuses",
+        "Returns paginated results",
+        "Agent can navigate through pages"
+      ],
+      "response": {
+        "status": 200,
+        "body": "TrackRequestsResult with Accepted and PartialAuth invitations"
+      },
+      "frontend_action": "Display accepted invitations including alt-ITSA partial auths. Provide next/previous page navigation."
+    },
+    {
+      "scenario": "Agent dashboard initialization",
+      "flow": [
+        "Agent opens dashboard",
+        "Frontend makes request without filters (pageNumber=1, pageSize=20)",
+        "System returns recent invitations and all metadata",
+        "Frontend uses metadata to build filter dropdowns"
+      ],
+      "response": {
+        "status": 200,
+        "body": "TrackRequestsResult with metadata"
+      },
+      "frontend_action": "Display recent invitations. Populate status filter dropdown with availableFilters. Populate client name filter/search with clientNames."
+    }
+  ],
+  "importantNotes": [
+    "✅ Uses efficient MongoDB aggregation with facets (single query for data + metadata)",
+    "✅ Returns metadata for building filter UI (clientNames and availableFilters)",
+    "✅ Sorted by created timestamp descending (newest invitations first)",
+    "✅ Returns totalResults for calculating pagination UI",
+    "✅ Empty filters are treated as 'no filter' (returns all matching ARN)",
+    "✅ 'Accepted' status filter includes both Accepted and PartialAuth (for alt-ITSA)",
+    "⚠️ Agent can only view their own invitations (enforces ARN match)",
+    "⚠️ Client name must be URL-encoded and matches exactly against encrypted database values",
+    "⚠️ pageNumber is 1-based (first page is 1, not 0)",
+    "⚠️ filtersApplied field shows what filters were applied (useful for UI state)",
+    "⚠️ Returns 200 with empty array if no results (not 404)"
+  ],
+  "metadata": {
+    "lastUpdated": "2025-11-20",
+    "gitCommitSha": "b2138b4e3958677748c1820c3d715d4fbb9d3b2c",
+    "analysisVersion": "1.0"
+  }
 }
 

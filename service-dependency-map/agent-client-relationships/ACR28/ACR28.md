@@ -497,3 +497,10 @@ Requires Stride authentication with one of these roles:
 - **ACR26**: Get Stride Client Relationships - Stride endpoint for single service/client relationship query
 - **ACR09**: Get Client Relationship Details - Agent version with comprehensive data
 
+---
+
+## Document Metadata
+
+**Last Updated:** 2025-11-20  
+**Git Commit SHA:** `b2138b4e3958677748c1820c3d715d4fbb9d3b2c`  
+**Analysis Version:** 1.0

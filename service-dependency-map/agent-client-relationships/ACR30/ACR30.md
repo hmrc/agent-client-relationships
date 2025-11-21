@@ -61,3 +61,11 @@ sequenceDiagram
 - Restricted to Stride-authenticated HMRC staff
 - Shows historical partial auth relationships
 - Used for customer support and audit purposes
+
+---
+
+## Document Metadata
+
+**Last Updated:** 2025-11-20  
+**Git Commit SHA:** `b2138b4e3958677748c1820c3d715d4fbb9d3b2c`  
+**Analysis Version:** 1.0

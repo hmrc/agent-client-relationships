@@ -249,3 +249,11 @@ Always checks agent suspension status before returning details - prevents suspen
 - `arn` (unique)
 
 **No TTL**: Records persist indefinitely for static agent invitation links
+
+---
+
+## Document Metadata
+
+**Last Updated:** 2025-11-20  
+**Git Commit SHA:** `b2138b4e3958677748c1820c3d715d4fbb9d3b2c`  
+**Analysis Version:** 1.0

@@ -1,292 +1,306 @@
 {
-    "apiId": "ACR12",
-    "apiTitle": "Validate Invitation for Client",
-    "description": "Validates an agent's invitation for an authenticated client by checking the UID, verifying the agent is not suspended, finding matching invitations for the client's services, and checking for existing agent relationships. This is used when a client clicks an invitation link and needs to see invitation details including whether they already have an agent for that service. Returns invitation details with status and existing main agent information.",
-    "method": "POST",
-    "path": "/client/validate-invitation",
-    "pathParameters": {},
-    "queryParameters": {},
-    "requestBody": {
-        "ValidateInvitationRequest": {
-            "uid": "8-character agent invitation link UID",
-            "serviceKeys": "Array of service keys the client wants to check (e.g., ['HMRC-MTD-IT', 'HMRC-MTD-VAT'])"
-        },
-        "example": {
-            "uid": "abc12345",
-            "serviceKeys": ["HMRC-MTD-IT", "HMRC-MTD-VAT"]
-        }
+  "apiId": "ACR12",
+  "apiTitle": "Validate Invitation for Client",
+  "description": "Validates an agent's invitation for an authenticated client by checking the UID, verifying the agent is not suspended, finding matching invitations for the client's services, and checking for existing agent relationships. This is used when a client clicks an invitation link and needs to see invitation details including whether they already have an agent for that service. Returns invitation details with status and existing main agent information.",
+  "method": "POST",
+  "path": "/client/validate-invitation",
+  "pathParameters": {},
+  "queryParameters": {},
+  "requestBody": {
+    "ValidateInvitationRequest": {
+      "uid": "8-character agent invitation link UID",
+      "serviceKeys": "Array of service keys the client wants to check (e.g., ['HMRC-MTD-IT', 'HMRC-MTD-VAT'])"
     },
-    "responses": {
-        "200": "Returns ValidateInvitationResponse with invitation details and existing main agent info",
-        "404": "Not Found - UID not found OR no matching invitations found",
-        "403": "Forbidden - Agent is suspended OR client not enrolled for requested services",
-        "401": "Unauthorized - Client not authenticated"
-    },
-    "authentication": "Client authentication via Government Gateway with validation against requested service keys",
-    "audience": "internal",
-    "controller": "InvitationLinkController",
-    "controllerMethod": "validateInvitationForClient",
-    "services": [
-        {
-            "name": "InvitationLinkService",
-            "alias": "ILS",
-            "method": "validateInvitationRequest",
-            "description": "Validates UID and checks agent suspension"
-        },
-        {
-            "name": "AgentReferenceRepository",
-            "alias": "ARR",
-            "method": "findBy",
-            "description": "Looks up agent reference record by UID"
-        },
-        {
-            "name": "agent-assurance",
-            "alias": "AAS/AMS",
-            "method": "getNonSuspendedAgentRecord, getAgentRecord",
-            "description": "Checks agent suspension and retrieves agent details"
-        },
-        {
-            "name": "InvitationService",
-            "alias": "IS",
-            "method": "findAllForAgent",
-            "description": "Finds invitations matching agent ARN, services, and client IDs"
-        },
-        {
-            "name": "InvitationsRepository",
-            "alias": "IR",
-            "method": "findAllForAgent",
-            "description": "Queries MongoDB for matching invitations"
-        },
-        {
-            "name": "CheckRelationshipsService",
-            "alias": "CRS",
-            "method": "findCurrentMainAgent",
-            "description": "Checks if client already has an existing main agent for the service"
-        },
-        {
-            "name": "Enrolment Store Proxy (EACD)",
-            "alias": "ESP",
-            "methods": ["getDelegatedGroupIdsFor", "getPrincipalGroupIdFor"],
-            "description": "Queries for existing agent relationships via enrolment delegations"
-        },
-        {
-            "name": "agent-fi-relationship",
-            "alias": "AFRC",
-            "method": "findIrvActiveRelationshipForClient",
-            "description": "Checks for existing PIR relationships"
-        }
-    ],
-    "interactions": "See ACR12.mmd for detailed sequence diagram - over 20 steps with branching logic",
-    "externalDependencies": [
-        {
-            "name": "agent-assurance",
-            "description": "Checks agent suspension and provides agent details for existing relationships"
-        },
-        {
-            "name": "Enrolment Store Proxy (EACD)",
-            "description": "Queries for existing agent delegations via enrolment keys"
-        },
-        {
-            "name": "agent-fi-relationship",
-            "description": "Checks for existing PIR (Personal Income Record) relationships"
-        }
-    ],
-    "databaseCollections": [
-        {
-            "name": "agent-reference",
-            "operation": "READ",
-            "description": "Looks up agent reference record by UID"
-        },
-        {
-            "name": "invitations",
-            "operation": "READ",
-            "description": "Queries for invitations matching agent ARN, services, and client IDs"
-        }
-    ],
-    "authenticationDetails": {
-        "method": "withAuthorisedClientForServiceKeys",
-        "provider": "GovernmentGateway",
-        "affinityGroups": ["Individual", "Organisation"],
-        "validates": "Client must have enrolments for at least one of the requested service keys",
-        "retrieves": "allEnrolments",
-        "noEnrolmentsResponse": "403 Forbidden (NoPermissionToPerformOperation)"
-    },
-    "responseModel": {
-        "ValidateInvitationResponse": {
-            "invitationId": "Unique invitation ID",
-            "service": "Service identifier",
-            "agencyName": "Agent's agency name",
-            "status": "Invitation status (Pending, Accepted, Rejected, Expired, Cancelled)",
-            "lastUpdated": "Timestamp of last status change",
-            "existingMainAgent": "Optional ExistingMainAgent object if client already has an agent",
-            "clientType": "Client type (personal or business)"
-        },
-        "ExistingMainAgent": {
-            "agentName": "Existing agent's agency name",
-            "isThisAgent": "Boolean - true if existing agent is same as inviting agent"
-        },
-        "example": {
-            "invitationId": "ABBBBBBBBBBBB",
-            "service": "HMRC-MTD-IT",
-            "agencyName": "ABC Accountants Ltd",
-            "status": "Pending",
-            "lastUpdated": "2025-11-15T10:30:00Z",
-            "existingMainAgent": {
-                "agentName": "XYZ Tax Services",
-                "isThisAgent": false
-            },
-            "clientType": "personal"
-        }
-    },
-    "businessLogic": {
-        "serviceMapping": {
-            "description": "Handles special service mappings for HMRC-NI and HMRC-PT enrolments",
-            "HMRC-NI_or_HMRC-PT_with_HMRC-MTD-IT": "Maps to HMRC-MTD-IT",
-            "HMRC-NI_or_HMRC-PT_without_HMRC-MTD-IT": "Maps to PERSONAL-INCOME-RECORD",
-            "multiAgentServices": "MTD-IT also checks MTD-IT-SUPP"
-        },
-        "invitationSelection": {
-            "description": "Selects which invitation to return when multiple found",
-            "priority1": "Pending invitation (if exists)",
-            "priority2": "Most recently created invitation (sorted by created timestamp descending)"
-        },
-        "existingMainAgentCheck": {
-            "description": "Checks if client already has an existing main agent for the service",
-            "MTD-IT_MTD-IT-SUPP": "Uses findMainAgentForNino - checks EACD, partial_auth, mappings",
-            "PIR": "Queries agent-fi-relationship for active IRV relationship",
-            "CBC-ORG": "Uses provided enrolment to check EACD delegations",
-            "other_services": "Builds enrolment key from invitation and checks EACD delegations"
-        },
-        "isThisAgent": {
-            "description": "Compares existing agent ARN with inviting agent ARN",
-            "logic": "existingArn == invitationArn"
-        }
-    },
-    "errorHandling": [
-        {
-            "scenario": "UID not found in agent-reference collection",
-            "response": "404 Not Found",
-            "logged": "Agent Reference Record not found for UID: {uid}"
-        },
-        {
-            "scenario": "Agent suspended",
-            "response": "403 Forbidden",
-            "logged": "Agent is suspended for UID: {uid}"
-        },
-        {
-            "scenario": "No invitations found matching criteria",
-            "response": "404 Not Found",
-            "logged": "Invitation was not found for UID: {uid}, service keys: {serviceKeys}"
-        },
-        {
-            "scenario": "Client not enrolled for requested services",
-            "response": "403 Forbidden (NoPermissionToPerformOperation)",
-            "note": "Caught by withAuthorisedClientForServiceKeys"
-        },
-        {
-            "scenario": "Client not authenticated",
-            "response": "401 Unauthorized"
-        }
-    ],
-    "useCases": [
-        {
-            "scenario": "Client clicks invitation link and has pending invitation",
-            "flow": [
-                "Client authenticated with MTD-IT enrolment",
-                "POST with {uid: 'abc12345', serviceKeys: ['HMRC-MTD-IT']}",
-                "UID validated, agent not suspended",
-                "Pending invitation found",
-                "No existing main agent",
-                "Returns invitation details"
-            ],
-            "response": {
-                "invitationId": "ABBBBBBBBBBBB",
-                "service": "HMRC-MTD-IT",
-                "agencyName": "ABC Accountants Ltd",
-                "status": "Pending",
-                "lastUpdated": "2025-11-15T10:30:00Z",
-                "existingMainAgent": null,
-                "clientType": "personal"
-            },
-            "frontend_action": "Show 'ABC Accountants Ltd has invited you to authorize them as your agent for Making Tax Digital for Income Tax'"
-        },
-        {
-            "scenario": "Client already has an agent for the service",
-            "flow": [
-                "Client authenticated with VAT enrolment",
-                "POST with {uid: 'xyz67890', serviceKeys: ['HMRC-MTD-VAT']}",
-                "Invitation found",
-                "Existing main agent found (different agent)",
-                "Returns invitation with existingMainAgent"
-            ],
-            "response": {
-                "invitationId": "CCCCCCCCCCCCC",
-                "service": "HMRC-MTD-VAT",
-                "agencyName": "New Agent Ltd",
-                "status": "Pending",
-                "lastUpdated": "2025-11-15T14:00:00Z",
-                "existingMainAgent": {
-                    "agentName": "Current Agent Ltd",
-                    "isThisAgent": false
-                },
-                "clientType": "business"
-            },
-            "frontend_action": "Show warning: 'You already have Current Agent Ltd as your agent for this service. Accepting this invitation will replace them with New Agent Ltd.'"
-        },
-        {
-            "scenario": "Client has expired invitation",
-            "flow": [
-                "No Pending invitation found",
-                "Most recent invitation selected (status: Expired)",
-                "Returns expired invitation details"
-            ],
-            "response": {
-                "status": "Expired",
-                "lastUpdated": "2025-10-15T10:30:00Z"
-            },
-            "frontend_action": "Show 'This invitation has expired. Please ask the agent to send a new invitation.'"
-        },
-        {
-            "scenario": "Client not enrolled for requested services",
-            "response": "403 Forbidden",
-            "frontend_action": "Show 'You are not enrolled for the requested tax services'"
-        },
-        {
-            "scenario": "Agent suspended",
-            "response": "403 Forbidden",
-            "frontend_action": "Show 'This agent is currently suspended and cannot accept new clients'"
-        }
-    ],
-    "importantNotes": [
-        "✅ Client authentication required with service enrolment validation",
-        "✅ Checks both UID validity and agent suspension",
-        "✅ Queries MongoDB invitations for matching records",
-        "✅ Handles special service mappings (HMRC-NI/PT → MTD-IT/PIR)",
-        "✅ Multi-agent services: MTD-IT also checks MTD-IT-SUPP",
-        "✅ Invitation selection: Pending first, else most recent",
-        "✅ Checks for existing main agent relationships",
-        "✅ Different logic per service for existing agent check",
-        "✅ Returns isThisAgent flag (existing agent == inviting agent)",
-        "⚠️ Request body required (not query parameters)",
-        "⚠️ serviceKeys must match client's actual enrolments",
-        "⚠️ Returns 404 if no invitations found (even if UID valid)"
-    ],
-    "comparisonWithACR10": {
-        "ACR10_validateLink": {
-            "purpose": "Validate agent link (UID + name)",
-            "authentication": "None (public)",
-            "input": "UID and normalized name (path params)",
-            "output": "Agent ARN and agency name",
-            "checks": "UID exists, name matches, agent not suspended"
-        },
-        "ACR12_validateInvitationForClient": {
-            "purpose": "Validate invitation for authenticated client",
-            "authentication": "Client (must have service enrolments)",
-            "input": "UID and service keys (request body)",
-            "output": "Full invitation details with existing agent check",
-            "checks": "UID exists, agent not suspended, invitations exist, existing relationships"
-        },
-        "relationship": "ACR10 is first step (validate link), ACR12 is second step (validate invitation for specific client)"
+    "example": {
+      "uid": "abc12345",
+      "serviceKeys": [
+        "HMRC-MTD-IT",
+        "HMRC-MTD-VAT"
+      ]
     }
+  },
+  "responses": {
+    "200": "Returns ValidateInvitationResponse with invitation details and existing main agent info",
+    "404": "Not Found - UID not found OR no matching invitations found",
+    "403": "Forbidden - Agent is suspended OR client not enrolled for requested services",
+    "401": "Unauthorized - Client not authenticated"
+  },
+  "authentication": "Client authentication via Government Gateway with validation against requested service keys",
+  "audience": "internal",
+  "controller": "InvitationLinkController",
+  "controllerMethod": "validateInvitationForClient",
+  "services": [
+    {
+      "name": "InvitationLinkService",
+      "alias": "ILS",
+      "method": "validateInvitationRequest",
+      "description": "Validates UID and checks agent suspension"
+    },
+    {
+      "name": "AgentReferenceRepository",
+      "alias": "ARR",
+      "method": "findBy",
+      "description": "Looks up agent reference record by UID"
+    },
+    {
+      "name": "agent-assurance",
+      "alias": "AAS/AMS",
+      "method": "getNonSuspendedAgentRecord, getAgentRecord",
+      "description": "Checks agent suspension and retrieves agent details"
+    },
+    {
+      "name": "InvitationService",
+      "alias": "IS",
+      "method": "findAllForAgent",
+      "description": "Finds invitations matching agent ARN, services, and client IDs"
+    },
+    {
+      "name": "InvitationsRepository",
+      "alias": "IR",
+      "method": "findAllForAgent",
+      "description": "Queries MongoDB for matching invitations"
+    },
+    {
+      "name": "CheckRelationshipsService",
+      "alias": "CRS",
+      "method": "findCurrentMainAgent",
+      "description": "Checks if client already has an existing main agent for the service"
+    },
+    {
+      "name": "Enrolment Store Proxy (EACD)",
+      "alias": "ESP",
+      "methods": [
+        "getDelegatedGroupIdsFor",
+        "getPrincipalGroupIdFor"
+      ],
+      "description": "Queries for existing agent relationships via enrolment delegations"
+    },
+    {
+      "name": "agent-fi-relationship",
+      "alias": "AFRC",
+      "method": "findIrvActiveRelationshipForClient",
+      "description": "Checks for existing PIR relationships"
+    }
+  ],
+  "interactions": "See ACR12.mmd for detailed sequence diagram - over 20 steps with branching logic",
+  "externalDependencies": [
+    {
+      "name": "agent-assurance",
+      "description": "Checks agent suspension and provides agent details for existing relationships"
+    },
+    {
+      "name": "Enrolment Store Proxy (EACD)",
+      "description": "Queries for existing agent delegations via enrolment keys"
+    },
+    {
+      "name": "agent-fi-relationship",
+      "description": "Checks for existing PIR (Personal Income Record) relationships"
+    }
+  ],
+  "databaseCollections": [
+    {
+      "name": "agent-reference",
+      "operation": "READ",
+      "description": "Looks up agent reference record by UID"
+    },
+    {
+      "name": "invitations",
+      "operation": "READ",
+      "description": "Queries for invitations matching agent ARN, services, and client IDs"
+    }
+  ],
+  "authenticationDetails": {
+    "method": "withAuthorisedClientForServiceKeys",
+    "provider": "GovernmentGateway",
+    "affinityGroups": [
+      "Individual",
+      "Organisation"
+    ],
+    "validates": "Client must have enrolments for at least one of the requested service keys",
+    "retrieves": "allEnrolments",
+    "noEnrolmentsResponse": "403 Forbidden (NoPermissionToPerformOperation)"
+  },
+  "responseModel": {
+    "ValidateInvitationResponse": {
+      "invitationId": "Unique invitation ID",
+      "service": "Service identifier",
+      "agencyName": "Agent's agency name",
+      "status": "Invitation status (Pending, Accepted, Rejected, Expired, Cancelled)",
+      "lastUpdated": "Timestamp of last status change",
+      "existingMainAgent": "Optional ExistingMainAgent object if client already has an agent",
+      "clientType": "Client type (personal or business)"
+    },
+    "ExistingMainAgent": {
+      "agentName": "Existing agent's agency name",
+      "isThisAgent": "Boolean - true if existing agent is same as inviting agent"
+    },
+    "example": {
+      "invitationId": "ABBBBBBBBBBBB",
+      "service": "HMRC-MTD-IT",
+      "agencyName": "ABC Accountants Ltd",
+      "status": "Pending",
+      "lastUpdated": "2025-11-15T10:30:00Z",
+      "existingMainAgent": {
+        "agentName": "XYZ Tax Services",
+        "isThisAgent": false
+      },
+      "clientType": "personal"
+    }
+  },
+  "businessLogic": {
+    "serviceMapping": {
+      "description": "Handles special service mappings for HMRC-NI and HMRC-PT enrolments",
+      "HMRC-NI_or_HMRC-PT_with_HMRC-MTD-IT": "Maps to HMRC-MTD-IT",
+      "HMRC-NI_or_HMRC-PT_without_HMRC-MTD-IT": "Maps to PERSONAL-INCOME-RECORD",
+      "multiAgentServices": "MTD-IT also checks MTD-IT-SUPP"
+    },
+    "invitationSelection": {
+      "description": "Selects which invitation to return when multiple found",
+      "priority1": "Pending invitation (if exists)",
+      "priority2": "Most recently created invitation (sorted by created timestamp descending)"
+    },
+    "existingMainAgentCheck": {
+      "description": "Checks if client already has an existing main agent for the service",
+      "MTD-IT_MTD-IT-SUPP": "Uses findMainAgentForNino - checks EACD, partial_auth, mappings",
+      "PIR": "Queries agent-fi-relationship for active IRV relationship",
+      "CBC-ORG": "Uses provided enrolment to check EACD delegations",
+      "other_services": "Builds enrolment key from invitation and checks EACD delegations"
+    },
+    "isThisAgent": {
+      "description": "Compares existing agent ARN with inviting agent ARN",
+      "logic": "existingArn == invitationArn"
+    }
+  },
+  "errorHandling": [
+    {
+      "scenario": "UID not found in agent-reference collection",
+      "response": "404 Not Found",
+      "logged": "Agent Reference Record not found for UID: {uid}"
+    },
+    {
+      "scenario": "Agent suspended",
+      "response": "403 Forbidden",
+      "logged": "Agent is suspended for UID: {uid}"
+    },
+    {
+      "scenario": "No invitations found matching criteria",
+      "response": "404 Not Found",
+      "logged": "Invitation was not found for UID: {uid}, service keys: {serviceKeys}"
+    },
+    {
+      "scenario": "Client not enrolled for requested services",
+      "response": "403 Forbidden (NoPermissionToPerformOperation)",
+      "note": "Caught by withAuthorisedClientForServiceKeys"
+    },
+    {
+      "scenario": "Client not authenticated",
+      "response": "401 Unauthorized"
+    }
+  ],
+  "useCases": [
+    {
+      "scenario": "Client clicks invitation link and has pending invitation",
+      "flow": [
+        "Client authenticated with MTD-IT enrolment",
+        "POST with {uid: 'abc12345', serviceKeys: ['HMRC-MTD-IT']}",
+        "UID validated, agent not suspended",
+        "Pending invitation found",
+        "No existing main agent",
+        "Returns invitation details"
+      ],
+      "response": {
+        "invitationId": "ABBBBBBBBBBBB",
+        "service": "HMRC-MTD-IT",
+        "agencyName": "ABC Accountants Ltd",
+        "status": "Pending",
+        "lastUpdated": "2025-11-15T10:30:00Z",
+        "existingMainAgent": null,
+        "clientType": "personal"
+      },
+      "frontend_action": "Show 'ABC Accountants Ltd has invited you to authorize them as your agent for Making Tax Digital for Income Tax'"
+    },
+    {
+      "scenario": "Client already has an agent for the service",
+      "flow": [
+        "Client authenticated with VAT enrolment",
+        "POST with {uid: 'xyz67890', serviceKeys: ['HMRC-MTD-VAT']}",
+        "Invitation found",
+        "Existing main agent found (different agent)",
+        "Returns invitation with existingMainAgent"
+      ],
+      "response": {
+        "invitationId": "CCCCCCCCCCCCC",
+        "service": "HMRC-MTD-VAT",
+        "agencyName": "New Agent Ltd",
+        "status": "Pending",
+        "lastUpdated": "2025-11-15T14:00:00Z",
+        "existingMainAgent": {
+          "agentName": "Current Agent Ltd",
+          "isThisAgent": false
+        },
+        "clientType": "business"
+      },
+      "frontend_action": "Show warning: 'You already have Current Agent Ltd as your agent for this service. Accepting this invitation will replace them with New Agent Ltd.'"
+    },
+    {
+      "scenario": "Client has expired invitation",
+      "flow": [
+        "No Pending invitation found",
+        "Most recent invitation selected (status: Expired)",
+        "Returns expired invitation details"
+      ],
+      "response": {
+        "status": "Expired",
+        "lastUpdated": "2025-10-15T10:30:00Z"
+      },
+      "frontend_action": "Show 'This invitation has expired. Please ask the agent to send a new invitation.'"
+    },
+    {
+      "scenario": "Client not enrolled for requested services",
+      "response": "403 Forbidden",
+      "frontend_action": "Show 'You are not enrolled for the requested tax services'"
+    },
+    {
+      "scenario": "Agent suspended",
+      "response": "403 Forbidden",
+      "frontend_action": "Show 'This agent is currently suspended and cannot accept new clients'"
+    }
+  ],
+  "importantNotes": [
+    "✅ Client authentication required with service enrolment validation",
+    "✅ Checks both UID validity and agent suspension",
+    "✅ Queries MongoDB invitations for matching records",
+    "✅ Handles special service mappings (HMRC-NI/PT → MTD-IT/PIR)",
+    "✅ Multi-agent services: MTD-IT also checks MTD-IT-SUPP",
+    "✅ Invitation selection: Pending first, else most recent",
+    "✅ Checks for existing main agent relationships",
+    "✅ Different logic per service for existing agent check",
+    "✅ Returns isThisAgent flag (existing agent == inviting agent)",
+    "⚠️ Request body required (not query parameters)",
+    "⚠️ serviceKeys must match client's actual enrolments",
+    "⚠️ Returns 404 if no invitations found (even if UID valid)"
+  ],
+  "comparisonWithACR10": {
+    "ACR10_validateLink": {
+      "purpose": "Validate agent link (UID + name)",
+      "authentication": "None (public)",
+      "input": "UID and normalized name (path params)",
+      "output": "Agent ARN and agency name",
+      "checks": "UID exists, name matches, agent not suspended"
+    },
+    "ACR12_validateInvitationForClient": {
+      "purpose": "Validate invitation for authenticated client",
+      "authentication": "Client (must have service enrolments)",
+      "input": "UID and service keys (request body)",
+      "output": "Full invitation details with existing agent check",
+      "checks": "UID exists, agent not suspended, invitations exist, existing relationships"
+    },
+    "relationship": "ACR10 is first step (validate link), ACR12 is second step (validate invitation for specific client)"
+  },
+  "metadata": {
+    "lastUpdated": "2025-11-20",
+    "gitCommitSha": "b2138b4e3958677748c1820c3d715d4fbb9d3b2c",
+    "analysisVersion": "1.0"
+  }
 }
 

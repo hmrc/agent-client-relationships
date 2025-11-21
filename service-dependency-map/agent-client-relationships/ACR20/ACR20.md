@@ -339,3 +339,10 @@ POST /agent/TARN0000001/remove-authorisation
 - **ACR10**: Get Inactive Relationships for Client - terminated relationships appear here
 - **ACR15**: Accept Invitation - creates relationship that this endpoint removes
 
+---
+
+## Document Metadata
+
+**Last Updated:** 2025-11-20  
+**Git Commit SHA:** `b2138b4e3958677748c1820c3d715d4fbb9d3b2c`  
+**Analysis Version:** 1.0

@@ -1,267 +1,282 @@
 {
-    "apiId": "ACR09",
-    "apiTitle": "Get Client Details for Agent",
-    "description": "Retrieves comprehensive client details for the authenticated agent, including client name, known facts (postcode/country), overseas status, pending invitation status, and existing relationship status. The endpoint queries service-specific external APIs (citizen-details, IF/HIP) for client information, then enriches it with invitation and relationship status from internal sources. Supports multi-agent services (MTD-IT + MTD-IT-SUPP) by checking both main and supporting services. Used by agent frontends to display client information during invitation or relationship management flows.",
-    "method": "GET",
-    "path": "/client/{service}/details/{clientId}",
-    "pathParameters": {
-        "service": "Service identifier (e.g., HMRC-MTD-IT, HMRC-MTD-VAT, HMRC-TERS-ORG, HMRC-CGT-PD)",
-        "clientId": "Client identifier - format varies by service (NINO, VRN, UTR, URN, CGT ref, PPT ref, CBC ID, PLR ID)"
+  "apiId": "ACR09",
+  "apiTitle": "Get Client Details for Agent",
+  "description": "Retrieves comprehensive client details for the authenticated agent, including client name, known facts (postcode/country), overseas status, pending invitation status, and existing relationship status. The endpoint queries service-specific external APIs (citizen-details, IF/HIP) for client information, then enriches it with invitation and relationship status from internal sources. Supports multi-agent services (MTD-IT + MTD-IT-SUPP) by checking both main and supporting services. Used by agent frontends to display client information during invitation or relationship management flows.",
+  "method": "GET",
+  "path": "/client/{service}/details/{clientId}",
+  "pathParameters": {
+    "service": "Service identifier (e.g., HMRC-MTD-IT, HMRC-MTD-VAT, HMRC-TERS-ORG, HMRC-CGT-PD)",
+    "clientId": "Client identifier - format varies by service (NINO, VRN, UTR, URN, CGT ref, PPT ref, CBC ID, PLR ID)"
+  },
+  "queryParameters": {},
+  "responses": {
+    "200": "Returns ClientDetailsResponse with name, known facts, overseas status, pending invitation flag, and existing relationship service",
+    "404": "Not Found - client details not found in external service",
+    "401": "Unauthorized - agent not authenticated",
+    "500": "Internal Server Error - error retrieving client details or unexpected error during relationship check"
+  },
+  "authentication": "Agent authentication via withAuthorisedAsAgent",
+  "audience": "internal",
+  "controller": "ClientDetailsController",
+  "controllerMethod": "findClientDetails",
+  "services": [
+    {
+      "name": "ClientDetailsService",
+      "alias": "CDS",
+      "method": "findClientDetails",
+      "description": "Routes to appropriate external API based on service type and formats response"
     },
-    "queryParameters": {},
-    "responses": {
-        "200": "Returns ClientDetailsResponse with name, known facts, overseas status, pending invitation flag, and existing relationship service",
-        "404": "Not Found - client details not found in external service",
-        "401": "Unauthorized - agent not authenticated",
-        "500": "Internal Server Error - error retrieving client details or unexpected error during relationship check"
+    {
+      "name": "citizen-details",
+      "method": "getCitizenDetails",
+      "description": "Retrieves citizen details for PIR (Personal Income Record) service"
     },
-    "authentication": "Agent authentication via withAuthorisedAsAgent",
-    "audience": "internal",
-    "controller": "ClientDetailsController",
-    "controllerMethod": "findClientDetails",
-    "services": [
-        {
-            "name": "ClientDetailsService",
-            "alias": "CDS",
-            "method": "findClientDetails",
-            "description": "Routes to appropriate external API based on service type and formats response"
-        },
-        {
-            "name": "citizen-details",
-            "method": "getCitizenDetails",
-            "description": "Retrieves citizen details for PIR (Personal Income Record) service"
-        },
-        {
-            "name": "IF/HIP (IfOrHipConnector)",
-            "alias": "HIP",
-            "methods": ["getItsaBusinessDetails", "getVatCustomerDetails", "getTrustDetails", "getCgtSubscriptionDetails", "getPptSubscriptionDetails", "getCbcSubscriptionDetails", "getPillar2SubscriptionDetails"],
-            "description": "Retrieves client subscription/registration details for various tax services"
-        },
-        {
-            "name": "CheckRelationshipsOrchestratorService",
-            "alias": "CRS",
-            "method": "checkForRelationship",
-            "description": "Checks if agent has existing relationship with client (uses full ACR01 flow)"
-        },
-        {
-            "name": "InvitationsRepository",
-            "alias": "IR",
-            "method": "findAllForAgent",
-            "description": "Queries MongoDB for pending invitations from agent to client"
-        },
-        {
-            "name": "PartialAuthRepository",
-            "alias": "PAuth",
-            "method": "findActive",
-            "description": "Queries MongoDB for active IR-SA partial authorizations (MTD-IT/MTD-IT-SUPP only)"
-        }
+    {
+      "name": "IF/HIP (IfOrHipConnector)",
+      "alias": "HIP",
+      "methods": [
+        "getItsaBusinessDetails",
+        "getVatCustomerDetails",
+        "getTrustDetails",
+        "getCgtSubscriptionDetails",
+        "getPptSubscriptionDetails",
+        "getCbcSubscriptionDetails",
+        "getPillar2SubscriptionDetails"
+      ],
+      "description": "Retrieves client subscription/registration details for various tax services"
+    },
+    {
+      "name": "CheckRelationshipsOrchestratorService",
+      "alias": "CRS",
+      "method": "checkForRelationship",
+      "description": "Checks if agent has existing relationship with client (uses full ACR01 flow)"
+    },
+    {
+      "name": "InvitationsRepository",
+      "alias": "IR",
+      "method": "findAllForAgent",
+      "description": "Queries MongoDB for pending invitations from agent to client"
+    },
+    {
+      "name": "PartialAuthRepository",
+      "alias": "PAuth",
+      "method": "findActive",
+      "description": "Queries MongoDB for active IR-SA partial authorizations (MTD-IT/MTD-IT-SUPP only)"
+    }
+  ],
+  "interactions": "See detailed sequence diagram in ACR09.mmd - over 15 steps with parallel checks",
+  "externalDependencies": [
+    {
+      "name": "citizen-details",
+      "description": "Provides citizen personal details for PIR service",
+      "endpoint": "/citizen-details/{nino}"
+    },
+    {
+      "name": "IF/HIP",
+      "description": "Provides subscription/registration details for all tax services except PIR",
+      "endpoints": [
+        "/registration/business-details/{identifier} (ITSA)",
+        "/vat/customer/vrn/{vrn}/information (VAT)",
+        "/trusts/{identifier} (Trusts)",
+        "/subscriptions/CGT/{cgtRef} (CGT)",
+        "/subscriptions/PPT/{pptRef} (PPT)",
+        "/subscriptions/CBC/{cbcId} (CBC)",
+        "/subscriptions/PLR/{plrId} (Pillar2)"
+      ]
+    }
+  ],
+  "databaseCollections": [
+    {
+      "name": "invitations",
+      "operation": "READ",
+      "description": "Queries for pending invitations from this agent to this client for this service"
+    },
+    {
+      "name": "partial_auth",
+      "operation": "READ",
+      "description": "Queries for active partial authorizations (MTD-IT/MTD-IT-SUPP only)"
+    }
+  ],
+  "supportedServices": {
+    "HMRC-MTD-IT": {
+      "clientIdType": "NINO",
+      "externalSource": "IF/HIP getItsaBusinessDetails",
+      "knownFactType": "PostalCode or Overseas indicator",
+      "multiAgentService": "Also checks HMRC-MTD-IT-SUPP"
+    },
+    "HMRC-MTD-IT-SUPP": {
+      "clientIdType": "NINO",
+      "externalSource": "IF/HIP getItsaBusinessDetails",
+      "knownFactType": "PostalCode or Overseas indicator"
+    },
+    "HMRC-MTD-VAT": {
+      "clientIdType": "VRN",
+      "externalSource": "IF/HIP getVatCustomerDetails",
+      "knownFactType": "VatRegistrationDate"
+    },
+    "HMCE-VATDEC-ORG": {
+      "clientIdType": "VRN",
+      "externalSource": "IF/HIP getVatCustomerDetails",
+      "knownFactType": "VatRegistrationDate"
+    },
+    "HMRC-TERS-ORG": {
+      "clientIdType": "UTR",
+      "externalSource": "IF/HIP getTrustDetails",
+      "knownFactType": "PostalCode"
+    },
+    "HMRC-TERSNT-ORG": {
+      "clientIdType": "URN",
+      "externalSource": "IF/HIP getTrustDetails",
+      "knownFactType": "PostalCode"
+    },
+    "PERSONAL-INCOME-RECORD": {
+      "clientIdType": "NINO",
+      "externalSource": "citizen-details getCitizenDetails",
+      "knownFactType": "DateOfBirth"
+    },
+    "HMRC-CGT-PD": {
+      "clientIdType": "CGT Reference",
+      "externalSource": "IF/HIP getCgtSubscriptionDetails",
+      "knownFactType": "PostalCode or Overseas indicator"
+    },
+    "HMRC-PPT-ORG": {
+      "clientIdType": "PPT Reference",
+      "externalSource": "IF/HIP getPptSubscriptionDetails",
+      "knownFactType": "VatRegistrationDate"
+    },
+    "HMRC-CBC-ORG": {
+      "clientIdType": "CBC ID",
+      "externalSource": "IF/HIP getCbcSubscriptionDetails",
+      "knownFactType": "Email",
+      "serviceRefinement": "Changes to HMRC-CBC-NONUKORG if isOverseas=true"
+    },
+    "HMRC-PILLAR2-ORG": {
+      "clientIdType": "PLR ID",
+      "externalSource": "IF/HIP getPillar2SubscriptionDetails",
+      "knownFactType": "PlrReference"
+    }
+  },
+  "responseModel": {
+    "ClientDetailsResponse": {
+      "name": "Client name (individual or organization)",
+      "status": "Optional client status",
+      "isOverseas": "Optional[Boolean] - whether client is overseas",
+      "knownFacts": "Array of known facts (postcode, country, date of birth, email, registration date, etc.)",
+      "knownFactType": "Type of known fact (PostalCode, DateOfBirth, VatRegistrationDate, Email, PlrReference, Overseas)",
+      "hasPendingInvitation": "Boolean - true if agent has pending invitation for this client (main OR supp service)",
+      "hasExistingRelationshipFor": "Optional[String] - service ID if relationship exists (main OR supp service)"
+    },
+    "example": {
+      "name": "John Smith",
+      "status": null,
+      "isOverseas": false,
+      "knownFacts": [
+        "SW1A1AA"
+      ],
+      "knownFactType": "PostalCode",
+      "hasPendingInvitation": true,
+      "hasExistingRelationshipFor": null
+    }
+  },
+  "businessLogic": {
+    "serviceRefinement": {
+      "description": "CBC-ORG service is refined to CBC-NONUKORG if client is overseas",
+      "logic": "if (service == HMRC-CBC-ORG && isOverseas == true) then service = HMRC-CBC-NONUKORG"
+    },
+    "multiAgentServices": {
+      "description": "MTD-IT has a supporting service (MTD-IT-SUPP) that must also be checked",
+      "logic": "When service is HMRC-MTD-IT, also check HMRC-MTD-IT-SUPP for pending invitations and existing relationships"
+    },
+    "partialAuthFallback": {
+      "description": "For MTD-IT/MTD-IT-SUPP, if no relationship found via ACR01, check partial_auth collection",
+      "logic": "if (relationship not found AND service in [HMRC-MTD-IT, HMRC-MTD-IT-SUPP]) then check partial_auth.findActive(service, nino, arn)"
+    },
+    "knownFactExtraction": {
+      "PostalCode": "Extracted from address, spaces removed",
+      "DateOfBirth": "Extracted from citizen details",
+      "VatRegistrationDate": "Extracted from VAT customer details",
+      "Email": "Extracted from CBC subscription",
+      "PlrReference": "PLR ID itself",
+      "Overseas": "Country code if overseas"
+    },
+    "combinedResults": {
+      "hasPendingInvitation": "true if pending invitation found for main service OR supporting service",
+      "hasExistingRelationshipFor": "Returns first found: main service relationship OR supporting service relationship"
+    }
+  },
+  "parallelExecution": {
+    "description": "Three parallel checks run after client details retrieved",
+    "checks": [
+      "Check pending invitation for main service",
+      "Check pending invitation for supporting service (if applicable)",
+      "Check existing relationship via ACR01 for main service (may include partial_auth check)",
+      "Check existing relationship via ACR01 for supporting service (if applicable, may include partial_auth check)"
     ],
-    "interactions": "See detailed sequence diagram in ACR09.mmd - over 15 steps with parallel checks",
-    "externalDependencies": [
-        {
-            "name": "citizen-details",
-            "description": "Provides citizen personal details for PIR service",
-            "endpoint": "/citizen-details/{nino}"
-        },
-        {
-            "name": "IF/HIP",
-            "description": "Provides subscription/registration details for all tax services except PIR",
-            "endpoints": [
-                "/registration/business-details/{identifier} (ITSA)",
-                "/vat/customer/vrn/{vrn}/information (VAT)",
-                "/trusts/{identifier} (Trusts)",
-                "/subscriptions/CGT/{cgtRef} (CGT)",
-                "/subscriptions/PPT/{pptRef} (PPT)",
-                "/subscriptions/CBC/{cbcId} (CBC)",
-                "/subscriptions/PLR/{plrId} (Pillar2)"
-            ]
-        }
-    ],
-    "databaseCollections": [
-        {
-            "name": "invitations",
-            "operation": "READ",
-            "description": "Queries for pending invitations from this agent to this client for this service"
-        },
-        {
-            "name": "partial_auth",
-            "operation": "READ",
-            "description": "Queries for active partial authorizations (MTD-IT/MTD-IT-SUPP only)"
-        }
-    ],
-    "supportedServices": {
-        "HMRC-MTD-IT": {
-            "clientIdType": "NINO",
-            "externalSource": "IF/HIP getItsaBusinessDetails",
-            "knownFactType": "PostalCode or Overseas indicator",
-            "multiAgentService": "Also checks HMRC-MTD-IT-SUPP"
-        },
-        "HMRC-MTD-IT-SUPP": {
-            "clientIdType": "NINO",
-            "externalSource": "IF/HIP getItsaBusinessDetails",
-            "knownFactType": "PostalCode or Overseas indicator"
-        },
-        "HMRC-MTD-VAT": {
-            "clientIdType": "VRN",
-            "externalSource": "IF/HIP getVatCustomerDetails",
-            "knownFactType": "VatRegistrationDate"
-        },
-        "HMCE-VATDEC-ORG": {
-            "clientIdType": "VRN",
-            "externalSource": "IF/HIP getVatCustomerDetails",
-            "knownFactType": "VatRegistrationDate"
-        },
-        "HMRC-TERS-ORG": {
-            "clientIdType": "UTR",
-            "externalSource": "IF/HIP getTrustDetails",
-            "knownFactType": "PostalCode"
-        },
-        "HMRC-TERSNT-ORG": {
-            "clientIdType": "URN",
-            "externalSource": "IF/HIP getTrustDetails",
-            "knownFactType": "PostalCode"
-        },
-        "PERSONAL-INCOME-RECORD": {
-            "clientIdType": "NINO",
-            "externalSource": "citizen-details getCitizenDetails",
-            "knownFactType": "DateOfBirth"
-        },
-        "HMRC-CGT-PD": {
-            "clientIdType": "CGT Reference",
-            "externalSource": "IF/HIP getCgtSubscriptionDetails",
-            "knownFactType": "PostalCode or Overseas indicator"
-        },
-        "HMRC-PPT-ORG": {
-            "clientIdType": "PPT Reference",
-            "externalSource": "IF/HIP getPptSubscriptionDetails",
-            "knownFactType": "VatRegistrationDate"
-        },
-        "HMRC-CBC-ORG": {
-            "clientIdType": "CBC ID",
-            "externalSource": "IF/HIP getCbcSubscriptionDetails",
-            "knownFactType": "Email",
-            "serviceRefinement": "Changes to HMRC-CBC-NONUKORG if isOverseas=true"
-        },
-        "HMRC-PILLAR2-ORG": {
-            "clientIdType": "PLR ID",
-            "externalSource": "IF/HIP getPillar2SubscriptionDetails",
-            "knownFactType": "PlrReference"
-        }
+    "note": "All checks run in parallel for performance"
+  },
+  "errorHandling": [
+    {
+      "scenario": "Client details not found in external service",
+      "response": "404 Not Found"
     },
-    "responseModel": {
-        "ClientDetailsResponse": {
-            "name": "Client name (individual or organization)",
-            "status": "Optional client status",
-            "isOverseas": "Optional[Boolean] - whether client is overseas",
-            "knownFacts": "Array of known facts (postcode, country, date of birth, email, registration date, etc.)",
-            "knownFactType": "Type of known fact (PostalCode, DateOfBirth, VatRegistrationDate, Email, PlrReference, Overseas)",
-            "hasPendingInvitation": "Boolean - true if agent has pending invitation for this client (main OR supp service)",
-            "hasExistingRelationshipFor": "Optional[String] - service ID if relationship exists (main OR supp service)"
-        },
-        "example": {
-            "name": "John Smith",
-            "status": null,
-            "isOverseas": false,
-            "knownFacts": ["SW1A1AA"],
-            "knownFactType": "PostalCode",
-            "hasPendingInvitation": true,
-            "hasExistingRelationshipFor": null
-        }
+    {
+      "scenario": "Error retrieving client details from external service",
+      "response": "500 Internal Server Error (RuntimeException thrown)",
+      "error_format": "Client details lookup failed - status: '{status}', error: '{message}'"
     },
-    "businessLogic": {
-        "serviceRefinement": {
-            "description": "CBC-ORG service is refined to CBC-NONUKORG if client is overseas",
-            "logic": "if (service == HMRC-CBC-ORG && isOverseas == true) then service = HMRC-CBC-NONUKORG"
-        },
-        "multiAgentServices": {
-            "description": "MTD-IT has a supporting service (MTD-IT-SUPP) that must also be checked",
-            "logic": "When service is HMRC-MTD-IT, also check HMRC-MTD-IT-SUPP for pending invitations and existing relationships"
-        },
-        "partialAuthFallback": {
-            "description": "For MTD-IT/MTD-IT-SUPP, if no relationship found via ACR01, check partial_auth collection",
-            "logic": "if (relationship not found AND service in [HMRC-MTD-IT, HMRC-MTD-IT-SUPP]) then check partial_auth.findActive(service, nino, arn)"
-        },
-        "knownFactExtraction": {
-            "PostalCode": "Extracted from address, spaces removed",
-            "DateOfBirth": "Extracted from citizen details",
-            "VatRegistrationDate": "Extracted from VAT customer details",
-            "Email": "Extracted from CBC subscription",
-            "PlrReference": "PLR ID itself",
-            "Overseas": "Country code if overseas"
-        },
-        "combinedResults": {
-            "hasPendingInvitation": "true if pending invitation found for main service OR supporting service",
-            "hasExistingRelationshipFor": "Returns first found: main service relationship OR supporting service relationship"
-        }
+    {
+      "scenario": "Unexpected error during relationship check",
+      "response": "500 Internal Server Error (RuntimeException thrown)",
+      "error_format": "Unexpected error during relationship check"
     },
-    "parallelExecution": {
-        "description": "Three parallel checks run after client details retrieved",
-        "checks": [
-            "Check pending invitation for main service",
-            "Check pending invitation for supporting service (if applicable)",
-            "Check existing relationship via ACR01 for main service (may include partial_auth check)",
-            "Check existing relationship via ACR01 for supporting service (if applicable, may include partial_auth check)"
-        ],
-        "note": "All checks run in parallel for performance"
+    {
+      "scenario": "CheckRelationshipInvalidRequest from ACR01",
+      "response": "500 Internal Server Error (RuntimeException thrown)"
     },
-    "errorHandling": [
-        {
-            "scenario": "Client details not found in external service",
-            "response": "404 Not Found"
-        },
-        {
-            "scenario": "Error retrieving client details from external service",
-            "response": "500 Internal Server Error (RuntimeException thrown)",
-            "error_format": "Client details lookup failed - status: '{status}', error: '{message}'"
-        },
-        {
-            "scenario": "Unexpected error during relationship check",
-            "response": "500 Internal Server Error (RuntimeException thrown)",
-            "error_format": "Unexpected error during relationship check"
-        },
-        {
-            "scenario": "CheckRelationshipInvalidRequest from ACR01",
-            "response": "500 Internal Server Error (RuntimeException thrown)"
-        },
-        {
-            "scenario": "Agent not authenticated",
-            "response": "401 Unauthorized"
-        }
-    ],
-    "useCases": [
-        {
-            "scenario": "Agent wants to invite client - check if invitation already pending",
-            "response": "Returns hasPendingInvitation=true if invitation already sent",
-            "frontend_action": "Show message 'You have already sent an invitation to this client'"
-        },
-        {
-            "scenario": "Agent wants to invite client - check if relationship already exists",
-            "response": "Returns hasExistingRelationshipFor with service ID if relationship exists",
-            "frontend_action": "Show message 'You already have access to this client for {service}'"
-        },
-        {
-            "scenario": "Agent entering client details - verify client exists and show name",
-            "response": "Returns client name and known facts for verification",
-            "frontend_action": "Display 'Is this your client? Name: {name}, Postcode: {postcode}'"
-        },
-        {
-            "scenario": "Agent checking client for MTD-IT - need to check both MTD-IT and MTD-IT-SUPP",
-            "response": "Checks both services, returns true if invitation/relationship exists for either",
-            "frontend_action": "Prevent duplicate invitations for either service"
-        }
-    ],
-    "importantNotes": [
-        "Routes to different external APIs based on service type",
-        "For MTD-IT, checks both main (HMRC-MTD-IT) and supporting (HMRC-MTD-IT-SUPP) services",
-        "CBC-ORG service is refined to CBC-NONUKORG if client is overseas",
-        "Partial auth fallback only applies to MTD-IT and MTD-IT-SUPP services",
-        "Uses full ACR01 flow for relationship checking (including all ACR01 complexity)",
-        "Known facts vary by service (postcode, date of birth, VAT reg date, email, etc.)",
-        "Spaces are removed from postcodes in response",
-        "Parallel execution of invitation and relationship checks for performance",
-        "hasPendingInvitation is true if EITHER main OR supporting service has pending invitation",
-        "hasExistingRelationshipFor returns first found service (main OR supporting)",
-        "Throws RuntimeException for unexpected errors (not graceful error handling)"
-    ]
+    {
+      "scenario": "Agent not authenticated",
+      "response": "401 Unauthorized"
+    }
+  ],
+  "useCases": [
+    {
+      "scenario": "Agent wants to invite client - check if invitation already pending",
+      "response": "Returns hasPendingInvitation=true if invitation already sent",
+      "frontend_action": "Show message 'You have already sent an invitation to this client'"
+    },
+    {
+      "scenario": "Agent wants to invite client - check if relationship already exists",
+      "response": "Returns hasExistingRelationshipFor with service ID if relationship exists",
+      "frontend_action": "Show message 'You already have access to this client for {service}'"
+    },
+    {
+      "scenario": "Agent entering client details - verify client exists and show name",
+      "response": "Returns client name and known facts for verification",
+      "frontend_action": "Display 'Is this your client? Name: {name}, Postcode: {postcode}'"
+    },
+    {
+      "scenario": "Agent checking client for MTD-IT - need to check both MTD-IT and MTD-IT-SUPP",
+      "response": "Checks both services, returns true if invitation/relationship exists for either",
+      "frontend_action": "Prevent duplicate invitations for either service"
+    }
+  ],
+  "importantNotes": [
+    "Routes to different external APIs based on service type",
+    "For MTD-IT, checks both main (HMRC-MTD-IT) and supporting (HMRC-MTD-IT-SUPP) services",
+    "CBC-ORG service is refined to CBC-NONUKORG if client is overseas",
+    "Partial auth fallback only applies to MTD-IT and MTD-IT-SUPP services",
+    "Uses full ACR01 flow for relationship checking (including all ACR01 complexity)",
+    "Known facts vary by service (postcode, date of birth, VAT reg date, email, etc.)",
+    "Spaces are removed from postcodes in response",
+    "Parallel execution of invitation and relationship checks for performance",
+    "hasPendingInvitation is true if EITHER main OR supporting service has pending invitation",
+    "hasExistingRelationshipFor returns first found service (main OR supporting)",
+    "Throws RuntimeException for unexpected errors (not graceful error handling)"
+  ],
+  "metadata": {
+    "lastUpdated": "2025-11-20",
+    "gitCommitSha": "b2138b4e3958677748c1820c3d715d4fbb9d3b2c",
+    "analysisVersion": "1.0"
+  }
 }
 

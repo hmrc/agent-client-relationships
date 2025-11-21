@@ -170,3 +170,10 @@ Status: 404 Not Found
 - **ACR05**: Create Invitation - Creates the initial invitation that may later be updated by this endpoint
 - **ACR06**: Cancel Invitation - Alternative action that can be taken on invitations
 
+---
+
+## Document Metadata
+
+**Last Updated:** 2025-11-20  
+**Git Commit SHA:** `b2138b4e3958677748c1820c3d715d4fbb9d3b2c`  
+**Analysis Version:** 1.0

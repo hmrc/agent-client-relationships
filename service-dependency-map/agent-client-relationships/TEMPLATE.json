@@ -1,0 +1,103 @@
+{
+    "apiId": "ACRxx",
+    "apiTitle": "[Short descriptive title]",
+    "description": "[Comprehensive description of what the endpoint does, including key flows and business logic]",
+    "method": "GET|POST|PUT|DELETE",
+    "path": "/path/to/:endpoint",
+    "pathParameters": {
+        "param1": "Description of parameter 1"
+    },
+    "queryParameters": {
+        "param1": "Description of query parameter 1"
+    },
+    "requestBody": {
+        "description": "Description of request body",
+        "contentType": "application/json",
+        "schema": {
+            "field1": "string",
+            "field2": "number"
+        },
+        "example": {
+            "field1": "example value",
+            "field2": 123
+        }
+    },
+    "responses": {
+        "200": "Success - description",
+        "400": "Bad Request - description",
+        "404": "Not Found - description",
+        "401": "Unauthorized - authentication required",
+        "500": "Internal Server Error"
+    },
+    "authentication": "Bearer token via authorised() | No authentication required",
+    "audience": "internal|external",
+    "controller": "ControllerName",
+    "controllerMethod": "methodName",
+    "services": [
+        {
+            "name": "ServiceName",
+            "fullName": "Full.Service.Class.Name",
+            "alias": "SN",
+            "method": "serviceMethod",
+            "description": "What this service does in this flow"
+        }
+    ],
+    "externalDependencies": [
+        {
+            "name": "External Service Name",
+            "alias": "ESN",
+            "description": "Purpose of this external dependency",
+            "endpoints": [
+                {
+                    "path": "/external/api/path",
+                    "method": "GET",
+                    "description": "What this external call does"
+                }
+            ]
+        }
+    ],
+    "interactionFlow": [
+        {
+            "step": 1,
+            "actor": "Component Name (Alias)",
+            "action": "calls service|calls external API|queries database|validates internally",
+            "target": "Target Component",
+            "method": "methodName",
+            "endpoint": "/api/endpoint (if external API)",
+            "description": "Detailed description of what happens",
+            "conditional": "only if [condition] (optional field)"
+        }
+    ],
+    "mongoCollectionsUsed": [
+        {
+            "collection": "collection-name",
+            "operations": ["read", "write", "update", "delete"],
+            "description": "How and why this collection is used"
+        }
+    ],
+    "errorHandling": {
+        "validation": "Description of validation errors",
+        "notFound": "When 404 is returned",
+        "serverError": "When 500 is returned"
+    },
+    "specialCases": [
+        {
+            "case": "Description of special case",
+            "handling": "How it's handled differently"
+        }
+    ],
+    "performanceConsiderations": [
+        "Performance consideration 1",
+        "Performance consideration 2"
+    ],
+    "notes": [
+        "Additional note 1",
+        "Additional note 2"
+    ],
+    "metadata": {
+        "lastUpdated": "YYYY-MM-DD",
+        "gitCommitSha": "[Run: git rev-parse HEAD]",
+        "analysisVersion": "1.0"
+    }
+}
+

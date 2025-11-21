@@ -204,3 +204,10 @@ Gets or creates an agent reference record with a unique ID (uid). Looks up by AR
 - **ACR31**: API Create Invitation - creates invitations that can be retrieved with this endpoint
 - **ACR33**: API Get Invitations - retrieves multiple invitations for an agent
 
+---
+
+## Document Metadata
+
+**Last Updated:** 2025-11-20  
+**Git Commit SHA:** `b2138b4e3958677748c1820c3d715d4fbb9d3b2c`  
+**Analysis Version:** 1.0

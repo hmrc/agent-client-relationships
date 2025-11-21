@@ -294,3 +294,10 @@ Only when a **mapped legacy relationship is found** (204 response)
 - **agent-mapping service**: Maintains ARN to legacy SA reference mappings
 - **DES/CESA**: Legacy tax system storing SA agent relationships
 
+---
+
+## Document Metadata
+
+**Last Updated:** 2025-11-20  
+**Git Commit SHA:** `b2138b4e3958677748c1820c3d715d4fbb9d3b2c`  
+**Analysis Version:** 1.0

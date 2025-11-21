@@ -314,3 +314,11 @@ For IR-SA service, suspended agents:
 - The endpoint supports both legacy and modern enrolment patterns
 - Granular permissions checks require the userId to be valid in EACD
 
+---
+
+## Document Metadata
+
+**Last Updated:** 2025-11-20  
+**Git Commit SHA:** `b2138b4e3958677748c1820c3d715d4fbb9d3b2c`  
+**Analysis Version:** 1.0
+

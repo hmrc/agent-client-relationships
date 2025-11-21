@@ -1,297 +1,302 @@
 {
-    "apiId": "ACR01",
-    "apiTitle": "Check Agent-Client Relationship",
-    "description": "Checks if a relationship exists between an agent and a client for a specific service. This endpoint orchestrates multiple validation flows including checking for pending deletions in MongoDB, verifying active relationships in EACD (enrolment-store-proxy), checking legacy relationships in CESA/DES/IF, and handling special cases for different service types (IR-SA, MTD-IT, VAT, PIR). Supports both agency-level and user-level granular permission checks.",
-    "method": "GET",
-    "path": "/agent/:arn/service/:service/client/:clientIdType/:clientId",
-    "pathParameters": {
-        "arn": "Agent Reference Number in format [A-Z]ARN[0-9]{7}",
-        "service": "HMRC service identifier (e.g., HMRC-MTD-IT, HMRC-MTD-VAT, IR-SA, HMCE-VATDEC-ORG, PERSONAL-INCOME-RECORD)",
-        "clientIdType": "Type of client identifier (e.g., ni, NI, NINO, utr, vrn, mtditid)",
-        "clientId": "Client identifier value"
+  "apiId": "ACR01",
+  "apiTitle": "Check Agent-Client Relationship",
+  "description": "Checks if a relationship exists between an agent and a client for a specific service. This endpoint orchestrates multiple validation flows including checking for pending deletions in MongoDB, verifying active relationships in EACD (enrolment-store-proxy), checking legacy relationships in CESA/DES/IF, and handling special cases for different service types (IR-SA, MTD-IT, VAT, PIR). Supports both agency-level and user-level granular permission checks.",
+  "method": "GET",
+  "path": "/agent/:arn/service/:service/client/:clientIdType/:clientId",
+  "pathParameters": {
+    "arn": "Agent Reference Number in format [A-Z]ARN[0-9]{7}",
+    "service": "HMRC service identifier (e.g., HMRC-MTD-IT, HMRC-MTD-VAT, IR-SA, HMCE-VATDEC-ORG, PERSONAL-INCOME-RECORD)",
+    "clientIdType": "Type of client identifier (e.g., ni, NI, NINO, utr, vrn, mtditid)",
+    "clientId": "Client identifier value"
+  },
+  "queryParameters": {
+    "userId": "Optional user ID for granular permissions check - if provided, validates user-level access"
+  },
+  "responses": {
+    "200": "Relationship found - agent has access to client",
+    "404": "Relationship not found",
+    "400": "Bad Request - invalid parameters or agent suspended",
+    "401": "Unauthorized - authentication required"
+  },
+  "authentication": "Bearer token via authorised()",
+  "audience": "internal",
+  "controller": "RelationshipsController",
+  "controllerMethod": "checkForRelationship",
+  "services": [
+    {
+      "name": "OrchestratorService",
+      "fullName": "CheckRelationshipsOrchestratorService",
+      "alias": "OS",
+      "method": "checkForRelationship",
+      "description": "Main orchestrator that routes to appropriate service-specific check based on service type"
     },
-    "queryParameters": {
-        "userId": "Optional user ID for granular permissions check - if provided, validates user-level access"
+    {
+      "name": "ValidationService",
+      "alias": "VS",
+      "method": "validateForEnrolmentKey",
+      "description": "Validates service, clientIdType, and clientId, converts to EnrolmentKey"
     },
-    "responses": {
-        "200": "Relationship found - agent has access to client",
-        "404": "Relationship not found",
-        "400": "Bad Request - invalid parameters or agent suspended",
-        "401": "Unauthorized - authentication required"
+    {
+      "name": "DeleteRelationshipsService",
+      "alias": "DRS",
+      "method": "checkDeleteRecordAndEventuallyResume",
+      "description": "Checks if relationship deletion is pending, resumes if timed out"
     },
-    "authentication": "Bearer token via authorised()",
-    "audience": "internal",
-    "controller": "RelationshipsController",
-    "controllerMethod": "checkForRelationship",
-    "services": [
-        {
-            "name": "OrchestratorService",
-            "fullName": "CheckRelationshipsOrchestratorService",
-            "alias": "OS",
-            "method": "checkForRelationship",
-            "description": "Main orchestrator that routes to appropriate service-specific check based on service type"
-        },
-        {
-            "name": "ValidationService",
-            "alias": "VS",
-            "method": "validateForEnrolmentKey",
-            "description": "Validates service, clientIdType, and clientId, converts to EnrolmentKey"
-        },
-        {
-            "name": "DeleteRelationshipsService",
-            "alias": "DRS",
-            "method": "checkDeleteRecordAndEventuallyResume",
-            "description": "Checks if relationship deletion is pending, resumes if timed out"
-        },
-        {
-            "name": "CheckRelationshipsService",
-            "alias": "CRS",
-            "method": "checkForRelationship",
-            "description": "Checks active relationships in EACD (enrolment-store-proxy), supports agency-level and user-level checks"
-        },
-        {
-            "name": "CheckAndCopyRelationshipsService",
-            "alias": "CACRS",
-            "method": "checkForOldRelationshipAndCopy",
-            "description": "Fallback to check legacy CESA relationships, optionally copies to EACD"
-        },
-        {
-            "name": "AgentAssuranceService",
-            "alias": "AA",
-            "method": "getNonSuspendedAgentRecord",
-            "description": "For IR-SA, checks if agent is suspended"
-        }
-    ],
-    "interactions": [
-        {
-            "step": 1,
-            "actor": "RelationshipsController (RC)",
-            "action": "delegates to service",
-            "target": "OrchestratorService (OS)",
-            "method": "checkForRelationship",
-            "description": "Main orchestration of relationship check with service-specific routing"
-        },
-        {
-            "step": 2,
-            "actor": "OrchestratorService (OS)",
-            "action": "calls service",
-            "target": "ValidationService (VS)",
-            "method": "validateForEnrolmentKey",
-            "description": "Validates parameters and converts to EnrolmentKey (normal flow only)"
-        },
-        {
-            "step": 3,
-            "actor": "OrchestratorService (OS)",
-            "action": "calls service",
-            "target": "DeleteRelationshipsService (DRS)",
-            "method": "checkDeleteRecordAndEventuallyResume",
-            "description": "Checks MongoDB for pending deletion records"
-        },
-        {
-            "step": 4,
-            "actor": "DeleteRelationshipsService (DRS)",
-            "action": "queries database",
-            "target": "MongoDB (DeleteRecordRepository)",
-            "method": "findBy",
-            "description": "Queries delete_record collection for pending deletions"
-        },
-        {
-            "step": 5,
-            "actor": "OrchestratorService (OS)",
-            "action": "calls service",
-            "target": "CheckRelationshipsService (CRS)",
-            "method": "checkForRelationship",
-            "description": "Checks active relationship in EACD"
-        },
-        {
-            "step": 6,
-            "actor": "CheckRelationshipsService (CRS)",
-            "action": "calls external API",
-            "target": "EACD (enrolment-store-proxy)",
-            "endpoint": "/enrolment-store-proxy/enrolment-store/groups",
-            "method": "GET",
-            "description": "Gets agent's principal group ID"
-        },
-        {
-            "step": 7,
-            "actor": "CheckRelationshipsService (CRS)",
-            "action": "calls external API",
-            "target": "EACD (enrolment-store-proxy)",
-            "endpoint": "/enrolment-store-proxy/enrolment-store/enrolments/:enrolmentKey/groups",
-            "method": "GET",
-            "description": "Gets client's delegated group IDs to check if agent's group has access"
-        },
-        {
-            "step": 8,
-            "actor": "CheckRelationshipsService (CRS)",
-            "action": "calls external API",
-            "target": "users-groups-search (UGS)",
-            "endpoint": "/users-groups-search/groups/:groupId/users",
-            "method": "GET",
-            "description": "If userId provided, gets users in group to verify user membership",
-            "conditional": "only if userId parameter provided"
-        },
-        {
-            "step": 9,
-            "actor": "CheckRelationshipsService (CRS)",
-            "action": "validates internally",
-            "target": "CheckRelationshipsService (CRS)",
-            "description": "Checks if userId exists in the list of group users",
-            "conditional": "only if userId parameter provided"
-        },
-        {
-            "step": 10,
-            "actor": "CheckRelationshipsService (CRS)",
-            "action": "calls external API",
-            "target": "agent-permissions (AP)",
-            "endpoint": "/agent-permissions/arn/:arn/client/:enrolmentKey/groups",
-            "method": "GET",
-            "description": "If user belongs to group, checks if client is unassigned from access groups (returns 404 if unassigned, 200 if assigned)",
-            "conditional": "only if userId parameter provided and user belongs to group"
-        },
-        {
-            "step": 11,
-            "actor": "CheckRelationshipsService (CRS)",
-            "action": "calls external API",
-            "target": "EACD (enrolment-store-proxy)",
-            "endpoint": "/enrolment-store-proxy/enrolment-store/users/:userId/enrolments",
-            "method": "GET",
-            "description": "If user belongs to group, gets user's assigned enrolments for granular permissions",
-            "conditional": "only if userId parameter provided and user belongs to group"
-        },
-        {
-            "step": 12,
-            "actor": "CheckRelationshipsService (CRS)",
-            "action": "validates internally",
-            "target": "CheckRelationshipsService (CRS)",
-            "description": "Final check: grants access if client is unassigned OR if enrolment is assigned to user",
-            "conditional": "only if userId parameter provided and user belongs to group"
-        },
-        {
-            "step": 13,
-            "actor": "OrchestratorService (OS)",
-            "action": "calls service (fallback)",
-            "target": "CheckAndCopyRelationshipsService (CACRS)",
-            "method": "checkForOldRelationshipAndCopy",
-            "description": "If not found in EACD, checks legacy CESA relationships",
-            "conditional": "only if relationship not found in EACD"
-        },
-        {
-            "step": 14,
-            "actor": "CheckAndCopyRelationshipsService (CACRS)",
-            "action": "calls external API",
-            "target": "IF/HIP",
-            "endpoint": "/individuals/details/nino/:nino",
-            "method": "GET",
-            "description": "For MTD-IT with NINO, gets MtdItId",
-            "conditional": "MTD-IT service with NINO"
-        },
-        {
-            "step": 15,
-            "actor": "CheckAndCopyRelationshipsService (CACRS)",
-            "action": "calls external API",
-            "target": "DES",
-            "endpoint": "/sa/agents/nino/:nino",
-            "method": "GET",
-            "description": "Gets client's SA agent references from CESA",
-            "conditional": "MTD-IT or IR-SA services"
-        },
-        {
-            "step": 16,
-            "actor": "CheckAndCopyRelationshipsService (CACRS)",
-            "action": "calls external API",
-            "target": "agent-mapping (AM)",
-            "endpoint": "/agent-mapping/mappings/sa/:arn",
-            "method": "GET",
-            "description": "Gets agent's SA references to match against client's",
-            "conditional": "MTD-IT or IR-SA services"
-        },
-        {
-            "step": 17,
-            "actor": "OrchestratorService (OS)",
-            "action": "calls external API",
-            "target": "agent-fi-relationship (AFI)",
-            "endpoint": "/agent-fi-relationship/relationships/agent/:arn/service/:service/client/:clientId",
-            "method": "GET",
-            "description": "For PIR service, delegates to agent-fi-relationship microservice",
-            "conditional": "PERSONAL-INCOME-RECORD service only"
-        },
-        {
-            "step": 18,
-            "actor": "OrchestratorService (OS)",
-            "action": "calls service",
-            "target": "AgentAssuranceService (AA)",
-            "method": "getNonSuspendedAgentRecord",
-            "description": "For IR-SA, checks agent suspension status",
-            "conditional": "IR-SA service only"
-        }
-    ],
-    "externalDependencies": [
-        {
-            "name": "EACD",
-            "fullName": "Enterprise Authorisation Context Data",
-            "serviceName": "enrolment-store-proxy",
-            "description": "EACD (Enterprise Authorisation Context Data) - provides enrolment and group management services"
-        },
-        {
-            "name": "users-groups-search",
-            "alias": "UGS",
-            "description": "Gets group users for user membership validation"
-        },
-        {
-            "name": "agent-permissions",
-            "alias": "AP",
-            "description": "Checks client assignment to access groups for granular permissions"
-        },
-        {
-            "name": "if-or-hip",
-            "alias": "HIP",
-            "description": "HMRC Integration Platform"
-        },
-        {
-            "name": "des",
-            "alias": "DES",
-            "description": "Data Exchange Service / ETMP"
-        },
-        {
-            "name": "agent-mapping",
-            "alias": "AM",
-            "description": "Maps ARN to legacy SA agent references"
-        },
-        {
-            "name": "agent-fi-relationship",
-            "alias": "AFI",
-            "description": "Handles Personal Income Record relationships"
-        },
-        {
-            "name": "agent-assurance",
-            "alias": "AA",
-            "description": "Agent suspension and assurance checks"
-        }
-    ],
-    "databaseCollections": [
-        "delete_record"
-    ],
-    "specialCases": [
-        {
-            "service": "IR-SA",
-            "description": "Checks agent suspension status, then validates partial auth or legacy CESA relationship using NINO"
-        },
-        {
-            "service": "HMRC-MTD-IT or HMRC-MTD-IT-SUPP with clientIdType=ni",
-            "description": "Converts NINO to MtdItId via IF/HIP, then proceeds with normal ES check and CESA fallback"
-        },
-        {
-            "service": "HMCE-VATDEC-ORG",
-            "description": "Checks legacy VAT enrolment directly in ES using VRN"
-        },
-        {
-            "service": "PERSONAL-INCOME-RECORD",
-            "description": "Delegates entirely to agent-fi-relationship microservice"
-        }
-    ],
-    "granularPermissions": {
-        "enabled": true,
-        "description": "When userId query parameter is provided, performs user-level granular permissions check by verifying: 1) Agency-level relationship exists, 2) User belongs to agent's group, 3) Client is either unassigned or assigned to the user's access groups"
+    {
+      "name": "CheckRelationshipsService",
+      "alias": "CRS",
+      "method": "checkForRelationship",
+      "description": "Checks active relationships in EACD (enrolment-store-proxy), supports agency-level and user-level checks"
+    },
+    {
+      "name": "CheckAndCopyRelationshipsService",
+      "alias": "CACRS",
+      "method": "checkForOldRelationshipAndCopy",
+      "description": "Fallback to check legacy CESA relationships, optionally copies to EACD"
+    },
+    {
+      "name": "AgentAssuranceService",
+      "alias": "AA",
+      "method": "getNonSuspendedAgentRecord",
+      "description": "For IR-SA, checks if agent is suspended"
     }
+  ],
+  "interactions": [
+    {
+      "step": 1,
+      "actor": "RelationshipsController (RC)",
+      "action": "delegates to service",
+      "target": "OrchestratorService (OS)",
+      "method": "checkForRelationship",
+      "description": "Main orchestration of relationship check with service-specific routing"
+    },
+    {
+      "step": 2,
+      "actor": "OrchestratorService (OS)",
+      "action": "calls service",
+      "target": "ValidationService (VS)",
+      "method": "validateForEnrolmentKey",
+      "description": "Validates parameters and converts to EnrolmentKey (normal flow only)"
+    },
+    {
+      "step": 3,
+      "actor": "OrchestratorService (OS)",
+      "action": "calls service",
+      "target": "DeleteRelationshipsService (DRS)",
+      "method": "checkDeleteRecordAndEventuallyResume",
+      "description": "Checks MongoDB for pending deletion records"
+    },
+    {
+      "step": 4,
+      "actor": "DeleteRelationshipsService (DRS)",
+      "action": "queries database",
+      "target": "MongoDB (DeleteRecordRepository)",
+      "method": "findBy",
+      "description": "Queries delete_record collection for pending deletions"
+    },
+    {
+      "step": 5,
+      "actor": "OrchestratorService (OS)",
+      "action": "calls service",
+      "target": "CheckRelationshipsService (CRS)",
+      "method": "checkForRelationship",
+      "description": "Checks active relationship in EACD"
+    },
+    {
+      "step": 6,
+      "actor": "CheckRelationshipsService (CRS)",
+      "action": "calls external API",
+      "target": "EACD (enrolment-store-proxy)",
+      "endpoint": "/enrolment-store-proxy/enrolment-store/groups",
+      "method": "GET",
+      "description": "Gets agent's principal group ID"
+    },
+    {
+      "step": 7,
+      "actor": "CheckRelationshipsService (CRS)",
+      "action": "calls external API",
+      "target": "EACD (enrolment-store-proxy)",
+      "endpoint": "/enrolment-store-proxy/enrolment-store/enrolments/:enrolmentKey/groups",
+      "method": "GET",
+      "description": "Gets client's delegated group IDs to check if agent's group has access"
+    },
+    {
+      "step": 8,
+      "actor": "CheckRelationshipsService (CRS)",
+      "action": "calls external API",
+      "target": "users-groups-search (UGS)",
+      "endpoint": "/users-groups-search/groups/:groupId/users",
+      "method": "GET",
+      "description": "If userId provided, gets users in group to verify user membership",
+      "conditional": "only if userId parameter provided"
+    },
+    {
+      "step": 9,
+      "actor": "CheckRelationshipsService (CRS)",
+      "action": "validates internally",
+      "target": "CheckRelationshipsService (CRS)",
+      "description": "Checks if userId exists in the list of group users",
+      "conditional": "only if userId parameter provided"
+    },
+    {
+      "step": 10,
+      "actor": "CheckRelationshipsService (CRS)",
+      "action": "calls external API",
+      "target": "agent-permissions (AP)",
+      "endpoint": "/agent-permissions/arn/:arn/client/:enrolmentKey/groups",
+      "method": "GET",
+      "description": "If user belongs to group, checks if client is unassigned from access groups (returns 404 if unassigned, 200 if assigned)",
+      "conditional": "only if userId parameter provided and user belongs to group"
+    },
+    {
+      "step": 11,
+      "actor": "CheckRelationshipsService (CRS)",
+      "action": "calls external API",
+      "target": "EACD (enrolment-store-proxy)",
+      "endpoint": "/enrolment-store-proxy/enrolment-store/users/:userId/enrolments",
+      "method": "GET",
+      "description": "If user belongs to group, gets user's assigned enrolments for granular permissions",
+      "conditional": "only if userId parameter provided and user belongs to group"
+    },
+    {
+      "step": 12,
+      "actor": "CheckRelationshipsService (CRS)",
+      "action": "validates internally",
+      "target": "CheckRelationshipsService (CRS)",
+      "description": "Final check: grants access if client is unassigned OR if enrolment is assigned to user",
+      "conditional": "only if userId parameter provided and user belongs to group"
+    },
+    {
+      "step": 13,
+      "actor": "OrchestratorService (OS)",
+      "action": "calls service (fallback)",
+      "target": "CheckAndCopyRelationshipsService (CACRS)",
+      "method": "checkForOldRelationshipAndCopy",
+      "description": "If not found in EACD, checks legacy CESA relationships",
+      "conditional": "only if relationship not found in EACD"
+    },
+    {
+      "step": 14,
+      "actor": "CheckAndCopyRelationshipsService (CACRS)",
+      "action": "calls external API",
+      "target": "IF/HIP",
+      "endpoint": "/individuals/details/nino/:nino",
+      "method": "GET",
+      "description": "For MTD-IT with NINO, gets MtdItId",
+      "conditional": "MTD-IT service with NINO"
+    },
+    {
+      "step": 15,
+      "actor": "CheckAndCopyRelationshipsService (CACRS)",
+      "action": "calls external API",
+      "target": "DES",
+      "endpoint": "/sa/agents/nino/:nino",
+      "method": "GET",
+      "description": "Gets client's SA agent references from CESA",
+      "conditional": "MTD-IT or IR-SA services"
+    },
+    {
+      "step": 16,
+      "actor": "CheckAndCopyRelationshipsService (CACRS)",
+      "action": "calls external API",
+      "target": "agent-mapping (AM)",
+      "endpoint": "/agent-mapping/mappings/sa/:arn",
+      "method": "GET",
+      "description": "Gets agent's SA references to match against client's",
+      "conditional": "MTD-IT or IR-SA services"
+    },
+    {
+      "step": 17,
+      "actor": "OrchestratorService (OS)",
+      "action": "calls external API",
+      "target": "agent-fi-relationship (AFI)",
+      "endpoint": "/agent-fi-relationship/relationships/agent/:arn/service/:service/client/:clientId",
+      "method": "GET",
+      "description": "For PIR service, delegates to agent-fi-relationship microservice",
+      "conditional": "PERSONAL-INCOME-RECORD service only"
+    },
+    {
+      "step": 18,
+      "actor": "OrchestratorService (OS)",
+      "action": "calls service",
+      "target": "AgentAssuranceService (AA)",
+      "method": "getNonSuspendedAgentRecord",
+      "description": "For IR-SA, checks agent suspension status",
+      "conditional": "IR-SA service only"
+    }
+  ],
+  "externalDependencies": [
+    {
+      "name": "EACD",
+      "fullName": "Enterprise Authorisation Context Data",
+      "serviceName": "enrolment-store-proxy",
+      "description": "EACD (Enterprise Authorisation Context Data) - provides enrolment and group management services"
+    },
+    {
+      "name": "users-groups-search",
+      "alias": "UGS",
+      "description": "Gets group users for user membership validation"
+    },
+    {
+      "name": "agent-permissions",
+      "alias": "AP",
+      "description": "Checks client assignment to access groups for granular permissions"
+    },
+    {
+      "name": "if-or-hip",
+      "alias": "HIP",
+      "description": "HMRC Integration Platform"
+    },
+    {
+      "name": "des",
+      "alias": "DES",
+      "description": "Data Exchange Service / ETMP"
+    },
+    {
+      "name": "agent-mapping",
+      "alias": "AM",
+      "description": "Maps ARN to legacy SA agent references"
+    },
+    {
+      "name": "agent-fi-relationship",
+      "alias": "AFI",
+      "description": "Handles Personal Income Record relationships"
+    },
+    {
+      "name": "agent-assurance",
+      "alias": "AA",
+      "description": "Agent suspension and assurance checks"
+    }
+  ],
+  "databaseCollections": [
+    "delete_record"
+  ],
+  "specialCases": [
+    {
+      "service": "IR-SA",
+      "description": "Checks agent suspension status, then validates partial auth or legacy CESA relationship using NINO"
+    },
+    {
+      "service": "HMRC-MTD-IT or HMRC-MTD-IT-SUPP with clientIdType=ni",
+      "description": "Converts NINO to MtdItId via IF/HIP, then proceeds with normal ES check and CESA fallback"
+    },
+    {
+      "service": "HMCE-VATDEC-ORG",
+      "description": "Checks legacy VAT enrolment directly in ES using VRN"
+    },
+    {
+      "service": "PERSONAL-INCOME-RECORD",
+      "description": "Delegates entirely to agent-fi-relationship microservice"
+    }
+  ],
+  "granularPermissions": {
+    "enabled": true,
+    "description": "When userId query parameter is provided, performs user-level granular permissions check by verifying: 1) Agency-level relationship exists, 2) User belongs to agent's group, 3) Client is either unassigned or assigned to the user's access groups"
+  },
+  "metadata": {
+    "lastUpdated": "2025-11-20",
+    "gitCommitSha": "b2138b4e3958677748c1820c3d715d4fbb9d3b2c",
+    "analysisVersion": "1.0"
+  }
 }

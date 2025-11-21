@@ -1,202 +1,207 @@
 {
-    "apiId": "ACR03",
-    "apiTitle": "Terminate Agent - Clean Up Internal Records",
-    "description": "Administrative endpoint that deletes internal tracking records for a terminated agent from MongoDB. This endpoint removes records from the delete_record and relationship_copy_record collections. It does NOT delete actual relationships from EACD or terminate active agent-client relationships - it only cleans up internal housekeeping data. This is typically called as part of an agent termination workflow managed by other services.",
-    "method": "DELETE",
-    "path": "/agent/{arn}/terminate",
-    "pathParameters": {
-        "arn": "Agent Reference Number in format [A-Z]ARN[0-9]{7}"
+  "apiId": "ACR03",
+  "apiTitle": "Terminate Agent - Clean Up Internal Records",
+  "description": "Administrative endpoint that deletes internal tracking records for a terminated agent from MongoDB. This endpoint removes records from the delete_record and relationship_copy_record collections. It does NOT delete actual relationships from EACD or terminate active agent-client relationships - it only cleans up internal housekeeping data. This is typically called as part of an agent termination workflow managed by other services.",
+  "method": "DELETE",
+  "path": "/agent/{arn}/terminate",
+  "pathParameters": {
+    "arn": "Agent Reference Number in format [A-Z]ARN[0-9]{7}"
+  },
+  "queryParameters": {},
+  "responses": {
+    "200": "Successfully deleted internal records - returns JSON with deletion counts",
+    "401": "Unauthorized - invalid or missing HTTP Basic Authentication credentials",
+    "500": "Internal Server Error - MongoDB write exception occurred"
+  },
+  "authentication": "HTTP Basic Authentication via withBasicAuth - not agent/stride authentication",
+  "audience": "internal",
+  "controller": "RelationshipsController",
+  "controllerMethod": "terminateAgent",
+  "services": [
+    {
+      "name": "AgentTerminationService",
+      "alias": "ATS",
+      "method": "terminateAgent",
+      "description": "Orchestrates deletion from both MongoDB collections in parallel"
     },
-    "queryParameters": {},
-    "responses": {
-        "200": "Successfully deleted internal records - returns JSON with deletion counts",
-        "401": "Unauthorized - invalid or missing HTTP Basic Authentication credentials",
-        "500": "Internal Server Error - MongoDB write exception occurred"
+    {
+      "name": "DeleteRecordRepository",
+      "alias": "DRR",
+      "method": "terminateAgent",
+      "description": "Deletes all delete_record documents for the ARN"
     },
-    "authentication": "HTTP Basic Authentication via withBasicAuth - not agent/stride authentication",
-    "audience": "internal",
-    "controller": "RelationshipsController",
-    "controllerMethod": "terminateAgent",
-    "services": [
-        {
-            "name": "AgentTerminationService",
-            "alias": "ATS",
-            "method": "terminateAgent",
-            "description": "Orchestrates deletion from both MongoDB collections in parallel"
-        },
-        {
-            "name": "DeleteRecordRepository",
-            "alias": "DRR",
-            "method": "terminateAgent",
-            "description": "Deletes all delete_record documents for the ARN"
-        },
-        {
-            "name": "RelationshipCopyRecordRepository",
-            "alias": "RCRR",
-            "method": "terminateAgent",
-            "description": "Deletes all relationship_copy_record documents for the ARN"
-        }
-    ],
-    "interactions": [
-        {
-            "step": 1,
-            "actor": "RelationshipsController (RC)",
-            "action": "authenticates",
-            "target": "Caller",
-            "method": "withBasicAuth",
-            "description": "Validates HTTP Basic Authentication credentials against configured expectedAuth"
-        },
-        {
-            "step": 2,
-            "actor": "RelationshipsController (RC)",
-            "action": "calls service",
-            "target": "AgentTerminationService (ATS)",
-            "method": "terminateAgent",
-            "description": "Delegates to service layer to delete internal records"
-        },
-        {
-            "step": 3,
-            "actor": "AgentTerminationService (ATS)",
-            "action": "calls repository (parallel)",
-            "target": "DeleteRecordRepository (DRR)",
-            "method": "terminateAgent",
-            "description": "Deletes all delete_record documents for the ARN (executed in parallel with step 4)"
-        },
-        {
-            "step": 4,
-            "actor": "AgentTerminationService (ATS)",
-            "action": "calls repository (parallel)",
-            "target": "RelationshipCopyRecordRepository (RCRR)",
-            "method": "terminateAgent",
-            "description": "Deletes all relationship_copy_record documents for the ARN (executed in parallel with step 3)"
-        },
-        {
-            "step": 5,
-            "actor": "DeleteRecordRepository (DRR)",
-            "action": "deletes from database",
-            "target": "MongoDB (delete_record collection)",
-            "method": "deleteMany",
-            "filter": "{\"arn\": \"{arn}\"}",
-            "description": "Removes all delete records associated with the agent"
-        },
-        {
-            "step": 6,
-            "actor": "RelationshipCopyRecordRepository (RCRR)",
-            "action": "deletes from database",
-            "target": "MongoDB (relationship_copy_record collection)",
-            "method": "deleteMany",
-            "filter": "{\"arn\": \"{arn}\"}",
-            "description": "Removes all relationship copy records associated with the agent"
-        },
-        {
-            "step": 7,
-            "actor": "DeleteRecordRepository (DRR)",
-            "action": "returns result",
-            "target": "AgentTerminationService (ATS)",
-            "description": "Returns Either[String, Int] with deleted count or error message"
-        },
-        {
-            "step": 8,
-            "actor": "RelationshipCopyRecordRepository (RCRR)",
-            "action": "returns result",
-            "target": "AgentTerminationService (ATS)",
-            "description": "Returns Either[String, Int] with deleted count or error message"
-        },
-        {
-            "step": 9,
-            "actor": "AgentTerminationService (ATS)",
-            "action": "builds response",
-            "target": "AgentTerminationService (ATS)",
-            "description": "Constructs TerminationResponse with DeletionCount for each collection"
-        },
-        {
-            "step": 10,
-            "actor": "AgentTerminationService (ATS)",
-            "action": "returns result",
-            "target": "RelationshipsController (RC)",
-            "description": "Returns EitherT[Future, String, TerminationResponse]"
-        },
-        {
-            "step": 11,
-            "actor": "RelationshipsController (RC)",
-            "action": "returns response",
-            "target": "Caller",
-            "description": "Returns 200 OK with JSON if successful, 500 if error"
-        }
-    ],
-    "externalDependencies": [],
-    "databaseCollections": [
-        {
-            "name": "delete_record",
-            "operation": "DELETE",
-            "description": "Stores pending relationship deletion records - all documents for the ARN are deleted"
-        },
-        {
-            "name": "relationship_copy_record",
-            "operation": "DELETE",
-            "description": "Tracks copied legacy relationships from CESA to EACD - all documents for the ARN are deleted"
-        }
-    ],
-    "responseModel": {
-        "TerminationResponse": {
-            "counts": "Array of DeletionCount objects"
-        },
-        "DeletionCount": {
-            "service": "Always 'agent-client-relationships'",
-            "store": "Collection name ('delete-record' or 'relationship-copy-record')",
-            "count": "Number of documents deleted from the collection"
-        }
+    {
+      "name": "RelationshipCopyRecordRepository",
+      "alias": "RCRR",
+      "method": "terminateAgent",
+      "description": "Deletes all relationship_copy_record documents for the ARN"
+    }
+  ],
+  "interactions": [
+    {
+      "step": 1,
+      "actor": "RelationshipsController (RC)",
+      "action": "authenticates",
+      "target": "Caller",
+      "method": "withBasicAuth",
+      "description": "Validates HTTP Basic Authentication credentials against configured expectedAuth"
     },
-    "authenticationDetails": {
-        "type": "HTTP Basic Authentication",
-        "header": "Authorization: Basic {base64(username:password)}",
-        "configuration": "Credentials configured in appConfig.expectedAuth",
-        "note": "This is NOT agent authentication or Stride authentication - it's service-to-service Basic Auth"
+    {
+      "step": 2,
+      "actor": "RelationshipsController (RC)",
+      "action": "calls service",
+      "target": "AgentTerminationService (ATS)",
+      "method": "terminateAgent",
+      "description": "Delegates to service layer to delete internal records"
     },
-    "errorHandling": [
-        {
-            "error": "Invalid/Missing Basic Auth",
-            "httpStatus": 401,
-            "handling": "Returns 401 Unauthorized with logged warning"
-        },
-        {
-            "error": "MongoWriteException in delete_record",
-            "httpStatus": 500,
-            "handling": "Repository returns Left(errorMessage), propagated to controller as 500 Internal Server Error"
-        },
-        {
-            "error": "MongoWriteException in relationship_copy_record",
-            "httpStatus": 500,
-            "handling": "Repository returns Left(errorMessage), propagated to controller as 500 Internal Server Error"
-        }
-    ],
-    "importantNotes": [
-        "⚠️ This endpoint does NOT terminate actual agent-client relationships in EACD",
-        "⚠️ This endpoint does NOT call any external services - it only cleans up internal MongoDB records",
-        "⚠️ This is an administrative endpoint meant for service-to-service calls, not for agent UI use",
-        "The delete_record collection stores pending deletion tracking records",
-        "The relationship_copy_record collection tracks which legacy CESA relationships have been copied to EACD",
-        "Deletions from both collections execute in parallel for efficiency",
-        "Returns 200 OK with deletion counts even if 0 records were deleted",
-        "Uses EitherT for functional error handling - errors are propagated as Left values"
-    ],
-    "misconceptions": [
-        {
-            "wrong": "This endpoint terminates active agent-client relationships",
-            "correct": "This endpoint only deletes internal tracking records from MongoDB"
-        },
-        {
-            "wrong": "This endpoint calls EACD to de-allocate enrolments",
-            "correct": "This endpoint does not call any external services"
-        },
-        {
-            "wrong": "This uses agent authentication",
-            "correct": "This uses HTTP Basic Authentication for service-to-service calls"
-        },
-        {
-            "wrong": "This updates the invitations collection",
-            "correct": "This only touches delete_record and relationship_copy_record collections"
-        }
-    ]
+    {
+      "step": 3,
+      "actor": "AgentTerminationService (ATS)",
+      "action": "calls repository (parallel)",
+      "target": "DeleteRecordRepository (DRR)",
+      "method": "terminateAgent",
+      "description": "Deletes all delete_record documents for the ARN (executed in parallel with step 4)"
+    },
+    {
+      "step": 4,
+      "actor": "AgentTerminationService (ATS)",
+      "action": "calls repository (parallel)",
+      "target": "RelationshipCopyRecordRepository (RCRR)",
+      "method": "terminateAgent",
+      "description": "Deletes all relationship_copy_record documents for the ARN (executed in parallel with step 3)"
+    },
+    {
+      "step": 5,
+      "actor": "DeleteRecordRepository (DRR)",
+      "action": "deletes from database",
+      "target": "MongoDB (delete_record collection)",
+      "method": "deleteMany",
+      "filter": "{\"arn\": \"{arn}\"}",
+      "description": "Removes all delete records associated with the agent"
+    },
+    {
+      "step": 6,
+      "actor": "RelationshipCopyRecordRepository (RCRR)",
+      "action": "deletes from database",
+      "target": "MongoDB (relationship_copy_record collection)",
+      "method": "deleteMany",
+      "filter": "{\"arn\": \"{arn}\"}",
+      "description": "Removes all relationship copy records associated with the agent"
+    },
+    {
+      "step": 7,
+      "actor": "DeleteRecordRepository (DRR)",
+      "action": "returns result",
+      "target": "AgentTerminationService (ATS)",
+      "description": "Returns Either[String, Int] with deleted count or error message"
+    },
+    {
+      "step": 8,
+      "actor": "RelationshipCopyRecordRepository (RCRR)",
+      "action": "returns result",
+      "target": "AgentTerminationService (ATS)",
+      "description": "Returns Either[String, Int] with deleted count or error message"
+    },
+    {
+      "step": 9,
+      "actor": "AgentTerminationService (ATS)",
+      "action": "builds response",
+      "target": "AgentTerminationService (ATS)",
+      "description": "Constructs TerminationResponse with DeletionCount for each collection"
+    },
+    {
+      "step": 10,
+      "actor": "AgentTerminationService (ATS)",
+      "action": "returns result",
+      "target": "RelationshipsController (RC)",
+      "description": "Returns EitherT[Future, String, TerminationResponse]"
+    },
+    {
+      "step": 11,
+      "actor": "RelationshipsController (RC)",
+      "action": "returns response",
+      "target": "Caller",
+      "description": "Returns 200 OK with JSON if successful, 500 if error"
+    }
+  ],
+  "externalDependencies": [],
+  "databaseCollections": [
+    {
+      "name": "delete_record",
+      "operation": "DELETE",
+      "description": "Stores pending relationship deletion records - all documents for the ARN are deleted"
+    },
+    {
+      "name": "relationship_copy_record",
+      "operation": "DELETE",
+      "description": "Tracks copied legacy relationships from CESA to EACD - all documents for the ARN are deleted"
+    }
+  ],
+  "responseModel": {
+    "TerminationResponse": {
+      "counts": "Array of DeletionCount objects"
+    },
+    "DeletionCount": {
+      "service": "Always 'agent-client-relationships'",
+      "store": "Collection name ('delete-record' or 'relationship-copy-record')",
+      "count": "Number of documents deleted from the collection"
+    }
+  },
+  "authenticationDetails": {
+    "type": "HTTP Basic Authentication",
+    "header": "Authorization: Basic {base64(username:password)}",
+    "configuration": "Credentials configured in appConfig.expectedAuth",
+    "note": "This is NOT agent authentication or Stride authentication - it's service-to-service Basic Auth"
+  },
+  "errorHandling": [
+    {
+      "error": "Invalid/Missing Basic Auth",
+      "httpStatus": 401,
+      "handling": "Returns 401 Unauthorized with logged warning"
+    },
+    {
+      "error": "MongoWriteException in delete_record",
+      "httpStatus": 500,
+      "handling": "Repository returns Left(errorMessage), propagated to controller as 500 Internal Server Error"
+    },
+    {
+      "error": "MongoWriteException in relationship_copy_record",
+      "httpStatus": 500,
+      "handling": "Repository returns Left(errorMessage), propagated to controller as 500 Internal Server Error"
+    }
+  ],
+  "importantNotes": [
+    "⚠️ This endpoint does NOT terminate actual agent-client relationships in EACD",
+    "⚠️ This endpoint does NOT call any external services - it only cleans up internal MongoDB records",
+    "⚠️ This is an administrative endpoint meant for service-to-service calls, not for agent UI use",
+    "The delete_record collection stores pending deletion tracking records",
+    "The relationship_copy_record collection tracks which legacy CESA relationships have been copied to EACD",
+    "Deletions from both collections execute in parallel for efficiency",
+    "Returns 200 OK with deletion counts even if 0 records were deleted",
+    "Uses EitherT for functional error handling - errors are propagated as Left values"
+  ],
+  "misconceptions": [
+    {
+      "wrong": "This endpoint terminates active agent-client relationships",
+      "correct": "This endpoint only deletes internal tracking records from MongoDB"
+    },
+    {
+      "wrong": "This endpoint calls EACD to de-allocate enrolments",
+      "correct": "This endpoint does not call any external services"
+    },
+    {
+      "wrong": "This uses agent authentication",
+      "correct": "This uses HTTP Basic Authentication for service-to-service calls"
+    },
+    {
+      "wrong": "This updates the invitations collection",
+      "correct": "This only touches delete_record and relationship_copy_record collections"
+    }
+  ],
+  "metadata": {
+    "lastUpdated": "2025-11-20",
+    "gitCommitSha": "b2138b4e3958677748c1820c3d715d4fbb9d3b2c",
+    "analysisVersion": "1.0"
+  }
 }
 

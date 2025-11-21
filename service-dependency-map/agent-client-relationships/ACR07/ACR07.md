@@ -361,3 +361,10 @@ Same as ACR05 - each service requires a specific `auth-profile` parameter:
 | Returns empty object if not found | Returns 404 Not Found |
 | Can query without service enrolment | 403 Forbidden if not enrolled |
 
+---
+
+## Document Metadata
+
+**Last Updated:** 2025-11-20  
+**Git Commit SHA:** `b2138b4e3958677748c1820c3d715d4fbb9d3b2c`  
+**Analysis Version:** 1.0

@@ -294,3 +294,10 @@ This field uses short-circuit evaluation to avoid expensive ETMP queries when po
 - **ACR04**: Get All Invitations - Lists all invitations for an agent
 - **ACR09**: Get Active Relationships - Retrieves all active relationships for a client (more detailed version)
 
+---
+
+## Document Metadata
+
+**Last Updated:** 2025-11-20  
+**Git Commit SHA:** `b2138b4e3958677748c1820c3d715d4fbb9d3b2c`  
+**Analysis Version:** 1.0

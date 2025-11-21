@@ -1,262 +1,275 @@
 {
-    "apiId": "ACR05",
-    "apiTitle": "Get Client Active Relationships",
-    "description": "Retrieves all active agent-client relationships for the authenticated client across all their enrolled services (excluding PIR). The endpoint extracts tax identifiers from the client's Government Gateway enrolments and queries ETMP via HIP to find active agent relationships for each service. Returns a map of service identifiers to arrays of ARNs representing the agents that have active relationships with the client.",
-    "method": "GET",
-    "path": "/client/relationships/active",
-    "pathParameters": {},
-    "queryParameters": {},
-    "responses": {
-        "200": "Returns JSON map of service IDs to arrays of agent ARNs - empty map if no relationships",
-        "401": "Unauthorized - client not authenticated via Government Gateway",
-        "403": "Forbidden - user is not an Individual or Organisation (no permission to perform operation)"
+  "apiId": "ACR05",
+  "apiTitle": "Get Client Active Relationships",
+  "description": "Retrieves all active agent-client relationships for the authenticated client across all their enrolled services (excluding PIR). The endpoint extracts tax identifiers from the client's Government Gateway enrolments and queries ETMP via HIP to find active agent relationships for each service. Returns a map of service identifiers to arrays of ARNs representing the agents that have active relationships with the client.",
+  "method": "GET",
+  "path": "/client/relationships/active",
+  "pathParameters": {},
+  "queryParameters": {},
+  "responses": {
+    "200": "Returns JSON map of service IDs to arrays of agent ARNs - empty map if no relationships",
+    "401": "Unauthorized - client not authenticated via Government Gateway",
+    "403": "Forbidden - user is not an Individual or Organisation (no permission to perform operation)"
+  },
+  "authentication": "Client authentication via Government Gateway (Individual or Organisation)",
+  "audience": "internal",
+  "controller": "RelationshipsController",
+  "controllerMethod": "getActiveRelationshipsForClient",
+  "services": [
+    {
+      "name": "FindRelationshipsService",
+      "alias": "FRS",
+      "method": "getActiveRelationshipsForClient",
+      "description": "Orchestrates retrieval of active relationships across all client's enrolled services"
     },
-    "authentication": "Client authentication via Government Gateway (Individual or Organisation)",
-    "audience": "internal",
-    "controller": "RelationshipsController",
-    "controllerMethod": "getActiveRelationshipsForClient",
-    "services": [
-        {
-            "name": "FindRelationshipsService",
-            "alias": "FRS",
-            "method": "getActiveRelationshipsForClient",
-            "description": "Orchestrates retrieval of active relationships across all client's enrolled services"
-        },
-        {
-            "name": "HipConnector",
-            "alias": "HIP",
-            "method": "getActiveClientRelationships",
-            "description": "Queries ETMP via HIP for active agent relationships for each service"
-        }
-    ],
-    "interactions": [
-        {
-            "step": 1,
-            "actor": "RelationshipsController (RC)",
-            "action": "authenticates",
-            "target": "Client",
-            "method": "withAuthorisedAsClient",
-            "description": "Validates client via Gov Gateway, retrieves all enrolments"
-        },
-        {
-            "step": 2,
-            "actor": "RelationshipsController (RC)",
-            "action": "extracts identifiers",
-            "target": "RelationshipsController (RC)",
-            "description": "Builds Map[Service, TaxIdentifier] from client's enrolments for supported services"
-        },
-        {
-            "step": 3,
-            "actor": "RelationshipsController (RC)",
-            "action": "calls service",
-            "target": "FindRelationshipsService (FRS)",
-            "method": "getActiveRelationshipsForClient",
-            "description": "Passes map of service to tax identifier for relationship lookup"
-        },
-        {
-            "step": 4,
-            "actor": "FindRelationshipsService (FRS)",
-            "action": "traverses services",
-            "target": "FindRelationshipsService (FRS)",
-            "description": "Iterates through supportedServicesWithoutPir, checking each service"
-        },
-        {
-            "step": 5,
-            "actor": "FindRelationshipsService (FRS)",
-            "action": "calls connector",
-            "target": "HipConnector (HIP)",
-            "method": "getActiveClientRelationships",
-            "description": "For each enrolled service, queries HIP for active relationships",
-            "conditional": "only if client has enrolment for the service"
-        },
-        {
-            "step": 6,
-            "actor": "HipConnector (HIP)",
-            "action": "builds URL",
-            "target": "HipConnector (HIP)",
-            "description": "Constructs HIP URL with taxIdentifier, authProfile, and activeOnly=true"
-        },
-        {
-            "step": 7,
-            "actor": "HipConnector (HIP)",
-            "action": "calls external API",
-            "target": "IF/HIP → ETMP",
-            "endpoint": "/etmp/RESTAdapter/rosm/agent-relationship",
-            "method": "GET",
-            "queryParams": {
-                "idType": "Tax identifier type (e.g., MTDITID, VRN, UTR)",
-                "refNumber": "Tax identifier value",
-                "auth-profile": "Service-specific auth profile (ITSA, VATC, TRS, etc.)",
-                "active-only": "true"
-            },
-            "description": "Queries ETMP for agent relationships via HIP REST Adapter"
-        },
-        {
-            "step": 8,
-            "actor": "ETMP",
-            "action": "returns response",
-            "target": "HipConnector (HIP)",
-            "description": "Returns relationshipDisplayResponse array with relationship data",
-            "conditional": "on success (200 OK)"
-        },
-        {
-            "step": 9,
-            "actor": "HipConnector (HIP)",
-            "action": "filters results",
-            "target": "HipConnector (HIP)",
-            "method": "isActive",
-            "description": "Finds first active relationship (dateFrom <= today, dateTo empty or future)"
-        },
-        {
-            "step": 10,
-            "actor": "HipConnector (HIP)",
-            "action": "returns data",
-            "target": "FindRelationshipsService (FRS)",
-            "description": "Returns Option[ActiveRelationship] with agent ARN if found"
-        },
-        {
-            "step": 11,
-            "actor": "FindRelationshipsService (FRS)",
-            "action": "collects results",
-            "target": "FindRelationshipsService (FRS)",
-            "description": "Extracts (Service, ARN) pairs from all successful lookups"
-        },
-        {
-            "step": 12,
-            "actor": "FindRelationshipsService (FRS)",
-            "action": "groups by service",
-            "target": "FindRelationshipsService (FRS)",
-            "description": "Groups results into Map[Service, Seq[ARN]]"
-        },
-        {
-            "step": 13,
-            "actor": "FindRelationshipsService (FRS)",
-            "action": "returns data",
-            "target": "RelationshipsController (RC)",
-            "description": "Returns Map[Service, Seq[ARN]]"
-        },
-        {
-            "step": 14,
-            "actor": "RelationshipsController (RC)",
-            "action": "converts keys",
-            "target": "RelationshipsController (RC)",
-            "description": "Converts Service objects to service ID strings for JSON response"
-        },
-        {
-            "step": 15,
-            "actor": "RelationshipsController (RC)",
-            "action": "returns response",
-            "target": "Client",
-            "description": "Returns 200 OK with JSON map of service IDs to ARN arrays"
-        }
-    ],
-    "externalDependencies": [
-        {
-            "name": "IF/HIP",
-            "alias": "HIP",
-            "description": "HMRC Integration Platform - provides access to ETMP agent relationships"
-        },
-        {
-            "name": "ETMP",
-            "description": "Enterprise Tax Management Platform - stores agent-client relationship records"
-        }
-    ],
-    "databaseCollections": [],
-    "authenticationDetails": {
-        "provider": "GovernmentGateway",
-        "affinityGroups": ["Individual", "Organisation"],
-        "enrolmentsRequired": "At least one supported service enrolment",
-        "retrieves": "allEnrolments",
-        "noEnrolmentsResponse": "403 Forbidden (NoPermissionToPerformOperation)"
+    {
+      "name": "HipConnector",
+      "alias": "HIP",
+      "method": "getActiveClientRelationships",
+      "description": "Queries ETMP via HIP for active agent relationships for each service"
+    }
+  ],
+  "interactions": [
+    {
+      "step": 1,
+      "actor": "RelationshipsController (RC)",
+      "action": "authenticates",
+      "target": "Client",
+      "method": "withAuthorisedAsClient",
+      "description": "Validates client via Gov Gateway, retrieves all enrolments"
     },
-    "supportedServices": [
-        "HMRC-MTD-IT",
-        "HMRC-MTD-IT-SUPP",
-        "HMRC-MTD-VAT",
-        "HMRC-TERS-ORG",
-        "HMRC-TERSNT-ORG",
-        "HMRC-CGT-PD",
-        "HMRC-PPT-ORG",
-        "HMRC-CBC-ORG",
-        "HMRC-PILLAR2-ORG"
-    ],
-    "excludedServices": [
-        "PERSONAL-INCOME-RECORD (PIR) - handled by separate service"
-    ],
-    "responseModel": {
-        "structure": "Map[String, Seq[String]]",
-        "example": {
-            "HMRC-MTD-IT": ["TARN0000001", "TARN0000002"],
-            "HMRC-MTD-VAT": ["TARN0000001"],
-            "HMRC-CGT-PD": []
-        },
-        "description": "Service ID as key, array of agent ARNs as value. Services with no relationships may be omitted or have empty arrays."
+    {
+      "step": 2,
+      "actor": "RelationshipsController (RC)",
+      "action": "extracts identifiers",
+      "target": "RelationshipsController (RC)",
+      "description": "Builds Map[Service, TaxIdentifier] from client's enrolments for supported services"
     },
-    "activeRelationshipCriteria": {
-        "dateFrom": "Must be on or before today",
-        "dateTo": "Must be empty (None) or in the future",
-        "isActive": "ETMP returns active-only relationships when activeOnly=true query parameter used"
+    {
+      "step": 3,
+      "actor": "RelationshipsController (RC)",
+      "action": "calls service",
+      "target": "FindRelationshipsService (FRS)",
+      "method": "getActiveRelationshipsForClient",
+      "description": "Passes map of service to tax identifier for relationship lookup"
     },
-    "errorHandling": [
-        {
-            "scenario": "ETMP returns 400 or 404",
-            "handling": "Returns None for that service (omitted from results)"
-        },
-        {
-            "scenario": "ETMP returns 422 with 'suspended' message",
-            "handling": "Agent suspended - returns None for that service"
-        },
-        {
-            "scenario": "ETMP returns 422 with error code '009'",
-            "handling": "ETMP error - returns None for that service"
-        },
-        {
-            "scenario": "ETMP returns other error",
-            "handling": "Logs error, returns None for that service"
-        },
-        {
-            "scenario": "Client has no supported enrolments",
-            "handling": "Returns 403 Forbidden (NoPermissionToPerformOperation)"
-        },
-        {
-            "scenario": "Client not authenticated",
-            "handling": "Returns 401 Unauthorized"
-        },
-        {
-            "scenario": "All services return errors or no relationships",
-            "handling": "Returns 200 OK with empty map {}"
-        }
-    ],
-    "businessLogic": {
-        "enrolmentExtraction": "For each supported service, extracts first tax identifier from matching enrolment",
-        "serviceTraversal": "Uses Future.traverse to query all services in parallel",
-        "resultGrouping": "Groups (Service, ARN) tuples by service, creating Seq[ARN] per service",
-        "emptyServices": "Services without enrolments or with errors are omitted from results",
-        "authProfile": "Each service has a specific auth-profile parameter (ITSA, VATC, TRS, TRSNT, CGT, PPT, CBC, PLR)"
+    {
+      "step": 4,
+      "actor": "FindRelationshipsService (FRS)",
+      "action": "traverses services",
+      "target": "FindRelationshipsService (FRS)",
+      "description": "Iterates through supportedServicesWithoutPir, checking each service"
     },
-    "useCases": [
-        {
-            "scenario": "Client viewing all their agent relationships",
-            "response": "Shows complete picture of which agents have access across all services"
-        },
-        {
-            "scenario": "Frontend displaying agent dashboard for client",
-            "response": "Can show agent names, access levels per service"
-        },
-        {
-            "scenario": "Client checking before authorising new agent",
-            "response": "Can see if they already have agents for specific services"
-        }
+    {
+      "step": 5,
+      "actor": "FindRelationshipsService (FRS)",
+      "action": "calls connector",
+      "target": "HipConnector (HIP)",
+      "method": "getActiveClientRelationships",
+      "description": "For each enrolled service, queries HIP for active relationships",
+      "conditional": "only if client has enrolment for the service"
+    },
+    {
+      "step": 6,
+      "actor": "HipConnector (HIP)",
+      "action": "builds URL",
+      "target": "HipConnector (HIP)",
+      "description": "Constructs HIP URL with taxIdentifier, authProfile, and activeOnly=true"
+    },
+    {
+      "step": 7,
+      "actor": "HipConnector (HIP)",
+      "action": "calls external API",
+      "target": "IF/HIP → ETMP",
+      "endpoint": "/etmp/RESTAdapter/rosm/agent-relationship",
+      "method": "GET",
+      "queryParams": {
+        "idType": "Tax identifier type (e.g., MTDITID, VRN, UTR)",
+        "refNumber": "Tax identifier value",
+        "auth-profile": "Service-specific auth profile (ITSA, VATC, TRS, etc.)",
+        "active-only": "true"
+      },
+      "description": "Queries ETMP for agent relationships via HIP REST Adapter"
+    },
+    {
+      "step": 8,
+      "actor": "ETMP",
+      "action": "returns response",
+      "target": "HipConnector (HIP)",
+      "description": "Returns relationshipDisplayResponse array with relationship data",
+      "conditional": "on success (200 OK)"
+    },
+    {
+      "step": 9,
+      "actor": "HipConnector (HIP)",
+      "action": "filters results",
+      "target": "HipConnector (HIP)",
+      "method": "isActive",
+      "description": "Finds first active relationship (dateFrom <= today, dateTo empty or future)"
+    },
+    {
+      "step": 10,
+      "actor": "HipConnector (HIP)",
+      "action": "returns data",
+      "target": "FindRelationshipsService (FRS)",
+      "description": "Returns Option[ActiveRelationship] with agent ARN if found"
+    },
+    {
+      "step": 11,
+      "actor": "FindRelationshipsService (FRS)",
+      "action": "collects results",
+      "target": "FindRelationshipsService (FRS)",
+      "description": "Extracts (Service, ARN) pairs from all successful lookups"
+    },
+    {
+      "step": 12,
+      "actor": "FindRelationshipsService (FRS)",
+      "action": "groups by service",
+      "target": "FindRelationshipsService (FRS)",
+      "description": "Groups results into Map[Service, Seq[ARN]]"
+    },
+    {
+      "step": 13,
+      "actor": "FindRelationshipsService (FRS)",
+      "action": "returns data",
+      "target": "RelationshipsController (RC)",
+      "description": "Returns Map[Service, Seq[ARN]]"
+    },
+    {
+      "step": 14,
+      "actor": "RelationshipsController (RC)",
+      "action": "converts keys",
+      "target": "RelationshipsController (RC)",
+      "description": "Converts Service objects to service ID strings for JSON response"
+    },
+    {
+      "step": 15,
+      "actor": "RelationshipsController (RC)",
+      "action": "returns response",
+      "target": "Client",
+      "description": "Returns 200 OK with JSON map of service IDs to ARN arrays"
+    }
+  ],
+  "externalDependencies": [
+    {
+      "name": "IF/HIP",
+      "alias": "HIP",
+      "description": "HMRC Integration Platform - provides access to ETMP agent relationships"
+    },
+    {
+      "name": "ETMP",
+      "description": "Enterprise Tax Management Platform - stores agent-client relationship records"
+    }
+  ],
+  "databaseCollections": [],
+  "authenticationDetails": {
+    "provider": "GovernmentGateway",
+    "affinityGroups": [
+      "Individual",
+      "Organisation"
     ],
-    "importantNotes": [
-        "Returns active relationships only - ended relationships are not included",
-        "PIR (Personal Income Record) is excluded - handled by agent-fi-relationship service",
-        "Client must have at least one supported service enrolment",
-        "Services are queried in parallel for performance",
-        "Empty map {} returned if no relationships found (not 404)",
-        "Each service can have multiple agent relationships",
-        "ETMP filtering ensures only active relationships returned",
-        "Auth profile parameter varies by service type"
-    ]
+    "enrolmentsRequired": "At least one supported service enrolment",
+    "retrieves": "allEnrolments",
+    "noEnrolmentsResponse": "403 Forbidden (NoPermissionToPerformOperation)"
+  },
+  "supportedServices": [
+    "HMRC-MTD-IT",
+    "HMRC-MTD-IT-SUPP",
+    "HMRC-MTD-VAT",
+    "HMRC-TERS-ORG",
+    "HMRC-TERSNT-ORG",
+    "HMRC-CGT-PD",
+    "HMRC-PPT-ORG",
+    "HMRC-CBC-ORG",
+    "HMRC-PILLAR2-ORG"
+  ],
+  "excludedServices": [
+    "PERSONAL-INCOME-RECORD (PIR) - handled by separate service"
+  ],
+  "responseModel": {
+    "structure": "Map[String, Seq[String]]",
+    "example": {
+      "HMRC-MTD-IT": [
+        "TARN0000001",
+        "TARN0000002"
+      ],
+      "HMRC-MTD-VAT": [
+        "TARN0000001"
+      ],
+      "HMRC-CGT-PD": []
+    },
+    "description": "Service ID as key, array of agent ARNs as value. Services with no relationships may be omitted or have empty arrays."
+  },
+  "activeRelationshipCriteria": {
+    "dateFrom": "Must be on or before today",
+    "dateTo": "Must be empty (None) or in the future",
+    "isActive": "ETMP returns active-only relationships when activeOnly=true query parameter used"
+  },
+  "errorHandling": [
+    {
+      "scenario": "ETMP returns 400 or 404",
+      "handling": "Returns None for that service (omitted from results)"
+    },
+    {
+      "scenario": "ETMP returns 422 with 'suspended' message",
+      "handling": "Agent suspended - returns None for that service"
+    },
+    {
+      "scenario": "ETMP returns 422 with error code '009'",
+      "handling": "ETMP error - returns None for that service"
+    },
+    {
+      "scenario": "ETMP returns other error",
+      "handling": "Logs error, returns None for that service"
+    },
+    {
+      "scenario": "Client has no supported enrolments",
+      "handling": "Returns 403 Forbidden (NoPermissionToPerformOperation)"
+    },
+    {
+      "scenario": "Client not authenticated",
+      "handling": "Returns 401 Unauthorized"
+    },
+    {
+      "scenario": "All services return errors or no relationships",
+      "handling": "Returns 200 OK with empty map {}"
+    }
+  ],
+  "businessLogic": {
+    "enrolmentExtraction": "For each supported service, extracts first tax identifier from matching enrolment",
+    "serviceTraversal": "Uses Future.traverse to query all services in parallel",
+    "resultGrouping": "Groups (Service, ARN) tuples by service, creating Seq[ARN] per service",
+    "emptyServices": "Services without enrolments or with errors are omitted from results",
+    "authProfile": "Each service has a specific auth-profile parameter (ITSA, VATC, TRS, TRSNT, CGT, PPT, CBC, PLR)"
+  },
+  "useCases": [
+    {
+      "scenario": "Client viewing all their agent relationships",
+      "response": "Shows complete picture of which agents have access across all services"
+    },
+    {
+      "scenario": "Frontend displaying agent dashboard for client",
+      "response": "Can show agent names, access levels per service"
+    },
+    {
+      "scenario": "Client checking before authorising new agent",
+      "response": "Can see if they already have agents for specific services"
+    }
+  ],
+  "importantNotes": [
+    "Returns active relationships only - ended relationships are not included",
+    "PIR (Personal Income Record) is excluded - handled by agent-fi-relationship service",
+    "Client must have at least one supported service enrolment",
+    "Services are queried in parallel for performance",
+    "Empty map {} returned if no relationships found (not 404)",
+    "Each service can have multiple agent relationships",
+    "ETMP filtering ensures only active relationships returned",
+    "Auth profile parameter varies by service type"
+  ],
+  "metadata": {
+    "lastUpdated": "2025-11-20",
+    "gitCommitSha": "b2138b4e3958677748c1820c3d715d4fbb9d3b2c",
+    "analysisVersion": "1.0"
+  }
 }
 

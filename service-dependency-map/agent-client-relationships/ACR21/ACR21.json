@@ -1,165 +1,170 @@
 {
-    "apiId": "ACR21",
-    "apiTitle": "Cancel Invitation",
-    "description": "Allows an agent to cancel a pending authorisation request (invitation) they have previously sent to a client. Only invitations with Pending status can be cancelled. The agent must own the invitation (ARN must match). Once cancelled, the invitation cannot be accepted by the client. This is used when an agent wants to revoke an invitation before the client responds.",
-    "method": "PUT",
-    "path": "/agent-client-relationships/agent/cancel-invitation/{invitationId}",
-    "pathParameters": {
-        "invitationId": "Unique identifier for the invitation (UUID format)"
+  "apiId": "ACR21",
+  "apiTitle": "Cancel Invitation",
+  "description": "Allows an agent to cancel a pending authorisation request (invitation) they have previously sent to a client. Only invitations with Pending status can be cancelled. The agent must own the invitation (ARN must match). Once cancelled, the invitation cannot be accepted by the client. This is used when an agent wants to revoke an invitation before the client responds.",
+  "method": "PUT",
+  "path": "/agent-client-relationships/agent/cancel-invitation/{invitationId}",
+  "pathParameters": {
+    "invitationId": "Unique identifier for the invitation (UUID format)"
+  },
+  "queryParameters": {},
+  "requestBody": {},
+  "responses": {
+    "204": "No Content - Invitation successfully cancelled",
+    "401": "Unauthorized - Agent authentication failed",
+    "403": "Forbidden - Either invitation is not Pending status (InvalidInvitationStatus) or agent does not own the invitation (NoPermissionOnAgency)",
+    "404": "Not Found - Invitation with given ID does not exist"
+  },
+  "authentication": "Agent authentication via withAuthorisedAsAgent - requires valid agent enrolment (HMRC-AS-AGENT)",
+  "audience": "internal",
+  "controller": "InvitationController",
+  "controllerMethod": "cancelInvitation",
+  "services": [
+    {
+      "name": "InvitationService",
+      "alias": "IS",
+      "method": "cancelInvitation",
+      "description": "Passes through to repository for invitation cancellation"
     },
-    "queryParameters": {},
-    "requestBody": {},
-    "responses": {
-        "204": "No Content - Invitation successfully cancelled",
-        "401": "Unauthorized - Agent authentication failed",
-        "403": "Forbidden - Either invitation is not Pending status (InvalidInvitationStatus) or agent does not own the invitation (NoPermissionOnAgency)",
-        "404": "Not Found - Invitation with given ID does not exist"
+    {
+      "name": "InvitationsRepository",
+      "alias": "IR",
+      "method": "cancelByIdForAgent",
+      "description": "Finds invitation, validates ownership and status, updates to Cancelled"
+    }
+  ],
+  "interactions": "See ACR21.mmd for complete sequence diagram",
+  "externalDependencies": [],
+  "databaseCollections": [
+    {
+      "name": "invitations",
+      "operation": "READ/UPDATE",
+      "description": "Finds invitation by invitationId. Validates status is Pending and arn matches authenticated agent. Updates status to Cancelled and sets lastUpdated to current timestamp."
+    }
+  ],
+  "responseModel": {
+    "success": "204 No Content - no response body"
+  },
+  "businessLogic": {
+    "invitationLookup": {
+      "description": "Finds invitation by ID and validates ownership",
+      "logic": "Queries invitations collection by invitationId. Checks: 1) Invitation exists (404 if not), 2) Status is Pending (403 InvalidInvitationStatus if not), 3) ARN matches authenticated agent (403 NoPermissionOnAgency if not). Only proceeds to update if all checks pass."
     },
-    "authentication": "Agent authentication via withAuthorisedAsAgent - requires valid agent enrolment (HMRC-AS-AGENT)",
-    "audience": "internal",
-    "controller": "InvitationController",
-    "controllerMethod": "cancelInvitation",
-    "services": [
-        {
-            "name": "InvitationService",
-            "alias": "IS",
-            "method": "cancelInvitation",
-            "description": "Passes through to repository for invitation cancellation"
-        },
-        {
-            "name": "InvitationsRepository",
-            "alias": "IR",
-            "method": "cancelByIdForAgent",
-            "description": "Finds invitation, validates ownership and status, updates to Cancelled"
-        }
-    ],
-    "interactions": "See ACR21.mmd for complete sequence diagram",
-    "externalDependencies": [],
-    "databaseCollections": [
-        {
-            "name": "invitations",
-            "operation": "READ/UPDATE",
-            "description": "Finds invitation by invitationId. Validates status is Pending and arn matches authenticated agent. Updates status to Cancelled and sets lastUpdated to current timestamp."
-        }
-    ],
-    "responseModel": {
-        "success": "204 No Content - no response body"
+    "statusValidation": {
+      "description": "Only Pending invitations can be cancelled",
+      "logic": "Checks invitation status before allowing cancellation. If status is Accepted, Rejected, Expired, Cancelled, or Deauthorised, returns 403 InvalidInvitationStatus. This prevents cancelling invitations that have already been processed."
     },
-    "businessLogic": {
-        "invitationLookup": {
-            "description": "Finds invitation by ID and validates ownership",
-            "logic": "Queries invitations collection by invitationId. Checks: 1) Invitation exists (404 if not), 2) Status is Pending (403 InvalidInvitationStatus if not), 3) ARN matches authenticated agent (403 NoPermissionOnAgency if not). Only proceeds to update if all checks pass."
-        },
-        "statusValidation": {
-            "description": "Only Pending invitations can be cancelled",
-            "logic": "Checks invitation status before allowing cancellation. If status is Accepted, Rejected, Expired, Cancelled, or Deauthorised, returns 403 InvalidInvitationStatus. This prevents cancelling invitations that have already been processed."
-        },
-        "ownershipValidation": {
-            "description": "Only the agent who created the invitation can cancel it",
-            "logic": "Compares invitation.arn with authenticated agent's ARN. If mismatch, returns 403 NoPermissionOnAgency. This prevents agents from cancelling other agents' invitations."
-        },
-        "atomicUpdate": {
-            "description": "Update is atomic with validation",
-            "logic": "The MongoDB updateOne operation includes filters for arn=authenticated ARN, invitationId=requested ID, and status=Pending. This ensures the update only succeeds if all conditions are still true at execution time, preventing race conditions."
-        },
-        "timestampUpdate": {
-            "description": "Records when invitation was cancelled",
-            "logic": "Sets lastUpdated field to Instant.now() when cancelling. This provides audit trail of when the cancellation occurred."
-        }
+    "ownershipValidation": {
+      "description": "Only the agent who created the invitation can cancel it",
+      "logic": "Compares invitation.arn with authenticated agent's ARN. If mismatch, returns 403 NoPermissionOnAgency. This prevents agents from cancelling other agents' invitations."
     },
-    "errorHandling": [
-        {
-            "scenario": "Invitation ID does not exist",
-            "response": "404 Not Found (InvitationNotFound)",
-            "message": "Empty response body",
-            "note": "Invitation never existed or was deleted"
-        },
-        {
-            "scenario": "Invitation status is not Pending (e.g., already Accepted, Rejected, Expired, or Cancelled)",
-            "response": "403 Forbidden (InvalidInvitationStatus)",
-            "message": "Empty response body",
-            "note": "Cannot cancel invitations that have already been processed or expired"
-        },
-        {
-            "scenario": "Authenticated agent ARN does not match invitation ARN",
-            "response": "403 Forbidden (NoPermissionOnAgency)",
-            "message": "Empty response body",
-            "note": "Agent can only cancel their own invitations, not other agents'"
-        },
-        {
-            "scenario": "Agent not authenticated",
-            "response": "401 Unauthorized",
-            "message": "Standard auth failure response",
-            "note": "Missing or invalid agent credentials"
-        }
-    ],
-    "useCases": [
-        {
-            "scenario": "Agent cancels pending invitation",
-            "flow": [
-                "Agent sent invitation to client but wants to revoke it",
-                "Agent authenticates and makes PUT request with invitation ID",
-                "System validates invitation exists, is Pending, and belongs to agent",
-                "Updates invitation status to Cancelled",
-                "Client can no longer accept this invitation"
-            ],
-            "response": {
-                "status": 204,
-                "body": null
-            },
-            "frontend_action": "Show success message 'Invitation cancelled'. Remove invitation from agent's pending list. Update invitation status to Cancelled in UI."
-        },
-        {
-            "scenario": "Agent tries to cancel already accepted invitation",
-            "flow": [
-                "Agent attempts to cancel invitation that client has already accepted",
-                "System finds invitation but status is Accepted",
-                "Returns 403 InvalidInvitationStatus"
-            ],
-            "response": {
-                "status": 403,
-                "body": "InvalidInvitationStatus error"
-            },
-            "frontend_action": "Show error message 'Cannot cancel - invitation has already been accepted'. Invitation remains in Accepted status."
-        },
-        {
-            "scenario": "Agent tries to cancel another agent's invitation",
-            "flow": [
-                "Agent A tries to cancel invitation created by Agent B",
-                "System finds invitation but ARN doesn't match",
-                "Returns 403 NoPermissionOnAgency"
-            ],
-            "response": {
-                "status": 403,
-                "body": "NoPermissionOnAgency error"
-            },
-            "frontend_action": "Show error message 'You do not have permission to cancel this invitation'."
-        },
-        {
-            "scenario": "Agent tries to cancel non-existent invitation",
-            "flow": [
-                "Agent provides invalid or non-existent invitation ID",
-                "System cannot find invitation",
-                "Returns 404 NotFound"
-            ],
-            "response": {
-                "status": 404,
-                "body": "InvitationNotFound error"
-            },
-            "frontend_action": "Show error message 'Invitation not found'. ID may be incorrect or invitation may have been deleted."
-        }
-    ],
-    "importantNotes": [
-        "✅ Only affects Pending invitations - cannot cancel processed invitations",
-        "✅ Agent must own the invitation (ARN must match)",
-        "✅ Atomic update with validation - prevents race conditions",
-        "✅ Updates lastUpdated timestamp for audit trail",
-        "✅ Client can no longer accept cancelled invitation",
-        "✅ Idempotent within constraints - cancelling already Cancelled invitation returns 403 (not 204)",
-        "⚠️ Returns 403 (not 409) for wrong status or wrong owner",
-        "⚠️ Does not send email notification to client about cancellation",
-        "⚠️ Does not delete the invitation record - just changes status to Cancelled",
-        "⚠️ Cannot be undone - once cancelled, invitation cannot be reactivated"
-    ]
+    "atomicUpdate": {
+      "description": "Update is atomic with validation",
+      "logic": "The MongoDB updateOne operation includes filters for arn=authenticated ARN, invitationId=requested ID, and status=Pending. This ensures the update only succeeds if all conditions are still true at execution time, preventing race conditions."
+    },
+    "timestampUpdate": {
+      "description": "Records when invitation was cancelled",
+      "logic": "Sets lastUpdated field to Instant.now() when cancelling. This provides audit trail of when the cancellation occurred."
+    }
+  },
+  "errorHandling": [
+    {
+      "scenario": "Invitation ID does not exist",
+      "response": "404 Not Found (InvitationNotFound)",
+      "message": "Empty response body",
+      "note": "Invitation never existed or was deleted"
+    },
+    {
+      "scenario": "Invitation status is not Pending (e.g., already Accepted, Rejected, Expired, or Cancelled)",
+      "response": "403 Forbidden (InvalidInvitationStatus)",
+      "message": "Empty response body",
+      "note": "Cannot cancel invitations that have already been processed or expired"
+    },
+    {
+      "scenario": "Authenticated agent ARN does not match invitation ARN",
+      "response": "403 Forbidden (NoPermissionOnAgency)",
+      "message": "Empty response body",
+      "note": "Agent can only cancel their own invitations, not other agents'"
+    },
+    {
+      "scenario": "Agent not authenticated",
+      "response": "401 Unauthorized",
+      "message": "Standard auth failure response",
+      "note": "Missing or invalid agent credentials"
+    }
+  ],
+  "useCases": [
+    {
+      "scenario": "Agent cancels pending invitation",
+      "flow": [
+        "Agent sent invitation to client but wants to revoke it",
+        "Agent authenticates and makes PUT request with invitation ID",
+        "System validates invitation exists, is Pending, and belongs to agent",
+        "Updates invitation status to Cancelled",
+        "Client can no longer accept this invitation"
+      ],
+      "response": {
+        "status": 204,
+        "body": null
+      },
+      "frontend_action": "Show success message 'Invitation cancelled'. Remove invitation from agent's pending list. Update invitation status to Cancelled in UI."
+    },
+    {
+      "scenario": "Agent tries to cancel already accepted invitation",
+      "flow": [
+        "Agent attempts to cancel invitation that client has already accepted",
+        "System finds invitation but status is Accepted",
+        "Returns 403 InvalidInvitationStatus"
+      ],
+      "response": {
+        "status": 403,
+        "body": "InvalidInvitationStatus error"
+      },
+      "frontend_action": "Show error message 'Cannot cancel - invitation has already been accepted'. Invitation remains in Accepted status."
+    },
+    {
+      "scenario": "Agent tries to cancel another agent's invitation",
+      "flow": [
+        "Agent A tries to cancel invitation created by Agent B",
+        "System finds invitation but ARN doesn't match",
+        "Returns 403 NoPermissionOnAgency"
+      ],
+      "response": {
+        "status": 403,
+        "body": "NoPermissionOnAgency error"
+      },
+      "frontend_action": "Show error message 'You do not have permission to cancel this invitation'."
+    },
+    {
+      "scenario": "Agent tries to cancel non-existent invitation",
+      "flow": [
+        "Agent provides invalid or non-existent invitation ID",
+        "System cannot find invitation",
+        "Returns 404 NotFound"
+      ],
+      "response": {
+        "status": 404,
+        "body": "InvitationNotFound error"
+      },
+      "frontend_action": "Show error message 'Invitation not found'. ID may be incorrect or invitation may have been deleted."
+    }
+  ],
+  "importantNotes": [
+    "✅ Only affects Pending invitations - cannot cancel processed invitations",
+    "✅ Agent must own the invitation (ARN must match)",
+    "✅ Atomic update with validation - prevents race conditions",
+    "✅ Updates lastUpdated timestamp for audit trail",
+    "✅ Client can no longer accept cancelled invitation",
+    "✅ Idempotent within constraints - cancelling already Cancelled invitation returns 403 (not 204)",
+    "⚠️ Returns 403 (not 409) for wrong status or wrong owner",
+    "⚠️ Does not send email notification to client about cancellation",
+    "⚠️ Does not delete the invitation record - just changes status to Cancelled",
+    "⚠️ Cannot be undone - once cancelled, invitation cannot be reactivated"
+  ],
+  "metadata": {
+    "lastUpdated": "2025-11-20",
+    "gitCommitSha": "b2138b4e3958677748c1820c3d715d4fbb9d3b2c",
+    "analysisVersion": "1.0"
+  }
 }
 

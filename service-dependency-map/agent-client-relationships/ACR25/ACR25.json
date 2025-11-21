@@ -1,211 +1,216 @@
 {
-    "apiId": "ACR25",
-    "apiTitle": "Clean Up Invitation Status - Deauthorise Accepted Invitation",
-    "description": "Administrative/cleanup endpoint that marks accepted or partial-auth invitations as deauthorised when a relationship is terminated externally. Updates invitation status from Accepted or PartialAuth to DeAuthorised, sets relationshipEndedBy to 'HMRC', and updates lastUpdated timestamp. This endpoint is used for cleanup operations when relationships are terminated through other systems but the invitation record needs to be updated to reflect the termination.",
-    "method": "PUT",
-    "path": "/agent-client-relationships/cleanup-invitation-status",
-    "pathParameters": {},
-    "queryParameters": {},
-    "requestBody": {
-        "CleanUpInvitationStatusRequest": {
-            "arn": "Agent Reference Number (ARN) - format: AARN1234567",
-            "clientId": "Client identifier value (e.g., NINO, MTDITID, VRN, UTR, URN, CGT reference, etc.)",
-            "service": "Service identifier (e.g., HMRC-MTD-IT, HMRC-MTD-VAT, HMRC-TERS-ORG, etc.)"
-        },
-        "example": {
-            "arn": "AARN1234567",
-            "clientId": "AB123456C",
-            "service": "HMRC-MTD-IT"
-        }
+  "apiId": "ACR25",
+  "apiTitle": "Clean Up Invitation Status - Deauthorise Accepted Invitation",
+  "description": "Administrative/cleanup endpoint that marks accepted or partial-auth invitations as deauthorised when a relationship is terminated externally. Updates invitation status from Accepted or PartialAuth to DeAuthorised, sets relationshipEndedBy to 'HMRC', and updates lastUpdated timestamp. This endpoint is used for cleanup operations when relationships are terminated through other systems but the invitation record needs to be updated to reflect the termination.",
+  "method": "PUT",
+  "path": "/agent-client-relationships/cleanup-invitation-status",
+  "pathParameters": {},
+  "queryParameters": {},
+  "requestBody": {
+    "CleanUpInvitationStatusRequest": {
+      "arn": "Agent Reference Number (ARN) - format: AARN1234567",
+      "clientId": "Client identifier value (e.g., NINO, MTDITID, VRN, UTR, URN, CGT reference, etc.)",
+      "service": "Service identifier (e.g., HMRC-MTD-IT, HMRC-MTD-VAT, HMRC-TERS-ORG, etc.)"
     },
-    "responses": {
-        "204": "No Content - Invitation successfully deauthorised",
-        "400": "Bad Request - Invalid JSON or invalid clientId for the service type",
-        "401": "Unauthorized - Authentication failed",
-        "404": "Not Found - No matching Accepted or PartialAuth invitation found",
-        "501": "Not Implemented - Unsupported service",
-        "500": "Internal Server Error"
+    "example": {
+      "arn": "AARN1234567",
+      "clientId": "AB123456C",
+      "service": "HMRC-MTD-IT"
+    }
+  },
+  "responses": {
+    "204": "No Content - Invitation successfully deauthorised",
+    "400": "Bad Request - Invalid JSON or invalid clientId for the service type",
+    "401": "Unauthorized - Authentication failed",
+    "404": "Not Found - No matching Accepted or PartialAuth invitation found",
+    "501": "Not Implemented - Unsupported service",
+    "500": "Internal Server Error"
+  },
+  "authentication": "Standard authentication required using authorised()",
+  "audience": "internal",
+  "controller": "CleanUpInvitationStatusController",
+  "controllerMethod": "deauthoriseInvitation",
+  "services": [
+    {
+      "name": "CleanUpInvitationStatusService",
+      "alias": "CISS",
+      "method": "validateService, validateClientId, deauthoriseInvitation",
+      "description": "Validates request and orchestrates invitation deauthorisation"
     },
-    "authentication": "Standard authentication required using authorised()",
-    "audience": "internal",
-    "controller": "CleanUpInvitationStatusController",
-    "controllerMethod": "deauthoriseInvitation",
-    "services": [
-        {
-            "name": "CleanUpInvitationStatusService",
-            "alias": "CISS",
-            "method": "validateService, validateClientId, deauthoriseInvitation",
-            "description": "Validates request and orchestrates invitation deauthorisation"
-        },
-        {
-            "name": "InvitationsRepository",
-            "alias": "IR",
-            "method": "deauthAcceptedInvitation",
-            "description": "Updates invitation status in MongoDB"
-        }
-    ],
-    "interactions": "See ACR25.mmd for complete sequence diagram",
-    "externalDependencies": [],
-    "databaseCollections": [
-        {
-            "name": "invitations",
-            "operation": "UPDATE",
-            "description": "Finds invitation by status IN (Accepted, Partialauth), service, clientId, and arn. Updates status to DeAuthorised, sets relationshipEndedBy to 'HMRC', and updates lastUpdated timestamp."
-        }
-    ],
-    "responseModel": {
-        "Success": "No content returned (204)",
-        "NotFound": "No body returned (404)",
-        "Error": {
-            "code": "Error code (e.g., UNSUPPORTED_SERVICE, INVALID_CLIENT_ID)",
-            "message": "Error message"
-        }
+    {
+      "name": "InvitationsRepository",
+      "alias": "IR",
+      "method": "deauthAcceptedInvitation",
+      "description": "Updates invitation status in MongoDB"
+    }
+  ],
+  "interactions": "See ACR25.mmd for complete sequence diagram",
+  "externalDependencies": [],
+  "databaseCollections": [
+    {
+      "name": "invitations",
+      "operation": "UPDATE",
+      "description": "Finds invitation by status IN (Accepted, Partialauth), service, clientId, and arn. Updates status to DeAuthorised, sets relationshipEndedBy to 'HMRC', and updates lastUpdated timestamp."
+    }
+  ],
+  "responseModel": {
+    "Success": "No content returned (204)",
+    "NotFound": "No body returned (404)",
+    "Error": {
+      "code": "Error code (e.g., UNSUPPORTED_SERVICE, INVALID_CLIENT_ID)",
+      "message": "Error message"
+    }
+  },
+  "businessLogic": {
+    "validation": {
+      "description": "Validates service and clientId before processing",
+      "logic": "First validates that the service is supported (matches Service.forId). Then validates that the clientId format is valid for the specified service type. Uses Try blocks to catch format exceptions."
     },
-    "businessLogic": {
-        "validation": {
-            "description": "Validates service and clientId before processing",
-            "logic": "First validates that the service is supported (matches Service.forId). Then validates that the clientId format is valid for the specified service type. Uses Try blocks to catch format exceptions."
-        },
-        "updateOperation": {
-            "description": "Updates invitation status to DeAuthorised",
-            "logic": "Queries MongoDB for invitations matching: status IN (Accepted, Partialauth), service, clientId (encrypted), and arn. If found, updates status to DeAuthorised, sets relationshipEndedBy to 'HMRC', and updates lastUpdated to current time. Returns 204 if exactly one document modified, 404 if no documents modified."
-        },
-        "statusFilter": {
-            "description": "Only updates invitations with specific statuses",
-            "logic": "Only invitations with status 'Accepted' or 'Partialauth' can be deauthorised. Invitations with other statuses (Pending, Cancelled, Expired, Rejected, DeAuthorised) are not updated and will result in 404."
-        },
-        "relationshipEndedBy": {
-            "description": "Tracks who terminated the relationship",
-            "logic": "Always sets relationshipEndedBy to 'HMRC' for this endpoint, indicating the relationship was terminated by HMRC systems (as opposed to 'Agent' or 'Client')."
-        }
+    "updateOperation": {
+      "description": "Updates invitation status to DeAuthorised",
+      "logic": "Queries MongoDB for invitations matching: status IN (Accepted, Partialauth), service, clientId (encrypted), and arn. If found, updates status to DeAuthorised, sets relationshipEndedBy to 'HMRC', and updates lastUpdated to current time. Returns 204 if exactly one document modified, 404 if no documents modified."
     },
-    "errorHandling": [
-        {
-            "scenario": "Unsupported service",
-            "response": "501 Not Implemented",
-            "message": "Unsupported service \"{service}\"",
-            "note": "Service must be in the list of supported services (excluding PIR for some operations)"
-        },
-        {
-            "scenario": "Invalid clientId format",
-            "response": "400 Bad Request",
-            "message": "Invalid clientId \"{clientId}\", for service type \"{service}\"",
-            "note": "ClientId format must match the expected format for the service (e.g., NINO format for MTD-IT)"
-        },
-        {
-            "scenario": "No matching invitation found",
-            "response": "404 Not Found",
-            "message": "No body",
-            "note": "No invitation exists with status Accepted or PartialAuth matching the arn, clientId, and service"
-        },
-        {
-            "scenario": "Invalid JSON payload",
-            "response": "400 Bad Request",
-            "message": "Invalid payload: {validation errors}",
-            "note": "Request body must be valid JSON matching CleanUpInvitationStatusRequest structure"
-        },
-        {
-            "scenario": "Authentication failure",
-            "response": "401 Unauthorized",
-            "message": "Authentication failed",
-            "note": "Must be authenticated to call this endpoint"
-        },
-        {
-            "scenario": "Database error",
-            "response": "500 Internal Server Error",
-            "message": "Error message",
-            "note": "Unexpected database error during update"
+    "statusFilter": {
+      "description": "Only updates invitations with specific statuses",
+      "logic": "Only invitations with status 'Accepted' or 'Partialauth' can be deauthorised. Invitations with other statuses (Pending, Cancelled, Expired, Rejected, DeAuthorised) are not updated and will result in 404."
+    },
+    "relationshipEndedBy": {
+      "description": "Tracks who terminated the relationship",
+      "logic": "Always sets relationshipEndedBy to 'HMRC' for this endpoint, indicating the relationship was terminated by HMRC systems (as opposed to 'Agent' or 'Client')."
+    }
+  },
+  "errorHandling": [
+    {
+      "scenario": "Unsupported service",
+      "response": "501 Not Implemented",
+      "message": "Unsupported service \"{service}\"",
+      "note": "Service must be in the list of supported services (excluding PIR for some operations)"
+    },
+    {
+      "scenario": "Invalid clientId format",
+      "response": "400 Bad Request",
+      "message": "Invalid clientId \"{clientId}\", for service type \"{service}\"",
+      "note": "ClientId format must match the expected format for the service (e.g., NINO format for MTD-IT)"
+    },
+    {
+      "scenario": "No matching invitation found",
+      "response": "404 Not Found",
+      "message": "No body",
+      "note": "No invitation exists with status Accepted or PartialAuth matching the arn, clientId, and service"
+    },
+    {
+      "scenario": "Invalid JSON payload",
+      "response": "400 Bad Request",
+      "message": "Invalid payload: {validation errors}",
+      "note": "Request body must be valid JSON matching CleanUpInvitationStatusRequest structure"
+    },
+    {
+      "scenario": "Authentication failure",
+      "response": "401 Unauthorized",
+      "message": "Authentication failed",
+      "note": "Must be authenticated to call this endpoint"
+    },
+    {
+      "scenario": "Database error",
+      "response": "500 Internal Server Error",
+      "message": "Error message",
+      "note": "Unexpected database error during update"
+    }
+  ],
+  "useCases": [
+    {
+      "scenario": "Relationship terminated in ETMP - cleanup invitation record",
+      "flow": [
+        "Relationship terminated in ETMP by HMRC",
+        "Cleanup job calls this endpoint to update invitation status",
+        "Invitation with status Accepted found",
+        "Status updated to DeAuthorised, relationshipEndedBy set to 'HMRC'",
+        "204 No Content returned"
+      ],
+      "response": {
+        "status": 204
+      },
+      "frontend_action": "N/A - This is a backend cleanup operation"
+    },
+    {
+      "scenario": "Partial auth invitation cleanup",
+      "flow": [
+        "Partial auth invitation exists but relationship needs cleanup",
+        "System calls this endpoint",
+        "Invitation with status PartialAuth found",
+        "Status updated to DeAuthorised",
+        "204 No Content returned"
+      ],
+      "response": {
+        "status": 204
+      },
+      "frontend_action": "N/A - This is a backend cleanup operation"
+    },
+    {
+      "scenario": "Invitation already deauthorised or doesn't exist",
+      "flow": [
+        "Cleanup job calls endpoint",
+        "No invitation with status Accepted or PartialAuth found",
+        "Either invitation doesn't exist, or already DeAuthorised, or has different status",
+        "404 returned"
+      ],
+      "response": {
+        "status": 404
+      },
+      "frontend_action": "Calling system should log but not fail - cleanup already done or not needed"
+    },
+    {
+      "scenario": "Invalid service type provided",
+      "flow": [
+        "Cleanup job calls with invalid service identifier",
+        "Service validation fails",
+        "501 Not Implemented returned"
+      ],
+      "response": {
+        "status": 501,
+        "body": {
+          "code": "UNSUPPORTED_SERVICE",
+          "message": "Unsupported service \"INVALID-SERVICE\""
         }
-    ],
-    "useCases": [
-        {
-            "scenario": "Relationship terminated in ETMP - cleanup invitation record",
-            "flow": [
-                "Relationship terminated in ETMP by HMRC",
-                "Cleanup job calls this endpoint to update invitation status",
-                "Invitation with status Accepted found",
-                "Status updated to DeAuthorised, relationshipEndedBy set to 'HMRC'",
-                "204 No Content returned"
-            ],
-            "response": {
-                "status": 204
-            },
-            "frontend_action": "N/A - This is a backend cleanup operation"
-        },
-        {
-            "scenario": "Partial auth invitation cleanup",
-            "flow": [
-                "Partial auth invitation exists but relationship needs cleanup",
-                "System calls this endpoint",
-                "Invitation with status PartialAuth found",
-                "Status updated to DeAuthorised",
-                "204 No Content returned"
-            ],
-            "response": {
-                "status": 204
-            },
-            "frontend_action": "N/A - This is a backend cleanup operation"
-        },
-        {
-            "scenario": "Invitation already deauthorised or doesn't exist",
-            "flow": [
-                "Cleanup job calls endpoint",
-                "No invitation with status Accepted or PartialAuth found",
-                "Either invitation doesn't exist, or already DeAuthorised, or has different status",
-                "404 returned"
-            ],
-            "response": {
-                "status": 404
-            },
-            "frontend_action": "Calling system should log but not fail - cleanup already done or not needed"
-        },
-        {
-            "scenario": "Invalid service type provided",
-            "flow": [
-                "Cleanup job calls with invalid service identifier",
-                "Service validation fails",
-                "501 Not Implemented returned"
-            ],
-            "response": {
-                "status": 501,
-                "body": {
-                    "code": "UNSUPPORTED_SERVICE",
-                    "message": "Unsupported service \"INVALID-SERVICE\""
-                }
-            },
-            "frontend_action": "Calling system should fix the service identifier"
-        },
-        {
-            "scenario": "Invalid clientId format for service",
-            "flow": [
-                "Cleanup job calls with clientId that doesn't match service format",
-                "ClientId validation fails (e.g., invalid NINO format for MTD-IT)",
-                "400 Bad Request returned"
-            ],
-            "response": {
-                "status": 400,
-                "body": {
-                    "code": "INVALID_CLIENT_ID",
-                    "message": "Invalid clientId \"INVALID\", for service type \"HMRC-MTD-IT\""
-                }
-            },
-            "frontend_action": "Calling system should fix the clientId format"
+      },
+      "frontend_action": "Calling system should fix the service identifier"
+    },
+    {
+      "scenario": "Invalid clientId format for service",
+      "flow": [
+        "Cleanup job calls with clientId that doesn't match service format",
+        "ClientId validation fails (e.g., invalid NINO format for MTD-IT)",
+        "400 Bad Request returned"
+      ],
+      "response": {
+        "status": 400,
+        "body": {
+          "code": "INVALID_CLIENT_ID",
+          "message": "Invalid clientId \"INVALID\", for service type \"HMRC-MTD-IT\""
         }
-    ],
-    "importantNotes": [
-        "✅ This is a cleanup/administrative endpoint for maintaining invitation status consistency",
-        "✅ Only updates invitations with status 'Accepted' or 'Partialauth'",
-        "✅ Always sets relationshipEndedBy to 'HMRC' (not configurable)",
-        "✅ Idempotent for already deauthorised invitations (returns 404 but no harm)",
-        "✅ Updates are atomic - all fields updated in single MongoDB operation",
-        "✅ ClientId is encrypted in database but provided unencrypted in request",
-        "⚠️ Does NOT terminate relationships in EACD or ETMP - only updates invitation record",
-        "⚠️ Returns 404 if invitation has wrong status (e.g., Pending, Cancelled, Expired)",
-        "⚠️ Service validation is strict - must be in supported services list",
-        "⚠️ ClientId validation is format-based - checks if format matches service type",
-        "⚠️ No email notifications sent - this is a silent cleanup operation",
-        "⚠️ This endpoint assumes the relationship has already been terminated elsewhere",
-        "⚠️ Not idempotent in the strict sense - second call returns 404 instead of 204"
-    ]
+      },
+      "frontend_action": "Calling system should fix the clientId format"
+    }
+  ],
+  "importantNotes": [
+    "✅ This is a cleanup/administrative endpoint for maintaining invitation status consistency",
+    "✅ Only updates invitations with status 'Accepted' or 'Partialauth'",
+    "✅ Always sets relationshipEndedBy to 'HMRC' (not configurable)",
+    "✅ Idempotent for already deauthorised invitations (returns 404 but no harm)",
+    "✅ Updates are atomic - all fields updated in single MongoDB operation",
+    "✅ ClientId is encrypted in database but provided unencrypted in request",
+    "⚠️ Does NOT terminate relationships in EACD or ETMP - only updates invitation record",
+    "⚠️ Returns 404 if invitation has wrong status (e.g., Pending, Cancelled, Expired)",
+    "⚠️ Service validation is strict - must be in supported services list",
+    "⚠️ ClientId validation is format-based - checks if format matches service type",
+    "⚠️ No email notifications sent - this is a silent cleanup operation",
+    "⚠️ This endpoint assumes the relationship has already been terminated elsewhere",
+    "⚠️ Not idempotent in the strict sense - second call returns 404 instead of 204"
+  ],
+  "metadata": {
+    "lastUpdated": "2025-11-20",
+    "gitCommitSha": "b2138b4e3958677748c1820c3d715d4fbb9d3b2c",
+    "analysisVersion": "1.0"
+  }
 }
 

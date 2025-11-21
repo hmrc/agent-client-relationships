@@ -277,7 +277,10 @@ The `relationship-copy-record` and `delete-record` collections use `syncToETMPSt
 
 ---
 
+## Document Metadata
+
 **Last Updated:** November 2025  
+**Git Commit SHA:** `b2138b4e3958677748c1820c3d715d4fbb9d3b2c`  
 **MongoDB Driver:** org.mongodb.scala (Reactive Streams)  
 **Play Framework Version:** 2.9.x  
 **Scala Version:** 2.13.x

@@ -260,3 +260,10 @@ Different logic per service:
 - **ACR13**: Accept Invitation (next step after validation)
 - **ACR14**: Reject Invitation (alternative next step)
 
+---
+
+## Document Metadata
+
+**Last Updated:** 2025-11-20  
+**Git Commit SHA:** `b2138b4e3958677748c1820c3d715d4fbb9d3b2c`  
+**Analysis Version:** 1.0

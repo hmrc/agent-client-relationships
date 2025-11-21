@@ -1,261 +1,266 @@
 {
-    "apiId": "ACR24",
-    "apiTitle": "Get Customer Status Summary",
-    "description": "MEDIUM COMPLEXITY - Provides a comprehensive summary of the client's relationship status for display in the client-facing frontend. Returns three boolean flags: hasPendingInvitations (has pending invitations from non-suspended agents), hasInvitationsHistory (has any invitation or partial auth history), and hasExistingRelationships (has active relationships from multiple sources). Uses caching for existing relationships check (15 min TTL). Checks multiple data sources: invitations, partial auth records, IRV relationships, and ETMP relationships.",
-    "method": "GET",
-    "path": "/agent-client-relationships/customer-status",
-    "pathParameters": {},
-    "queryParameters": {},
-    "requestBody": {},
-    "responses": {
-        "200": "OK - Returns CustomerStatus JSON with three boolean flags",
-        "401": "Unauthorized - Client authentication failed",
-        "500": "Internal Server Error"
+  "apiId": "ACR24",
+  "apiTitle": "Get Customer Status Summary",
+  "description": "MEDIUM COMPLEXITY - Provides a comprehensive summary of the client's relationship status for display in the client-facing frontend. Returns three boolean flags: hasPendingInvitations (has pending invitations from non-suspended agents), hasInvitationsHistory (has any invitation or partial auth history), and hasExistingRelationships (has active relationships from multiple sources). Uses caching for existing relationships check (15 min TTL). Checks multiple data sources: invitations, partial auth records, IRV relationships, and ETMP relationships.",
+  "method": "GET",
+  "path": "/agent-client-relationships/customer-status",
+  "pathParameters": {},
+  "queryParameters": {},
+  "requestBody": {},
+  "responses": {
+    "200": "OK - Returns CustomerStatus JSON with three boolean flags",
+    "401": "Unauthorized - Client authentication failed",
+    "500": "Internal Server Error"
+  },
+  "authentication": "Client authentication required - must be authenticated as a client with NINO and enrolments",
+  "audience": "internal",
+  "controller": "CustomerStatusController",
+  "controllerMethod": "customerStatus",
+  "services": [
+    {
+      "name": "InvitationService",
+      "alias": "IS",
+      "method": "findNonSuspendedClientInvitations",
+      "description": "Finds client invitations and filters out those from suspended agents"
     },
-    "authentication": "Client authentication required - must be authenticated as a client with NINO and enrolments",
-    "audience": "internal",
-    "controller": "CustomerStatusController",
-    "controllerMethod": "customerStatus",
-    "services": [
-        {
-            "name": "InvitationService",
-            "alias": "IS",
-            "method": "findNonSuspendedClientInvitations",
-            "description": "Finds client invitations and filters out those from suspended agents"
-        },
-        {
-            "name": "InvitationsRepository",
-            "alias": "IR",
-            "method": "findAllBy",
-            "description": "Queries MongoDB for invitations matching services and client IDs"
-        },
-        {
-            "name": "AgentAssuranceService",
-            "alias": "AAS",
-            "method": "getNonSuspendedAgentRecord",
-            "description": "Checks if agents are suspended via Agent Assurance API"
-        },
-        {
-            "name": "PartialAuthRepository",
-            "alias": "PAuthR",
-            "method": "findByNino",
-            "description": "Retrieves partial auth records for the client"
-        },
-        {
-            "name": "AgentFiRelationshipConnector",
-            "alias": "AFRC",
-            "method": "findIrvActiveRelationshipForClient",
-            "description": "Checks for active Personal Income Record (IRV) relationships"
-        },
-        {
-            "name": "FindRelationshipsService",
-            "alias": "FRS",
-            "method": "getActiveRelationshipsForClient",
-            "description": "Queries ETMP via HIP for active relationships across all supported services"
-        }
-    ],
-    "interactions": "See ACR24.mmd for complete sequence diagram",
-    "externalDependencies": [
-        {
-            "name": "Agent Assurance (API 2007)",
-            "description": "Checks agent suspension status for filtering invitations",
-            "method": "GET /agent-record/{arn}",
-            "note": "Called for each unique ARN in invitations to filter suspended agents"
-        },
-        {
-            "name": "Agent FI Relationship",
-            "description": "Checks for active IRV (Personal Income Record) relationships",
-            "method": "GET /agent-fi-relationship/relationships/active",
-            "note": "Only called if client has a NINO"
-        },
-        {
-            "name": "IF/HIP",
-            "description": "Queries ETMP for active relationships across all supported services",
-            "method": "GET /agent-client-relationships/client/relationships/active",
-            "note": "Called per service unless short-circuit conditions are met (cached or has partial auth/IRV)"
-        },
-        {
-            "name": "ETMP",
-            "description": "Enterprise Tax Management Platform - source of truth for active relationships",
-            "method": "Via HIP",
-            "note": "Accessed through HIP connector"
-        }
-    ],
-    "databaseCollections": [
-        {
-            "name": "invitations",
-            "operation": "READ",
-            "description": "Retrieves all invitations matching client's services and identifiers. Filters out invitations from suspended agents."
-        },
-        {
-            "name": "partial-auth",
-            "operation": "READ",
-            "description": "Retrieves partial auth records by NINO. Used to determine hasInvitationsHistory and hasExistingRelationships (if active)."
-        },
-        {
-            "name": "customer-status-existing-relationships-cache",
-            "operation": "READ/WRITE",
-            "description": "Caches results of getActiveRelationshipsForClient queries with 15-minute TTL. Key is concatenated service+identifier pairs."
-        }
-    ],
-    "responseModel": {
-        "CustomerStatus": {
-            "hasPendingInvitations": "Boolean - true if client has any pending invitations from non-suspended agents",
-            "hasInvitationsHistory": "Boolean - true if client has any invitations (any status) or partial auth records (active or inactive)",
-            "hasExistingRelationships": "Boolean - true if client has active partial auth, IRV relationship, PartialAuth/Accepted invitation status, or active ETMP relationships"
-        },
-        "example": {
-            "hasPendingInvitations": true,
-            "hasInvitationsHistory": true,
-            "hasExistingRelationships": true
-        }
+    {
+      "name": "InvitationsRepository",
+      "alias": "IR",
+      "method": "findAllBy",
+      "description": "Queries MongoDB for invitations matching services and client IDs"
     },
-    "businessLogic": {
-        "invitationFiltering": {
-            "description": "Filters out invitations from suspended agents",
-            "logic": "Retrieves all invitations for client, then calls Agent Assurance for each unique ARN to check suspension status. Only non-suspended agent invitations are returned."
-        },
-        "hasPendingInvitations": {
-            "description": "Determines if client has pending invitations",
-            "logic": "Returns true if any invitation has status = Pending (after filtering suspended agents)"
-        },
-        "hasInvitationsHistory": {
-            "description": "Determines if client has any invitation or partial auth history",
-            "logic": "Returns true if: (1) any invitations exist (any status, from non-suspended agents) OR (2) any partial auth records exist (active or inactive)"
-        },
-        "hasExistingRelationships": {
-            "description": "Determines if client has any active relationships - most complex logic",
-            "logic": "Short-circuit returns true if: (1) active partial auth records exist OR (2) IRV relationship exists OR (3) any invitation has status PartialAuth or Accepted. Otherwise queries ETMP via HIP for all supported services (with caching) and returns true if any active relationships found."
-        },
-        "caching": {
-            "description": "Caches existing relationships check to reduce ETMP calls",
-            "logic": "Cache key is concatenated service+identifier pairs (lowercase, spaces removed). TTL is 15 minutes. Cache is only used if short-circuit conditions are not met."
-        }
+    {
+      "name": "AgentAssuranceService",
+      "alias": "AAS",
+      "method": "getNonSuspendedAgentRecord",
+      "description": "Checks if agents are suspended via Agent Assurance API"
     },
-    "errorHandling": [
-        {
-            "scenario": "Client not authenticated",
-            "response": "401 Unauthorized",
-            "message": "Authentication failed",
-            "note": "Must be authenticated as a client with enrolments"
-        },
-        {
-            "scenario": "Agent Assurance API failure",
-            "response": "500 Internal Server Error",
-            "message": "Error checking agent suspension status",
-            "note": "If agent assurance check fails, the entire request fails"
-        },
-        {
-            "scenario": "Agent FI Relationship API failure",
-            "response": "Defaults to false",
-            "message": "N/A",
-            "note": "Errors are swallowed - treats as no IRV relationship"
-        },
-        {
-            "scenario": "HIP/ETMP query failure",
-            "response": "500 Internal Server Error",
-            "message": "Error retrieving relationships",
-            "note": "Only called if short-circuit conditions not met"
-        },
-        {
-            "scenario": "MongoDB query failure",
-            "response": "500 Internal Server Error",
-            "message": "Database error",
-            "note": "Failures in invitations or partial auth queries will fail the request"
-        }
-    ],
-    "useCases": [
-        {
-            "scenario": "Client with pending invitations and active relationships",
-            "flow": [
-                "Client authenticated with NINO and MTD-IT enrolment",
-                "Has pending invitation from non-suspended agent",
-                "Has active partial auth record",
-                "Short-circuit: hasExistingRelationships = true (no ETMP call)"
-            ],
-            "response": {
-                "hasPendingInvitations": true,
-                "hasInvitationsHistory": true,
-                "hasExistingRelationships": true
-            },
-            "frontend_action": "Display message: 'You have pending invitations and existing relationships'"
-        },
-        {
-            "scenario": "Client with pending invitation from suspended agent",
-            "flow": [
-                "Client authenticated",
-                "Has invitation but agent is suspended",
-                "Invitation filtered out by Agent Assurance check",
-                "No other invitations or relationships"
-            ],
-            "response": {
-                "hasPendingInvitations": false,
-                "hasInvitationsHistory": false,
-                "hasExistingRelationships": false
-            },
-            "frontend_action": "Display message: 'You have no pending invitations' (suspended agent invitations are hidden)"
-        },
-        {
-            "scenario": "New client with no history",
-            "flow": [
-                "Client authenticated",
-                "No invitations, no partial auth, no IRV",
-                "Cache miss - queries ETMP via HIP",
-                "No active relationships in ETMP",
-                "Result cached for 15 minutes"
-            ],
-            "response": {
-                "hasPendingInvitations": false,
-                "hasInvitationsHistory": false,
-                "hasExistingRelationships": false
-            },
-            "frontend_action": "Display message: 'You have no invitations or relationships'"
-        },
-        {
-            "scenario": "Client with inactive partial auth history",
-            "flow": [
-                "Client authenticated",
-                "Has inactive partial auth record",
-                "No active relationships",
-                "Queries ETMP - no active relationships"
-            ],
-            "response": {
-                "hasPendingInvitations": false,
-                "hasInvitationsHistory": true,
-                "hasExistingRelationships": false
-            },
-            "frontend_action": "Display message: 'You have invitation history but no active relationships'"
-        },
-        {
-            "scenario": "Client with IRV relationship only",
-            "flow": [
-                "Client authenticated with NINO",
-                "No invitations or partial auth",
-                "Agent FI Relationship returns active IRV relationship",
-                "Short-circuit: hasExistingRelationships = true (no ETMP call)"
-            ],
-            "response": {
-                "hasPendingInvitations": false,
-                "hasInvitationsHistory": false,
-                "hasExistingRelationships": true
-            },
-            "frontend_action": "Display message: 'You have existing relationships'"
-        }
-    ],
-    "importantNotes": [
-        "✅ Client authentication required - must have NINO and enrolments",
-        "✅ Filters out invitations from suspended agents - these are hidden from clients",
-        "✅ Uses 15-minute caching for existing relationships check to reduce load on ETMP",
-        "✅ Short-circuits ETMP query if active partial auth, IRV, or PartialAuth/Accepted invitation exists",
-        "✅ Checks multiple relationship sources: partial auth, IRV, invitations, ETMP",
-        "✅ hasInvitationsHistory includes both active and inactive partial auth records",
-        "✅ Cache key is based on all client identifiers (service+identifier pairs)",
-        "⚠️ Agent Assurance check failure will cause entire request to fail",
-        "⚠️ IRV relationship check failures are swallowed (defaults to no IRV relationship)",
-        "⚠️ Cache is per-client based on their identifiers - different services = different cache key",
-        "⚠️ ETMP query can be slow - hence the caching and short-circuit logic",
-        "⚠️ Suspended agent invitations are completely hidden from the response",
-        "⚠️ The logic for hasExistingRelationships has special condition: returns true if ANY active partial auth OR IRV relationship exists, even without checking ETMP"
-    ]
+    {
+      "name": "PartialAuthRepository",
+      "alias": "PAuthR",
+      "method": "findByNino",
+      "description": "Retrieves partial auth records for the client"
+    },
+    {
+      "name": "AgentFiRelationshipConnector",
+      "alias": "AFRC",
+      "method": "findIrvActiveRelationshipForClient",
+      "description": "Checks for active Personal Income Record (IRV) relationships"
+    },
+    {
+      "name": "FindRelationshipsService",
+      "alias": "FRS",
+      "method": "getActiveRelationshipsForClient",
+      "description": "Queries ETMP via HIP for active relationships across all supported services"
+    }
+  ],
+  "interactions": "See ACR24.mmd for complete sequence diagram",
+  "externalDependencies": [
+    {
+      "name": "Agent Assurance (API 2007)",
+      "description": "Checks agent suspension status for filtering invitations",
+      "method": "GET /agent-record/{arn}",
+      "note": "Called for each unique ARN in invitations to filter suspended agents"
+    },
+    {
+      "name": "Agent FI Relationship",
+      "description": "Checks for active IRV (Personal Income Record) relationships",
+      "method": "GET /agent-fi-relationship/relationships/active",
+      "note": "Only called if client has a NINO"
+    },
+    {
+      "name": "IF/HIP",
+      "description": "Queries ETMP for active relationships across all supported services",
+      "method": "GET /agent-client-relationships/client/relationships/active",
+      "note": "Called per service unless short-circuit conditions are met (cached or has partial auth/IRV)"
+    },
+    {
+      "name": "ETMP",
+      "description": "Enterprise Tax Management Platform - source of truth for active relationships",
+      "method": "Via HIP",
+      "note": "Accessed through HIP connector"
+    }
+  ],
+  "databaseCollections": [
+    {
+      "name": "invitations",
+      "operation": "READ",
+      "description": "Retrieves all invitations matching client's services and identifiers. Filters out invitations from suspended agents."
+    },
+    {
+      "name": "partial-auth",
+      "operation": "READ",
+      "description": "Retrieves partial auth records by NINO. Used to determine hasInvitationsHistory and hasExistingRelationships (if active)."
+    },
+    {
+      "name": "customer-status-existing-relationships-cache",
+      "operation": "READ/WRITE",
+      "description": "Caches results of getActiveRelationshipsForClient queries with 15-minute TTL. Key is concatenated service+identifier pairs."
+    }
+  ],
+  "responseModel": {
+    "CustomerStatus": {
+      "hasPendingInvitations": "Boolean - true if client has any pending invitations from non-suspended agents",
+      "hasInvitationsHistory": "Boolean - true if client has any invitations (any status) or partial auth records (active or inactive)",
+      "hasExistingRelationships": "Boolean - true if client has active partial auth, IRV relationship, PartialAuth/Accepted invitation status, or active ETMP relationships"
+    },
+    "example": {
+      "hasPendingInvitations": true,
+      "hasInvitationsHistory": true,
+      "hasExistingRelationships": true
+    }
+  },
+  "businessLogic": {
+    "invitationFiltering": {
+      "description": "Filters out invitations from suspended agents",
+      "logic": "Retrieves all invitations for client, then calls Agent Assurance for each unique ARN to check suspension status. Only non-suspended agent invitations are returned."
+    },
+    "hasPendingInvitations": {
+      "description": "Determines if client has pending invitations",
+      "logic": "Returns true if any invitation has status = Pending (after filtering suspended agents)"
+    },
+    "hasInvitationsHistory": {
+      "description": "Determines if client has any invitation or partial auth history",
+      "logic": "Returns true if: (1) any invitations exist (any status, from non-suspended agents) OR (2) any partial auth records exist (active or inactive)"
+    },
+    "hasExistingRelationships": {
+      "description": "Determines if client has any active relationships - most complex logic",
+      "logic": "Short-circuit returns true if: (1) active partial auth records exist OR (2) IRV relationship exists OR (3) any invitation has status PartialAuth or Accepted. Otherwise queries ETMP via HIP for all supported services (with caching) and returns true if any active relationships found."
+    },
+    "caching": {
+      "description": "Caches existing relationships check to reduce ETMP calls",
+      "logic": "Cache key is concatenated service+identifier pairs (lowercase, spaces removed). TTL is 15 minutes. Cache is only used if short-circuit conditions are not met."
+    }
+  },
+  "errorHandling": [
+    {
+      "scenario": "Client not authenticated",
+      "response": "401 Unauthorized",
+      "message": "Authentication failed",
+      "note": "Must be authenticated as a client with enrolments"
+    },
+    {
+      "scenario": "Agent Assurance API failure",
+      "response": "500 Internal Server Error",
+      "message": "Error checking agent suspension status",
+      "note": "If agent assurance check fails, the entire request fails"
+    },
+    {
+      "scenario": "Agent FI Relationship API failure",
+      "response": "Defaults to false",
+      "message": "N/A",
+      "note": "Errors are swallowed - treats as no IRV relationship"
+    },
+    {
+      "scenario": "HIP/ETMP query failure",
+      "response": "500 Internal Server Error",
+      "message": "Error retrieving relationships",
+      "note": "Only called if short-circuit conditions not met"
+    },
+    {
+      "scenario": "MongoDB query failure",
+      "response": "500 Internal Server Error",
+      "message": "Database error",
+      "note": "Failures in invitations or partial auth queries will fail the request"
+    }
+  ],
+  "useCases": [
+    {
+      "scenario": "Client with pending invitations and active relationships",
+      "flow": [
+        "Client authenticated with NINO and MTD-IT enrolment",
+        "Has pending invitation from non-suspended agent",
+        "Has active partial auth record",
+        "Short-circuit: hasExistingRelationships = true (no ETMP call)"
+      ],
+      "response": {
+        "hasPendingInvitations": true,
+        "hasInvitationsHistory": true,
+        "hasExistingRelationships": true
+      },
+      "frontend_action": "Display message: 'You have pending invitations and existing relationships'"
+    },
+    {
+      "scenario": "Client with pending invitation from suspended agent",
+      "flow": [
+        "Client authenticated",
+        "Has invitation but agent is suspended",
+        "Invitation filtered out by Agent Assurance check",
+        "No other invitations or relationships"
+      ],
+      "response": {
+        "hasPendingInvitations": false,
+        "hasInvitationsHistory": false,
+        "hasExistingRelationships": false
+      },
+      "frontend_action": "Display message: 'You have no pending invitations' (suspended agent invitations are hidden)"
+    },
+    {
+      "scenario": "New client with no history",
+      "flow": [
+        "Client authenticated",
+        "No invitations, no partial auth, no IRV",
+        "Cache miss - queries ETMP via HIP",
+        "No active relationships in ETMP",
+        "Result cached for 15 minutes"
+      ],
+      "response": {
+        "hasPendingInvitations": false,
+        "hasInvitationsHistory": false,
+        "hasExistingRelationships": false
+      },
+      "frontend_action": "Display message: 'You have no invitations or relationships'"
+    },
+    {
+      "scenario": "Client with inactive partial auth history",
+      "flow": [
+        "Client authenticated",
+        "Has inactive partial auth record",
+        "No active relationships",
+        "Queries ETMP - no active relationships"
+      ],
+      "response": {
+        "hasPendingInvitations": false,
+        "hasInvitationsHistory": true,
+        "hasExistingRelationships": false
+      },
+      "frontend_action": "Display message: 'You have invitation history but no active relationships'"
+    },
+    {
+      "scenario": "Client with IRV relationship only",
+      "flow": [
+        "Client authenticated with NINO",
+        "No invitations or partial auth",
+        "Agent FI Relationship returns active IRV relationship",
+        "Short-circuit: hasExistingRelationships = true (no ETMP call)"
+      ],
+      "response": {
+        "hasPendingInvitations": false,
+        "hasInvitationsHistory": false,
+        "hasExistingRelationships": true
+      },
+      "frontend_action": "Display message: 'You have existing relationships'"
+    }
+  ],
+  "importantNotes": [
+    "✅ Client authentication required - must have NINO and enrolments",
+    "✅ Filters out invitations from suspended agents - these are hidden from clients",
+    "✅ Uses 15-minute caching for existing relationships check to reduce load on ETMP",
+    "✅ Short-circuits ETMP query if active partial auth, IRV, or PartialAuth/Accepted invitation exists",
+    "✅ Checks multiple relationship sources: partial auth, IRV, invitations, ETMP",
+    "✅ hasInvitationsHistory includes both active and inactive partial auth records",
+    "✅ Cache key is based on all client identifiers (service+identifier pairs)",
+    "⚠️ Agent Assurance check failure will cause entire request to fail",
+    "⚠️ IRV relationship check failures are swallowed (defaults to no IRV relationship)",
+    "⚠️ Cache is per-client based on their identifiers - different services = different cache key",
+    "⚠️ ETMP query can be slow - hence the caching and short-circuit logic",
+    "⚠️ Suspended agent invitations are completely hidden from the response",
+    "⚠️ The logic for hasExistingRelationships has special condition: returns true if ANY active partial auth OR IRV relationship exists, even without checking ETMP"
+  ],
+  "metadata": {
+    "lastUpdated": "2025-11-20",
+    "gitCommitSha": "b2138b4e3958677748c1820c3d715d4fbb9d3b2c",
+    "analysisVersion": "1.0"
+  }
 }
 

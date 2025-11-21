@@ -266,3 +266,10 @@ Status: 400 Bad Request
 - **ACR11**: Remove Agent Relationships - Removes relationships from EACD/ETMP
 - **ACR22**: ITSA Post Signup - Can update invitation status to Accepted
 
+---
+
+## Document Metadata
+
+**Last Updated:** 2025-11-20  
+**Git Commit SHA:** `b2138b4e3958677748c1820c3d715d4fbb9d3b2c`  
+**Analysis Version:** 1.0

@@ -353,3 +353,10 @@ None - All data from external services
 - **ACR28**: Stride Get Client Details - Includes active main agent (may be IRV for IRV service)
 - **AFR03**: Agent-Fi-Relationship API - Source of IRV relationship data
 
+---
+
+## Document Metadata
+
+**Last Updated:** 2025-11-20  
+**Git Commit SHA:** `b2138b4e3958677748c1820c3d715d4fbb9d3b2c`  
+**Analysis Version:** 1.0

@@ -261,3 +261,10 @@ HTTP/1.1 204 No Content
 - **ACR32**: API Get Invitation - external API for retrieving single invitation
 - **ACR33**: API Get Invitations - external API for retrieving all invitations
 
+---
+
+## Document Metadata
+
+**Last Updated:** 2025-11-20  
+**Git Commit SHA:** `b2138b4e3958677748c1820c3d715d4fbb9d3b2c`  
+**Analysis Version:** 1.0

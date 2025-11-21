@@ -216,3 +216,10 @@ Returns all invitations for the agent, not just one. Calls `findAllForAgentServi
 - **ACR32**: API Get Invitation - retrieves a single invitation by ID
 - **ACR31**: API Create Invitation - creates invitations that can be retrieved with this endpoint
 
+---
+
+## Document Metadata
+
+**Last Updated:** 2025-11-20  
+**Git Commit SHA:** `b2138b4e3958677748c1820c3d715d4fbb9d3b2c`  
+**Analysis Version:** 1.0
