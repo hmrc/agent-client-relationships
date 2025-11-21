@@ -29,7 +29,6 @@ import uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa._
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.pillar2.Pillar2Record
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ppt.PptSubscriptionDetails
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.vat.VatCustomerDetails
-import uk.gov.hmrc.agentclientrelationships.util.HttpApiMonitor
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.agentclientrelationships.util.RequestSupport.hc
 import uk.gov.hmrc.http.HttpReads.Implicits._
@@ -53,8 +52,7 @@ class ClientDetailsConnector @Inject() (
   httpClient: HttpClientV2,
   val metrics: Metrics
 )(implicit val ec: ExecutionContext)
-extends HttpApiMonitor
-with RequestAwareLogging {
+extends RequestAwareLogging {
 
   private def desHeaders(authToken: String): Seq[(String, String)] = Seq(
     "Environment" -> appConfig.desEnv,
@@ -64,7 +62,7 @@ with RequestAwareLogging {
   )
 
   private def ifHeaders(authToken: String): Seq[(String, String)] = Seq(
-    "Environment" -> appConfig.ifEnvironment,
+    "Environment" -> appConfig.ifsEnvironment,
     // TODO: The correlationId is used to link our request with the corresponding request received in DES/IF/HIP. Without logging, it would be impossible to associate these requests.
     "CorrelationId" -> UUID.randomUUID().toString,
     HeaderNames.authorisation -> s"Bearer $authToken"
@@ -136,8 +134,8 @@ with RequestAwareLogging {
       else
         "URN"
     httpClient
-      .get(url"${appConfig.ifPlatformBaseUrl}/trusts/agent-known-fact-check/$identifierType/$trustTaxIdentifier")
-      .setHeader(ifHeaders(appConfig.ifAPI1495Token): _*)
+      .get(url"${appConfig.ifsPlatformBaseUrl}/trusts/agent-known-fact-check/$identifierType/$trustTaxIdentifier")
+      .setHeader(ifHeaders(appConfig.ifsAPI1495Token): _*)
       .execute[HttpResponse]
       .map { response =>
         response.status match {
@@ -172,8 +170,8 @@ with RequestAwareLogging {
   def getPptSubscriptionDetails(
     pptRef: String
   )(implicit rh: RequestHeader): Future[Either[ClientDetailsFailureResponse, PptSubscriptionDetails]] = httpClient
-    .get(url"${appConfig.ifPlatformBaseUrl}/plastic-packaging-tax/subscriptions/PPT/$pptRef/display")
-    .setHeader(ifHeaders(appConfig.ifAPI1712Token): _*)
+    .get(url"${appConfig.ifsPlatformBaseUrl}/plastic-packaging-tax/subscriptions/PPT/$pptRef/display")
+    .setHeader(ifHeaders(appConfig.ifsAPI1712Token): _*)
     .execute[HttpResponse]
     .map { response =>
       response.status match {
@@ -200,18 +198,18 @@ with RequestAwareLogging {
     )
 
     val httpHeaders = Seq(
-      HeaderNames.authorisation -> s"Bearer ${appConfig.eisAuthToken}",
+      HeaderNames.authorisation -> s"Bearer ${appConfig.ifAuthToken}",
       "x-forwarded-host" -> "mdtp",
       "x-correlation-id" -> UUID.randomUUID().toString,
       "x-conversation-id" -> conversationId,
       "date" -> ZonedDateTime.now().format(DateTimeFormatter.ofPattern("EEE, dd MMM yyyy HH:mm:ss O")),
       "content-type" -> "application/json",
       "accept" -> "application/json",
-      "Environment" -> appConfig.eisEnvironment
+      "Environment" -> appConfig.ifEnvironment
     )
 
     httpClient
-      .post(url"${appConfig.eisBaseUrl}/dac6/dct50d/v1")
+      .post(url"${appConfig.ifBaseUrl}/dac6/dct50d/v1")
       .withBody(Json.toJson(request))
       .setHeader(httpHeaders: _*)
       .execute[HttpResponse]
@@ -230,10 +228,10 @@ with RequestAwareLogging {
   def getPillar2SubscriptionDetails(
     plrId: String
   )(implicit rh: RequestHeader): Future[Either[ClientDetailsFailureResponse, Pillar2Record]] = {
-    val url = url"${appConfig.ifPlatformBaseUrl}/pillar2/subscription/$plrId"
+    val url = url"${appConfig.ifsPlatformBaseUrl}/pillar2/subscription/$plrId"
     httpClient
       .get(url)
-      .setHeader(ifHeaders(appConfig.ifAPI2143Token): _*)
+      .setHeader(ifHeaders(appConfig.ifsAPI2143Token): _*)
       .execute[HttpResponse]
       .map { response =>
         response.status match {

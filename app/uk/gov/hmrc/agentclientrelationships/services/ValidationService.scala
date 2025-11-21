@@ -56,7 +56,6 @@ extends RequestAwareLogging {
       case (Service.MtdIt.id | Service.MtdItSupp.id, "ni" | "NI" | "NINO") if Nino.isValid(clientId) =>
         Future.successful(Right(EnrolmentKey(serviceKey, Nino(clientId))))
       case (Service.PersonalIncomeRecord.id, "NINO") => Future.successful(Right(EnrolmentKey(serviceKey, Nino(clientId))))
-      case ("HMCE-VATDEC-ORG", "vrn") if Vrn.isValid(clientId) => Future.successful(Right(EnrolmentKey("HMCE-VATDEC-ORG", Vrn(clientId))))
       case (Service.Cbc.id, CbcIdType.enrolmentId) => makeSanitisedCbcEnrolmentKey(CbcId(clientId))
       // "normal" cases
       case (serviceKey, _) =>

@@ -19,32 +19,32 @@ package uk.gov.hmrc.agentclientrelationships.connectors
 import com.github.tomakehurst.wiremock.client.WireMock._
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
+import play.api.http.Status.INTERNAL_SERVER_ERROR
+import play.api.http.Status.NOT_FOUND
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.mvc.RequestHeader
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
-import play.utils.UriEncoding
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.helpers.HipHeaders
 import uk.gov.hmrc.agentclientrelationships.model.ActiveRelationship
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.InactiveRelationship
 import uk.gov.hmrc.agentclientrelationships.model.RegistrationRelationshipResponse
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.CapitalGains
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa.ItsaBusinessDetails
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsNotFound
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ErrorRetrievingClientDetails
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Cbc
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdIt
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdItSupp
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Pillar2
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Ppt
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Trust
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.TrustNT
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Vat
 import uk.gov.hmrc.agentclientrelationships.model.identifiers._
 import uk.gov.hmrc.agentclientrelationships.services.AgentCacheProvider
 import uk.gov.hmrc.agentclientrelationships.stubs.DataStreamStub
 import uk.gov.hmrc.agentclientrelationships.stubs.HipStub
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 import uk.gov.hmrc.agentclientrelationships.support.WireMockSupport
+import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.http.client.HttpClientV2
@@ -84,11 +84,8 @@ with DataStreamStub {
     "features.recovery-enable" -> false,
     "agent.cache.expires" -> "1 millis",
     "agent.cache.enabled" -> false,
-    "agent.trackPage.cache.expires" -> "1 millis",
-    "agent.trackPage.cache.enabled" -> false,
     "microservice.services.hip.port" -> wireMockPort,
-    "microservice.services.hip.authorization-token" -> "token",
-    "hip.BusinessDetails.enabled" -> true
+    "microservice.services.hip.authorization-token" -> "token"
   )
 
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
@@ -300,6 +297,7 @@ with DataStreamStub {
     }
 
     "throw an IllegalArgumentException when the tax identifier is not supported" in {
+      givenAuditConnector()
       an[IllegalArgumentException] should be thrownBy await(
         hipConnector.createAgentRelationship(EnrolmentKey("foo"), Arn("bar"))
       )
@@ -312,8 +310,8 @@ with DataStreamStub {
     }
 
     "return nothing when IF is unavailable" in {
-      givenReturnsServiceUnavailable()
       givenAuditConnector()
+      givenReturnsServiceUnavailable()
       intercept[UpstreamErrorResponse](await(hipConnector.createAgentRelationship(vatEnrolmentKey, Arn("someArn"))))
     }
   }
@@ -380,12 +378,14 @@ with DataStreamStub {
     }
 
     "throw an IllegalArgumentException when the tax identifier is not supported" in {
+      givenAuditConnector()
       an[IllegalArgumentException] should be thrownBy await(
         hipConnector.deleteAgentRelationship(EnrolmentKey("foo"), Arn("bar"))
       )
     }
 
     "return an exception when HIP has returned an error" in {
+      givenAuditConnector()
       givenReturnsServerError()
       an[UpstreamErrorResponse] should be thrownBy await(
         hipConnector.deleteAgentRelationship(vatEnrolmentKey, Arn("someArn"))
@@ -393,6 +393,7 @@ with DataStreamStub {
     }
 
     "return an exception when HIP is unavailable" in {
+      givenAuditConnector()
       givenReturnsServiceUnavailable()
       an[UpstreamErrorResponse] should be thrownBy await(
         hipConnector.deleteAgentRelationship(vatEnrolmentKey, Arn("someArn"))
@@ -537,246 +538,6 @@ with DataStreamStub {
     }
   }
 
-  "HIPConnector GetInactiveAgentRelationships" should {
-    val encodedArn = UriEncoding.encodePathSegment(agentARN.value, "UTF-8")
-
-    "return existing inactive relationships for specified clientId for ItSa service" in {
-      getInactiveRelationshipsViaAgent(
-        agentARN,
-        otherTaxIdentifier(mtdItId),
-        mtdItId
-      )
-      givenAuditConnector()
-      val result = await(hipConnector.getInactiveRelationships(agentARN))
-      result(0).arn shouldBe agentARN
-      result(0).dateFrom shouldBe Some(LocalDate.parse("2015-09-10"))
-      result(0).dateTo shouldBe Some(LocalDate.parse("2015-09-21"))
-      result(0).clientId shouldBe otherTaxIdentifier(mtdItId).value
-      result(1).arn shouldBe agentARN
-      result(1).dateFrom shouldBe Some(LocalDate.parse("2015-09-10"))
-      result(1).dateTo shouldBe Some(LocalDate.now())
-      result(1).clientId shouldBe mtdItId.value
-    }
-
-    "return existing inactive relationships for specified clientId for Vat service" in {
-      getInactiveRelationshipsViaAgent(
-        agentARN,
-        otherTaxIdentifier(vrn),
-        vrn
-      )
-      givenAuditConnector()
-      val result = await(hipConnector.getInactiveRelationships(agentARN))
-      result(0).arn shouldBe agentARN
-      result(0).dateFrom shouldBe Some(LocalDate.parse("2015-09-10"))
-      result(0).dateTo shouldBe Some(LocalDate.parse("2015-09-21"))
-      result(0).clientId shouldBe otherTaxIdentifier(vrn).value
-      result(1).arn shouldBe agentARN
-      result(1).dateFrom shouldBe Some(LocalDate.parse("2015-09-10"))
-      result(1).dateTo shouldBe Some(LocalDate.now())
-      result(1).clientId shouldBe vrn.value
-
-    }
-
-    "return empty sequence if IF returns 404 for ItSa service" in {
-      getFailAgentInactiveRelationships(encodedArn, status = 404)
-      givenAuditConnector()
-      val result = await(hipConnector.getInactiveRelationships(agentARN))
-      result shouldBe Seq.empty
-    }
-
-    "return empty sequence if IF returns 404 for Vat service" in {
-      getFailAgentInactiveRelationships(encodedArn, status = 404)
-      givenAuditConnector()
-      val result = await(hipConnector.getInactiveRelationships(agentARN))
-      result shouldBe Seq.empty
-    }
-
-    "return empty sequence if IF returns 400 for ItSa service" in {
-      getFailAgentInactiveRelationships(encodedArn, status = 400)
-      givenAuditConnector()
-      val result = await(hipConnector.getInactiveRelationships(agentARN))
-      result shouldBe Seq.empty
-    }
-
-    "return empty sequence if IF returns 400 for Vat service" in {
-      getFailWithSuspendedAgentInactiveRelationships(encodedArn)
-      givenAuditConnector()
-      val result = await(hipConnector.getInactiveRelationships(agentARN))
-      result shouldBe Seq.empty
-    }
-
-    "return None if IF returns 403 AGENT_SUSPENDED" in {
-      getActiveRelationshipFailsWithSuspended(vrn)
-      givenAuditConnector()
-      val result = await(hipConnector.getActiveClientRelationships(vrn, Service.Vat))
-      result shouldBe None
-    }
-  }
-
-  "HIPConnector getInactiveClientRelationships" should {
-
-    "return existing inactive relationships for specified clientId for ItSa service" in {
-
-      getInactiveRelationshipsForClient(mtdItId)
-      givenAuditConnector()
-
-      val result = await(hipConnector.getInactiveClientRelationships(mtdItId, MtdIt))
-
-      result.head shouldBe InactiveRelationship(
-        arn = agentARN,
-        dateTo = Some(LocalDate.parse("2018-09-09")),
-        dateFrom = Some(LocalDate.parse("2015-09-10")),
-        clientId = mtdItId.value,
-        service = "HMRC-MTD-IT",
-        clientType = "personal"
-      )
-    }
-
-    "return existing inactive relationships for specified clientId for ItSa Supp service" in {
-
-      getInactiveRelationshipsForClient(mtdItId, "ITSAS001")
-      givenAuditConnector()
-
-      val result = await(hipConnector.getInactiveClientRelationships(mtdItId, MtdItSupp))
-
-      result.head shouldBe InactiveRelationship(
-        arn = agentARN,
-        dateTo = Some(LocalDate.parse("2018-09-09")),
-        dateFrom = Some(LocalDate.parse("2015-09-10")),
-        clientId = mtdItId.value,
-        service = "HMRC-MTD-IT",
-        clientType = "personal"
-      )
-    }
-
-    "return existing inactive relationships for specified clientId for VAT service" in {
-
-      getInactiveRelationshipsForClient(vrn)
-      givenAuditConnector()
-
-      val result = await(hipConnector.getInactiveClientRelationships(vrn, Vat))
-
-      result.head shouldBe InactiveRelationship(
-        arn = agentARN,
-        dateTo = Some(LocalDate.parse("2018-09-09")),
-        dateFrom = Some(LocalDate.parse("2015-09-10")),
-        clientId = vrn.value,
-        service = "HMRC-MTD-VAT",
-        clientType = "business"
-      )
-    }
-
-    "return existing inactive relationships for specified clientId for Trust service with UTR" in {
-
-      getInactiveRelationshipsForClient(utr)
-      givenAuditConnector()
-
-      val result = await(hipConnector.getInactiveClientRelationships(utr, Trust))
-
-      result.head shouldBe InactiveRelationship(
-        arn = agentARN,
-        dateTo = Some(LocalDate.parse("2018-09-09")),
-        dateFrom = Some(LocalDate.parse("2015-09-10")),
-        clientId = utr.value,
-        service = "HMRC-TERS-ORG",
-        clientType = "business"
-      )
-    }
-
-    "return existing inactive relationships for specified clientId for Trust service with URN" in {
-
-      getInactiveRelationshipsForClient(urn)
-      givenAuditConnector()
-
-      val result = await(hipConnector.getInactiveClientRelationships(urn, TrustNT))
-
-      result.head shouldBe InactiveRelationship(
-        arn = agentARN,
-        dateTo = Some(LocalDate.parse("2018-09-09")),
-        dateFrom = Some(LocalDate.parse("2015-09-10")),
-        clientId = urn.value,
-        service = "HMRC-TERSNT-ORG",
-        clientType = "business"
-      )
-    }
-
-    "return existing inactive relationships for specified clientId for CGT-PD service" in {
-
-      getInactiveRelationshipsForClient(cgt)
-      givenAuditConnector()
-
-      val result = await(hipConnector.getInactiveClientRelationships(cgt, CapitalGains))
-
-      result.head shouldBe InactiveRelationship(
-        arn = agentARN,
-        dateTo = Some(LocalDate.parse("2018-09-09")),
-        dateFrom = Some(LocalDate.parse("2015-09-10")),
-        clientId = cgt.value,
-        service = "HMRC-CGT-PD",
-        clientType = "business"
-      )
-    }
-
-    "return existing inactive relationships for specified clientId for Pillar2 service" in {
-
-      getInactiveRelationshipsForClient(plrId)
-      givenAuditConnector()
-
-      val result = await(hipConnector.getInactiveClientRelationships(plrId, Pillar2))
-      result.head shouldBe InactiveRelationship(
-        arn = agentARN,
-        dateTo = Some(LocalDate.parse("2018-09-09")),
-        dateFrom = Some(LocalDate.parse("2015-09-10")),
-        clientId = plrId.value,
-        service = "HMRC-PILLAR2-ORG",
-        clientType = "business"
-      )
-    }
-
-    "return empty Seq if the identifier is valid but there are no inactive relationships" in {
-
-      getNoInactiveRelationshipsForClient(mtdItId)
-      givenAuditConnector()
-      val result = await(hipConnector.getInactiveClientRelationships(mtdItId, MtdIt))
-      result.isEmpty shouldBe true
-    }
-
-    "return empty Seq if the identifier if IF responds with a Bad Request" in {
-
-      getFailInactiveRelationshipsForClient(mtdItId, 400)
-      givenAuditConnector()
-      val result = await(hipConnector.getInactiveClientRelationships(mtdItId, MtdIt))
-      result.isEmpty shouldBe true
-    }
-
-    "return empty Seq if the identifier if IF responds with Not Found" in {
-
-      getFailInactiveRelationshipsForClient(mtdItId, 404)
-      givenAuditConnector()
-      val result = await(hipConnector.getInactiveClientRelationships(mtdItId, MtdIt))
-      result.isEmpty shouldBe true
-    }
-
-    "return empty Seq if IF returns 403 and body AGENT_SUSPENDED" in {
-      getFailInactiveRelationshipsForClient(
-        mtdItId,
-        403,
-        Some(
-          s""""{"code":"AGENT_SUSPENDED","reason":"The remote endpoint has indicated that the agent is suspended"}"""
-        )
-      )
-      givenAuditConnector()
-      val result = await(hipConnector.getInactiveClientRelationships(mtdItId, MtdIt))
-      result.isEmpty shouldBe true
-    }
-
-    "return empty Seq when IF is unavailable" in {
-      givenReturnsServiceUnavailable()
-      givenAuditConnector()
-      await(hipConnector.getInactiveClientRelationships(mtdItId, MtdIt)) shouldBe empty
-    }
-  }
-
   "isActive" should {
     val noEndRelationship = ActiveRelationship(
       Arn("foo"),
@@ -844,6 +605,54 @@ with DataStreamStub {
     "return true when the end date is equal to the current date" in {
       givenAuditConnector()
       hipConnector.isNotActive(endsAtCurrentDateRelationship) shouldBe true
+    }
+  }
+
+  ".getItsaBusinessDetails" should {
+
+    "return business details when receiving a 200 status" in {
+      givenAuditConnector()
+      givenMtdItsaBusinessDetailsExists(Nino("AA000001B"), MtdItId("XAIT0000111122"))
+      await(hipConnector.getItsaBusinessDetails("AA000001B")) shouldBe Right(
+        ItsaBusinessDetails(
+          "Erling Haal",
+          Some("AA1 1AA"),
+          "GB"
+        )
+      )
+    }
+
+    "return the first set of business details when receiving multiple" in {
+      givenAuditConnector()
+      givenMultipleItsaBusinessDetailsExists("AA000001B")
+      await(hipConnector.getItsaBusinessDetails("AA000001B")) shouldBe Right(
+        ItsaBusinessDetails(
+          "Erling Haal",
+          Some("AA1 1AA"),
+          "GB"
+        )
+      )
+    }
+
+    "return a ClientDetailsNotFound error when no items are returned in the businessData array" in {
+      givenAuditConnector()
+      givenEmptyItsaBusinessDetailsExists("AA000001B")
+      await(hipConnector.getItsaBusinessDetails("AA000001B")) shouldBe Left(ClientDetailsNotFound)
+    }
+
+    "return a ClientDetailsNotFound error when receiving a 404 status" in {
+      givenAuditConnector()
+      givenItsaBusinessDetailsError("AA000001B", NOT_FOUND)
+      await(hipConnector.getItsaBusinessDetails("AA000001B")) shouldBe Left(ClientDetailsNotFound)
+    }
+
+    "return an ErrorRetrievingClientDetails error when receiving an unexpected status" in {
+      givenAuditConnector()
+      givenItsaBusinessDetailsError("AA000001B", INTERNAL_SERVER_ERROR)
+      await(hipConnector.getItsaBusinessDetails("AA000001B")) should matchPattern {
+        case Left(ErrorRetrievingClientDetails(INTERNAL_SERVER_ERROR, msg))
+            if msg.startsWith("Unexpected error during 'getItsaBusinessDetails'") =>
+      }
     }
   }
 

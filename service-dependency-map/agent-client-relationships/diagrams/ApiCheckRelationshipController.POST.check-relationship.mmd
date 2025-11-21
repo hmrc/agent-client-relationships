@@ -1,0 +1,20 @@
+sequenceDiagram
+    autonumber
+    participant Upstream
+    participant agent-client-relationships
+    participant agent-assurance
+    participant des
+    participant Database
+    participant enrolment-store-proxy
+
+    Upstream->>+agent-client-relationships: POST /api/:arn/relationship
+    agent-client-relationships->>+agent-assurance: GET /agent-assurance/agent-details/:arn
+    agent-assurance-->>-agent-client-relationships: Response
+    agent-client-relationships->>+des: GET /registration/business-details/... or /vat/customer/vrn/...
+    des-->>-agent-client-relationships: Response
+    agent-client-relationships->>Database: Read: Check for active relationship.
+    alt Relationship not in local DB
+        agent-client-relationships->>+enrolment-store-proxy: GET /enrolment-store-proxy/enrolment-store/enrolments/:enrolmentKey/groups
+        enrolment-store-proxy-->>-agent-client-relationships: Response
+    end
+    agent-client-relationships-->>-Upstream: Final Response

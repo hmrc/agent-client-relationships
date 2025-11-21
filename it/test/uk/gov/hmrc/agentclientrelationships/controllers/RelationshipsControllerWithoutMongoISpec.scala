@@ -89,8 +89,7 @@ with AuthStub {
       "features.recovery-enable" -> false,
       "agent.cache.expires" -> "1 millis",
       "agent.cache.enabled" -> true,
-      "mongodb.uri" -> mongoUri,
-      "hip.BusinessDetails.enabled" -> true
+      "mongodb.uri" -> mongoUri
     )
     .overrides(new AbstractModule {
       override def configure(): Unit = {
@@ -290,6 +289,7 @@ with AuthStub {
     }
 
     "return 401 when auth token is missing" in {
+      givenAuditConnector()
       requestIsNotAuthenticated()
 
       await(repo.findBy(arn, enrolmentKey)) shouldBe empty

@@ -17,6 +17,7 @@
 package uk.gov.hmrc.agentclientrelationships.controllers
 
 import com.google.inject.AbstractModule
+import org.mongodb.scala.bson.BsonDocument
 import org.scalatest.concurrent.IntegrationPatience
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
@@ -47,6 +48,8 @@ import uk.gov.hmrc.http.HttpResponse
 import uk.gov.hmrc.mongo.CurrentTimestampSupport
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.test.MongoSupport
+
+import scala.concurrent.Future
 
 trait BaseControllerISpec
 extends UnitSpec
@@ -89,8 +92,8 @@ with IntegrationPatience {
       "microservice.services.tax-enrolments.port" -> wireMockPort,
       "microservice.services.users-groups-search.port" -> wireMockPort,
       "microservice.services.des.port" -> wireMockPort,
+      "microservice.services.ifs.port" -> wireMockPort,
       "microservice.services.if.port" -> wireMockPort,
-      "microservice.services.eis.port" -> wireMockPort,
       "microservice.services.hip.port" -> wireMockPort,
       "microservice.services.citizen-details.port" -> wireMockPort,
       "microservice.services.auth.port" -> wireMockPort,
@@ -107,8 +110,6 @@ with IntegrationPatience {
       "features.recovery-enable" -> false,
       "agent.cache.expires" -> "1 millis",
       "agent.cache.enabled" -> true,
-      "agent.trackPage.cache.expires" -> "1 millis",
-      "agent.trackPage.cache.enabled" -> true,
       "agent.customerStatusExistingRelationships.cache.expires" -> "15 minutes",
       "agent.customerStatusExistingRelationships.cache.enabled" -> true,
       "mongodb.uri" -> mongoUri,
@@ -126,10 +127,14 @@ with IntegrationPatience {
   def repo: RelationshipCopyRecordRepository = new RelationshipCopyRecordRepository(mongoComponent)
   def deleteRecordRepository: DeleteRecordRepository = new DeleteRecordRepository(mongoComponent)
 
-  override def beforeEach() = {
+  override def beforeEach(): Unit = {
     super.beforeEach()
     givenAuditConnector()
-    await(mongoComponent.database.drop().toFuture())
+    await(mongoComponent.database.listCollectionNames().toFuture().flatMap { collections =>
+      Future.sequence(collections.map { name =>
+        mongoComponent.database.getCollection(name).deleteMany(BsonDocument()).toFuture()
+      })
+    })
   }
 
   val arn = Arn("AARN0000002")
@@ -156,6 +161,8 @@ with IntegrationPatience {
   val mtdItSuppEnrolmentKey: LocalEnrolmentKey = LocalEnrolmentKey(Service.MtdItSupp, mtdItId)
   val mtdItIdUriEncoded: String = UriEncoding.encodePathSegment(mtdItId.value, "UTF-8")
   val vrn = Vrn("101747641")
+  val vrn2 = Vrn("101747642")
+  val vrn3 = Vrn("101747643")
   val testVatRegDate = "2020-01-01"
   val vatEnrolmentKey: LocalEnrolmentKey = LocalEnrolmentKey(Service.Vat, vrn)
   val vrnUriEncoded: String = UriEncoding.encodePathSegment(vrn.value, "UTF-8")

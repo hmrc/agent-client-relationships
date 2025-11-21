@@ -47,8 +47,6 @@ with ClientDetailsStub
 with HipStub
 with AfiRelationshipStub {
 
-  override def additionalConfig: Map[String, Any] = Map("hip.BusinessDetails.enabled" -> true)
-
   val partialAuthRepo: PartialAuthRepository = app.injector.instanceOf[PartialAuthRepository]
   val invitationsRepo: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
 

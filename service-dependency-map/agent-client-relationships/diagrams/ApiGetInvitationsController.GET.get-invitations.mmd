@@ -1,0 +1,13 @@
+sequenceDiagram
+    autonumber
+    participant Upstream
+    participant agent-client-relationships
+    participant agent-assurance
+    participant Database
+
+    Upstream->>+agent-client-relationships: GET /api/:arn/invitations
+    agent-client-relationships->>+agent-assurance: GET /agent-assurance/agent-details/:arn
+    agent-assurance-->>-agent-client-relationships: Response
+    agent-client-relationships->>Database: Read: Get agent's unique reference ID.
+    agent-client-relationships->>Database: Read: Find all invitations for the agent's ARN.
+    agent-client-relationships-->>-Upstream: Final Response

@@ -59,9 +59,7 @@ with DataStreamStub {
     "features.copy-relationship.mtd-it" -> true,
     "features.recovery-enable" -> false,
     "agent.cache.expires" -> "1 millis",
-    "agent.cache.enabled" -> true,
-    "agent.trackPage.cache.expires" -> "1 millis",
-    "agent.trackPage.cache.enabled" -> true
+    "agent.cache.enabled" -> true
   )
 
   private implicit val request: RequestHeader = FakeRequest()
@@ -101,19 +99,6 @@ with DataStreamStub {
       givenServiceReturnsServerError()
       givenAuditConnector()
       await(mappingConnector.getSaAgentReferencesFor(arn)) shouldBe empty
-    }
-
-    "return agent codes for some known ARN" in {
-      givenArnIsKnownFor(arn, AgentCode("foo"))
-      givenAuditConnector()
-      await(mappingConnector.getAgentCodesFor(arn)) shouldBe Seq(AgentCode("foo"))
-    }
-
-    "return multiple agent codes for some known ARN" in {
-      val oldAgentCodes = Seq(AgentCode("001"), AgentCode("002"))
-      givenArnIsKnownForAgentCodes(arn, oldAgentCodes)
-      givenAuditConnector()
-      await(mappingConnector.getAgentCodesFor(arn)) shouldBe oldAgentCodes
     }
   }
 

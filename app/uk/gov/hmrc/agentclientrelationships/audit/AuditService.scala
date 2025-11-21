@@ -41,7 +41,7 @@ import scala.util.Try
 object AgentClientRelationshipEvent
 extends Enumeration {
 
-  val CreateInvitation, RespondToInvitation, CreateRelationship, CreatePartialAuthorisation, CheckCESA, CheckES,
+  val CreateInvitation, RespondToInvitation, CreateRelationship, CreatePartialAuthorisation, CheckCESA,
     TerminateRelationship, TerminatePartialAuthorisation, RecoveryOfDeleteRelationshipHasBeenAbandoned = Value
   type AgentClientRelationshipEvent = Value
 
@@ -109,15 +109,6 @@ extends RequestAwareLogging {
     cesaRelationshipKey,
     ninoKey,
     "partialAuth"
-  )
-
-  private val checkEsDetailsFields: Seq[String] = Seq(
-    agentCodeKey,
-    credIdKey,
-    "oldAgentCodes",
-    "vrn",
-    arnKey,
-    "ESRelationship"
   )
 
   private val terminateRelationshipFields: Seq[String] = Seq(
@@ -218,15 +209,6 @@ extends RequestAwareLogging {
     AgentClientRelationshipEvent.CheckCESA,
     "check-cesa",
     collectDetails(auditData.getDetails, checkCesaDetailsAndPartialAuthFields)
-  )
-
-  def sendCheckEsAuditEvent()(implicit
-    request: RequestHeader,
-    auditData: AuditData
-  ): Future[Unit] = auditEvent(
-    AgentClientRelationshipEvent.CheckES,
-    "check-es",
-    collectDetails(auditData.getDetails, checkEsDetailsFields)
   )
 
   def sendTerminateRelationshipAuditEvent()(implicit

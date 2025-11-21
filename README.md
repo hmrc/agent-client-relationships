@@ -9,7 +9,6 @@ It is used to manage relationships between agents and clients for the following 
  - HMRC-MTD-VAT
  - HMRC-TERS-ORG / HMRC-TERSNT-ORG (Trusts and estates)
  - IR-SA 
- - HMCE-VATDEC-ORG
  - HMRC-CGT-PD
  - HMRC-PPT-ORG
  - HRMC-CBC-ORG / HMRC-CBC-NONUK-ORG (Country by country, support pending)
@@ -78,7 +77,6 @@ The provided error code is to help diagnose potential issues in production and w
  | HMRC-MTD-VAT    | VRN          |
  | HMRC-TERS-ORG   | SAUTR        |
  | IR-SA           | ni           |
- | HMCE-VATDEC-ORG | vrn          |
 
 ### Retrieve client details
 

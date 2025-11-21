@@ -1,0 +1,15 @@
+sequenceDiagram
+    autonumber
+    participant Upstream
+    participant agent-client-relationships
+    participant des
+    participant Database
+    participant agent-assurance
+
+    Upstream->>+agent-client-relationships: GET /stride/client-details/service/:service/client/:clientIdType/:clientId
+    agent-client-relationships->>+des: GET /registration/business-details/nino/:nino or /vat/customer/vrn/:vrn
+    des-->>-agent-client-relationships: Response
+    agent-client-relationships->>Database: Read: Find any active relationships for the client.
+    agent-client-relationships->>+agent-assurance: GET /agent-assurance/agent-details/:arn
+    agent-assurance-->>-agent-client-relationships: Response
+    agent-client-relationships-->>-Upstream: Final Response

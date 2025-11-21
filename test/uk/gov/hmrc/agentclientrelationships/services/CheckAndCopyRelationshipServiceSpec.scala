@@ -101,7 +101,6 @@ with ResettingMockitoSugar {
 
   val es = resettingMock[EnrolmentStoreProxyConnector]
   val des = resettingMock[DesConnector]
-  val ifOrHipConnector = resettingMock[IfOrHipConnector]
   val hipConnector = resettingMock[HipConnector]
   val mapping = resettingMock[MappingConnector]
   val ugs = resettingMock[UsersGroupsSearchConnector]
@@ -146,7 +145,7 @@ with ResettingMockitoSugar {
   val relationshipsService =
     new CheckAndCopyRelationshipsService(
       es,
-      ifOrHipConnector,
+      hipConnector,
       des,
       mapping,
       ugs,
@@ -341,7 +340,6 @@ with ResettingMockitoSugar {
           cesaRelationshipExists()
           relationshipWillBeCreated(mtdItEnrolmentKey)
           metricsStub()
-          auditStub()
           sendCreateRelationshipAuditEvent()()
           deleteSameAgentOtherItsaService()
 
@@ -486,7 +484,6 @@ with ResettingMockitoSugar {
       partialAuthDeleted(HMRCMTDIT)
       partialAuthStatusUpdatedToAccepted(HMRCMTDIT)
       metricsStub()
-      auditStub()
       sendCreateRelationshipAuditEvent()()
       deleteSameAgentOtherItsaService()
 
@@ -504,7 +501,6 @@ with ResettingMockitoSugar {
       partialAuthDeleted(HMRCMTDITSUPP)
       partialAuthStatusUpdatedToAccepted(HMRCMTDITSUPP)
       metricsStub()
-      auditStub()
       sendCreateRelationshipAuditEvent()()
       deleteSameAgentOtherItsaService()
 
@@ -526,19 +522,6 @@ with ResettingMockitoSugar {
     }
   }
 
-  "lookupESForOldRelationship" should {
-    "return Upstream5xxResponse, if the mapping service is unavailable" in {
-      val auditData = new AuditData()
-
-      mappingServiceUnavailableForMtdVat()
-      val check = relationshipsService.lookupESForOldRelationship(arn, vrn)(request, auditData)
-
-      an[UpstreamErrorResponse] should be thrownBy await(check)
-      verifyEsRecordNotCreatedMtdVat()
-      verifyEtmpRecordNotCreatedForMtdVat()
-    }
-  }
-
   "checkForOldRelationshipAndCopy should return CopyRelationshipNotEnabled" when {
 
     "the copy-relationship.mtd-it feature switch is disabled and tax enrolment is MTD IT" in {
@@ -554,7 +537,7 @@ with ResettingMockitoSugar {
       val relationshipsService =
         new CheckAndCopyRelationshipsService(
           es,
-          ifOrHipConnector,
+          hipConnector,
           des,
           mapping,
           ugs,
@@ -603,7 +586,7 @@ with ResettingMockitoSugar {
       val relationshipsService =
         new CheckAndCopyRelationshipsService(
           es,
-          ifOrHipConnector,
+          hipConnector,
           des,
           mapping,
           ugs,
@@ -643,13 +626,13 @@ with ResettingMockitoSugar {
   }
 
   private def cesaRelationshipDoesNotExist(): OngoingStubbing[Future[Seq[SaAgentReference]]] = {
-    when(ifOrHipConnector.getNinoFor(eqs(mtdItId))(any[RequestHeader]())).thenReturn(Future successful Some(nino))
+    when(hipConnector.getNinoFor(eqs(mtdItId))(any[RequestHeader]())).thenReturn(Future successful Some(nino))
     when(des.getClientSaAgentSaReferences(eqs(nino))(any[RequestHeader]())).thenReturn(Future successful Seq())
     when(mapping.getSaAgentReferencesFor(eqs(arn))(any[RequestHeader]())).thenReturn(Future successful Seq())
   }
 
   private def mappingServiceUnavailable(): OngoingStubbing[Future[Seq[SaAgentReference]]] = {
-    when(ifOrHipConnector.getNinoFor(eqs(mtdItId))(any[RequestHeader]())).thenReturn(Future successful Some(nino))
+    when(hipConnector.getNinoFor(eqs(mtdItId))(any[RequestHeader]())).thenReturn(Future successful Some(nino))
     when(des.getClientSaAgentSaReferences(eqs(nino))(any[RequestHeader]())).thenReturn(
       Future successful Seq(saAgentRef)
     )
@@ -663,32 +646,8 @@ with ResettingMockitoSugar {
     )
   }
 
-  private def mappingServiceUnavailableForMtdVat(): OngoingStubbing[Future[Seq[AgentCode]]] = {
-    when(es.getDelegatedGroupIdsForHMCEVATDECORG(eqs(vrn))(any[RequestHeader]())).thenReturn(
-      Future successful Set(agentGroupId)
-    )
-    when(ugs.getGroupInfo(eqs(agentGroupId))(any[RequestHeader]())).thenReturn(
-      Future successful
-        Some(
-          GroupInfo(
-            agentGroupId,
-            Some("Agent"),
-            Some(agentCodeForVatDecAgent)
-          )
-        )
-    )
-    when(mapping.getAgentCodesFor(eqs(arn))(any[RequestHeader]())).thenReturn(
-      Future failed
-        UpstreamErrorResponse(
-          "Error, no response",
-          502,
-          502
-        )
-    )
-  }
-
   private def ninoExists(): OngoingStubbing[Future[Option[Nino]]] = when(
-    ifOrHipConnector.getNinoFor(eqs(mtdItId))(any[RequestHeader]())
+    hipConnector.getNinoFor(eqs(mtdItId))(any[RequestHeader]())
   ).thenReturn(Future successful Some(nino))
 
   private def partialAuthExists(service: String): OngoingStubbing[Future[Option[PartialAuthRelationship]]] = when(
@@ -730,7 +689,7 @@ with ResettingMockitoSugar {
   ).thenReturn(Future.successful(None))
 
   private def cesaRelationshipExists(): OngoingStubbing[Future[Seq[SaAgentReference]]] = {
-    when(ifOrHipConnector.getNinoFor(eqs(mtdItId))(any[RequestHeader]())).thenReturn(Future successful Some(nino))
+    when(hipConnector.getNinoFor(eqs(mtdItId))(any[RequestHeader]())).thenReturn(Future successful Some(nino))
     when(des.getClientSaAgentSaReferences(eqs(nino))(any[RequestHeader]())).thenReturn(
       Future successful Seq(saAgentRef)
     )
@@ -778,10 +737,6 @@ with ResettingMockitoSugar {
     new MetricRegistry
   )
 
-  private def auditStub(): OngoingStubbing[Future[Unit]] = when(
-    auditService.sendCheckEsAuditEvent()(any[RequestHeader](), any[AuditData])
-  ).thenReturn(Future.successful(()))
-
   private def sendCreateRelationshipAuditEvent()(): OngoingStubbing[Future[Unit]] = when(
     auditService.sendCreateRelationshipAuditEvent()(any[RequestHeader](), any[AuditData])
   ).thenReturn(Future.successful(()))
@@ -802,12 +757,6 @@ with ResettingMockitoSugar {
   def verifyEtmpRecordNotCreated(): Future[RegistrationRelationshipResponse] =
     verify(hipConnector, never()).createAgentRelationship(eqs(mtdItEnrolmentKey), eqs(arn))(any[RequestHeader]())
 
-  def verifyEtmpRecordCreatedForMtdVat(): Future[RegistrationRelationshipResponse] =
-    verify(hipConnector).createAgentRelationship(eqs(vatEnrolmentKey), eqs(arn))(any[RequestHeader]())
-
-  def verifyEtmpRecordNotCreatedForMtdVat(): Future[RegistrationRelationshipResponse] =
-    verify(hipConnector, never()).createAgentRelationship(eqs(vatEnrolmentKey), eqs(arn))(any[RequestHeader]())
-
   def verifyEsRecordCreated(): Future[Done] =
     verify(es).allocateEnrolmentToAgent(
       eqs(agentGroupId),
@@ -824,22 +773,6 @@ with ResettingMockitoSugar {
       eqs(agentCodeForAsAgent)
     )(any[RequestHeader]())
 
-  def verifyEsRecordCreatedForMtdVat(): Future[Done] =
-    verify(es).allocateEnrolmentToAgent(
-      eqs(agentGroupId),
-      eqs(agentUserId),
-      eqs(vatEnrolmentKey),
-      eqs(agentCodeForAsAgent)
-    )(any[RequestHeader]())
-
-  def verifyEsRecordNotCreatedMtdVat(): Future[Done] =
-    verify(es, never()).allocateEnrolmentToAgent(
-      eqs(agentUserId),
-      eqs(agentGroupId),
-      eqs(vatEnrolmentKey),
-      eqs(agentCodeForAsAgent)
-    )(any[RequestHeader]())
-
   def verifyAuditEventSent(): Map[String, Any] = {
     val auditDataCaptor = ArgumentCaptor.forClass(classOf[AuditData])
     verify(auditService).sendCheckCesaAndPartialAuthAuditEvent()(any[RequestHeader](), auditDataCaptor.capture())
@@ -848,16 +781,6 @@ with ResettingMockitoSugar {
     auditDetails("saAgentRef") shouldBe saAgentRef.value
     auditDetails("cesaRelationship") shouldBe true
     auditDetails("nino") shouldBe nino
-    auditDetails
-  }
-
-  def verifyESAuditEventSent(): Map[String, Any] = {
-    val auditDataCaptor = ArgumentCaptor.forClass(classOf[AuditData])
-    verify(auditService).sendCheckEsAuditEvent()(any[RequestHeader](), auditDataCaptor.capture())
-    val auditData: AuditData = auditDataCaptor.getValue
-    val auditDetails = auditData.getDetails
-    auditDetails("vrn") shouldBe vrn
-    auditDetails("ESRelationship") shouldBe true
     auditDetails
   }
 

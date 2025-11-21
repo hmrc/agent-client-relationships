@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.agentclientrelationships.controllers
 
-import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
@@ -731,39 +730,6 @@ trait RelationshipsControllerITSABehaviours {
 
         val result = doRequest
         result.status shouldBe 401
-      }
-    }
-
-    "GET /agent/:arn/client/:nino/legacy-mapped-relationship" should {
-      val requestPath: String = s"/agent-client-relationships/agent/$arn/client/$nino/legacy-mapped-relationship"
-      def doRequest = doGetRequest(requestPath)
-      val req = FakeRequest()
-
-      "find legacy mapped relationship" in {
-        givenAuthorisedAsValidAgent(req, arn.value)
-        givenClientHasRelationshipWithAgentInCESA(nino, arn.value)
-        givenArnIsKnownFor(arn, SaAgentReference(arn.value))
-
-        val result = doRequest
-        result.status shouldBe 204
-      }
-
-      "find legacy relationship not mapped" in {
-        givenAuthorisedAsValidAgent(req, arn.value)
-        givenClientHasRelationshipWithAgentInCESA(nino, arn.value)
-        givenArnIsUnknownFor(arn)
-
-        val result = doRequest
-        result.status shouldBe 200
-      }
-
-      "not find legacy relationship" in {
-        givenAuthorisedAsValidAgent(req, arn.value)
-        givenClientHasNoActiveRelationshipWithAgentInCESA(nino)
-        givenArnIsKnownFor(arn, SaAgentReference(arn.value))
-
-        val result = doRequest
-        result.status shouldBe 404
       }
     }
   }

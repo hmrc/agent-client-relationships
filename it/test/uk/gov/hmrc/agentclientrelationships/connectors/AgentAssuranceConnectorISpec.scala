@@ -25,6 +25,7 @@ import play.api.test.Helpers.await
 import play.api.test.Helpers.defaultAwaitTimeout
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.stubs.AgentAssuranceStubs
+import uk.gov.hmrc.agentclientrelationships.stubs.DataStreamStub
 import uk.gov.hmrc.agentclientrelationships.support.TestData
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 import uk.gov.hmrc.agentclientrelationships.support.WireMockSupport
@@ -35,7 +36,8 @@ extends UnitSpec
 with GuiceOneServerPerSuite
 with WireMockSupport
 with TestData
-with AgentAssuranceStubs {
+with AgentAssuranceStubs
+with DataStreamStub {
 
   override lazy val app: Application = appBuilder.build()
 
@@ -53,6 +55,7 @@ with AgentAssuranceStubs {
   "getAgentRecord" should {
     "return the agent record for a given agent" in {
       val agentARN: Arn = Arn("ABCDE123456")
+      givenAuditConnector()
       givenAgentRecordFound(agentARN, agentRecordResponse)
 
       await(connector.getAgentRecordWithChecks(agentARN)) shouldBe agentRecord
@@ -60,6 +63,7 @@ with AgentAssuranceStubs {
 
     "throw exception when 502 response" in {
       val agentARN: Arn = Arn("ABCDE123456")
+      givenAuditConnector()
       givenAgentDetailsErrorResponse(agentARN, 502)
       intercept[UpstreamErrorResponse] {
         await(connector.getAgentRecordWithChecks(agentARN))

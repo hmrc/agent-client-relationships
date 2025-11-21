@@ -1,0 +1,9 @@
+sequenceDiagram
+    autonumber
+    participant Upstream
+    participant agent-client-relationships
+    participant Database
+
+    Upstream->>+agent-client-relationships: GET /relationships/service/:service/client/:clientIdType/:clientId
+    agent-client-relationships->>Database: Read: Find active relationships for the given client identifier and service.
+    agent-client-relationships-->>-Upstream: Final Response

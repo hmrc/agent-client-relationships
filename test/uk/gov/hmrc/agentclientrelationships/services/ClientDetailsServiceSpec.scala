@@ -26,7 +26,7 @@ import play.api.test.Helpers.await
 import play.api.test.Helpers.defaultAwaitTimeout
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.ClientDetailsConnector
-import uk.gov.hmrc.agentclientrelationships.connectors.IfOrHipConnector
+import uk.gov.hmrc.agentclientrelationships.connectors.HipConnector
 import uk.gov.hmrc.agentclientrelationships.model.CitizenDetails
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientStatus.Deregistered
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientStatus.Inactive
@@ -51,12 +51,12 @@ class ClientDetailsServiceSpec
 extends UnitSpec {
 
   val mockConnector: ClientDetailsConnector = mock[ClientDetailsConnector]
-  val mockIfOrHipConnector: IfOrHipConnector = mock[IfOrHipConnector]
+  val mockHipConnector: HipConnector = mock[HipConnector]
   val mockAppConfig: AppConfig = mock[AppConfig]
   val service =
     new ClientDetailsService(
       mockConnector,
-      mockIfOrHipConnector,
+      mockHipConnector,
       mockAppConfig
     )
   implicit val request: RequestHeader = FakeRequest()
@@ -68,7 +68,7 @@ extends UnitSpec {
       "the IF Get Business Details API returns a successful response" should {
 
         "return a ClientDetailsResponse if expected data is returned" in {
-          when(mockIfOrHipConnector.getItsaBusinessDetails(eqTo[String]("AA000001B"))(any[RequestHeader])).thenReturn(
+          when(mockHipConnector.getItsaBusinessDetails(eqTo[String]("AA000001B"))(any[RequestHeader])).thenReturn(
             Future.successful(
               Right(
                 ItsaBusinessDetails(
@@ -92,7 +92,7 @@ extends UnitSpec {
         }
 
         "return a ClientDetailsNotFound error if no postcode was returned" in {
-          when(mockIfOrHipConnector.getItsaBusinessDetails(eqTo[String]("AA000001B"))(any[RequestHeader])).thenReturn(
+          when(mockHipConnector.getItsaBusinessDetails(eqTo[String]("AA000001B"))(any[RequestHeader])).thenReturn(
             Future.successful(
               Right(
                 ItsaBusinessDetails(
@@ -113,7 +113,7 @@ extends UnitSpec {
         "the Citizen Details APIs (alt-ITSA) return successful responses" should {
 
           "return a ClientDetailsResponse if expected data is returned" in {
-            when(mockIfOrHipConnector.getItsaBusinessDetails(eqTo[String]("AA000001B"))(any[RequestHeader])).thenReturn(
+            when(mockHipConnector.getItsaBusinessDetails(eqTo[String]("AA000001B"))(any[RequestHeader])).thenReturn(
               Future.successful(Left(ClientDetailsNotFound))
             )
             when(mockConnector.getItsaCitizenDetails(eqTo[String]("AA000001B"))(any[RequestHeader])).thenReturn(
@@ -144,7 +144,7 @@ extends UnitSpec {
           }
 
           "return a ClientDetailsNotFound error if no postcode was returned" in {
-            when(mockIfOrHipConnector.getItsaBusinessDetails(eqTo[String]("AA000001B"))(any[RequestHeader])).thenReturn(
+            when(mockHipConnector.getItsaBusinessDetails(eqTo[String]("AA000001B"))(any[RequestHeader])).thenReturn(
               Future.successful(Left(ClientDetailsNotFound))
             )
             when(mockConnector.getItsaCitizenDetails(eqTo[String]("AA000001B"))(any[RequestHeader])).thenReturn(
@@ -167,7 +167,7 @@ extends UnitSpec {
           }
 
           "return a ClientDetailsNotFound error if no name was returned" in {
-            when(mockIfOrHipConnector.getItsaBusinessDetails(eqTo[String]("AA000001B"))(any[RequestHeader])).thenReturn(
+            when(mockHipConnector.getItsaBusinessDetails(eqTo[String]("AA000001B"))(any[RequestHeader])).thenReturn(
               Future.successful(Left(ClientDetailsNotFound))
             )
             when(mockConnector.getItsaCitizenDetails(eqTo[String]("AA000001B"))(any[RequestHeader])).thenReturn(
@@ -190,7 +190,7 @@ extends UnitSpec {
           }
 
           "return a ClientDetailsNotFound error if no SA UTR was returned" in {
-            when(mockIfOrHipConnector.getItsaBusinessDetails(eqTo[String]("AA000001B"))(any[RequestHeader])).thenReturn(
+            when(mockHipConnector.getItsaBusinessDetails(eqTo[String]("AA000001B"))(any[RequestHeader])).thenReturn(
               Future.successful(Left(ClientDetailsNotFound))
             )
             when(mockConnector.getItsaCitizenDetails(eqTo[String]("AA000001B"))(any[RequestHeader])).thenReturn(
@@ -216,7 +216,7 @@ extends UnitSpec {
         "the Citizen Details APIs (alt-ITSA) return 404 responses" should {
 
           "return a ClientDetailsNotFound error" in {
-            when(mockIfOrHipConnector.getItsaBusinessDetails(eqTo[String]("AA000001B"))(any[RequestHeader])).thenReturn(
+            when(mockHipConnector.getItsaBusinessDetails(eqTo[String]("AA000001B"))(any[RequestHeader])).thenReturn(
               Future.successful(Left(ClientDetailsNotFound))
             )
             when(mockConnector.getItsaCitizenDetails(eqTo[String]("AA000001B"))(any[RequestHeader])).thenReturn(

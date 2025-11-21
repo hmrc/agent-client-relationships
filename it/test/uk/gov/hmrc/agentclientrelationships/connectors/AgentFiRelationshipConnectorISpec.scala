@@ -28,6 +28,7 @@ import uk.gov.hmrc.agentclientrelationships.model.ActiveRelationship
 import uk.gov.hmrc.agentclientrelationships.model.InactiveRelationship
 import uk.gov.hmrc.agentclientrelationships.model.identifiers._
 import uk.gov.hmrc.agentclientrelationships.stubs.AfiRelationshipStub
+import uk.gov.hmrc.agentclientrelationships.stubs.DataStreamStub
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 import uk.gov.hmrc.agentclientrelationships.support.WireMockSupport
 import uk.gov.hmrc.http.UpstreamErrorResponse
@@ -41,7 +42,8 @@ class AgentFiRelationshipConnectorISpec
 extends UnitSpec
 with GuiceOneServerPerSuite
 with WireMockSupport
-with AfiRelationshipStub {
+with AfiRelationshipStub
+with DataStreamStub {
 
   override implicit lazy val app: Application = appBuilder.build()
 
@@ -64,9 +66,7 @@ with AfiRelationshipStub {
     "features.copy-relationship.mtd-it" -> true,
     "features.recovery-enable" -> false,
     "agent.cache.expires" -> "1 millis",
-    "agent.cache.enabled" -> false,
-    "agent.trackPage.cache.expires" -> "1 millis",
-    "agent.trackPage.cache.enabled" -> false
+    "agent.cache.enabled" -> false
   )
 
   private implicit val request: RequestHeader = FakeRequest()
@@ -79,6 +79,7 @@ with AfiRelationshipStub {
 
   "deleteRelationship" should {
     "return a true if PersonalIncomeRecord has been deleted" in {
+      givenAuditConnector()
       givenTerminateAfiRelationshipSucceeds(
         arn,
         service,
@@ -93,6 +94,7 @@ with AfiRelationshipStub {
       ) shouldBe true
     }
     "return a false if PersonalIncomeRecord has not been found" in {
+      givenAuditConnector()
       givenTerminateAfiRelationshipFails(
         arn,
         service,
@@ -108,6 +110,7 @@ with AfiRelationshipStub {
       ) shouldBe false
     }
     "throw an if PersonalIncomeRecord fails to delete" in {
+      givenAuditConnector()
       givenTerminateAfiRelationshipFails(
         arn,
         service,
@@ -128,6 +131,7 @@ with AfiRelationshipStub {
 
   "createRelationship" should {
     "return unit if PersonalIncomeRecord has been created" in {
+      givenAuditConnector()
       givenCreateAfiRelationshipSucceeds(
         arn,
         service,
@@ -143,6 +147,7 @@ with AfiRelationshipStub {
       ) shouldBe Done
     }
     "throw an if PersonalIncomeRecord fails to create" in {
+      givenAuditConnector()
       givenCreateAfiRelationshipFails(
         arn,
         service,
@@ -163,6 +168,7 @@ with AfiRelationshipStub {
 
   "getRelationship" should {
     "return an active relationship if active PersonalIncomeRecord exists" in {
+      givenAuditConnector()
       givenAfiRelationshipIsActive(
         arn,
         service,
@@ -184,7 +190,12 @@ with AfiRelationshipStub {
       )
     }
     "return None if active PersonalIncomeRecord does not exist" in {
-      givenAfiRelationshipForClientNotFound(clientId)
+      givenAuditConnector()
+      givenAfiRelationshipNotFound(
+        arn = arn,
+        service = service,
+        clientId = clientId
+      )
       await(
         agentFiRelationshipConnector.getRelationship(
           arn,
@@ -197,6 +208,7 @@ with AfiRelationshipStub {
 
   "getRelationship" should {
     "return a list of inactive PersonalIncomeRecord if they exist" in {
+      givenAuditConnector()
       givenInactiveAfiRelationship(arn)
       await(agentFiRelationshipConnector.getInactiveRelationships) shouldBe Seq(
         InactiveRelationship(
@@ -218,6 +230,7 @@ with AfiRelationshipStub {
       )
     }
     "return Nil if inactive PersonalIncomeRecord do not exist" in {
+      givenAuditConnector()
       givenInactiveAfiRelationshipNotFound
       await(agentFiRelationshipConnector.getInactiveRelationships) shouldBe Nil
     }

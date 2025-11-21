@@ -98,7 +98,7 @@ with TestData {
       expiryDate,
       None
     )
-    .copy(status = Pending)
+    .copy(status = Pending, invitationId = "pendingVat1")
 
   val pendingItsaInvitationAgent1: Invitation = Invitation
     .createNew(
@@ -112,7 +112,7 @@ with TestData {
       expiryDate,
       None
     )
-    .copy(status = Pending)
+    .copy(status = Pending, invitationId = "pendingItsa1")
 
   val pendingCbcInvitationAgent1: Invitation = Invitation
     .createNew(
@@ -126,7 +126,7 @@ with TestData {
       expiryDate,
       None
     )
-    .copy(status = Pending)
+    .copy(status = Pending, invitationId = "pendingCbc1")
 
   val pendingVatInvitationAgent2: Invitation = Invitation
     .createNew(
@@ -140,7 +140,7 @@ with TestData {
       expiryDate,
       None
     )
-    .copy(status = Pending)
+    .copy(status = Pending, invitationId = "pendingVat2")
 
   val pendingItsaInvitationAgent2: Invitation = Invitation
     .createNew(
@@ -154,7 +154,7 @@ with TestData {
       expiryDate,
       None
     )
-    .copy(status = Pending)
+    .copy(status = Pending, invitationId = "pendingItsa2")
 
   val pendingCbcInvitationAgent2: Invitation = Invitation
     .createNew(
@@ -168,7 +168,7 @@ with TestData {
       expiryDate,
       None
     )
-    .copy(status = Pending)
+    .copy(status = Pending, invitationId = "pendingCbc2")
 
   val expiredVatInvitationAgent1: Invitation = Invitation
     .createNew(
@@ -182,7 +182,7 @@ with TestData {
       expiryDate,
       None
     )
-    .copy(status = Expired)
+    .copy(status = Expired, invitationId = "expiredVat1")
 
   val rejectedCgtInvitationAgent2: Invitation = Invitation
     .createNew(
@@ -196,7 +196,7 @@ with TestData {
       expiryDate,
       None
     )
-    .copy(status = Rejected)
+    .copy(status = Rejected, invitationId = "rejectedCgt2")
 
   val rejectedCbcInvitationAgent2: Invitation = Invitation
     .createNew(
@@ -210,7 +210,7 @@ with TestData {
       expiryDate,
       None
     )
-    .copy(status = Rejected)
+    .copy(status = Rejected, invitationId = "rejectedCbc2")
 
   val acceptedItsaInvitationAgent2: Invitation = Invitation
     .createNew(
@@ -224,7 +224,7 @@ with TestData {
       expiryDate,
       None
     )
-    .copy(status = Accepted)
+    .copy(status = Accepted, invitationId = "acceptedItsa2")
 
   val acceptedPartialAuthInvitationAgent2: Invitation = Invitation
     .createNew(
@@ -238,7 +238,7 @@ with TestData {
       expiryDate,
       None
     )
-    .copy(status = PartialAuth)
+    .copy(status = PartialAuth, invitationId = "acceptedPartialAuth2")
 
   val cancelledVatInvitationAgent2: Invitation = Invitation
     .createNew(
@@ -252,7 +252,7 @@ with TestData {
       expiryDate,
       None
     )
-    .copy(status = Cancelled)
+    .copy(status = Cancelled, invitationId = "cancelledVat2")
 
   val deAuthorisedItsaInvitationAgent1: Invitation = Invitation
     .createNew(
@@ -266,7 +266,7 @@ with TestData {
       expiryDate,
       None
     )
-    .copy(status = DeAuthorised)
+    .copy(status = DeAuthorised, invitationId = "deauthorisedItsa1")
 
   val testEndpoint = "/agent-client-relationships/client/authorisations-relationships"
   val fakeRequest = FakeRequest("GET", s"/agent-client-relationships/client/authorisations-relationships")
@@ -290,7 +290,11 @@ with TestData {
         .futureValue
 
       // no relationships
-      getActiveRelationshipFailsWith(vrn, 422)
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = vrn,
+        status = 422,
+        activeOnly = false
+      )
       getAllActiveRelationshipFailsWithNotFound(
         taxIdentifier = utr,
         status = 404,
@@ -311,7 +315,11 @@ with TestData {
         status = 404,
         activeOnly = false
       )
-      getActiveRelationshipFailsWith(mtdItId, 422)
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = mtdItId,
+        status = 422,
+        activeOnly = false
+      )
 
       // TODO UID is created each time
       givenAgentRecordFound(arn, testAgentRecord1)
@@ -352,13 +360,36 @@ with TestData {
         .futureValue
 
       // no relationships
-      getActiveRelationshipFailsWith(vrn, 422)
-      getActiveRelationshipFailsWith(utr, 422)
-      getActiveRelationshipFailsWith(urn, 422)
-      getActiveRelationshipFailsWith(pptRef, 422)
-      getActiveRelationshipFailsWith(cgtRef, 422)
-
-      getActiveRelationshipFailsWith(mtdItId, 422)
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = vrn,
+        status = 422,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = utr,
+        status = 422,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = urn,
+        status = 422,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = pptRef,
+        status = 422,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = cgtRef,
+        status = 422,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = mtdItId,
+        status = 422,
+        activeOnly = false
+      )
 
       givenAgentRecordFound(arn, testAgentRecord1)
       givenAgentRecordFound(arn2, testAgentRecord2)
@@ -403,7 +434,11 @@ with TestData {
         .futureValue
 
       // no relationships
-      getActiveRelationshipFailsWith(vrn, 422)
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = vrn,
+        status = 422,
+        activeOnly = false
+      )
       getAllActiveRelationshipFailsWithNotFound(
         taxIdentifier = utr,
         status = 404,
@@ -424,7 +459,11 @@ with TestData {
         status = 404,
         activeOnly = false
       )
-      getActiveRelationshipFailsWith(mtdItId, 422)
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = mtdItId,
+        status = 422,
+        activeOnly = false
+      )
 
       givenAgentRecordFound(arn, testAgentRecord1)
       givenAgentRecordFound(
@@ -461,7 +500,11 @@ with TestData {
       givenAuditConnector()
 
       // no relationships
-      getActiveRelationshipFailsWith(vrn, 422)
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = vrn,
+        status = 422,
+        activeOnly = false
+      )
       getAllActiveRelationshipFailsWithNotFound(
         taxIdentifier = utr,
         status = 404,
@@ -482,7 +525,11 @@ with TestData {
         status = 404,
         activeOnly = false
       )
-      getActiveRelationshipFailsWith(mtdItId, 422)
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = mtdItId,
+        status = 422,
+        activeOnly = false
+      )
 
       givenAgentRecordFound(arn, testAgentRecord1)
       givenAgentRecordFound(arn2, testAgentRecord2)
@@ -1287,6 +1334,16 @@ with TestData {
         .toFuture()
         .futureValue
 
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = urn,
+        status = 404,
+        activeOnly = false
+      )
+      getAllActiveRelationshipFailsWithNotFound(
+        taxIdentifier = utr,
+        status = 404,
+        activeOnly = false
+      )
       getAllActiveRelationshipFailsWith(
         pptRef,
         404,

@@ -33,8 +33,6 @@ extends RelationshipsBaseControllerISpec
 with TestData
 with HipStub {
 
-  override def additionalConfig: Map[String, Any] = Map("hip.BusinessDetails.enabled" -> true)
-
   val testUrl = s"/agent-client-relationships/itsa-post-signup/create-relationship/$nino"
 
   def mongoPartialAuthRepo: PartialAuthRepository = app.injector.instanceOf[PartialAuthRepository]

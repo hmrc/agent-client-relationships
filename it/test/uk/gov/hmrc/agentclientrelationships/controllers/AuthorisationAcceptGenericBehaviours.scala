@@ -97,7 +97,7 @@ trait AuthorisationAcceptGenericBehaviours {
       "return 201 when client accept invitation and the relationship do not exists in ES and ETMP " in {
 
         // OAuth
-        givenUserIsSubscribedClient(clientId)
+        givenUserIsSubscribedClient(suppliedClientId)
 
         // Validation EnrolmentKey
         if (serviceId == HMRCCBCORG)
@@ -291,7 +291,7 @@ trait AuthorisationAcceptGenericBehaviours {
       "return 404 when Invitation already Accepted " in {
 
         // OAuth
-        givenUserIsSubscribedClient(clientId)
+        givenUserIsSubscribedClient(suppliedClientId)
 
         val pendingInvitation =
           invitationRepo.create(
@@ -337,7 +337,7 @@ trait AuthorisationAcceptGenericBehaviours {
 
       "return 404 when no Invitation " in {
         // OAuth
-        givenUserIsSubscribedClient(clientId)
+        givenUserIsSubscribedClient(suppliedClientId)
 
         val result = doAgentPutRequest(getRequestPath("XX0XXXX000XXXX"))
         result.status shouldBe 404
@@ -349,7 +349,7 @@ trait AuthorisationAcceptGenericBehaviours {
       "return 503 when client accept invitation when ES is not available 503, ETMP relation created" in {
 
         // OAuth
-        givenUserIsSubscribedClient(clientId)
+        givenUserIsSubscribedClient(suppliedClientId)
 
         // Validation EnrolmentKey
         if (serviceId == HMRCCBCORG)
@@ -428,7 +428,7 @@ trait AuthorisationAcceptGenericBehaviours {
       "return 502 when client accept invitation when ETMP creation fail, ES - created" in {
 
         // OAuth
-        givenUserIsSubscribedClient(clientId)
+        givenUserIsSubscribedClient(suppliedClientId)
 
         // Validation EnrolmentKey
         if (serviceId == HMRCCBCORG)
@@ -506,7 +506,7 @@ trait AuthorisationAcceptGenericBehaviours {
       "return 201 when accept invitation and ES relationship exists and ETMP relationship do not exists" in {
 
         // OAuth
-        givenUserIsSubscribedClient(clientId)
+        givenUserIsSubscribedClient(suppliedClientId)
 
         // Validation EnrolmentKey
         if (serviceId == HMRCCBCORG)

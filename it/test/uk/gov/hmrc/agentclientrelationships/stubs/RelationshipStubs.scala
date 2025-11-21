@@ -116,12 +116,4 @@ with UsersGroupsSearchStubs {
     agentCode: String
   ) = givenDelegatedGroupIdsExistFor(enrolmentKey, Set("foo"))
 
-  def givenAgentIsAllocatedAndAssignedToClientForHMCEVATDECORG(
-    vrn: Vrn,
-    agentCode: String
-  ) = {
-    givenDelegatedGroupIdsExistFor(EnrolmentKey(s"HMCE-VATDEC-ORG~VATRegNo~${vrn.value}"), Set("oldvatfoo"))
-    givenGroupInfo("oldvatfoo", agentCode)
-  }
-
 }

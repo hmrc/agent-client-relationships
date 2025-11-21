@@ -62,9 +62,7 @@ with MockitoSugar {
     "features.copy-relationship.mtd-it" -> true,
     "features.recovery-enable" -> false,
     "agent.cache.expires" -> "1 millis",
-    "agent.cache.enabled" -> true,
-    "agent.trackPage.cache.expires" -> "1 millis",
-    "agent.trackPage.cache.enabled" -> true
+    "agent.cache.enabled" -> true
   )
 
   implicit val request: RequestHeader = FakeRequest()
@@ -148,19 +146,6 @@ with MockitoSugar {
         )
       )
       await(connector.getDelegatedGroupIdsFor(vatEnrolmentKey)) should contain("bar")
-    }
-
-    "return some agents's groupIds for given VATRegNo" in {
-      givenAuditConnector()
-      givenDelegatedGroupIdsExistFor(
-        EnrolmentKey("HMCE-VATDEC-ORG~VATRegNo~oldfoo"),
-        Set(
-          "bar",
-          "car",
-          "dar"
-        )
-      )
-      await(connector.getDelegatedGroupIdsForHMCEVATDECORG(Vrn("oldfoo"))) should contain("bar")
     }
 
     "return Empty when VRN not found" in {

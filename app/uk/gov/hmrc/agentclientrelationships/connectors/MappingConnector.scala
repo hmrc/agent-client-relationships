@@ -21,7 +21,6 @@ import play.api.libs.json._
 import play.api.mvc.RequestHeader
 import play.api.http.Status
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.util.HttpApiMonitor
 import uk.gov.hmrc.agentclientrelationships.util.RequestSupport.hc
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.domain.AgentCode
@@ -72,11 +71,10 @@ class MappingConnector @Inject() (
   val metrics: Metrics,
   val ec: ExecutionContext
 )
-extends HttpApiMonitor
-with RequestAwareLogging {
+extends RequestAwareLogging {
 
   def getSaAgentReferencesFor(arn: Arn)(implicit rh: RequestHeader): Future[Seq[SaAgentReference]] = httpClient
-    .get(url"${appConfig.agentMappingUrl}/agent-mapping/mappings/${arn.value}")
+    .get(url"${appConfig.agentMappingUrl}/agent-mapping/mappings/sa/${arn.value}")
     .execute[HttpResponse]
     .map { response =>
       // TODO: Fix error handling
@@ -91,21 +89,4 @@ with RequestAwareLogging {
 
       }
     }
-
-  def getAgentCodesFor(arn: Arn)(implicit rh: RequestHeader): Future[Seq[AgentCode]] = httpClient
-    .get(url"${appConfig.agentMappingUrl}/agent-mapping/mappings/agentcode/${arn.value}")
-    .execute[HttpResponse]
-    .map { response =>
-      // TODO: Fix error handling
-      // Currently
-      // - Only correctly handles 404 status codes
-      // - Incorrectly reports Seq.empty for all other error cases
-      response.status match {
-        case Status.OK => response.json.as[AgentCodeMappings].mappings.map(_.agentCode)
-        case other =>
-          logger.error(s"Error in Digital-Mappings getAgentCodes: $other, ${response.body}")
-          Seq.empty
-      }
-    }
-
 }

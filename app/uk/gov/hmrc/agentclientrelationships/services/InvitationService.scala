@@ -20,7 +20,7 @@ import cats.data.EitherT
 import org.mongodb.scala.MongoException
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.connectors.IfOrHipConnector
+import uk.gov.hmrc.agentclientrelationships.connectors.HipConnector
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.Invitation
 import uk.gov.hmrc.agentclientrelationships.model.Rejected
@@ -55,7 +55,7 @@ import scala.concurrent.Future
 @Singleton
 class InvitationService @Inject() (
   invitationsRepository: InvitationsRepository,
-  ifOrHipConnector: IfOrHipConnector,
+  hipConnector: HipConnector,
   agentAssuranceService: AgentAssuranceService,
   emailService: EmailService,
   appConfig: AppConfig
@@ -206,7 +206,7 @@ extends RequestAwareLogging {
   )(implicit request: RequestHeader): Future[Either[InvitationFailureResponse, ClientId]] =
     (service, suppliedClientId.typeId) match {
       case (MtdIt | MtdItSupp, NinoType.id) =>
-        ifOrHipConnector
+        hipConnector
           .getMtdIdFor(Nino(suppliedClientId.value))
           .map(
             _.fold[Either[InvitationFailureResponse, ClientId]](Right(suppliedClientId))(mdtId =>

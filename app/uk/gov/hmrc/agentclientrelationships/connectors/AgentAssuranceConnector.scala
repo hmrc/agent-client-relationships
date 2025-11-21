@@ -19,7 +19,6 @@ package uk.gov.hmrc.agentclientrelationships.connectors
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentDetailsDesResponse
-import uk.gov.hmrc.agentclientrelationships.util.HttpApiMonitor
 import uk.gov.hmrc.agentclientrelationships.util.RequestSupport.hc
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.http.HttpReads.Implicits._
@@ -39,8 +38,7 @@ class AgentAssuranceConnector @Inject() (
 )(implicit
   appConfig: AppConfig,
   val ec: ExecutionContext
-)
-extends HttpApiMonitor {
+) {
 
   // agent-assurance uses internal auth to support unauthenticated frontend client journey start requests
   private def aaHeaders: (String, String) = HeaderNames.authorisation -> appConfig.internalAuthToken

@@ -26,7 +26,7 @@ import play.api.libs.json.Json.toJson
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.audit.AuditService
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.connectors.IfOrHipConnector
+import uk.gov.hmrc.agentclientrelationships.connectors.HipConnector
 import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiCreateInvitationRequest
 import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiFailureResponse.ErrorBody
@@ -53,16 +53,16 @@ class ApiCreateInvitationControllerISpec
 extends BaseControllerISpec
 with ClientDetailsStub
 with HipStub
-with TestData {
+with TestData
+with CitizenDetailsStub {
 
   override def additionalConfig: Map[String, Any] = Map(
-    "hip.enabled" -> true,
-    "hip.BusinessDetails.enabled" -> true
+    "hip.enabled" -> true
   )
 
   val auditService: AuditService = app.injector.instanceOf[AuditService]
   val authConnector: AuthConnector = app.injector.instanceOf[AuthConnector]
-  val ifOrHipConnector: IfOrHipConnector = app.injector.instanceOf[IfOrHipConnector]
+  val hipConnector: HipConnector = app.injector.instanceOf[HipConnector]
   val clientDetailsService: ClientDetailsService = app.injector.instanceOf[ClientDetailsService]
   val knowFactsCheckService: ApiKnownFactsCheckService = app.injector.instanceOf[ApiKnownFactsCheckService]
   val checkRelationshipsService: CheckRelationshipsOrchestratorService = app.injector.instanceOf[CheckRelationshipsOrchestratorService]
@@ -79,7 +79,7 @@ with TestData {
 
   val controller =
     new ApiCreateInvitationController(
-      ifOrHipConnector,
+      hipConnector,
       clientDetailsService,
       knowFactsCheckService,
       checkRelationshipsService,
@@ -161,7 +161,6 @@ with TestData {
     }
 
     if (taxService == HMRCMTDVAT) {
-      givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMCE-VATDEC-ORG~VATRegNo~101747641"))
       givenDelegatedGroupIdsNotExistFor(EnrolmentKey(taxService, vrn))
       givenVatCustomerInfoExists(vrn = vrn.value, regDate = "2020-01-01")
     }
@@ -207,6 +206,7 @@ with TestData {
     // Expected tests
     allServices.keySet.foreach(taxService =>
       s"return 201 status and valid JSON when invitation is created for $taxService" in {
+        givenClientHasNoRelationshipWithAnyAgentInCESA(nino = nino)
         val inputData: ApiCreateInvitationRequest = allServices(taxService)
 
         val clientId =
@@ -246,6 +246,7 @@ with TestData {
     s"return UnprocessableEntity status and valid JSON CLIENT_REGISTRATION_NOT_FOUND when invitation is created for Alt Itsa - no client mtdItId" in {
       val inputData: ApiCreateInvitationRequest = baseInvitationInputData
 
+      givenCitizenDetailsError(nino.value, 404)
       getStandardStubForCreateInvitation(HMRCMTDIT)
       givenMtdItIdIsUnKnownFor(nino)
       givenNinoIsUnknownFor(mtdItId)
@@ -333,6 +334,7 @@ with TestData {
     }
 
     s"return 201 status and valid JSON for ITSA request when Rejected request already exists in repo" in {
+      givenClientHasNoRelationshipWithAnyAgentInCESA(nino = nino)
       val taxService = HMRCMTDIT
       val inputData: ApiCreateInvitationRequest = baseInvitationInputData
 
@@ -406,6 +408,7 @@ with TestData {
       val taxIdentifier = mtdItId
       val clientId = mtdItId.value
 
+      givenClientHasNoRelationshipWithAnyAgentInCESA(nino = nino)
       getStandardStubForCreateInvitation(HMRCMTDIT)
       getActiveRelationshipsViaClient(taxIdentifier, arn)
       givenDelegatedGroupIdsExistFor(EnrolmentKey(HMRCMTDITSUPP, taxIdentifier), Set("foo"))
@@ -474,6 +477,7 @@ with TestData {
     s"return UNPROCESSABLE_ENTITY status and valid JSON CLIENT_REGISTRATION_NOT_FOUND when invitation is created for Alt Itsa - no client mtdItId and PartialAuth relationship exists" in {
       val inputData: ApiCreateInvitationRequest = baseInvitationInputData
 
+      givenCitizenDetailsError(nino.value, 404)
       getStandardStubForCreateInvitation(HMRCMTDIT)
       givenMtdItIdIsUnKnownFor(nino)
       givenNinoIsUnknownFor(mtdItId)
@@ -665,6 +669,7 @@ with TestData {
 
         givenAuditConnector()
         givenUserAuthorised()
+        givenMtdItIdIsUnKnownFor(nino)
         val expectedJson: JsValue = Json.toJson(
           toJson(
             ErrorBody(

@@ -1,0 +1,16 @@
+sequenceDiagram
+    autonumber
+    participant Upstream
+    participant agent-client-relationships
+    participant des
+    participant if-or-hip
+    participant enrolment-store-proxy
+
+    Upstream->>+agent-client-relationships: GET /agent/:arn/service/:service/client/:clientIdType/:clientId
+    agent-client-relationships->>+des: GET /registration/relationship/arn/:arn/service/:service/id/:id
+    des-->>-agent-client-relationships: Response
+    agent-client-relationships->>+if-or-hip: GET /if/registration/relationship/arn/:arn/service/:service/id/:id
+    if-or-hip-->>-agent-client-relationships: Response
+    agent-client-relationships->>+enrolment-store-proxy: GET /enrolment-store-proxy/enrolment-store/enrolments/:enrolmentKey/groups
+    enrolment-store-proxy-->>-agent-client-relationships: Response
+    agent-client-relationships-->>-Upstream: Final Response

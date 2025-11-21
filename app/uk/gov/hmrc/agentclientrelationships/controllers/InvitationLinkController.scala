@@ -99,6 +99,7 @@ with AuthActions {
     }.toSet
   }
 
+  // scalastyle:off method.length
   def validateInvitationForClient: Action[ValidateInvitationRequest] =
     Action.async(parse.json[ValidateInvitationRequest]) { implicit request =>
       withAuthorisedClientForServiceKeys(request.body.serviceKeys) { enrolments =>
@@ -112,7 +113,8 @@ with AuthActions {
                 .findAllForAgent(
                   validateLinkResponse.arn.value,
                   servicesToSearch,
-                  clientIdsToSearch
+                  clientIdsToSearch,
+                  isSuppliedClientId = true
                 )
                 .flatMap {
                   case Nil =>
