@@ -64,6 +64,17 @@ with TestData {
     testTime,
     testTime
   )
+  val testInvitation2: Invitation = testInvitation.copy(
+    invitationId = "testInvitationId2",
+    clientId = vrn2.value,
+    suppliedClientId = vrn2.value
+  )
+  val testInvitation3: Invitation = testInvitation.copy(
+    invitationId = "testInvitationId3",
+    clientId = vrn3.value,
+    suppliedClientId = vrn3.value
+  )
+
   val invitationRepo: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
   val agentReferenceRepo: AgentReferenceRepository = app.injector.instanceOf[AgentReferenceRepository]
 
@@ -159,9 +170,9 @@ with TestData {
       givenAuthorisedAsValidAgent(fakeRequest, arn.value)
 
       val listOfInvitations = Seq(
-        testInvitation.copy(invitationId = "testInvitationId1"),
-        testInvitation.copy(invitationId = "testInvitationId2"),
-        testInvitation.copy(invitationId = "testInvitationId3")
+        testInvitation,
+        testInvitation2,
+        testInvitation3
       )
 
       await(invitationRepo.collection.insertMany(listOfInvitations).toFuture())
@@ -181,14 +192,14 @@ with TestData {
       val clientNameFilter = URLEncoder.encode("Find Me", "UTF-8")
       val clientNameFilterUrl = testTrackRequestsUrl + "&clientName=" + clientNameFilter
       val fakeRequest = FakeRequest("GET", clientNameFilterUrl)
-      val matchingInvitation = testInvitation.copy(invitationId = "testInvitationId2", clientName = "Find Me")
+      val matchingInvitation = testInvitation2.copy(clientName = "Find Me")
       givenAuditConnector()
       givenAuthorisedAsValidAgent(fakeRequest, arn.value)
 
       val listOfInvitations = Seq(
-        testInvitation.copy(invitationId = "testInvitationId1"),
+        testInvitation,
         matchingInvitation,
-        testInvitation.copy(invitationId = "testInvitationId3")
+        testInvitation3
       )
 
       await(invitationRepo.collection.insertMany(listOfInvitations).toFuture())
@@ -208,14 +219,14 @@ with TestData {
     "correctly filter the result set when the status filter is applied" in {
       val statusFilterUrl = testTrackRequestsUrl + "&statusFilter=Accepted"
       val fakeRequest = FakeRequest("GET", statusFilterUrl)
-      val matchingInvitation = testInvitation.copy(invitationId = "testInvitationId2", status = Accepted)
+      val matchingInvitation = testInvitation2.copy(status = Accepted)
       givenAuditConnector()
       givenAuthorisedAsValidAgent(fakeRequest, arn.value)
 
       val listOfInvitations = Seq(
-        testInvitation.copy(invitationId = "testInvitationId1"),
+        testInvitation,
         matchingInvitation,
-        testInvitation.copy(invitationId = "testInvitationId3")
+        testInvitation3
       )
 
       await(invitationRepo.collection.insertMany(listOfInvitations).toFuture())
@@ -236,9 +247,8 @@ with TestData {
       val clientNameFilter = URLEncoder.encode("Find Me", "UTF-8")
       val allFiltersUrl = testTrackRequestsUrl + "&statusFilter=Accepted&clientName=" + clientNameFilter
       val fakeRequest = FakeRequest("GET", allFiltersUrl)
-      val matchingInvitation = testInvitation
+      val matchingInvitation = testInvitation2
         .copy(
-          invitationId = "testInvitationId2",
           status = Accepted,
           clientName = "Find Me"
         )
@@ -246,9 +256,9 @@ with TestData {
       givenAuthorisedAsValidAgent(fakeRequest, arn.value)
 
       val listOfInvitations = Seq(
-        testInvitation.copy(invitationId = "testInvitationId1"),
+        testInvitation,
         matchingInvitation,
-        testInvitation.copy(invitationId = "testInvitationId3")
+        testInvitation3
       )
 
       await(invitationRepo.collection.insertMany(listOfInvitations).toFuture())
@@ -273,9 +283,9 @@ with TestData {
       givenAuthorisedAsValidAgent(fakeRequest, arn.value)
 
       val listOfInvitations = Seq(
-        testInvitation.copy(invitationId = "testInvitationId1"),
-        testInvitation.copy(invitationId = "testInvitationId2"),
-        testInvitation.copy(invitationId = "testInvitationId3")
+        testInvitation,
+        testInvitation2,
+        testInvitation3
       )
 
       await(invitationRepo.collection.insertMany(listOfInvitations).toFuture())
@@ -300,9 +310,9 @@ with TestData {
       givenAuthorisedAsValidAgent(fakeRequest, arn.value)
 
       val listOfInvitations = Seq(
-        testInvitation.copy(invitationId = "testInvitationId1"),
-        testInvitation.copy(invitationId = "testInvitationId2"),
-        testInvitation.copy(invitationId = "testInvitationId3")
+        testInvitation,
+        testInvitation2,
+        testInvitation3
       )
 
       await(invitationRepo.collection.insertMany(listOfInvitations).toFuture())
@@ -314,8 +324,8 @@ with TestData {
         "pageNumber" -> 1,
         "requests" -> Json.toJson(
           Seq(
-            testInvitation.copy(invitationId = "testInvitationId1"),
-            testInvitation.copy(invitationId = "testInvitationId2")
+            testInvitation,
+            testInvitation2
           )
         ),
         "clientNames" -> Json.arr("testName"),
@@ -333,9 +343,9 @@ with TestData {
       givenAuthorisedAsValidAgent(fakeRequest, arn.value)
 
       val listOfInvitations = Seq(
-        testInvitation.copy(invitationId = "testInvitationId1"),
-        testInvitation.copy(invitationId = "testInvitationId2"),
-        testInvitation.copy(invitationId = "testInvitationId3")
+        testInvitation,
+        testInvitation2,
+        testInvitation3
       )
 
       await(invitationRepo.collection.insertMany(listOfInvitations).toFuture())
@@ -345,7 +355,7 @@ with TestData {
 
       result.json shouldBe Json.obj(
         "pageNumber" -> expectedPageNumber,
-        "requests" -> Json.toJson(Seq(testInvitation.copy(invitationId = "testInvitationId3"))),
+        "requests" -> Json.toJson(Seq(testInvitation3)),
         "clientNames" -> Json.arr("testName"),
         "availableFilters" -> Json.arr("Pending"),
         "totalResults" -> 3

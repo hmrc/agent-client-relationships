@@ -22,7 +22,6 @@ import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 class RelationshipsControllerServiceISpec
 extends RelationshipsBaseControllerISpec
 with RelationshipsControllerGenericBehaviours
-with RelationshipsControllerVATBehaviours
 with RelationshipsControllerITSABehaviours
 with HipStub {
 
@@ -57,8 +56,6 @@ with HipStub {
     vrn,
     "VRN"
   )
-
-  behave like relationshipControllerVATSpecificBehaviours()
 
   // Trust
   behave like relationshipsControllerGetISpec(

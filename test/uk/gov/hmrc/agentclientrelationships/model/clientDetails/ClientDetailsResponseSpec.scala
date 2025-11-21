@@ -37,7 +37,9 @@ extends UnitSpec {
           Seq("test@email.com"),
           Some(Email),
           hasPendingInvitation = true,
-          Some("HMRC-MTD-VAT")
+          Some("HMRC-MTD-IT"),
+          Some(false),
+          Some(Seq("A12345"))
         )
 
         val expectedJson = Json.obj(
@@ -47,7 +49,9 @@ extends UnitSpec {
           "knownFacts" -> Json.arr("test@email.com"),
           "knownFactType" -> "Email",
           "hasPendingInvitation" -> true,
-          "hasExistingRelationshipFor" -> "HMRC-MTD-VAT"
+          "hasExistingRelationshipFor" -> "HMRC-MTD-IT",
+          "isMapped" -> false,
+          "clientsLegacyRelationships" -> Json.arr("A12345")
         )
 
         Json.toJson(model) shouldBe expectedJson

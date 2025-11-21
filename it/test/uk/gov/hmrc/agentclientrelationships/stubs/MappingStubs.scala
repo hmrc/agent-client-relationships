@@ -27,7 +27,7 @@ trait MappingStubs {
     arn: Arn,
     saAgentReference: SaAgentReference
   ) = stubFor(
-    get(urlEqualTo(s"/agent-mapping/mappings/${arn.value}")).willReturn(
+    get(urlEqualTo(s"/agent-mapping/mappings/sa/${arn.value}")).willReturn(
       aResponse()
         .withStatus(200)
         .withBody(s"""{"mappings":[{"arn":"${arn.value}","saAgentReference":"${saAgentReference.value}"}]}""")
@@ -38,7 +38,7 @@ trait MappingStubs {
     arn: Arn,
     refs: Seq[SaAgentReference]
   ) = stubFor(
-    get(urlEqualTo(s"/agent-mapping/mappings/${arn.value}")).willReturn(
+    get(urlEqualTo(s"/agent-mapping/mappings/sa/${arn.value}")).willReturn(
       aResponse()
         .withStatus(200)
         .withBody(s"""{"mappings":[${refs
@@ -47,32 +47,8 @@ trait MappingStubs {
     )
   )
 
-  def givenArnIsKnownFor(
-    arn: Arn,
-    agentCode: AgentCode
-  ) = stubFor(
-    get(urlEqualTo(s"/agent-mapping/mappings/agentcode/${arn.value}")).willReturn(
-      aResponse()
-        .withStatus(200)
-        .withBody(s"""{"mappings":[{"arn":"${arn.value}","agentCode":"${agentCode.value}"}]}""")
-    )
-  )
-
-  def givenArnIsKnownForAgentCodes(
-    arn: Arn,
-    agentCodes: Seq[AgentCode]
-  ) = stubFor(
-    get(urlEqualTo(s"/agent-mapping/mappings/agentcode/${arn.value}")).willReturn(
-      aResponse()
-        .withStatus(200)
-        .withBody(s"""{"mappings":[${agentCodes
-            .map(agentCode => s"""{"arn":"${arn.value}","agentCode":"${agentCode.value}"}""")
-            .mkString(",")}]}""")
-    )
-  )
-
   def givenArnIsUnknownFor(arn: Arn) = stubFor(
-    get(urlEqualTo(s"/agent-mapping/mappings/${arn.value}")).willReturn(aResponse().withStatus(404))
+    get(urlEqualTo(s"/agent-mapping/mappings/sa/${arn.value}")).willReturn(aResponse().withStatus(404))
   )
 
   def givenServiceReturnsServerError() = stubFor(

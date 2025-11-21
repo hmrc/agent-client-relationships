@@ -133,13 +133,6 @@ extends RequestAwareLogging {
 
     }
 
-  def getDelegatedGroupIdsForHMCEVATDECORG(vrn: Vrn)(implicit request: RequestHeader): Future[Set[String]] = getDelegatedGroupIdsFor(
-    EnrolmentKey(
-      "HMCE-VATDEC-ORG",
-      Seq(Identifier("VATRegNo", vrn.value))
-    )
-  )
-
   // ES2 - delegated
   def getEnrolmentsAssignedToUser(
     userId: String,

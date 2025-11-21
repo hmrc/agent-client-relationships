@@ -148,19 +148,6 @@ with MockitoSugar {
       await(connector.getDelegatedGroupIdsFor(vatEnrolmentKey)) should contain("bar")
     }
 
-    "return some agents's groupIds for given VATRegNo" in {
-      givenAuditConnector()
-      givenDelegatedGroupIdsExistFor(
-        EnrolmentKey("HMCE-VATDEC-ORG~VATRegNo~oldfoo"),
-        Set(
-          "bar",
-          "car",
-          "dar"
-        )
-      )
-      await(connector.getDelegatedGroupIdsForHMCEVATDECORG(Vrn("oldfoo"))) should contain("bar")
-    }
-
     "return Empty when VRN not found" in {
       givenAuditConnector()
       givenDelegatedGroupIdsNotExistFor(vatEnrolmentKey)
