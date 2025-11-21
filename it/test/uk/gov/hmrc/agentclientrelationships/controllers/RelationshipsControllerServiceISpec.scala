@@ -58,8 +58,6 @@ with HipStub {
     "VRN"
   )
 
-  behave like relationshipControllerVATSpecificBehaviours()
-
   // Trust
   behave like relationshipsControllerGetISpec(
     Service.Trust.id,
