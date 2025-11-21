@@ -113,7 +113,7 @@ with AuthActions {
               currentRelationship = currentRelationshipMain.orElse(currentRelationshipSupp)
               (isMapped, legacyRelationships) <-
                 currentRelationship match {
-                  case None if Nino.isValid(clientId) && refinedService.equals(HMRCMTDIT) =>
+                  case None if !pendingInvitation && Nino.isValid(clientId) && refinedService.equals(HMRCMTDIT) =>
                     checkAndCopyRelationshipsService
                       .lookupCesaForOldRelationship(arn, Nino(clientId)).map {
                         case (mappedRef, legacyRefs) => (Some(mappedRef.nonEmpty), Some(legacyRefs.map(_.value)))

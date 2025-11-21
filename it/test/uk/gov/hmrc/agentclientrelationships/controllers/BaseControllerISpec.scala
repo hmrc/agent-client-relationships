@@ -127,7 +127,7 @@ with IntegrationPatience {
   def repo: RelationshipCopyRecordRepository = new RelationshipCopyRecordRepository(mongoComponent)
   def deleteRecordRepository: DeleteRecordRepository = new DeleteRecordRepository(mongoComponent)
 
-  override def beforeEach() = {
+  override def beforeEach(): Unit = {
     super.beforeEach()
     givenAuditConnector()
     await(mongoComponent.database.listCollectionNames().toFuture().flatMap { collections =>

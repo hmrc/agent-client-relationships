@@ -31,14 +31,17 @@ import uk.gov.hmrc.agentclientrelationships.services.CheckRelationshipsOrchestra
 import uk.gov.hmrc.agentclientrelationships.services.ClientDetailsService
 import uk.gov.hmrc.agentclientrelationships.stubs.ClientDetailsStub
 import uk.gov.hmrc.agentclientrelationships.stubs.HipStub
+import uk.gov.hmrc.agentclientrelationships.stubs.MappingStubs
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdIt
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdItSupp
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Vat
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Vrn
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.Nino
+import uk.gov.hmrc.domain.SaAgentReference
 
 import java.time.Instant
 import java.time.LocalDate
@@ -47,7 +50,8 @@ import scala.concurrent.ExecutionContext
 class ClientDetailsControllerISpec
 extends BaseControllerISpec
 with ClientDetailsStub
-with HipStub {
+with HipStub
+with MappingStubs {
 
   val clientDetailsService: ClientDetailsService = app.injector.instanceOf[ClientDetailsService]
   val authConnector: AuthConnector = app.injector.instanceOf[AuthConnector]
@@ -69,12 +73,9 @@ with HipStub {
   }
 
   ".findClientDetails" should {
-
     "return 200 status and the expected JSON body" when {
-
       "the service supports multiple agents" when {
-
-        "there are no pending invitations or existing relationship" in {
+        "there are no pending invitations or existing relationship and no mapping info or legacy relationship for SA" in {
           val request = FakeRequest("GET", "/agent-client-relationships/client/HMRC-MTD-IT/details/AA000001B")
           setupCommonStubs(request)
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")))
@@ -82,6 +83,7 @@ with HipStub {
           givenMtdItsaBusinessDetailsExists(Nino("AA000001B"), MtdItId("XAIT0000111122"))
           givenNinoItsaBusinessDetailsExists(MtdItId("XAIT0000111122"), Nino("AA000001B"))
           givenClientHasNoRelationshipWithAnyAgentInCESA(nino = Nino("AA000001B"))
+          givenArnIsUnknownFor(Arn("XARN1234567"))
 
           val result = doGetRequest(request.uri)
           result.status shouldBe 200
@@ -90,7 +92,86 @@ with HipStub {
             "isOverseas" -> false,
             "knownFacts" -> Json.arr("AA11AA"),
             "knownFactType" -> "PostalCode",
-            "hasPendingInvitation" -> false
+            "hasPendingInvitation" -> false,
+            "isMapped" -> false,
+            "clientsLegacyRelationships" -> Json.arr()
+          )
+        }
+
+        "there are no pending invitations or existing relationship and no mapping info but there is a legacy relationship for SA" in {
+          val request = FakeRequest("GET", "/agent-client-relationships/client/HMRC-MTD-IT/details/AA000001B")
+          setupCommonStubs(request)
+          givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")))
+          givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
+          givenMtdItsaBusinessDetailsExists(Nino("AA000001B"), MtdItId("XAIT0000111122"))
+          givenNinoItsaBusinessDetailsExists(MtdItId("XAIT0000111122"), Nino("AA000001B"))
+          givenArnIsUnknownFor(Arn("XARN1234567"))
+          givenClientHasRelationshipWithAgentInCESA(Nino("AA000001B"), "A12345")
+
+          val result = doGetRequest(request.uri)
+          result.status shouldBe 200
+          result.json shouldBe Json.obj(
+            "name" -> "Erling Haal",
+            "isOverseas" -> false,
+            "knownFacts" -> Json.arr("AA11AA"),
+            "knownFactType" -> "PostalCode",
+            "hasPendingInvitation" -> false,
+            "isMapped" -> false,
+            "clientsLegacyRelationships" -> Json.arr("A12345")
+          )
+        }
+
+        "there are no pending invitations or existing relationship and there is an existing mapping for a non signed-up SA client" in {
+          val request = FakeRequest("GET", "/agent-client-relationships/client/HMRC-MTD-IT/details/AA000001B")
+          setupCommonStubs(request)
+          givenMtdItIdIsUnKnownFor(Nino("AA000001B"))
+          givenItsaCitizenDetailsExists("AA000001B")
+          givenItsaDesignatoryDetailsExists("AA000001B")
+          givenArnIsKnownFor(Arn("XARN1234567"), SaAgentReference("A12345"))
+          givenClientHasRelationshipWithAgentInCESA(Nino("AA000001B"), "A12345")
+
+          val result = doGetRequest(request.uri)
+          result.status shouldBe 200
+          result.json shouldBe Json.obj(
+            "name" -> "Matthew Kovacic",
+            "isOverseas" -> false,
+            "knownFacts" -> Json.arr("AA11AA"),
+            "knownFactType" -> "PostalCode",
+            "hasPendingInvitation" -> false,
+            "isMapped" -> true,
+            "clientsLegacyRelationships" -> Json.arr("A12345")
+          )
+        }
+
+        "there are no pending invitations or existing relationship and there is an existing mapping for a signed-up SA client (relationship is created)" in {
+          val request = FakeRequest("GET", "/agent-client-relationships/client/HMRC-MTD-IT/details/AA000001B")
+          setupCommonStubs(request)
+          givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")))
+          givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
+          givenMtdItsaBusinessDetailsExists(Nino("AA000001B"), MtdItId("XAIT0000111122"))
+          givenNinoItsaBusinessDetailsExists(MtdItId("XAIT0000111122"), Nino("AA000001B"))
+          givenArnIsKnownFor(Arn("XARN1234567"), SaAgentReference("A12345"))
+          givenClientHasRelationshipWithAgentInCESA(Nino("AA000001B"), "A12345")
+          givenAgentCanBeAllocated(MtdItId("XAIT0000111122"), Arn("XARN1234567"))
+          givenAgentGroupExistsFor("foo")
+          givenAdminUser("foo", "bar")
+          givenEnrolmentAllocationSucceeds(
+            "foo",
+            "bar",
+            EnrolmentKey(Service.MtdIt, MtdItId("XAIT0000111122")),
+            "NQJUEJCWT14"
+          )
+          givenCacheRefresh(Arn("XARN1234567"))
+
+          val result = doGetRequest(request.uri)
+          result.status shouldBe 200
+          result.json shouldBe Json.obj(
+            "name" -> "Erling Haal",
+            "isOverseas" -> false,
+            "knownFacts" -> Json.arr("AA11AA"),
+            "knownFactType" -> "PostalCode",
+            "hasPendingInvitation" -> false,
+            "hasExistingRelationshipFor" -> "HMRC-MTD-IT"
           )
         }
 
