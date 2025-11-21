@@ -1,0 +1,18 @@
+%% Last Updated: 2025-11-20
+%% Git Commit SHA: b2138b4e3958677748c1820c3d715d4fbb9d3b2c
+%% Analysis Version: 1.0
+
+sequenceDiagram
+    participant Agent
+    participant ADC as AgentDetailsController
+    participant AAS as agent-assurance
+
+    Agent->>+ADC: GET /agent/:arn/details
+    Note over ADC: withAuthorisedAsAgent<br/>Agent authentication required
+
+    ADC->>+AAS: getAgentRecord(arn)
+    Note over AAS: GET /agent-assurance/agent-record/:arn<br/>Returns agent details (even if suspended)
+    AAS-->>-ADC: AgentDetailsDesResponse
+
+    ADC-->>-Agent: 200 OK with agent details JSON
+

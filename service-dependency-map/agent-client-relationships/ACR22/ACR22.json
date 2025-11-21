@@ -1,0 +1,261 @@
+{
+  "apiId": "ACR22",
+  "apiTitle": "ITSA Post-Signup Create Relationship",
+  "description": "⚠️ HIGH COMPLEXITY ENDPOINT - Creates an ITSA (MTD-IT) relationship for a client after they have signed up for Making Tax Digital. Two distinct flows: 1) Converts partial authorisation to full relationship if partial auth exists, or 2) Copies legacy SA (Self Assessment) relationship from CESA/DES to MTD-IT if no partial auth but legacy relationship exists. Used during client MTD signup to establish agent-client relationship. Includes cleanup of same-agent duplicate relationships.",
+  "method": "POST",
+  "path": "/agent-client-relationships/itsa-post-signup/create-relationship/{nino}",
+  "pathParameters": {
+    "nino": "Client's National Insurance Number"
+  },
+  "queryParameters": {},
+  "requestBody": {},
+  "responses": {
+    "201": "Created - Relationship successfully created. Returns JSON with service field (HMRC-MTD-IT or HMRC-MTD-IT-SUPP)",
+    "401": "Unauthorized - Agent authentication failed",
+    "404": "Not Found - Either MTDITID not found for NINO, or no partial auth and no legacy SA relationship exists",
+    "500": "Internal Server Error - Relationship creation failed or locked"
+  },
+  "authentication": "Agent authentication via withAuthorisedAsAgent - requires valid agent enrolment (HMRC-AS-AGENT)",
+  "audience": "internal",
+  "controller": "ItsaPostSignupController",
+  "controllerMethod": "itsaPostSignupCreateRelationship",
+  "services": [
+    {
+      "name": "CheckAndCopyRelationshipsService",
+      "alias": "CACRS",
+      "method": "tryCreateITSARelationshipFromPartialAuthOrCopyAcross",
+      "description": "Orchestrates relationship creation - tries partial auth first, then legacy SA copy"
+    },
+    {
+      "name": "CreateRelationshipsService",
+      "alias": "CRS",
+      "method": "createRelationship",
+      "description": "Creates relationship in EACD and ETMP with recovery mechanism"
+    },
+    {
+      "name": "ItsaDeauthAndCleanupService",
+      "alias": "IDCS",
+      "method": "deleteSameAgentRelationship",
+      "description": "Cleans up duplicate same-agent relationships after successful creation"
+    },
+    {
+      "name": "AuditService",
+      "alias": "AS",
+      "method": "sendAuditEvent",
+      "description": "Sends audit events for relationship creation"
+    }
+  ],
+  "interactions": "See ACR22.mmd for complete sequence diagram with two distinct flows",
+  "externalDependencies": [
+    {
+      "name": "HIP/IF",
+      "description": "Converts NINO to MTDITID. Creates agent relationship in ETMP",
+      "method": "getMtdIdFor, createAgentRelationship",
+      "note": "getMtdIdFor called at start. createAgentRelationship called during relationship creation"
+    },
+    {
+      "name": "DES (CESA)",
+      "description": "Retrieves legacy SA agent references for copy-across flow",
+      "method": "getClientSaAgentSaReferences",
+      "note": "Only called if no partial auth found and not MTD-IT-SUPP service"
+    },
+    {
+      "name": "EACD (Enrolment Store Proxy)",
+      "description": "Gets agent's principal group ID and allocates MTD-IT enrolment to agent",
+      "method": "getPrincipalGroupIdFor, allocateEnrolmentToAgent",
+      "note": "Called during relationship creation in both flows"
+    }
+  ],
+  "databaseCollections": [
+    {
+      "name": "partial-auth",
+      "operation": "READ/DELETE",
+      "description": "Partial auth flow: Finds active partial auth by nino and arn. Deletes partial auth after successful relationship creation"
+    },
+    {
+      "name": "invitations",
+      "operation": "UPDATE",
+      "description": "Partial auth flow: Updates invitation status from PartialAuth to Accepted with MTDITID"
+    },
+    {
+      "name": "relationship-copy-record",
+      "operation": "INSERT/DELETE",
+      "description": "Both flows: Tracks relationship creation progress for recovery. Created at start, deleted on completion"
+    }
+  ],
+  "responseModel": {
+    "success": {
+      "service": "Service code (HMRC-MTD-IT or HMRC-MTD-IT-SUPP)"
+    },
+    "example": {
+      "service": "HMRC-MTD-IT"
+    }
+  },
+  "businessLogic": {
+    "mtdItIdLookup": {
+      "description": "Converts NINO to MTDITID at start",
+      "logic": "Calls HIP/IF getMtdIdFor(nino). If MTDITID not found, returns 404 immediately. MTDITID is required for all subsequent operations as it's the identifier for MTD-IT enrolment key."
+    },
+    "flowSelection": {
+      "description": "Two distinct flows based on partial auth existence",
+      "logic": "1. Checks for active partial auth for this nino+arn. 2. If partial auth exists, creates relationship from partial auth. 3. If no partial auth, checks eligibility for legacy SA copy (not eligible if service is MTD-IT-SUPP or partial auth was requested). 4. If eligible, attempts to copy legacy SA relationship from CESA/DES."
+    },
+    "partialAuthFlow": {
+      "description": "Converts existing partial authorisation to full relationship",
+      "logic": "1. Finds active partial auth record (service, nino, arn). 2. Creates full relationship in EACD and ETMP using partial auth service. 3. On success: a) Deletes partial auth record, b) Updates invitation status from PartialAuth to Accepted, c) Cleans up duplicate same-agent relationships, d) Returns 201 with service from partial auth."
+    },
+    "legacySACopyFlow": {
+      "description": "Copies legacy SA relationship from CESA to MTD-IT",
+      "logic": "1. Calls DES to get client's SA agent references (legacy relationships). 2. If references exist, creates MTD-IT relationship in EACD and ETMP. 3. On success: a) Cleans up duplicate same-agent relationships, b) Returns 201 with HMRC-MTD-IT service. 4. If no references found, returns 404."
+    },
+    "relationshipCreation": {
+      "description": "Creates relationship in EACD and ETMP with recovery",
+      "logic": "Uses CreateRelationshipsService.createRelationship which: 1. Gets agent's principal group ID from EACD. 2. Creates relationship-copy-record for tracking. 3. Allocates MTD-IT enrolment to agent's group in EACD. 4. Creates agent relationship in ETMP (HIP). 5. Deletes relationship-copy-record on success. Uses failIfAllocateAgentInESFails=true for stricter error handling."
+    },
+    "partialAuthCleanup": {
+      "description": "Removes partial auth after successful conversion",
+      "logic": "1. Deletes active partial auth record from database. 2. Updates invitation record from PartialAuth status to Accepted status with MTDITID. This completes the partial auth journey - client initially gave partial consent, now has full MTD-IT relationship."
+    },
+    "sameAgentCleanup": {
+      "description": "Removes duplicate relationships for same agent",
+      "logic": "Calls ItsaDeauthAndCleanupService.deleteSameAgentRelationship which removes any pre-existing relationships between this agent and client for the same service. Prevents duplicate relationships that could cause issues."
+    },
+    "eligibilityCheck": {
+      "description": "Determines if legacy SA copy is allowed",
+      "logic": "Copy-across is NOT eligible if: 1. Partial auth was found (takes precedence), 2. Service is MTD-IT-SUPP (supplementary not copied), 3. Partial auth was previously requested for this client-agent pair. Only copies if none of these conditions apply."
+    }
+  },
+  "errorHandling": [
+    {
+      "scenario": "MTDITID not found for NINO",
+      "response": "404 Not Found",
+      "message": "no MTDITID found for nino",
+      "note": "Client not registered for MTD or NINO invalid"
+    },
+    {
+      "scenario": "No partial auth found",
+      "response": "404 Not Found",
+      "message": "no partial auth",
+      "note": "Partial auth flow only - when partial auth doesn't exist and copy-across not attempted"
+    },
+    {
+      "scenario": "No partial auth and no legacy SA relationship",
+      "response": "404 Not Found",
+      "message": "no partial-auth and no legacy SA relationship",
+      "note": "Both flows failed - neither partial auth nor legacy SA relationship exists"
+    },
+    {
+      "scenario": "Relationship creation locked",
+      "response": "500 Internal Server Error",
+      "message": "FoundButLockedCouldNotCopy",
+      "note": "Another process is creating this relationship - recovery lock in use"
+    },
+    {
+      "scenario": "Relationship creation failed",
+      "response": "500 Internal Server Error",
+      "message": "FoundAndFailedToCopy or create relationship failed",
+      "note": "EACD or ETMP call failed during relationship creation"
+    },
+    {
+      "scenario": "Agent not authenticated",
+      "response": "401 Unauthorized",
+      "message": "Standard auth failure response",
+      "note": "Missing or invalid agent credentials"
+    }
+  ],
+  "useCases": [
+    {
+      "scenario": "Client signs up for MTD-IT with existing partial auth",
+      "flow": [
+        "Client previously gave partial authorisation to agent",
+        "Client completes MTD-IT signup and gets MTDITID",
+        "System called with client's NINO",
+        "System finds MTDITID via HIP",
+        "System finds active partial auth for this agent+client",
+        "Creates full MTD-IT relationship in EACD and ETMP",
+        "Deletes partial auth record",
+        "Updates invitation to Accepted",
+        "Cleans up any duplicate relationships",
+        "Returns 201 with service from partial auth"
+      ],
+      "response": {
+        "status": 201,
+        "body": {
+          "service": "HMRC-MTD-IT"
+        }
+      },
+      "frontend_action": "Show success message. Partial authorisation has been converted to full relationship. Agent now has full MTD-IT access."
+    },
+    {
+      "scenario": "Client signs up for MTD-IT with legacy SA relationship",
+      "flow": [
+        "Client has legacy SA relationship with agent in CESA",
+        "No partial auth exists for this agent+client",
+        "Client completes MTD-IT signup",
+        "System finds MTDITID",
+        "No partial auth found",
+        "System checks DES for legacy SA relationships",
+        "Finds SA agent references",
+        "Copies to MTD-IT relationship in EACD and ETMP",
+        "Cleans up duplicates",
+        "Returns 201 with HMRC-MTD-IT"
+      ],
+      "response": {
+        "status": 201,
+        "body": {
+          "service": "HMRC-MTD-IT"
+        }
+      },
+      "frontend_action": "Show success message. Legacy SA relationship has been migrated to MTD-IT. Agent maintains access under new digital system."
+    },
+    {
+      "scenario": "Client signs up but no prior relationship exists",
+      "flow": [
+        "Client has no partial auth or legacy SA relationship",
+        "System finds MTDITID",
+        "No partial auth found",
+        "No legacy SA relationships in DES",
+        "Returns 404"
+      ],
+      "response": {
+        "status": 404,
+        "body": "no partial-auth and no legacy SA relationship"
+      },
+      "frontend_action": "Client needs to explicitly authorise agent. Direct to invitation/authorisation flow to create new relationship."
+    },
+    {
+      "scenario": "Client NINO not registered for MTD",
+      "flow": [
+        "System attempts to get MTDITID for NINO",
+        "HIP returns None (client not registered)",
+        "Returns 404 immediately"
+      ],
+      "response": {
+        "status": 404,
+        "body": "no MTDITID found for nino"
+      },
+      "frontend_action": "Client must complete MTD-IT registration before relationship can be created."
+    }
+  ],
+  "importantNotes": [
+    "⚠️ HIGH COMPLEXITY - Two distinct flows (partial auth conversion vs legacy SA copy)",
+    "⚠️ Partial auth takes precedence over legacy SA copy",
+    "⚠️ Copy-across NOT eligible if service is MTD-IT-SUPP (supplementary)",
+    "⚠️ Uses recovery mechanism - relationship-copy-record tracks progress",
+    "⚠️ failIfAllocateAgentInESFails=true for stricter EACD error handling",
+    "⚠️ Cleans up duplicate same-agent relationships after creation",
+    "⚠️ Returns 500 (not 423) if relationship creation locked or failed",
+    "✅ Converts NINO to MTDITID at start via HIP",
+    "✅ Partial auth flow: Deletes partial auth and updates invitation to Accepted",
+    "✅ Legacy SA flow: Copies SA relationship from CESA/DES to MTD-IT",
+    "✅ Both flows create in EACD (enrolment allocation) and ETMP (agent relationship)",
+    "✅ Returns service in response body (HMRC-MTD-IT or HMRC-MTD-IT-SUPP)",
+    "✅ Used during client MTD signup to establish agent relationship automatically"
+  ],
+  "metadata": {
+    "lastUpdated": "2025-11-20",
+    "gitCommitSha": "b2138b4e3958677748c1820c3d715d4fbb9d3b2c",
+    "analysisVersion": "1.0"
+  }
+}
+

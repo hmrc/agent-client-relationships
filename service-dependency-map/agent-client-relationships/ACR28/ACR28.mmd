@@ -1,0 +1,153 @@
+%% Last Updated: 2025-11-20
+%% Git Commit SHA: b2138b4e3958677748c1820c3d715d4fbb9d3b2c
+%% Analysis Version: 1.0
+
+sequenceDiagram
+    participant Stride as Stride User
+    participant SCDC as StrideClientDetailsController
+    participant VS as ValidationService
+    participant SCDS as StrideClientDetailsService
+    participant InvRepo as InvitationsRepository
+    participant AAS as AgentAssuranceService
+    participant AM as Agent Maintainer
+    participant PAuthRepo as PartialAuthRepository
+    participant FRS as FindRelationshipsService
+    participant IFOrHIP as IF/HIP Connector
+    participant AFIRC as AgentFiRelationshipConnector
+    participant CDS as ClientDetailsService
+    participant HIP as HIP<br/>(ETMP)
+    participant AF as Agent-Fi-Relationship
+    participant DES as DES<br/>(Citizen/Designatory/Subscription Details)
+
+    Stride->>+SCDC: GET /stride/client-details/service/{service}<br/>/client/{clientIdType}/{clientId}
+
+    SCDC->>+VS: validateForEnrolmentKey(service, clientIdType, clientId)
+
+    alt Valid EnrolmentKey
+        VS-->>SCDC: EnrolmentKey
+    else Invalid
+        VS-->>SCDC: Error
+        Note over SCDC: Validation failed - will return 400
+    end
+
+    VS-->>-SCDC: Validation complete
+
+    alt Invalid validation
+        SCDC-->>Stride: 400 Bad Request
+        Note over SCDC: Request terminates - flow ends here
+    end
+
+    Note over SCDC: Stride authorization check
+
+    SCDC->>+SCDS: getClientDetailsWithChecks(enrolmentKey)
+
+    Note over SCDS: Extract clientId and services from EnrolmentKey<br/>For MTD-IT, include MTD-IT-SUPP
+
+    par Get Pending Invitations
+        SCDS->>+InvRepo: findAllPendingForSuppliedClient(clientId, services)
+        InvRepo-->>-SCDS: Pending invitations
+
+        loop For each invitation
+            SCDS->>+AAS: getNonSuspendedAgentRecord(arn)
+            AAS->>+AM: GET /agent-maintainer/agent/{arn}
+            AM-->>-AAS: AgentRecord
+
+            alt Agent not suspended
+                AAS-->>SCDS: Some(AgentRecord)
+            else Agent suspended
+                AAS-->>-SCDS: None (filtered out)
+            end
+        end
+
+        Note over SCDS: Build InvitationWithAgentName objects<br/>(filtered to non-suspended agents)
+    and Find Active Relationship
+        alt MTD-IT service
+            SCDS->>+PAuthRepo: findMainAgent(nino)
+
+            alt PartialAuth main agent found
+                PAuthRepo-->>-SCDS: PartialAuth record
+                Note over SCDS: Use PartialAuth as active relationship
+            else No PartialAuth
+                PAuthRepo-->>SCDS: None
+                SCDS->>+FRS: getItsaRelationshipForClient(nino, service)
+                FRS->>+IFOrHIP: getMtdIdFor(nino)
+                IFOrHIP-->>-FRS: MtdItId
+                FRS->>+IFOrHIP: getActiveClientRelationships(mtdItId, service)
+                IFOrHIP->>+HIP: GET /registration/relationship
+                HIP-->>-IFOrHIP: Active relationship
+                IFOrHIP-->>-FRS: ActiveRelationship
+                FRS-->>-SCDS: Some(ActiveRelationship)
+            end
+        else IRV service (PERSONAL-INCOME-RECORD)
+            SCDS->>+AFIRC: findIrvActiveRelationshipForClient(nino)
+            AFIRC->>+AF: GET /relationships/active<br/>service=PERSONAL-INCOME-RECORD
+            AF-->>-AFIRC: IRV relationships
+            AFIRC-->>-SCDS: ClientRelationships
+            Note over SCDS: Take first relationship if exists
+        else Other services
+            SCDS->>+FRS: getActiveRelationshipsForClient(taxIdentifier, service)
+            FRS->>+IFOrHIP: getActiveClientRelationships(taxIdentifier, service)
+            IFOrHIP->>+HIP: GET /registration/relationship
+            HIP-->>-IFOrHIP: Active relationship
+            IFOrHIP-->>-FRS: ActiveRelationship
+            FRS-->>-SCDS: Some(ActiveRelationship)
+        end
+
+        alt Active relationship found
+            SCDS->>+AAS: getAgentRecord(arn)
+            AAS->>+AM: GET /agent-maintainer/agent/{arn}
+            AM-->>-AAS: AgentRecord with agentName
+            AAS-->>-SCDS: ActiveMainAgent(agentName, arn, service)
+        else No relationship
+            Note over SCDS: activeMainAgent = None
+        end
+    end
+
+    Note over SCDS: Get Client Name
+
+    alt Client name from invitation
+        Note over SCDS: Use clientName from first pending invitation
+    else No invitations or no name
+        SCDS->>+CDS: findClientDetails(service, clientId)
+
+        alt NINO
+            CDS->>+DES: getCitizenDetails(nino)
+            DES-->>-CDS: Citizen name
+        else VRN
+            CDS->>+DES: getVrnDisplayDetails(vrn)
+            DES-->>-CDS: Business name
+        else UTR/URN
+            CDS->>+DES: getTrustDetails(utr/urn)
+            DES-->>-CDS: Trust name
+        else CGT
+            CDS->>+DES: getCgtSubscriptionDetails(cgtRef)
+            DES-->>-CDS: CGT subscriber name
+        else PPT
+            CDS->>+DES: getPptSubscriptionDetails(pptRef)
+            DES-->>-CDS: PPT subscriber name
+        else CBC
+            CDS->>+DES: getCbcSubscriptionDetails(cbcId)
+            DES-->>-CDS: CBC subscriber name
+        else PLR
+            CDS->>+DES: getPillar2SubscriptionDetails(plrId)
+            DES-->>-CDS: Pillar2 subscriber name
+        end
+
+        CDS-->>-SCDS: ClientDetailsResponse(name)
+    end
+
+    alt Client name found
+        SCDS-->>SCDC: Some(ClientDetailsStrideResponse)
+    else No client name
+        SCDS-->>SCDC: None
+    end
+
+    SCDS-->>-SCDC: Processing complete
+
+    alt Success response
+        SCDC-->>Stride: 200 OK - Client details with invitations and active agent
+    else Not found response
+        SCDC-->>Stride: 404 Not Found
+    end
+
+    SCDC-->>-Stride: Response sent

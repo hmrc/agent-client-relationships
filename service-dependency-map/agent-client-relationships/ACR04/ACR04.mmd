@@ -1,0 +1,45 @@
+%% Last Updated: 2025-11-20
+%% Git Commit SHA: b2138b4e3958677748c1820c3d715d4fbb9d3b2c
+%% Analysis Version: 1.0
+
+sequenceDiagram
+    participant Agent as Agent/Frontend
+    participant RC as RelationshipsController
+    participant DES
+    participant CACRS as CheckAndCopyRelationshipsService
+    participant AM as agent-mapping
+    participant Audit as AuditService
+
+    Agent->>+RC: GET /agent/:arn/client/:nino/legacy-mapped-relationship
+    Note over RC: withAuthorisedAsAgent(arn)<br/>Validates agent authentication
+
+    RC->>RC: Set audit data<br/>(arn, nino, service=mtd-it,<br/>howCreated=hasLegacyMapping)
+
+    RC->>+DES: getClientSaAgentSaReferences(nino)
+    Note over DES: GET /registration/relationship/nino/:nino<br/>Returns active SA agent references from CESA
+    DES->>DES: Filter agents where:<br/>- hasAgent = true<br/>- agentCeasedDate is empty
+    DES-->>-RC: Seq[SaAgentReference]
+
+    alt Client has SA agent references
+        RC->>+CACRS: intersection(clientReferences)
+        CACRS->>+AM: getSaAgentReferencesFor(arn)
+        Note over AM: GET /agent-mapping/mappings/:arn<br/>Returns SA agent references mapped to ARN
+        AM-->>-CACRS: Seq[SaAgentReference]
+
+        CACRS->>CACRS: Calculate intersection:<br/>agentRefs ∩ clientRefs
+        CACRS-->>-RC: Set[SaAgentReference] (matching refs)
+
+        alt Matching references found
+            RC->>+Audit: sendCheckCesaAndPartialAuthAuditEvent()
+            Note over Audit: Audit with matching SA refs
+            Audit-->>-RC: Audit sent
+            RC-->>Agent: 204 No Content<br/>(Legacy SA relationship mapped to ARN)
+        else No matching references (404 from mapping)
+            RC-->>Agent: 200 OK<br/>(Legacy SA relationship exists but NOT mapped)
+        else No matching references (empty intersection)
+            RC-->>Agent: 200 OK<br/>(Legacy SA relationship exists but NOT mapped)
+        end
+    else No SA agent references
+        RC-->>-Agent: 404 Not Found<br/>(No legacy SA relationship)
+    end
+

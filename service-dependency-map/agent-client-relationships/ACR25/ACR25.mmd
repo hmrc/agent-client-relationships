@@ -1,0 +1,49 @@
+%% Last Updated: 2025-11-20
+%% Git Commit SHA: b2138b4e3958677748c1820c3d715d4fbb9d3b2c
+%% Analysis Version: 1.0
+
+sequenceDiagram
+    participant Client
+    participant CISC as CleanUpInvitationStatusController
+    participant CISS as CleanUpInvitationStatusService
+    participant IR as InvitationsRepository
+    participant Mongo as MongoDB<br/>invitations
+
+    Client->>+CISC: PUT /cleanup-invitation-status
+    Note over CISC: Authenticate (authorised)
+    Note over CISC: Parse JSON request body:<br/>arn, clientId, service
+
+    CISC->>+CISS: validateService(service)
+    alt Valid service
+        CISS-->>CISC: Right(Service)
+    else Invalid service
+        CISS-->>CISC: Left(UnsupportedService)
+        CISC-->>Client: 501 Not Implemented
+    end
+
+    CISC->>+CISS: validateClientId(service, clientId)
+    alt Valid clientId
+        CISS-->>CISC: Right(ClientId)
+    else Invalid clientId
+        CISS-->>CISC: Left(InvalidClientId)
+        CISC-->>Client: 400 Bad Request
+    end
+
+    CISC->>+CISS: deauthoriseInvitation(arn, clientId,<br/>service, "HMRC")
+    CISS->>+IR: deauthAcceptedInvitation(arn, clientId,<br/>service, "HMRC")
+
+    IR->>+Mongo: updateOne() - Find by status IN (Accepted, Partialauth),<br/>service, clientId, arn
+    Note over Mongo: Updates:<br/>- status: DeAuthorised<br/>- lastUpdated: now<br/>- relationshipEndedBy: HMRC
+
+    alt Invitation found and updated
+        Mongo-->>-IR: Modified count = 1
+        IR-->>-CISS: true
+        CISS-->>-CISC: Right(Unit)
+        CISC-->>-Client: 204 No Content
+    else No matching invitation
+        Mongo-->>IR: Modified count = 0
+        IR-->>CISS: false
+        CISS-->>CISC: Left(InvitationNotFound)
+        CISC-->>Client: 404 Not Found
+    end
+

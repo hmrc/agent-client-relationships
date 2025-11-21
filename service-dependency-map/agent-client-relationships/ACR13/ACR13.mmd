@@ -1,0 +1,42 @@
+%% Last Updated: 2025-11-20
+%% Git Commit SHA: b2138b4e3958677748c1820c3d715d4fbb9d3b2c
+%% Analysis Version: 1.0
+
+sequenceDiagram
+    participant Client
+    participant ARI as AuthorisationRequestInfoController
+    participant IS as InvitationService
+    participant IR as InvitationsRepository
+    participant Mongo as MongoDB<br/>(invitations collection)
+    participant AAS as agent-assurance
+
+    Client->>+ARI: GET /client/authorisation-request-info/:invitationId
+    Note over ARI: No initial auth check<br/>(auth happens after invitation lookup)
+
+    ARI->>+IS: findInvitationForClient(invitationId)
+    IS->>+IR: findOneByIdForClient(invitationId)
+    IR->>+Mongo: findOne({"invitationId": invitationId})
+    Note over Mongo: Query invitations collection
+    Mongo-->>-IR: Invitation or None
+    IR-->>-IS: Option[Invitation]
+    IS-->>-ARI: Option[Invitation]
+
+    alt Invitation not found
+        ARI-->>Client: 404 Not Found
+    else Invitation found
+        ARI->>ARI: authorisedUser(arn, clientId, [])
+        Note over ARI: Validates user is:<br/>- Agent with ARN, OR<br/>- Client with matching clientId
+
+        alt User not authorized
+            ARI-->>Client: 403 Forbidden<br/>(NoPermissionToPerformOperation)
+        else User authorized
+            ARI->>+AAS: getAgentRecord(arn)
+            Note over AAS: GET /agent-assurance/agent-record/:arn<br/>Returns agent details (even if suspended)
+            AAS-->>-ARI: AgentDetailsDesResponse
+
+            ARI->>ARI: Build AuthorisationRequestInfoForClient:<br/>- agentName (from agent details)<br/>- service (from invitation)<br/>- status (from invitation)
+
+            ARI-->>-Client: 200 OK with JSON
+        end
+    end
+

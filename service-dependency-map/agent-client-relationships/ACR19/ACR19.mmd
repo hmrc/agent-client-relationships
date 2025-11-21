@@ -1,0 +1,37 @@
+%% Last Updated: 2025-11-20
+%% Git Commit SHA: b2138b4e3958677748c1820c3d715d4fbb9d3b2c
+%% Analysis Version: 1.0
+
+sequenceDiagram
+    participant Client
+    participant ARIC as AuthorisationRequestInfoController
+    participant AA as AuthActions
+    participant IS as InvitationService
+    participant IR as InvitationsRepository
+    participant Mongo as MongoDB
+
+    Client->>+ARIC: GET /agent/{arn}/authorisation-requests<br/>?statusFilter=X&clientName=Y&pageNumber=1&pageSize=20
+    Note over ARIC: withAuthorisedAsAgent
+    ARIC->>+AA: Authenticate agent
+    AA-->>-ARIC: Authenticated as agentArn
+
+    alt agentArn matches arn in path
+        ARIC->>+IS: trackRequests(arn, statusFilter, clientName, pageNumber, pageSize)
+        IS->>+IR: trackRequests(arn, statusFilter, clientName, pageNumber, pageSize)
+
+        Note over IR: Build MongoDB aggregation pipeline
+        IR->>+Mongo: Aggregation pipeline on invitations collection
+        Note over Mongo: 1. Filter by ARN<br/>2. Sort by created desc<br/>3. Facet aggregation:<br/>   - clientNamesFacet (unique client names)<br/>   - availableFiltersFacet (unique statuses)<br/>   - totalResultsFacet (count with filters)<br/>   - requests (paginated results)
+
+        Note over IR: Apply filters:<br/>- statusFilter (Accepted includes PartialAuth)<br/>- clientName (URL decoded, encrypted match)<br/>- Pagination (skip/limit)
+
+        Mongo-->>-IR: MongoTrackRequestsResult
+        Note over IR: Build TrackRequestsResult<br/>with requests, clientNames,<br/>availableFilters, totalResults,<br/>filtersApplied
+        IR-->>-IS: TrackRequestsResult
+        IS-->>-ARIC: TrackRequestsResult
+
+        ARIC-->>Client: 200 OK - Paginated results
+    else agentArn does not match arn
+        ARIC-->>Client: 403 Forbidden
+    end
+    deactivate ARIC

@@ -1,0 +1,291 @@
+{
+  "apiId": "ACR17",
+  "apiTitle": "Create Authorization Request (Invitation)",
+  "description": "Allows an agent to create a new authorization request (invitation) for a client. Validates the request parameters, retrieves agent details from agent-assurance, optionally converts NINO to MTD IT ID for MTD-IT/MTD-IT-SUPP services, calculates expiry date, creates invitation record in MongoDB with Pending status, and audits the creation. Returns 201 Created with invitationId. Prevents duplicate invitations via MongoDB unique index. Does NOT send email to client (email sent separately or client accesses via invitation link).",
+  "method": "POST",
+  "path": "/agent/{arn}/authorisation-request",
+  "pathParameters": {
+    "arn": "Agent Reference Number (e.g., TARN0000001)"
+  },
+  "requestBody": {
+    "CreateInvitationRequest": {
+      "service": "Service identifier (e.g., HMRC-MTD-IT, HMRC-MTD-VAT)",
+      "clientIdType": "Type of client identifier (e.g., ni, vrn, utr, urn, CGTPDRef, PPTRef, cbcId, plrId)",
+      "clientId": "Client identifier value",
+      "clientName": "Client's name for display",
+      "clientType": "Optional - personal or business"
+    },
+    "example": {
+      "service": "HMRC-MTD-IT",
+      "clientIdType": "ni",
+      "clientId": "AB123456C",
+      "clientName": "John Smith",
+      "clientType": "personal"
+    }
+  },
+  "responses": {
+    "201": "Created - invitation created successfully, returns invitationId",
+    "400": "Bad Request - invalid payload, unsupported service/clientIdType/clientType",
+    "401": "Unauthorized - not authenticated",
+    "403": "Forbidden - duplicate invitation exists",
+    "404": "Not Found - client registration not found (MTD IT ID lookup failed)"
+  },
+  "authentication": "Basic authorised() check - no agent-specific validation",
+  "audience": "internal",
+  "controller": "InvitationController",
+  "controllerMethod": "createInvitation",
+  "services": [
+    {
+      "name": "InvitationService",
+      "alias": "IS",
+      "method": "createInvitation",
+      "description": "Orchestrates validation, agent details retrieval, client ID conversion, and invitation creation"
+    },
+    {
+      "name": "agent-assurance",
+      "alias": "AAS",
+      "method": "getAgentRecord",
+      "description": "Retrieves agent details including agency name and email"
+    },
+    {
+      "name": "IF/HIP",
+      "method": "getMtdIdFor",
+      "description": "Converts NINO to MTD IT ID for MTD-IT/MTD-IT-SUPP services"
+    },
+    {
+      "name": "InvitationsRepository",
+      "alias": "IR",
+      "method": "create",
+      "description": "Creates invitation record in MongoDB"
+    },
+    {
+      "name": "AuditService",
+      "alias": "AS",
+      "method": "sendCreateInvitationAuditEvent",
+      "description": "Audits invitation creation"
+    }
+  ],
+  "externalDependencies": [
+    {
+      "name": "agent-assurance",
+      "description": "Provides agent details (agency name, email)",
+      "note": "Uses getAgentRecord - returns details even if agent suspended"
+    },
+    {
+      "name": "IF/HIP",
+      "description": "Converts NINO to MTD IT ID",
+      "services": "Only for MTD-IT and MTD-IT-SUPP with NINO",
+      "note": "If MTD IT ID not found, uses NINO (for alt-itsa)"
+    }
+  ],
+  "databaseCollections": [
+    {
+      "name": "invitations",
+      "operation": "INSERT",
+      "description": "Creates new invitation with Pending status",
+      "fields": {
+        "invitationId": "Generated unique ID",
+        "arn": "Agent Reference Number",
+        "service": "Service identifier",
+        "clientId": "Client identifier (may be MTD IT ID or original)",
+        "suppliedClientId": "Original client identifier from request",
+        "clientIdType": "Type of client identifier",
+        "suppliedClientIdType": "Type from request",
+        "clientName": "Client name from request",
+        "agentName": "From agent-assurance",
+        "agencyEmail": "From agent-assurance",
+        "status": "Pending",
+        "created": "Current timestamp",
+        "lastUpdated": "Current timestamp",
+        "expiryDate": "now + invitationExpiringDuration",
+        "clientType": "Optional - personal/business"
+      },
+      "indexes": "Unique index on (arn, service, clientId, status) prevents duplicates"
+    }
+  ],
+  "businessLogic": {
+    "validation": {
+      "step1": "Validate JSON payload structure",
+      "step2": "Validate clientIdType (ni, vrn, utr, etc.)",
+      "step3": "Validate service (HMRC-MTD-IT, HMRC-MTD-VAT, etc.)",
+      "step4": "Validate clientType (personal, business, or None)"
+    },
+    "clientIdConversion": {
+      "description": "For MTD-IT/MTD-IT-SUPP with NINO: attempts to get MTD IT ID",
+      "process": "Calls IF/HIP getMtdIdFor(nino)",
+      "if_found": "Uses MTD IT ID as clientId, stores NINO as suppliedClientId",
+      "if_not_found": "Uses NINO as clientId (for alt-itsa), stores NINO as suppliedClientId",
+      "other_services": "Uses supplied clientId as-is"
+    },
+    "expiryDate": {
+      "description": "Calculated as current time + invitationExpiringDuration",
+      "default_duration": "Configured in app config (typically 21 days)",
+      "format": "LocalDate"
+    },
+    "duplicatePrevention": {
+      "description": "MongoDB unique index on (arn, service, clientId, status)",
+      "error": "MongoException with 'E11000 duplicate key error'",
+      "response": "403 Forbidden (DuplicateInvitationError)",
+      "note": "Prevents multiple Pending invitations for same agent/service/client"
+    },
+    "noEmailSent": {
+      "description": "This endpoint does NOT send email to client",
+      "reason": "Client accesses invitation via link (ACR10) or agent provides invitation ID",
+      "note": "Email functionality may be in separate service or manual process"
+    }
+  },
+  "errorHandling": [
+    {
+      "scenario": "Invalid JSON payload",
+      "response": "400 Bad Request",
+      "message": "Invalid payload: {errors}"
+    },
+    {
+      "scenario": "Unsupported service",
+      "response": "400 Bad Request",
+      "logged": "Unsupported service \"{service}\""
+    },
+    {
+      "scenario": "Invalid clientId format",
+      "response": "400 Bad Request (InvalidClientId)",
+      "logged": "Invalid clientId \"{clientId}\", for service type \"{service}\""
+    },
+    {
+      "scenario": "Unsupported clientIdType",
+      "response": "400 Bad Request (UnsupportedClientIdType)",
+      "logged": "Unsupported clientIdType \"{clientIdType}\", for service type \"{service}\""
+    },
+    {
+      "scenario": "Unsupported clientType",
+      "response": "400 Bad Request (UnsupportedClientType)",
+      "logged": "Unsupported clientType \"{clientType}\""
+    },
+    {
+      "scenario": "Duplicate invitation exists",
+      "response": "403 Forbidden (DuplicateInvitationError)",
+      "logged": "An authorisation request for this service has already been created and is awaiting the client's response."
+    },
+    {
+      "scenario": "Client registration not found",
+      "response": "404 Not Found (ClientRegistrationNotFound)",
+      "logged": "The Client's MTDfB registration or SAUTR (if alt-itsa is enabled) was not found."
+    },
+    {
+      "scenario": "Not authenticated",
+      "response": "401 Unauthorized"
+    }
+  ],
+  "useCases": [
+    {
+      "scenario": "Agent creates MTD-IT invitation with NINO",
+      "request": {
+        "service": "HMRC-MTD-IT",
+        "clientIdType": "ni",
+        "clientId": "AB123456C",
+        "clientName": "John Smith",
+        "clientType": "personal"
+      },
+      "flow": [
+        "Validates request",
+        "Gets agent details from agent-assurance",
+        "Calls IF/HIP to get MTD IT ID for NINO",
+        "Creates invitation with MTD IT ID as clientId",
+        "Returns invitationId"
+      ],
+      "response": {
+        "status": 201,
+        "body": {
+          "invitationId": "ABBBBBBBBBBBB"
+        }
+      }
+    },
+    {
+      "scenario": "Agent creates VAT invitation",
+      "request": {
+        "service": "HMRC-MTD-VAT",
+        "clientIdType": "vrn",
+        "clientId": "123456789",
+        "clientName": "ABC Ltd",
+        "clientType": "business"
+      },
+      "flow": [
+        "Validates request",
+        "Gets agent details",
+        "Uses VRN as-is (no conversion)",
+        "Creates invitation",
+        "Returns invitationId"
+      ],
+      "response": {
+        "status": 201,
+        "body": {
+          "invitationId": "CCCCCCCCCCCCC"
+        }
+      }
+    },
+    {
+      "scenario": "Agent tries to create duplicate invitation",
+      "flow": [
+        "Agent already has Pending invitation for this client/service",
+        "MongoDB unique index prevents duplicate",
+        "Returns 403 Forbidden"
+      ],
+      "response": {
+        "status": 403,
+        "error": "DuplicateInvitationError"
+      }
+    },
+    {
+      "scenario": "Agent provides unsupported service",
+      "request": {
+        "service": "INVALID-SERVICE",
+        "clientIdType": "ni",
+        "clientId": "AB123456C"
+      },
+      "response": {
+        "status": 400,
+        "error": "UnsupportedService"
+      }
+    }
+  ],
+  "importantNotes": [
+    "✅ Creates invitation in MongoDB with Pending status",
+    "✅ Calculates expiry date (now + configured duration)",
+    "✅ For MTD-IT/MTD-IT-SUPP: attempts NINO → MTD IT ID conversion",
+    "✅ Stores both clientId (potentially converted) and suppliedClientId (original)",
+    "✅ Retrieves agent details from agent-assurance (name, email)",
+    "✅ Prevents duplicates via MongoDB unique index",
+    "✅ Audits invitation creation",
+    "✅ Returns 201 Created with invitationId",
+    "⚠️ Does NOT send email to client",
+    "⚠️ Basic auth check only - no validation ARN matches authenticated agent",
+    "⚠️ Works even if agent is suspended (uses getAgentRecord)",
+    "⚠️ If MTD IT ID not found, uses NINO (for alt-itsa support)"
+  ],
+  "supportedServices": [
+    "HMRC-MTD-IT",
+    "HMRC-MTD-IT-SUPP",
+    "HMRC-MTD-VAT",
+    "HMRC-TERS-ORG",
+    "HMRC-TERSNT-ORG",
+    "HMRC-CGT-PD",
+    "HMRC-PPT-ORG",
+    "HMRC-CBC-ORG",
+    "HMRC-PILLAR2-ORG"
+  ],
+  "supportedClientIdTypes": [
+    "ni (NINO)",
+    "vrn (VAT Registration Number)",
+    "utr (Unique Taxpayer Reference)",
+    "urn (Unique Reference Number)",
+    "CGTPDRef (CGT Reference)",
+    "PPTRef (PPT Reference)",
+    "cbcId (CBC ID)",
+    "plrId (Pillar2 ID)"
+  ],
+  "metadata": {
+    "lastUpdated": "2025-11-20",
+    "gitCommitSha": "b2138b4e3958677748c1820c3d715d4fbb9d3b2c",
+    "analysisVersion": "1.0"
+  }
+}
+

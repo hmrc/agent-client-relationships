@@ -1,0 +1,199 @@
+{
+  "apiId": "ACR18",
+  "apiTitle": "Get Agent Authorisation Request Info",
+  "description": "Retrieves details about a specific authorisation request (invitation) for an agent, including a shareable invitation link. The endpoint returns the full invitation details along with a generated link (UID and normalized agent name) that the agent can share with clients. This is used by agent frontends to display invitation details and generate shareable links for client onboarding.",
+  "method": "GET",
+  "path": "/agent-client-relationships/agent/{arn}/authorisation-request-info/{invitationId}",
+  "pathParameters": {
+    "arn": "Agent Reference Number - must match the authenticated agent",
+    "invitationId": "Unique identifier for the invitation (UUID format)"
+  },
+  "queryParameters": {},
+  "requestBody": {},
+  "responses": {
+    "200": "Success - Returns AuthorisationRequestInfo containing the invitation and shareable link",
+    "401": "Unauthorized - Agent authentication failed",
+    "403": "Forbidden - Authenticated agent ARN does not match the ARN in the path",
+    "404": "Not Found - No invitation found with the given ID for this agent"
+  },
+  "authentication": "Agent authentication via withAuthorisedAsAgent - requires valid agent enrolment (HMRC-AS-AGENT)",
+  "audience": "internal",
+  "controller": "AuthorisationRequestInfoController",
+  "controllerMethod": "get",
+  "services": [
+    {
+      "name": "InvitationService",
+      "alias": "IS",
+      "method": "findInvitationForAgent",
+      "description": "Retrieves invitation from database by ARN and invitation ID"
+    },
+    {
+      "name": "InvitationLinkService",
+      "alias": "ILS",
+      "method": "createLink",
+      "description": "Creates or retrieves shareable invitation link for the agent"
+    },
+    {
+      "name": "AgentAssuranceService",
+      "alias": "AAS",
+      "method": "getAgentRecord",
+      "description": "Retrieves agent details including agency name for link generation"
+    }
+  ],
+  "interactions": "See ACR18.mmd for complete sequence diagram",
+  "externalDependencies": [
+    {
+      "name": "Agent Assurance (via AgentAssuranceService)",
+      "description": "Retrieves agent record to get current agency name",
+      "method": "getAgentRecord",
+      "note": "Used to normalize agency name for link generation"
+    }
+  ],
+  "databaseCollections": [
+    {
+      "name": "invitations",
+      "operation": "READ",
+      "description": "Queries invitation by arn and invitationId to retrieve invitation details"
+    },
+    {
+      "name": "agent-reference",
+      "operation": "READ/INSERT/UPDATE",
+      "description": "Retrieves existing agent reference record by ARN, or creates new one if not exists. Updates normalisedAgentNames array if current name not present"
+    }
+  ],
+  "responseModel": {
+    "AuthorisationRequestInfo": {
+      "authorisationRequest": "Full Invitation object containing all invitation details",
+      "agentLink": "CreateLinkResponse containing uid and normalizedAgentName"
+    },
+    "Invitation": {
+      "invitationId": "Unique invitation identifier (UUID)",
+      "arn": "Agent Reference Number",
+      "service": "Service code (HMRC-MTD-IT, HMRC-MTD-VAT, etc.)",
+      "clientId": "Client identifier (MTDITID, VRN, etc.)",
+      "clientIdType": "Type of client identifier",
+      "suppliedClientId": "Original supplied client identifier (e.g., NINO)",
+      "suppliedClientIdType": "Type of supplied identifier",
+      "clientName": "Name of the client",
+      "agencyName": "Name of the agency",
+      "agencyEmail": "Email address of the agency",
+      "warningEmailSent": "Whether warning email has been sent",
+      "expiredEmailSent": "Whether expired email has been sent",
+      "status": "Invitation status (Pending, Accepted, Rejected, Expired, etc.)",
+      "relationshipEndedBy": "Optional - who ended the relationship",
+      "clientType": "Optional - personal or business",
+      "expiryDate": "Date when invitation expires",
+      "created": "Timestamp when invitation was created",
+      "lastUpdated": "Timestamp when invitation was last updated"
+    },
+    "CreateLinkResponse": {
+      "uid": "Unique identifier for the agent reference (used in shareable link)",
+      "normalizedAgentName": "Normalized version of agency name for URL"
+    },
+    "example": {
+      "authorisationRequest": {
+        "invitationId": "A1B2C3D4E5F6",
+        "arn": "TARN0000001",
+        "service": "HMRC-MTD-IT",
+        "clientId": "ABCDE1234567890",
+        "clientIdType": "MTDITID",
+        "suppliedClientId": "AB123456C",
+        "suppliedClientIdType": "NI",
+        "clientName": "John Smith",
+        "agencyName": "Test Agency Ltd",
+        "agencyEmail": "agent@test-agency.com",
+        "warningEmailSent": false,
+        "expiredEmailSent": false,
+        "status": "Pending",
+        "relationshipEndedBy": null,
+        "clientType": "personal",
+        "expiryDate": "2025-12-17",
+        "created": "2025-11-17T10:00:00Z",
+        "lastUpdated": "2025-11-17T10:00:00Z"
+      },
+      "agentLink": {
+        "uid": "ABC123XYZ789",
+        "normalizedAgentName": "test-agency-ltd"
+      }
+    }
+  },
+  "businessLogic": {
+    "invitationLookup": {
+      "description": "Finds invitation for specific agent and invitation ID",
+      "logic": "Queries invitations collection with both arn and invitationId to ensure the invitation belongs to the requesting agent. This prevents agents from accessing other agents' invitations."
+    },
+    "linkGeneration": {
+      "description": "Creates or retrieves shareable invitation link",
+      "logic": "1. Gets current agent record from Agent Assurance. 2. Normalizes agency name for URL usage. 3. Looks up existing agent-reference record by ARN. 4. If exists and normalized name not in list, updates the array. 5. If not exists, generates new UID and creates record. 6. Returns UID and normalized name for use in shareable links."
+    },
+    "agentNameNormalization": {
+      "description": "Converts agency name to URL-friendly format",
+      "logic": "Normalizes agency name by removing special characters, converting to lowercase, and replacing spaces with hyphens. Multiple normalized names can be associated with one agent reference to handle agency name changes."
+    }
+  },
+  "errorHandling": [
+    {
+      "scenario": "Invitation not found for agent",
+      "response": "404 Not Found",
+      "message": "No body returned",
+      "note": "Could mean invitation doesn't exist or belongs to different agent"
+    },
+    {
+      "scenario": "Agent not authenticated",
+      "response": "401 Unauthorized",
+      "message": "Standard auth failure response",
+      "note": "Missing or invalid agent credentials"
+    },
+    {
+      "scenario": "Authenticated ARN doesn't match path ARN",
+      "response": "403 Forbidden",
+      "message": "Standard auth failure response",
+      "note": "Agent can only access their own invitations"
+    }
+  ],
+  "useCases": [
+    {
+      "scenario": "Agent wants to view invitation details",
+      "flow": [
+        "Agent authenticates and makes GET request with their ARN and invitation ID",
+        "System retrieves invitation from database",
+        "System generates or retrieves shareable link for the agent",
+        "Returns full invitation details with link"
+      ],
+      "response": {
+        "status": 200,
+        "body": "AuthorisationRequestInfo with invitation and link"
+      },
+      "frontend_action": "Display invitation details (client name, service, status, etc.) and provide shareable link UI element for agent to copy/share"
+    },
+    {
+      "scenario": "Agent wants to get shareable link for invitation",
+      "flow": [
+        "Agent requests invitation details",
+        "System generates link with UID and normalized agent name",
+        "Link can be shared with client for them to accept invitation"
+      ],
+      "response": {
+        "status": 200,
+        "body": "Link details in agentLink field"
+      },
+      "frontend_action": "Display shareable link URL (e.g., /invitations/UID/normalized-agent-name) for agent to copy and send to client"
+    }
+  ],
+  "importantNotes": [
+    "✅ Returns both invitation details and shareable link in single call",
+    "✅ Agent-reference records have no TTL - they persist indefinitely",
+    "✅ Multiple normalized agent names can exist per agent reference (to handle agency name changes)",
+    "✅ The UID is unique per ARN and used in shareable invitation links",
+    "⚠️ Only returns invitations belonging to the authenticated agent (enforces agent isolation)",
+    "⚠️ Returns 404 if invitation not found OR if it belongs to different agent (does not reveal existence)",
+    "⚠️ Link generation queries Agent Assurance to get current agency name",
+    "⚠️ If agent-reference record doesn't exist, creates one with generated UID",
+    "⚠️ The normalized agent name is stored for future link validation when clients use the link"
+  ],
+  "metadata": {
+    "lastUpdated": "2025-11-20",
+    "gitCommitSha": "b2138b4e3958677748c1820c3d715d4fbb9d3b2c",
+    "analysisVersion": "1.0"
+  }
+}

@@ -1,0 +1,321 @@
+{
+  "apiId": "ACR08",
+  "apiTitle": "Get Client Tax Agents Data (Comprehensive Dashboard)",
+  "description": "Retrieves comprehensive tax agent data for the authenticated client, combining information from multiple sources: active/inactive relationships from ETMP, pending/expired/rejected invitations from MongoDB, partial authorizations for IR-SA, and detailed agent information including suspension status. This provides a complete dashboard view of all agent interactions including current authorizations, pending invitations, and historical events. The endpoint orchestrates parallel queries across multiple services and databases, enriches data with agent details, and filters out suspended agents.",
+  "method": "GET",
+  "path": "/client/authorisations-relationships",
+  "pathParameters": {},
+  "queryParameters": {},
+  "responses": {
+    "200": "Returns comprehensive ClientTaxAgentsData with three main sections: agentsInvitations, agentsAuthorisations, and authorisationEvents",
+    "400": "Bad Request - error in request processing",
+    "401": "Unauthorized - client not authenticated via Government Gateway",
+    "403": "Forbidden - user is not an Individual or Organisation",
+    "500": "Internal Server Error - unexpected error during processing",
+    "503": "Service Unavailable - error retrieving agent details or relationships"
+  },
+  "authentication": "Client authentication via Government Gateway with all enrolments and NINO retrieval",
+  "audience": "internal",
+  "controller": "ClientTaxAgentsDataController",
+  "controllerMethod": "findClientTaxAgentsData",
+  "services": [
+    {
+      "name": "ClientTaxAgentsDataService",
+      "alias": "CTADS",
+      "method": "getClientTaxAgentsData",
+      "description": "Main orchestrator that combines data from multiple sources and enriches with agent details"
+    },
+    {
+      "name": "InvitationsRepository",
+      "alias": "IR",
+      "method": "findAllBy",
+      "description": "Queries MongoDB invitations collection for all client invitations (pending, expired, rejected, cancelled)"
+    },
+    {
+      "name": "FindRelationshipsService",
+      "alias": "FRS",
+      "method": "getAllRelationshipsForClient",
+      "description": "Queries ETMP via HIP for all relationships (active and inactive) for non-PIR services"
+    },
+    {
+      "name": "agent-fi-relationship",
+      "alias": "AFRC",
+      "method": "findIrvActiveRelationshipForClient, findIrvInactiveRelationshipForClient",
+      "description": "Queries agent-fi-relationship for PIR (Personal Income Record) relationships"
+    },
+    {
+      "name": "PartialAuthRepository",
+      "alias": "PAuth",
+      "method": "findByNino",
+      "description": "Queries MongoDB partial_auth collection for IR-SA partial authorizations"
+    },
+    {
+      "name": "InvitationLinkService",
+      "alias": "ILS",
+      "method": "findAgentDetailsByArn",
+      "description": "Retrieves detailed agent information including agency name"
+    },
+    {
+      "name": "agent-assurance",
+      "alias": "AAS",
+      "method": "getAgentRecordWithChecks",
+      "description": "Checks agent suspension status and retrieves agent details"
+    }
+  ],
+  "interactions": "See detailed interaction steps in full documentation - over 25 steps involving parallel queries and data enrichment",
+  "externalDependencies": [
+    {
+      "name": "IF/HIP",
+      "alias": "HIP",
+      "description": "HMRC Integration Platform - queries ETMP for client relationships"
+    },
+    {
+      "name": "ETMP",
+      "description": "Enterprise Tax Management Platform - stores agent-client relationship records"
+    },
+    {
+      "name": "agent-fi-relationship",
+      "alias": "AFRC",
+      "description": "Handles PIR (Personal Income Record) relationship data"
+    }
+  ],
+  "databaseCollections": [
+    {
+      "name": "invitations",
+      "operation": "READ",
+      "description": "Stores invitation records (Pending, Expired, Rejected, Cancelled, Accepted)"
+    },
+    {
+      "name": "partial_auth",
+      "operation": "READ",
+      "description": "Stores IR-SA partial authorization records"
+    }
+  ],
+  "authenticationDetails": {
+    "provider": "GovernmentGateway",
+    "affinityGroups": [
+      "Individual",
+      "Organisation"
+    ],
+    "retrieves": "allEnrolments and nino",
+    "description": "Retrieves all client enrolments plus NINO for comprehensive data gathering"
+  },
+  "supportedServices": [
+    "HMRC-MTD-IT",
+    "HMRC-MTD-IT-SUPP",
+    "HMRC-MTD-VAT",
+    "HMRC-TERS-ORG",
+    "HMRC-TERSNT-ORG",
+    "HMRC-CGT-PD",
+    "HMRC-PPT-ORG",
+    "HMRC-CBC-ORG",
+    "HMRC-PILLAR2-ORG",
+    "PERSONAL-INCOME-RECORD (PIR - via agent-fi-relationship)"
+  ],
+  "responseModel": {
+    "ClientTaxAgentsData": {
+      "agentsInvitations": "AgentsInvitationsResponse - pending invitations grouped by agent",
+      "agentsAuthorisations": "AgentsAuthorisationsResponse - active authorizations grouped by agent",
+      "authorisationEvents": "AuthorisationEventsResponse - chronological event history"
+    },
+    "AgentsInvitationsResponse": {
+      "agentInvitations": "Array of AgentInvitation objects"
+    },
+    "AgentInvitation": {
+      "agentName": "Agent agency name",
+      "arn": "Agent Reference Number",
+      "invitations": "Array of Invitation objects with uid, service, clientId, expiryDate, status"
+    },
+    "AgentsAuthorisationsResponse": {
+      "agentAuthorisations": "Array of AgentAuthorisations objects"
+    },
+    "AgentAuthorisations": {
+      "agentName": "Agent agency name",
+      "arn": "Agent Reference Number",
+      "authorisations": "Array of Authorisation objects with uid, service, clientId, date (dateFrom), arn, agentName"
+    },
+    "AuthorisationEventsResponse": {
+      "authorisationEvents": "Array of AuthorisationEvent objects"
+    },
+    "AuthorisationEvent": {
+      "agentName": "Agent agency name",
+      "service": "Service identifier",
+      "eventDate": "Date of event",
+      "eventType": "One of: Accepted, DeAuthorised, Expired, Rejected, Cancelled"
+    }
+  },
+  "dataSourceCombination": {
+    "invitations": {
+      "source": "MongoDB invitations collection",
+      "filter": "All invitations for client IDs (including NINO)",
+      "used_for": [
+        "agentsInvitations (pending)",
+        "authorisationEvents (expired/rejected/cancelled)"
+      ]
+    },
+    "relationships_etmp": {
+      "source": "ETMP via HIP (activeOnly=false)",
+      "filter": "All relationships for enrolled services (excluding PIR)",
+      "used_for": [
+        "agentsAuthorisations (active)",
+        "authorisationEvents (accepted/deauthorised)"
+      ]
+    },
+    "relationships_pir": {
+      "source": "agent-fi-relationship",
+      "filter": "Active and inactive PIR relationships for NINO",
+      "used_for": [
+        "agentsAuthorisations (active PIR)",
+        "authorisationEvents (PIR accepted/deauthorised)"
+      ]
+    },
+    "partial_auth": {
+      "source": "MongoDB partial_auth collection",
+      "filter": "All partial auth records for NINO",
+      "used_for": [
+        "agentsAuthorisations (active IR-SA partial)",
+        "authorisationEvents (partial auth accepted/deauthorised)"
+      ]
+    }
+  },
+  "businessLogic": {
+    "agentsInvitations": {
+      "description": "Groups pending invitations by agent ARN",
+      "filtering": "Only includes invitations in Pending status",
+      "enrichment": "Adds agent name from InvitationLinkService",
+      "suspendedAgentHandling": "Filters out invitations from suspended agents"
+    },
+    "agentsAuthorisations": {
+      "description": "Groups active authorizations by agent ARN",
+      "filtering": "Only includes active relationships (isActive=true)",
+      "enrichment": "Adds agent name and creates unique UIDs for each authorization",
+      "suspendedAgentHandling": "Filters out authorizations from suspended agents",
+      "sources": "Combines ETMP relationships, PIR relationships, and partial auth records"
+    },
+    "authorisationEvents": {
+      "description": "Chronological timeline of all authorization events",
+      "event_types": {
+        "Accepted": "From active authorizations (dateFrom)",
+        "DeAuthorised": "From inactive authorizations (dateTo)",
+        "Expired": "From invitations with Expired status",
+        "Rejected": "From invitations with Rejected status",
+        "Cancelled": "From invitations with Cancelled status"
+      },
+      "enrichment": "Adds agent name for each event",
+      "suspendedAgentHandling": "Filters out events from suspended agents"
+    }
+  },
+  "errorHandling": [
+    {
+      "scenario": "Agent details retrieval fails",
+      "response": "503 Service Unavailable with message",
+      "error_type": "RelationshipFailureResponse.ErrorRetrievingAgentDetails"
+    },
+    {
+      "scenario": "Relationship retrieval fails from ETMP/HIP",
+      "response": "503 Service Unavailable with message",
+      "error_type": "RelationshipFailureResponse.ErrorRetrievingRelationship"
+    },
+    {
+      "scenario": "Bad request error",
+      "response": "400 Bad Request",
+      "error_type": "RelationshipFailureResponse.RelationshipBadRequest"
+    },
+    {
+      "scenario": "Relationship not found (404 from external services)",
+      "handling": "Recovered as empty list, processing continues",
+      "note": "Does not fail entire request"
+    },
+    {
+      "scenario": "Agent suspended (from AgentAssuranceService)",
+      "handling": "Agent filtered out from all responses",
+      "note": "Suspended agents do not appear in any section"
+    },
+    {
+      "scenario": "Missing dateFrom in authorization",
+      "response": "500 Internal Server Error",
+      "error_type": "RelationshipFailureResponse.RelationshipStartDateMissing"
+    },
+    {
+      "scenario": "Other unexpected errors",
+      "response": "500 Internal Server Error with error details logged"
+    }
+  ],
+  "parallelExecution": {
+    "phase1_data_gathering": [
+      "getAllInvitationsForAllServices (MongoDB query)",
+      "getAllAuthorisationsForAllServices (ETMP/HIP queries per service)",
+      "getActivePartialAuth (MongoDB query)"
+    ],
+    "phase2_enrichment": [
+      "getAgentDateForRelationships (agent details for each unique ARN in authorizations)",
+      "getAgentDataForInvitation (agent details for each unique ARN in invitations)",
+      "getAuthorisationEvent (agent details for each unique ARN in events)"
+    ],
+    "note": "Phase 1 queries run in parallel. Phase 2 enrichment runs in parallel after Phase 1 completes."
+  },
+  "performanceConsiderations": [
+    "Parallel execution of data gathering phase reduces total latency",
+    "Multiple ETMP queries (one per enrolled service) can be slow for clients with many services",
+    "Agent details lookups are parallel but still O(n) where n = number of unique agents",
+    "MongoDB queries for invitations and partial auth are relatively fast",
+    "Suspended agent filtering happens after all data is gathered",
+    "No caching - every request queries all sources fresh"
+  ],
+  "useCases": [
+    {
+      "scenario": "Client dashboard showing complete agent relationship status",
+      "response": "Shows active agents, pending invitations, and event history in organized sections"
+    },
+    {
+      "scenario": "Client reviewing invitation history",
+      "response": "Can see which invitations were sent, expired, rejected, or cancelled"
+    },
+    {
+      "scenario": "Client auditing authorization timeline",
+      "response": "Can see complete chronological history of all authorization events"
+    },
+    {
+      "scenario": "Client managing multiple tax services",
+      "response": "Single call provides unified view across all enrolled services including PIR"
+    }
+  ],
+  "importantNotes": [
+    "⚠️ COMPLEX ORCHESTRATION: Combines 4 different data sources (ETMP, agent-fi-relationship, invitations, partial_auth)",
+    "⚠️ MULTIPLE PARALLEL QUERIES: Phase 1 gathers data in parallel, Phase 2 enriches in parallel",
+    "✅ Includes PIR: Unlike most other endpoints, this includes PIR (Personal Income Record) data",
+    "✅ Includes Invitations: Only endpoint that returns invitation data alongside relationships",
+    "✅ Includes Partial Auth: IR-SA partial authorizations are included from MongoDB",
+    "✅ Suspended Agent Filtering: Automatically filters out suspended agents from all sections",
+    "✅ Event Timeline: Provides complete authorization event history",
+    "✅ Agent Details: Enriches all data with agent agency names",
+    "⚠️ PERFORMANCE: Can be slow for clients with many services and agents",
+    "⚠️ NO CACHING: Every request queries all sources fresh",
+    "✅ Comprehensive: Most complete view of agent relationships available in single call"
+  ],
+  "comparisonWithOtherEndpoints": {
+    "ACR05_vs_ACR08": {
+      "ACR05": "Returns only active relationships as Map[Service, Seq[ARN]]",
+      "ACR08": "Returns active relationships PLUS invitations PLUS events with agent names"
+    },
+    "ACR06_vs_ACR08": {
+      "ACR06": "Returns only inactive relationships as flat array",
+      "ACR08": "Returns inactive relationships as part of event timeline with context"
+    },
+    "uniqueToACR08": [
+      "Pending invitations (from MongoDB)",
+      "Agent names for all items",
+      "Chronological event timeline",
+      "Partial auth records for IR-SA",
+      "PIR relationships included",
+      "Suspended agent filtering",
+      "Grouped by agent for authorizations and invitations"
+    ]
+  },
+  "metadata": {
+    "lastUpdated": "2025-11-20",
+    "gitCommitSha": "b2138b4e3958677748c1820c3d715d4fbb9d3b2c",
+    "analysisVersion": "1.0"
+  }
+}
+

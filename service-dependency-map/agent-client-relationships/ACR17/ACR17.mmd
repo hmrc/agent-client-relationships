@@ -1,0 +1,87 @@
+%% Last Updated: 2025-11-20
+%% Git Commit SHA: b2138b4e3958677748c1820c3d715d4fbb9d3b2c
+%% Analysis Version: 1.0
+
+sequenceDiagram
+    participant Agent
+    participant IC as InvitationController
+    participant IS as InvitationService
+    participant AAS as agent-assurance
+    participant HIP as IF/HIP
+    participant IR as InvitationsRepository
+    participant Mongo as MongoDB<br/>(invitations collection)
+    participant AS as AuditService
+
+    Agent->>+IC: POST /agent/:arn/authorisation-request<br/>{service, clientIdType, clientId, clientName, clientType}
+    Note over IC: authorised() - basic auth check<br/>(no agent validation)
+
+    IC->>IC: Validate JSON payload
+
+    alt Invalid payload
+        IC-->>Agent: 400 Bad Request
+    else Valid payload
+        IC->>+IS: createInvitation(arn, request)
+
+        IS->>IS: getSuppliedClientId() - validate clientIdType
+
+        alt Unsupported clientIdType
+            IS-->>IC: Left(UnsupportedClientIdType)
+            IC-->>Agent: 400 Bad Request
+        end
+
+        IS->>IS: getService() - validate service
+
+        alt Unsupported service
+            IS-->>IC: Left(UnsupportedService)
+            IC-->>Agent: 400 Bad Request
+        end
+
+        IS->>IS: getClientType() - validate clientType
+
+        alt Unsupported clientType
+            IS-->>IC: Left(UnsupportedClientType)
+            IC-->>Agent: 400 Bad Request
+        end
+
+        IS->>+AAS: getAgentRecord(arn)
+        Note over AAS: GET /agent-assurance/agent-record/:arn<br/>Returns details even if suspended
+        AAS-->>-IS: AgentDetailsDesResponse
+
+        IS->>IS: getClientId(suppliedClientId, service)
+
+        alt Service is MTD-IT or MTD-IT-SUPP with NINO
+            IS->>+HIP: getMtdIdFor(nino)
+            Note over HIP: Convert NINO to MTD IT ID
+            HIP-->>-IS: Optional[MtdItId]
+            alt MTD IT ID found
+                IS->>IS: Use MtdItId as clientId
+            else Not found
+                IS->>IS: Use NINO as clientId<br/>(for alt-itsa)
+            end
+        else Other services
+            IS->>IS: Use supplied clientId
+        end
+
+        IS->>IS: Calculate expiry date<br/>(now + invitationExpiringDuration)
+
+        IS->>+IR: create(arn, service, clientId, suppliedClientId,<br/>clientName, agencyName, agencyEmail, expiryDate, clientType)
+        IR->>+Mongo: insertOne({<br/>  invitationId: generated,<br/>  arn, service, clientId, suppliedClientId,<br/>  status: Pending,<br/>  created: now,<br/>  lastUpdated: now,<br/>  expiryDate,<br/>  ...metadata<br/>})
+
+        alt Duplicate invitation (E11000 error)
+            Mongo-->>IR: MongoException
+            IR-->>IS: Exception
+            IS-->>IC: Left(DuplicateInvitationError)
+            IC-->>Agent: 403 Forbidden
+        else Success
+            Mongo-->>-IR: Invitation
+            IR-->>-IS: Invitation
+
+            IS-->>-IC: Right(Invitation)
+
+            IC->>+AS: sendCreateInvitationAuditEvent(invitation)
+            AS-->>-IC: Unit
+
+            IC-->>-Agent: 201 Created<br/>{invitationId}
+        end
+    end
+

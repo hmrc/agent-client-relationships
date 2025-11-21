@@ -40,3 +40,4 @@ bin
 project/metals.sbt
 .metals
 .vscode
+.github/copilot-instructions.md

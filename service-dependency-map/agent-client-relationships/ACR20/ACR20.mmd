@@ -1,0 +1,164 @@
+%% Last Updated: 2025-11-20
+%% Git Commit SHA: b2138b4e3958677748c1820c3d715d4fbb9d3b2c
+%% Analysis Version: 1.0
+
+sequenceDiagram
+    participant Client
+    participant RAC as RemoveAuthorisationController
+    participant AA as AuthActions
+    participant RAS as RemoveAuthorisationService
+    participant VS as ValidationService
+    participant DRS as DeleteRelationshipsService
+    participant AFRC as AgentFiRelationshipConnector
+    participant PAuth as PartialAuthRepository
+    participant IR as InvitationsRepository
+    participant EACD as Enrolment Store Proxy<br/>EACD
+    participant HIP as HIP/IF
+    participant DRR as DeleteRecordRepository
+    participant Mongo as MongoDB
+    participant AS as AuditService
+
+    Client->>+RAC: POST /agent/{arn}/remove-authorisation<br/>{clientId, service}
+    Note over RAC: Parse JSON body
+
+    RAC->>+RAS: validateRequest(service, clientId)
+    RAS-->>-RAC: Either[Error, ValidRequest]
+
+    alt Validation Failed
+        RAC-->>Client: 400 Bad Request (UnsupportedService/InvalidClientId)
+    else Validation Success
+        RAC->>+VS: validateForEnrolmentKey(service, clientIdType, clientId)
+        VS-->>-RAC: Either[Error, EnrolmentKey]
+
+        alt ITSA Service with NINO
+            RAC->>+RAS: replaceEnrolmentKeyForItsa(suppliedClientId, enrolmentKey, service)
+            RAS->>+HIP: getMtdIdFor(nino)
+            HIP-->>-RAS: Option[MtdItId]
+            Note over RAS: Replace enrolment key<br/>with MTDITID if found
+            RAS-->>-RAC: Either[Error, EnrolmentKey]
+        end
+
+        Note over RAC: authorisedUser (agent/client/stride)
+        RAC->>+AA: Authenticate user
+        AA-->>-RAC: Authenticated as CurrentUser
+
+        alt Service is PIR (Personal Income Record)
+            RAC->>+AFRC: deleteRelationship(arn, service, clientId)
+            AFRC->>+AgentFI: DELETE /relationships/agent/{arn}/service/{service}/client/{clientId}
+            AgentFI-->>-AFRC: Boolean
+            AFRC-->>-RAC: Boolean
+
+            alt PIR Deletion Success
+                RAC->>+DRS: setRelationshipEnded(arn, enrolmentKey, endedBy)
+                DRS->>+IR: deauthorise(arn, clientId, service, endedBy)
+                IR->>+Mongo: Update invitations (set relationshipEndedBy, status=Deauthorised)
+                Mongo-->>-IR: Updated
+                IR-->>-DRS: Boolean
+                DRS-->>-RAC: Unit
+
+                RAC->>+AS: auditForPirTermination(arn, enrolmentKey)
+                AS-->>-RAC: Unit
+                RAC-->>Client: 204 No Content
+            else PIR Deletion Failed
+                RAC-->>Client: 404 Not Found (RelationshipNotFound)
+            end
+
+        else Service is Alt-ITSA (MTD-IT/MTD-IT-SUPP with NINO)
+            RAC->>+RAS: deauthPartialAuth(arn, clientId, service)
+            RAS->>+PAuth: deauthorise(service, nino, arn, now)
+            PAuth->>+Mongo: Update partial-auth (set expiryDate to now)
+            Mongo-->>-PAuth: Boolean
+            PAuth-->>-RAS: Boolean
+            RAS-->>-RAC: Boolean
+
+            alt PartialAuth Deauth Success
+                RAC->>+AS: sendTerminatePartialAuthAuditEvent(arn, service, clientId)
+                AS-->>-RAC: Unit
+
+                RAC->>+RAS: deauthAltItsaInvitation(arn, clientId, service, affinityGroup)
+                RAS->>+IR: updatePartialAuthToDeAuthorisedStatus(arn, service, nino, endedBy)
+                IR->>+Mongo: Update invitations (PartialAuth -> Deauthorised)
+                Mongo-->>-IR: Option[Unit]
+                IR-->>-RAS: Option[Unit]
+                RAS-->>-RAC: Boolean
+
+                RAC-->>Client: 204 No Content
+            else PartialAuth Deauth Failed
+                RAC-->>Client: 500 Internal Server Error
+            end
+
+        else Other Services (Standard Flow)
+            RAC->>+DRS: deleteRelationship(arn, enrolmentKey, affinityGroup)
+
+            Note over DRS: Check for existing delete record
+            DRS->>+DRR: findBy(arn, enrolmentKey)
+            DRR->>+Mongo: Query delete-record collection
+            Mongo-->>-DRR: Option[DeleteRecord]
+            DRR-->>-DRS: Option[DeleteRecord]
+
+            alt Delete Record Exists (Recovery Mode)
+                Note over DRS: Resume incomplete deletion
+                DRS->>DRS: resumeRelationshipRemoval(record)
+            else No Delete Record (Normal Flow)
+                Note over DRS: Acquire recovery lock
+
+                DRS->>+EACD: getPrincipalGroupIdFor(arn)
+                EACD-->>-DRS: groupId
+
+                DRS->>+DRR: create(DeleteRecord)
+                DRR->>+Mongo: Insert delete-record
+                Mongo-->>-DRR: Created
+                DRR-->>-DRS: Unit
+
+                rect rgb(240, 248, 255)
+                    Note over DRS: Deallocate EACD enrolment
+                    DRS->>+DRR: updateEsSyncStatus(arn, enrolmentKey, InProgress)
+                    DRR-->>-DRS: Unit
+
+                    DRS->>+EACD: deallocateEnrolmentFromAgent(groupId, enrolmentKey)
+                    EACD-->>-DRS: Boolean
+
+                    DRS->>+DRR: updateEsSyncStatus(arn, enrolmentKey, Success)
+                    DRR-->>-DRS: Unit
+                end
+
+                rect rgb(255, 248, 240)
+                    Note over DRS: Remove ETMP relationship
+                    DRS->>+DRR: updateEtmpSyncStatus(arn, enrolmentKey, InProgress)
+                    DRR-->>-DRS: Unit
+
+                    DRS->>+HIP: deleteAgentRelationship(enrolmentKey, arn)
+                    HIP-->>-DRS: Option[String]
+
+                    DRS->>+DRR: updateEtmpSyncStatus(arn, enrolmentKey, Success)
+                    DRR-->>-DRS: Unit
+                end
+
+                DRS->>+DRR: delete(DeleteRecord)
+                DRR->>+Mongo: Remove delete-record
+                Mongo-->>-DRR: Deleted
+                DRR-->>-DRS: Unit
+
+                DRS->>+IR: deauthorise(arn, clientId, service, endedBy)
+                IR->>+Mongo: Update invitations (set relationshipEndedBy, status=Deauthorised)
+                Mongo-->>-IR: Boolean
+                IR-->>-DRS: Boolean
+            end
+
+            alt Deletion Success
+                DRS->>+AS: sendTerminateRelationshipAuditEvent()
+                AS-->>-DRS: Unit
+                DRS-->>RAC: true
+                RAC-->>Client: 204 No Content
+            else Deletion In Progress
+                DRS-->>RAC: false
+                RAC-->>Client: 423 Locked (RelationshipDeletionInProgress)
+            else Relationship Not Found
+                DRS-->>RAC: Error
+                RAC-->>Client: 404 Not Found (RelationshipNotFound)
+            end
+            deactivate DRS
+        end
+    end
+    deactivate RAC
+

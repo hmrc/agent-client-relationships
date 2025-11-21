@@ -1,0 +1,269 @@
+{
+  "apiId": "ACR26",
+  "apiTitle": "Get Stride Client Relationships",
+  "description": "Allows a Stride user (HMRC internal staff) to retrieve active agent-client relationships for a specific client. This endpoint validates the service and client identifier, then queries HIP (ETMP) to find any active relationships. Special handling exists for ITSA services which require NINO-to-MtdItId conversion via IF. Used by HMRC staff to view which agents are authorized to act on behalf of a client.",
+  "method": "GET",
+  "path": "/relationships/service/{service}/client/{clientIdType}/{clientId}",
+  "pathParameters": {
+    "service": "Service identifier (e.g., HMRC-MTD-IT, HMRC-MTD-VAT, HMRC-TERS-ORG, HMRC-CGT-PD, IR-SA, HMRC-CBC-ORG, etc.)",
+    "clientIdType": "Client identifier type matching the service (e.g., 'ni' for NINO, 'vrn' for VRN, 'utr' for UTR, 'CGTPDRef' for CGT)",
+    "clientId": "Client identifier value (must be valid format for the clientIdType)"
+  },
+  "queryParameters": {},
+  "requestBody": {},
+  "responses": {
+    "200": "OK - Active relationship found and returned as JSON",
+    "400": "Bad Request - Invalid service, clientIdType, or clientId format",
+    "401": "Unauthorized - Stride authentication failed",
+    "403": "Forbidden - Stride user does not have required role",
+    "404": "Not Found - No active relationship exists for this client and service",
+    "422": "Unprocessable Entity - HIP returned error (e.g., agent suspended)",
+    "500": "Internal Server Error"
+  },
+  "authentication": "Stride authentication with specific roles (maintain_agent_relationships or maintain_agent_manually_assure)",
+  "audience": "internal",
+  "controller": "RelationshipsController",
+  "controllerMethod": "getRelationships",
+  "services": [
+    {
+      "name": "ValidationService",
+      "alias": "VS",
+      "method": "validateForEnrolmentKey",
+      "description": "Validates service identifier, clientIdType, and clientId format. For CBC, queries EACD to determine if CBC-ORG or CBC-NONUK-ORG and retrieves UTR"
+    },
+    {
+      "name": "FindRelationshipsService",
+      "alias": "FRS",
+      "method": "getItsaRelationshipForClient (for MTD-IT/MTD-IT-SUPP) or getActiveRelationshipsForClient (other services)",
+      "description": "Routes to appropriate method based on service type. For ITSA, converts NINO to MtdItId first"
+    },
+    {
+      "name": "IFConnector / HIPConnector",
+      "alias": "IFOrHIP",
+      "method": "getMtdIdFor (ITSA only), getActiveClientRelationships",
+      "description": "IF: Converts NINO to MtdItId for ITSA. HIP: Queries ETMP for active relationships"
+    }
+  ],
+  "interactions": "See ACR26.mmd for complete sequence diagram",
+  "externalDependencies": [
+    {
+      "name": "EACD (Enrolment Store Proxy)",
+      "description": "Queried only for CBC service to determine if CBC-ORG or CBC-NONUK-ORG and retrieve UTR",
+      "method": "queryKnownFacts",
+      "note": "Only called for HMRC-CBC-ORG service validation"
+    },
+    {
+      "name": "IF (Integration Framework)",
+      "description": "Converts NINO to MtdItId for ITSA services (MTD-IT and MTD-IT-SUPP)",
+      "method": "getMtdIdFor",
+      "note": "Only called for MTD-IT and MTD-IT-SUPP services"
+    },
+    {
+      "name": "HIP (ETMP)",
+      "description": "Retrieves active relationships from ETMP for the client and service",
+      "method": "GET /registration/relationship",
+      "note": "Uses auth profile based on service type. Returns relationshipDisplayResponse with relationship details"
+    }
+  ],
+  "databaseCollections": [],
+  "responseModel": {
+    "ActiveRelationship": {
+      "arn": "Agent Reference Number (e.g., AARN1234567)",
+      "dateTo": "End date of relationship (active relationships have 9999-12-31)",
+      "dateFrom": "Start date of relationship (optional)",
+      "agentName": "Agent name (optional)"
+    },
+    "example": {
+      "arn": "AARN1234567",
+      "dateTo": "9999-12-31",
+      "dateFrom": "2024-01-15",
+      "agentName": "ABC Accountants Ltd"
+    }
+  },
+  "businessLogic": {
+    "validation": {
+      "description": "Multi-step validation of service, clientIdType, and clientId",
+      "logic": "ValidationService handles special cases (IR-SA, MTD-IT, PIR, VAT, CBC) and normal supported services. For CBC, queries EACD to determine correct enrolment key and retrieve UTR"
+    },
+    "serviceRouting": {
+      "description": "Different flow for ITSA vs other services",
+      "logic": "ITSA services (MTD-IT, MTD-IT-SUPP) require NINO-to-MtdItId conversion via IF before querying HIP. Other services query HIP directly with the provided tax identifier"
+    },
+    "activeRelationshipFilter": {
+      "description": "Only returns relationships with dateTo = 9999-12-31",
+      "logic": "HIP returns all relationships, but the service filters to find active ones (dateTo = 9999-12-31). Inactive or ended relationships result in 404"
+    },
+    "strideAuthorization": {
+      "description": "Requires Stride authentication with specific roles",
+      "logic": "User must be authenticated via Stride and have either 'maintain_agent_relationships' or 'maintain_agent_manually_assure' role"
+    }
+  },
+  "errorHandling": [
+    {
+      "scenario": "Unknown or unsupported service",
+      "response": "400 Bad Request",
+      "message": "Unknown service {service}",
+      "note": "Service must be in supported services list"
+    },
+    {
+      "scenario": "Invalid clientId format for service type",
+      "response": "400 Bad Request",
+      "message": "Validation error details",
+      "note": "ClientId must be valid format (e.g., valid NINO for MTD-IT)"
+    },
+    {
+      "scenario": "Stride authentication failure",
+      "response": "401 Unauthorized",
+      "message": "Authentication failed",
+      "note": "User must be authenticated via Stride"
+    },
+    {
+      "scenario": "Insufficient Stride permissions",
+      "response": "403 Forbidden",
+      "message": "Forbidden",
+      "note": "User must have required Stride role"
+    },
+    {
+      "scenario": "No active relationship found",
+      "response": "404 Not Found",
+      "message": "No body",
+      "note": "Either no relationship exists or it's inactive (dateTo != 9999-12-31)"
+    },
+    {
+      "scenario": "NINO has no MtdItId (ITSA services)",
+      "response": "404 Not Found",
+      "message": "No body",
+      "note": "For MTD-IT/MTD-IT-SUPP, if NINO cannot be converted to MtdItId, 404 is returned"
+    },
+    {
+      "scenario": "HIP returns suspended agent error",
+      "response": "404 Not Found",
+      "message": "No body",
+      "note": "422 from HIP with 'suspended' message is treated as no relationship"
+    },
+    {
+      "scenario": "HIP returns 400 or 404",
+      "response": "404 Not Found",
+      "message": "No body",
+      "note": "Errors from HIP are normalized to 404"
+    },
+    {
+      "scenario": "HIP returns other error",
+      "response": "404 Not Found",
+      "message": "No body (but error logged)",
+      "note": "Unexpected HIP errors are logged but return 404 to caller"
+    }
+  ],
+  "useCases": [
+    {
+      "scenario": "HMRC staff member checks MTD-IT relationships for a client",
+      "flow": [
+        "Stride user calls endpoint with service=HMRC-MTD-IT, clientIdType=ni, clientId={NINO}",
+        "Validation passes (NINO is valid format)",
+        "Stride authorization succeeds",
+        "NINO is converted to MtdItId via IF",
+        "HIP is queried with MtdItId",
+        "Active relationship found",
+        "200 OK returned with relationship details"
+      ],
+      "response": {
+        "arn": "AARN1234567",
+        "dateTo": "9999-12-31",
+        "dateFrom": "2024-01-15",
+        "agentName": "ABC Accountants Ltd"
+      },
+      "frontend_action": "Display agent details to Stride user"
+    },
+    {
+      "scenario": "Check VAT relationships for a client",
+      "flow": [
+        "Stride user calls endpoint with service=HMRC-MTD-VAT, clientIdType=vrn, clientId={VRN}",
+        "Validation passes (VRN is valid format)",
+        "Stride authorization succeeds",
+        "HIP is queried directly with VRN",
+        "Active relationship found",
+        "200 OK returned"
+      ],
+      "response": {
+        "arn": "AARN7654321",
+        "dateTo": "9999-12-31"
+      },
+      "frontend_action": "Display agent details to Stride user"
+    },
+    {
+      "scenario": "No relationship exists for client",
+      "flow": [
+        "Stride user calls endpoint",
+        "Validation and authorization succeed",
+        "HIP is queried",
+        "No relationship found or only inactive relationships",
+        "404 Not Found returned"
+      ],
+      "response": "404 Not Found (no body)",
+      "frontend_action": "Show 'No relationships found' message"
+    },
+    {
+      "scenario": "Invalid service identifier",
+      "flow": [
+        "Stride user calls endpoint with unsupported service",
+        "Validation fails",
+        "400 Bad Request returned"
+      ],
+      "response": "400 Bad Request - Unknown service",
+      "frontend_action": "Show validation error"
+    },
+    {
+      "scenario": "CBC service - UK version",
+      "flow": [
+        "Stride user calls with service=HMRC-CBC-ORG, clientIdType=cbcId, clientId={cbcId}",
+        "ValidationService queries EACD for HMRC-CBC-ORG with cbcId",
+        "UTR found in EACD",
+        "EnrolmentKey created with both UTR and cbcId",
+        "HIP queried with correct identifiers",
+        "Relationship returned"
+      ],
+      "response": {
+        "arn": "AARN9999999",
+        "dateTo": "9999-12-31"
+      },
+      "frontend_action": "Display agent details"
+    },
+    {
+      "scenario": "CBC service - Non-UK version",
+      "flow": [
+        "Stride user calls with service=HMRC-CBC-ORG, clientIdType=cbcId, clientId={cbcId}",
+        "ValidationService queries EACD for HMRC-CBC-ORG - not found",
+        "ValidationService queries EACD for HMRC-CBC-NONUK-ORG - found",
+        "EnrolmentKey created for CBC-NONUK-ORG",
+        "HIP queried",
+        "Relationship returned"
+      ],
+      "response": {
+        "arn": "AARN8888888",
+        "dateTo": "9999-12-31"
+      },
+      "frontend_action": "Display agent details"
+    }
+  ],
+  "importantNotes": [
+    "✅ Stride-only endpoint - not accessible to agents or clients",
+    "✅ Only returns ACTIVE relationships (dateTo = 9999-12-31)",
+    "✅ Different flow for ITSA services (MTD-IT, MTD-IT-SUPP) - requires NINO-to-MtdItId conversion",
+    "✅ CBC service has special handling - queries EACD to determine CBC-ORG vs CBC-NONUK-ORG",
+    "✅ Validation occurs before authentication (efficient rejection of invalid requests)",
+    "✅ Queries HIP (ETMP) for relationship data - does NOT use local MongoDB",
+    "✅ Returns single relationship (the active one) - not all relationships",
+    "⚠️ Returns 404 for inactive relationships (dateTo != 9999-12-31) - not just missing ones",
+    "⚠️ For ITSA: If NINO has no MtdItId in IF, returns 404",
+    "⚠️ HIP errors (including suspended agent) are normalized to 404 - actual errors logged server-side",
+    "⚠️ Unsupported identifier types return 404 with warning log - not 400",
+    "⚠️ Requires specific Stride roles: maintain_agent_relationships or maintain_agent_manually_assure",
+    "⚠️ Uses auth profile when querying HIP - different profiles for different services",
+    "⚠️ Does NOT filter by ARN - returns any active relationship for the client/service combination"
+  ],
+  "metadata": {
+    "lastUpdated": "2025-11-20",
+    "gitCommitSha": "b2138b4e3958677748c1820c3d715d4fbb9d3b2c",
+    "analysisVersion": "1.0"
+  }
+}
