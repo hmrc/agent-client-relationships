@@ -40,7 +40,10 @@ Add metadata as comments at the top of the file:
 %% Analysis Version: 1.0
 
 sequenceDiagram
-    ...
+    participant C as Client
+    participant RC as Controller
+    C->>+RC: Request()
+    RC-->>-C: Response()
 ```
 
 #### 2. Markdown Documentation (.md)
@@ -64,8 +67,7 @@ Add a metadata object at the root level:
 ```json
 {
     "apiId": "ACRxx",
-    "apiTitle": "...",
-    ...
+    "apiTitle": "Short title",
     "metadata": {
         "lastUpdated": "YYYY-MM-DD",
         "gitCommitSha": "[full 40-character SHA]",
@@ -83,27 +85,11 @@ Add a metadata object at the root level:
     "apiId": "ACRxx",
     "apiTitle": "Short title of the endpoint",
     "description": "Comprehensive description of what the endpoint does",
-    "method": "GET|POST|PUT|DELETE",
+    "method": "GET",
     "path": "/api/path/with/:parameters",
     "pathParameters": {
         "param": "Description of parameter"
-    },
-    "queryParameters": {
-        "param": "Description of parameter"
-    },
-    "requestBody": {
-        "description": "Description of request body",
-        "schema": {}
-    },
-    "responses": {
-        "200": "Success description",
-        "400": "Bad request description",
-        "404": "Not found description"
-    },
-    "authentication": "Description of auth requirements",
-    "audience": "internal|external",
-    "controller": "ControllerName",
-    "controllerMethod": "methodName"
+    }
 }
 ```
 
@@ -238,6 +224,26 @@ sequenceDiagram
 4. Use `-->>` for responses and `->>` for requests
 5. Include `+`/`-` for activation/deactivation when helpful
 
+### Mermaid validation (use mermaid-mcp)
+
+Add guidance to validate Mermaid diagrams using the Mermaid Collaboration Platform (mcp). Use the following config snippet when calling the MCP validator or adding validation configuration in CI tools. This replaces older references to other validators.
+
+JSON config example for tools that accept a validation config:
+
+```json
+{
+  "mermaid-mcp": {
+    "url": "https://mcp.mermaidchart.com/mcp",
+    "type": "http"
+  }
+}
+```
+
+Notes:
+- The MCP validates Mermaid syntax and returns detailed error locations; use it when mermaid CLI or other validators report ambiguous errors.
+- If you receive a parser error that mentions reserved aliases (for example `par`), try renaming aliases to avoid reserved words and rerun validation.
+- Keep participant aliases short and avoid common reserved words (e.g., `par`, `opt`, `alt`, `loop`).
+
 ## Markdown Documentation Standards
 
 ### Required Sections
@@ -304,4 +310,3 @@ When updating documentation:
 - See `mongo.md` for MongoDB collection details
 - See individual ACRxx folders for examples
 - See `ACR01` for a complete reference implementation
-
