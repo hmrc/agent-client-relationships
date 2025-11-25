@@ -62,6 +62,8 @@ class InvitationService @Inject() (
 )(implicit ec: ExecutionContext)
 extends RequestAwareLogging {
 
+  private val ninoRegex = "^([A-CEGHJ-PR-TW-Z]{2}[0-9]{6})([A-D])?$".r
+
   def trackRequests(
     arn: Arn,
     statusFilter: Option[String],
@@ -149,6 +151,9 @@ extends RequestAwareLogging {
     services: Seq[String],
     clientIds: Seq[String]
   )(implicit request: RequestHeader): Future[Seq[Invitation]] = {
+
+    val expandedClientIds: Seq[String] = clientIds.flatMap(expandNinoVariants).distinct
+
     def getSuspendedArns(arns: Seq[String]) = Future
       .sequence(
         arns.map { arn =>
@@ -165,7 +170,7 @@ extends RequestAwareLogging {
       invitations <- invitationsRepository.findAllBy(
         arn = None,
         services,
-        clientIds,
+        expandedClientIds,
         status = None
       )
       suspendedArns <- getSuspendedArns(invitations.map(_.arn).distinct)
@@ -199,6 +204,19 @@ extends RequestAwareLogging {
     newClientId,
     newClientIdType
   )
+
+  private def expandNinoVariants(id: String): Seq[String] =
+    id.replace(" ", "").toUpperCase match {
+      case ninoRegex(base, suffix) =>
+        // Generate A–D full variants + suffixless
+        Seq(base) ++ Seq(
+          "A",
+          "B",
+          "C",
+          "D"
+        ).map(base + _)
+      case other => Seq(other) // Not a NINO → leave unchanged (e.g. MTDITID)
+    }
 
   private def getClientId(
     suppliedClientId: ClientId,

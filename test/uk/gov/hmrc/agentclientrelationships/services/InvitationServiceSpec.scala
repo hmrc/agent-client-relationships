@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
+import org.mockito.ArgumentMatchers
 import play.api.mvc.RequestHeader
 import play.api.test.FakeRequest
 import play.api.test.Helpers.await
@@ -27,9 +28,12 @@ import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgencyDetails
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentDetailsDesResponse
 import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDIT
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDVAT
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdIt
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Vat
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.ClientIdentifier
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Vrn
 
 import java.time.LocalDate
@@ -124,6 +128,92 @@ with MockEmailService {
 
       result shouldBe Seq(invitation2)
     }
+  }
+
+  "expand NINO suffixes so that a stored NINO with a different suffix is still found" in {
+    val inputNino: String = "AB123456C"
+    val storedNino: String = "AB123456A"
+
+    val expectedExpandedIds: Seq[String] =
+      Seq("AB123456") ++ Seq(
+        "A",
+        "B",
+        "C",
+        "D"
+      ).map("AB123456" + _)
+
+    val invitation = Invitation.createNew(
+      arn = testArn1,
+      service = MtdIt,
+      clientId = ClientIdentifier(storedNino, "MTDITID"),
+      suppliedClientId = ClientIdentifier(storedNino, "MTDITID"),
+      clientName = "",
+      agencyName = "",
+      agencyEmail = "",
+      expiryDate = LocalDate.now(),
+      clientType = Some("personal")
+    )
+
+    mockFindAllBy(
+      None,
+      Seq(HMRCMTDIT),
+      expectedExpandedIds,
+      None
+    )(Future.successful(Seq(invitation)))
+
+    mockGetNonSuspendedAgentRecord(Arn(testArn1))(Some(testAgentDetailsDesResponse))
+
+    val result = await(
+      TestService.findNonSuspendedClientInvitations(
+        Seq(HMRCMTDIT),
+        Seq(inputNino)
+      )
+    )
+
+    result shouldBe Seq(invitation)
+  }
+
+  "find invitations stored without a NINO suffix when client supplies a full NINO with suffix (AC2)" in {
+    val inputNino: String = "AB123456C"
+    val storedNino: String = "AB123456"
+
+    val expectedExpandedIds: Seq[String] =
+      Seq("AB123456") ++ Seq(
+        "A",
+        "B",
+        "C",
+        "D"
+      ).map("AB123456" + _)
+
+    val invitation = Invitation.createNew(
+      arn = testArn2,
+      service = MtdIt,
+      clientId = ClientIdentifier(storedNino, "MTDITID"),
+      suppliedClientId = ClientIdentifier(storedNino, "MTDITID"),
+      clientName = "",
+      agencyName = "",
+      agencyEmail = "",
+      expiryDate = LocalDate.now(),
+      clientType = Some("personal")
+    )
+
+    mockFindAllBy(
+      None,
+      Seq(HMRCMTDIT),
+      expectedExpandedIds,
+      None
+    )(Future.successful(Seq(invitation)))
+
+    mockGetNonSuspendedAgentRecord(Arn(testArn2))(Some(testAgentDetailsDesResponse))
+
+    val result = await(
+      TestService.findNonSuspendedClientInvitations(
+        Seq(HMRCMTDIT),
+        Seq(inputNino)
+      )
+    )
+
+    result shouldBe Seq(invitation)
   }
 
 }
