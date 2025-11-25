@@ -1,0 +1,469 @@
+{
+  "apiId": "ACR27",
+  "apiTitle": "Stride Get Active Relationships (Bulk)",
+  "description": "VERY HIGH COMPLEXITY - Allows a Stride user (HMRC internal staff) to retrieve ALL active agent-client relationships for multiple clients in a single request. Supports all client identifier types (NINO, VRN, UTR, URN, CGT, PPT, CBC, PLR). For each client, retrieves relationships from HIP/IF/Agent-Fi-Relationship, enriches with agent names from Agent Maintainer and client names from various DES services. Special handling for NINO includes ITSA (MTD-IT + MTD-IT-SUPP), IRV (Personal Income Record), and PartialAuth relationships retrieved in parallel. Used by HMRC staff for comprehensive relationship views across multiple clients.",
+  "method": "POST",
+  "path": "/stride/active-relationships",
+  "pathParameters": {},
+  "queryParameters": {},
+  "requestBody": {
+    "ClientsRelationshipsRequest": {
+      "clientRelationshipRequest": "Array of ClientRelationshipRequest objects"
+    },
+    "ClientRelationshipRequest": {
+      "clientIdType": "Client identifier type (NINO, VRN, UTR, URN, CGTPDRef, EtmpRegistrationNumber, cbcId, PLRID)",
+      "clientId": "Client identifier value"
+    },
+    "example": {
+      "clientRelationshipRequest": [
+        {
+          "clientIdType": "NINO",
+          "clientId": "AB123456C"
+        },
+        {
+          "clientIdType": "VRN",
+          "clientId": "123456789"
+        },
+        {
+          "clientIdType": "UTR",
+          "clientId": "1234567890"
+        }
+      ]
+    }
+  },
+  "responses": {
+    "200": "OK - Returns all active relationships for all requested clients with enriched agent and client names",
+    "400": "Bad Request - Invalid clientIdType or clientId format",
+    "401": "Unauthorized - Stride authentication failed",
+    "403": "Forbidden - Stride user does not have required role",
+    "404": "Not Found - Client details not found for one or more clients",
+    "500": "Internal Server Error - Error retrieving relationships, agent details, or client details"
+  },
+  "authentication": "Stride authentication with specific roles (maintain_agent_relationships or maintain_agent_manually_assure)",
+  "audience": "internal",
+  "controller": "StrideClientDetailsController",
+  "controllerMethod": "getActiveRelationships",
+  "services": [
+    {
+      "name": "StrideClientDetailsService",
+      "alias": "SCDS",
+      "method": "findAllActiveRelationship",
+      "description": "Orchestrates the entire flow: validates clients, retrieves relationships from multiple sources, enriches with agent/client details"
+    },
+    {
+      "name": "ValidationService",
+      "alias": "VS",
+      "method": "validateForTaxIdentifier",
+      "description": "Validates clientIdType and clientId format, converts to TaxIdentifier"
+    },
+    {
+      "name": "FindRelationshipsService",
+      "alias": "FRS",
+      "method": "getAllActiveItsaRelationshipForClient (NINO) or getAllRelationshipsForClient (others)",
+      "description": "Retrieves active relationships from HIP via IF/HIP connectors"
+    },
+    {
+      "name": "AgentFiRelationshipConnector",
+      "alias": "AFIRC",
+      "method": "findIrvActiveRelationshipForClient",
+      "description": "Retrieves IRV (Personal Income Record) relationships for NINO from agent-fi-relationship service"
+    },
+    {
+      "name": "PartialAuthRepository",
+      "alias": "PAuthRepo",
+      "method": "findActiveByNino",
+      "description": "Retrieves PartialAuth (supporting agent) relationships for NINO from local MongoDB"
+    },
+    {
+      "name": "ClientDetailsService",
+      "alias": "CDS",
+      "method": "findClientDetailsByTaxIdentifier",
+      "description": "Retrieves client name from appropriate DES service based on tax identifier type"
+    },
+    {
+      "name": "AgentMaintainerConnector",
+      "alias": "AM",
+      "method": "getAgentRecord",
+      "description": "Retrieves agent name for each ARN found in relationships"
+    }
+  ],
+  "interactions": "See ACR27.mmd for complete sequence diagram",
+  "externalDependencies": [
+    {
+      "name": "HIP (ETMP)",
+      "description": "Retrieves active relationships for all services except IRV",
+      "method": "GET /registration/relationship",
+      "note": "Called for each non-NINO client, and for ITSA relationships for NINO. Returns MTD-IT, MTD-IT-SUPP, VAT, Trust, TrustNT, CGT, PPT, CBC, PLR relationships"
+    },
+    {
+      "name": "IF (Integration Framework)",
+      "description": "Converts NINO to MtdItId for ITSA relationship queries",
+      "method": "getMtdIdFor",
+      "note": "Only called for NINO clients to enable HIP ITSA relationship queries"
+    },
+    {
+      "name": "Agent-Fi-Relationship",
+      "description": "Retrieves IRV (Personal Income Record) relationships for NINO",
+      "method": "GET /relationships/active?service=PERSONAL-INCOME-RECORD",
+      "note": "Only called for NINO clients. IRV relationships not stored in HIP"
+    },
+    {
+      "name": "Citizen Details (DES)",
+      "description": "Retrieves client names for NINO",
+      "method": "getCitizenDetails",
+      "note": "Returns individual's name"
+    },
+    {
+      "name": "Designatory Details (DES)",
+      "description": "Retrieves additional client details for NINO",
+      "method": "getDesignatoryDetails",
+      "note": "Supplementary details for individuals"
+    },
+    {
+      "name": "DES",
+      "description": "Retrieves client names for VRN, UTR, URN, CGT, PPT, CBC, PLR",
+      "method": "getVrnDisplayDetails, getTrustDetails, getCgtSubscriptionDetails, getPptSubscriptionDetails, getCbcSubscriptionDetails, getPillar2SubscriptionDetails",
+      "note": "Different endpoints per client type"
+    },
+    {
+      "name": "Agent Maintainer",
+      "description": "Retrieves agent name for each ARN",
+      "method": "getAgentRecord",
+      "note": "Called once per unique ARN found across all relationships"
+    }
+  ],
+  "databaseCollections": [
+    {
+      "name": "partial-auth",
+      "operation": "READ",
+      "description": "Retrieves PartialAuth relationships for NINO clients. PartialAuth allows supporting agents to access MTD-IT"
+    }
+  ],
+  "responseModel": {
+    "ActiveClientsRelationshipResponse": {
+      "activeClientRelationships": "Array of ActiveClientRelationship objects"
+    },
+    "ActiveClientRelationship": {
+      "clientId": "Client identifier value from request",
+      "clientName": "Client name retrieved from DES",
+      "arn": "Agent Reference Number",
+      "agentName": "Agent name retrieved from Agent Maintainer",
+      "service": "Service identifier (e.g., HMRC-MTD-IT, HMRC-MTD-VAT, HMRC-TERS-ORG)"
+    },
+    "example": {
+      "activeClientRelationships": [
+        {
+          "clientId": "AB123456C",
+          "clientName": "John Doe",
+          "arn": "AARN1234567",
+          "agentName": "ABC Accountants Ltd",
+          "service": "HMRC-MTD-IT"
+        },
+        {
+          "clientId": "AB123456C",
+          "clientName": "John Doe",
+          "arn": "AARN1234567",
+          "agentName": "ABC Accountants Ltd",
+          "service": "HMRC-MTD-IT-SUPP"
+        },
+        {
+          "clientId": "AB123456C",
+          "clientName": "John Doe",
+          "arn": "AARN7654321",
+          "agentName": "XYZ Tax Services",
+          "service": "PERSONAL-INCOME-RECORD"
+        },
+        {
+          "clientId": "123456789",
+          "clientName": "Acme Ltd",
+          "arn": "AARN1111111",
+          "agentName": "VAT Specialists",
+          "service": "HMRC-MTD-VAT"
+        }
+      ]
+    }
+  },
+  "businessLogic": {
+    "bulkProcessing": {
+      "description": "Processes multiple clients in a single request",
+      "logic": "Each ClientRelationshipRequest is processed using EitherT monad transformation. All results are sequenced and flattened. A failure in any client request causes the entire operation to fail with appropriate error"
+    },
+    "ninoSpecialHandling": {
+      "description": "NINO clients have three relationship sources retrieved in parallel",
+      "logic": "For NINO: (1) ITSA relationships via IF→HIP (MTD-IT + MTD-IT-SUPP), (2) IRV relationships via Agent-Fi-Relationship (PERSONAL-INCOME-RECORD), (3) PartialAuth relationships from local MongoDB. All three are retrieved in parallel using par block, then combined. IRV and PartialAuth failures are recovered as empty sequences to not break the flow"
+    },
+    "otherIdentifierHandling": {
+      "description": "Non-NINO identifiers query HIP directly",
+      "logic": "VRN, UTR, URN, CGT, PPT, CBC, PLR all query HIP directly via getAllRelationshipsForClient with activeOnly=true. Service type is determined by the identifier type"
+    },
+    "relationshipEnrichment": {
+      "description": "Each relationship is enriched with agent and client names",
+      "logic": "For each relationship: (1) Agent name retrieved from Agent Maintainer using ARN, (2) Client name retrieved from appropriate DES service based on identifier type. This produces ActiveClientRelationship objects with full details"
+    },
+    "activeFiltering": {
+      "description": "Only active relationships are returned",
+      "logic": "activeOnly=true passed to all relationship queries. HIP and IF results are further filtered with .filter(_.isActive) to ensure only truly active relationships (isActive=true) are included"
+    },
+    "clientDetailsRouting": {
+      "description": "Client name retrieval routes to different DES services",
+      "logic": "NINO→Citizen Details + Designatory Details, VRN→getVrnDisplayDetails, UTR/URN→getTrustDetails, CGTPDRef→getCgtSubscriptionDetails, EtmpRegistrationNumber→getPptSubscriptionDetails, cbcId→getCbcSubscriptionDetails, PLRID→getPillar2SubscriptionDetails"
+    },
+    "errorRecovery": {
+      "description": "Some errors are recovered to not break bulk processing",
+      "logic": "IRV RelationshipNotFound and RelationshipSuspended are recovered as empty sequences. This allows NINO processing to continue even if IRV fails. Other errors propagate and fail the entire request"
+    },
+    "strideAuthorization": {
+      "description": "Requires Stride authentication with specific roles",
+      "logic": "User must be authenticated via Stride and have either 'maintain_agent_relationships' or 'maintain_agent_manually_assure' role"
+    }
+  },
+  "errorHandling": [
+    {
+      "scenario": "Invalid clientIdType or clientId format",
+      "response": "400 Bad Request",
+      "message": "RelationshipBadRequest or TaxIdentifierError",
+      "note": "Validation fails for any client in the request"
+    },
+    {
+      "scenario": "Stride authentication failure",
+      "response": "401 Unauthorized",
+      "message": "Authentication failed",
+      "note": "User must be authenticated via Stride"
+    },
+    {
+      "scenario": "Insufficient Stride permissions",
+      "response": "403 Forbidden",
+      "message": "Forbidden",
+      "note": "User must have required Stride role"
+    },
+    {
+      "scenario": "Client details not found",
+      "response": "404 Not Found",
+      "message": "ClientDetailsNotFound",
+      "note": "Client name lookup failed for one or more clients"
+    },
+    {
+      "scenario": "Error retrieving client details from DES",
+      "response": "500 Internal Server Error",
+      "message": "ErrorRetrievingClientDetails with status and message",
+      "note": "DES service unavailable or returned error"
+    },
+    {
+      "scenario": "Error retrieving agent details from Agent Maintainer",
+      "response": "500 Internal Server Error",
+      "message": "ErrorRetrievingAgentDetails with message",
+      "note": "Agent Maintainer unavailable or agent not found"
+    },
+    {
+      "scenario": "Error retrieving relationships from HIP/IF/Agent-Fi",
+      "response": "500 Internal Server Error",
+      "message": "ErrorRetrievingRelationship with status and message",
+      "note": "Upstream service failure"
+    },
+    {
+      "scenario": "IRV relationship not found (NINO only)",
+      "response": "200 OK with no IRV relationships",
+      "message": "N/A",
+      "note": "IRV errors are recovered - doesn't fail entire request"
+    },
+    {
+      "scenario": "Any other error",
+      "response": "500 Internal Server Error",
+      "message": "Generic error message",
+      "note": "Unexpected failures"
+    }
+  ],
+  "useCases": [
+    {
+      "scenario": "Bulk relationship lookup for multiple clients",
+      "flow": [
+        "Stride user needs to view relationships for 3 clients (NINO, VRN, UTR)",
+        "Stride user calls endpoint with array of 3 ClientRelationshipRequest objects",
+        "Each client is validated",
+        "NINO: ITSA, IRV, and PartialAuth relationships retrieved in parallel",
+        "VRN: HIP queried for VAT relationships",
+        "UTR: HIP queried for Trust relationships",
+        "All relationships enriched with agent names (from Agent Maintainer) and client names (from DES)",
+        "200 OK returned with combined list of all relationships"
+      ],
+      "response": {
+        "activeClientRelationships": [
+          {
+            "clientId": "AB123456C",
+            "clientName": "John Doe",
+            "arn": "AARN1234567",
+            "agentName": "ABC Accountants",
+            "service": "HMRC-MTD-IT"
+          },
+          {
+            "clientId": "AB123456C",
+            "clientName": "John Doe",
+            "arn": "AARN1234567",
+            "agentName": "ABC Accountants",
+            "service": "HMRC-MTD-IT-SUPP"
+          },
+          {
+            "clientId": "123456789",
+            "clientName": "Acme Ltd",
+            "arn": "AARN7654321",
+            "agentName": "VAT Specialists",
+            "service": "HMRC-MTD-VAT"
+          },
+          {
+            "clientId": "1234567890",
+            "clientName": "Smith Family Trust",
+            "arn": "AARN9999999",
+            "agentName": "Trust Advisors Ltd",
+            "service": "HMRC-TERS-ORG"
+          }
+        ]
+      },
+      "frontend_action": "Display comprehensive table of all relationships across all clients"
+    },
+    {
+      "scenario": "NINO client with multiple relationship types",
+      "flow": [
+        "Stride user requests relationships for one NINO",
+        "Validation passes",
+        "Parallel retrieval: (1) ITSA from HIP via IF, (2) IRV from Agent-Fi-Relationship, (3) PartialAuth from MongoDB",
+        "ITSA returns MTD-IT main agent + MTD-IT-SUPP",
+        "IRV returns PERSONAL-INCOME-RECORD relationship",
+        "PartialAuth returns supporting agent for MTD-IT",
+        "All enriched with names",
+        "200 OK with 4 relationships (2 MTD-IT, 1 MTD-IT-SUPP, 1 IRV)"
+      ],
+      "response": {
+        "activeClientRelationships": [
+          {
+            "clientId": "AB123456C",
+            "clientName": "John Doe",
+            "arn": "AARN1111111",
+            "agentName": "Main Agent Ltd",
+            "service": "HMRC-MTD-IT"
+          },
+          {
+            "clientId": "AB123456C",
+            "clientName": "John Doe",
+            "arn": "AARN2222222",
+            "agentName": "Supporting Agent Ltd",
+            "service": "HMRC-MTD-IT"
+          },
+          {
+            "clientId": "AB123456C",
+            "clientName": "John Doe",
+            "arn": "AARN1111111",
+            "agentName": "Main Agent Ltd",
+            "service": "HMRC-MTD-IT-SUPP"
+          },
+          {
+            "clientId": "AB123456C",
+            "clientName": "John Doe",
+            "arn": "AARN3333333",
+            "agentName": "IRV Agent Ltd",
+            "service": "PERSONAL-INCOME-RECORD"
+          }
+        ]
+      },
+      "frontend_action": "Display all relationships grouped by client, showing different agents and services"
+    },
+    {
+      "scenario": "Client with no relationships",
+      "flow": [
+        "Stride user requests relationships for VRN",
+        "Validation passes",
+        "HIP queried - no relationships found",
+        "Client details retrieved successfully",
+        "200 OK with empty activeClientRelationships array for this client"
+      ],
+      "response": {
+        "activeClientRelationships": []
+      },
+      "frontend_action": "Show 'No active relationships' for this client"
+    },
+    {
+      "scenario": "Invalid client identifier in bulk request",
+      "flow": [
+        "Stride user submits request with one invalid clientId format",
+        "Validation fails for invalid client",
+        "400 Bad Request returned",
+        "Entire request fails (no partial success)"
+      ],
+      "response": "400 Bad Request",
+      "frontend_action": "Show validation error, ask user to correct invalid client ID"
+    },
+    {
+      "scenario": "Client details not found",
+      "flow": [
+        "Stride user requests relationships",
+        "Validation passes",
+        "Relationships retrieved successfully",
+        "Client details lookup fails (client not found in DES)",
+        "404 Not Found returned"
+      ],
+      "response": "404 Not Found - ClientDetailsNotFound",
+      "frontend_action": "Show 'Client details not available' error"
+    },
+    {
+      "scenario": "Agent details lookup failure",
+      "flow": [
+        "Stride user requests relationships",
+        "Validation and relationship retrieval succeed",
+        "Agent Maintainer fails to return agent name for one ARN",
+        "500 Internal Server Error returned"
+      ],
+      "response": "500 Internal Server Error - ErrorRetrievingAgentDetails",
+      "frontend_action": "Show error message, suggest retry"
+    },
+    {
+      "scenario": "All supported client types in one request",
+      "flow": [
+        "Stride user requests relationships for 8 clients: NINO, VRN, UTR, URN, CGTPDRef, EtmpRegistrationNumber, cbcId, PLRID",
+        "All validated successfully",
+        "Each routed to appropriate service: HIP for most, Agent-Fi for IRV, MongoDB for PartialAuth",
+        "Client names retrieved from appropriate DES endpoints",
+        "Agent names enriched from Agent Maintainer",
+        "200 OK with all relationships across all services"
+      ],
+      "response": {
+        "activeClientRelationships": [
+          "...relationships for NINO (MTD-IT, MTD-IT-SUPP, IRV, PartialAuth)",
+          "...relationships for VRN (VAT)",
+          "...relationships for UTR (Trust)",
+          "...relationships for URN (TrustNT)",
+          "...relationships for CGTPDRef (CGT)",
+          "...relationships for EtmpRegistrationNumber (PPT)",
+          "...relationships for cbcId (CBC)",
+          "...relationships for PLRID (Pillar2)"
+        ]
+      },
+      "frontend_action": "Display comprehensive multi-service relationship view"
+    }
+  ],
+  "importantNotes": [
+    "✅ VERY HIGH COMPLEXITY - Bulk endpoint supporting all client identifier types",
+    "✅ Stride-only endpoint - not accessible to agents or clients",
+    "✅ Supports batch processing of multiple clients in single request",
+    "✅ NINO clients get special handling - 3 parallel queries (ITSA via HIP, IRV via Agent-Fi, PartialAuth via MongoDB)",
+    "✅ Each relationship enriched with agent name (from Agent Maintainer) and client name (from DES)",
+    "✅ Supports all services: MTD-IT, MTD-IT-SUPP, IRV, VAT, Trust, TrustNT, CGT, PPT, CBC, Pillar2",
+    "✅ Only returns ACTIVE relationships (isActive=true)",
+    "✅ Client names retrieved from service-specific DES endpoints",
+    "✅ PartialAuth relationships included for NINO (supporting agents)",
+    "⚠️ Entire request fails if any single client validation fails - no partial success",
+    "⚠️ IRV errors are silently recovered (not included in results) - doesn't fail entire request",
+    "⚠️ If agent name lookup fails, entire request returns 500",
+    "⚠️ If client name lookup fails, returns 404 (not 500)",
+    "⚠️ Performance consideration: Makes multiple downstream calls per client (relationships + agent details + client details)",
+    "⚠️ For NINO: Up to 3 relationship sources queried in parallel + IF call for MtdItId conversion",
+    "⚠️ Each unique ARN requires Agent Maintainer call - could be many calls for clients with multiple agents",
+    "⚠️ Response can be very large if many clients with many relationships requested",
+    "⚠️ No pagination - all results returned in single response",
+    "⚠️ Different error handling for IRV (recovered) vs other services (propagated)",
+    "⚠️ Requires specific Stride roles: maintain_agent_relationships or maintain_agent_manually_assure"
+  ],
+  "metadata": {
+    "lastUpdated": "2025-11-20",
+    "gitCommitSha": "b2138b4e3958677748c1820c3d715d4fbb9d3b2c",
+    "analysisVersion": "1.0"
+  }
+}

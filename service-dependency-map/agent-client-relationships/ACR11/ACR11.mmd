@@ -1,0 +1,58 @@
+%% Last Updated: 2025-11-20
+%% Git Commit SHA: b2138b4e3958677748c1820c3d715d4fbb9d3b2c
+%% Analysis Version: 1.0
+
+sequenceDiagram
+    participant Agent
+    participant ILC as InvitationLinkController
+    participant ILS as InvitationLinkService
+    participant AAS as agent-assurance
+    participant ARR as AgentReferenceRepository
+    participant Mongo as MongoDB<br/>(agent-reference collection)
+
+    Agent->>+ILC: GET /agent/agent-link
+    Note over ILC: withAuthorisedAsAgent(arn)<br/>Agent authentication required
+
+    ILC->>+ILS: createLink(arn)
+
+    ILS->>+AAS: getAgentRecord(arn)
+    Note over AAS: GET /agent-assurance/agent-record/:arn<br/>Returns agent details
+    AAS-->>-ILS: AgentDetailsDesResponse
+
+    ILS->>ILS: normaliseAgentName(agencyName)<br/>lowercase, spaces→hyphens, remove special chars
+
+    ILS->>+ARR: findByArn(arn)
+    ARR->>+Mongo: find({"arn": arn})
+    Mongo-->>-ARR: AgentReferenceRecord or None
+    ARR-->>-ILS: Option[AgentReferenceRecord]
+
+    alt AgentReferenceRecord exists
+        ILS->>ILS: Check if newNormaliseAgentName<br/>in record.normalisedAgentNames
+
+        alt Name not in array (agency name changed)
+            ILS->>+ARR: updateAgentName(uid, newNormaliseAgentName)
+            ARR->>+Mongo: updateOne({"uid": uid},<br/>$addToSet: {normalisedAgentNames: newName})
+            Note over Mongo: Adds new name to array,<br/>keeps old names
+            Mongo-->>-ARR: Update result
+            ARR-->>-ILS: Unit
+        else Name already in array
+            ILS->>ILS: No update needed
+        end
+
+        ILS->>ILS: Return CreateLinkResponse(uid, normalizedName)
+    else AgentReferenceRecord does not exist (first time)
+        ILS->>ILS: createAgentReferenceRecord(arn, normalizedName)
+        ILS->>ILS: Generate new UID<br/>RandomStringUtils.secure().next(8, codetable)
+
+        ILS->>+ARR: create(AgentReferenceRecord)
+        ARR->>+Mongo: insertOne({<br/>  uid: generatedUid,<br/>  arn: arn,<br/>  normalisedAgentNames: [normalizedName]<br/>})
+        Mongo-->>-ARR: Insert result
+        ARR-->>-ILS: Unit
+
+        ILS->>ILS: Return CreateLinkResponse(newUid, normalizedName)
+    end
+
+    ILS-->>-ILC: CreateLinkResponse
+
+    ILC-->>-Agent: 200 OK with UID and normalized name
+

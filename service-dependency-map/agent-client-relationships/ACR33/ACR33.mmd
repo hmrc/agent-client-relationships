@@ -1,0 +1,63 @@
+%% Last Updated: 2025-11-20
+%% Git Commit SHA: b2138b4e3958677748c1820c3d715d4fbb9d3b2c
+%% Analysis Version: 1.0
+
+sequenceDiagram
+    participant Client as External System
+    participant AGIC as ApiGetInvitationsController
+    participant AAS as AgentAssuranceService
+    participant AA as Agent Assurance
+    participant ILS as InvitationLinkService
+    participant ARR as AgentReferenceRepository
+    participant ARRDB as agent-references
+    participant IR as InvitationsRepository
+    participant IDB as invitations
+
+    Client->>AGIC: GET /api/{arn}/invitations
+    Note over AGIC: OAuth2 Authentication Check
+
+    AGIC->>AAS: getNonSuspendedAgentRecord(arn)
+    AAS->>AA: GET /agent-assurance/agent/{arn}
+
+    alt Agent Found and Not Suspended
+        AA-->>AAS: Agent record
+        AAS-->>AGIC: Some(agentRecord)
+
+        AGIC->>ILS: normaliseAgentName(agencyName)
+        ILS-->>AGIC: normalizedAgentName
+
+        AGIC->>ILS: getAgentReferenceRecordByArn(arn, normalizedName)
+        ILS->>ARR: findByArn(arn)
+        ARR->>ARRDB: Find by ARN
+
+        alt Agent Reference Exists
+            ARRDB-->>ARR: AgentReferenceRecord
+            ARR-->>ILS: Some(record)
+        else Agent Reference Not Found
+            ARRDB-->>ARR: None
+            ARR-->>ILS: None
+            Note over ARR: create(new AgentReferenceRecord)
+            ARR->>ARRDB: Insert new record with uid
+            ARRDB-->>ARR: Created
+            ARR-->>ILS: AgentReferenceRecord
+        end
+        ILS-->>AGIC: AgentReferenceRecord with uid
+
+        AGIC->>IR: findAllForAgentService(arn, services)
+        IR->>IDB: Query all invitations for ARN
+
+        alt Invitations Found
+            IDB-->>IR: Seq[Invitation]
+            IR-->>AGIC: List of invitations
+            AGIC-->>Client: 200 OK - ApiBulkInvitationsResponse
+        else No Invitations
+            IDB-->>IR: Empty Seq
+            IR-->>AGIC: Empty list
+            AGIC-->>Client: 200 OK - Empty invitations array
+        end
+
+    else Agent Suspended or Not Found
+        AA-->>AAS: None (suspended/not found)
+        AAS-->>AGIC: None
+        AGIC-->>Client: 422 AGENT_SUSPENDED
+    end

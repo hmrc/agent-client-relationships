@@ -1,0 +1,468 @@
+{
+  "apiId": "ACR28",
+  "apiTitle": "Stride Get Client Details with Relationships",
+  "description": "Allows a Stride user (HMRC internal staff) to retrieve comprehensive details for a single client including client name, pending invitations (non-suspended agents only), and active main agent relationship. Supports all client identifier types. Special handling for MTD-IT includes PartialAuth check and MTD-IT-SUPP service. Pending invitations are filtered to exclude suspended agents. Client name prioritized from invitation if available, otherwise retrieved from DES. Used by HMRC staff for customer support to view client's relationship status.",
+  "method": "GET",
+  "path": "/stride/client-details/service/{service}/client/{clientIdType}/{clientId}",
+  "pathParameters": {
+    "service": "Service identifier (e.g., HMRC-MTD-IT, HMRC-MTD-VAT, HMRC-TERS-ORG, HMRC-CGT-PD, PERSONAL-INCOME-RECORD)",
+    "clientIdType": "Client identifier type matching the service (e.g., 'NI' for NINO, 'VRN' for VRN, 'UTR' for UTR)",
+    "clientId": "Client identifier value (must be valid format for the clientIdType)"
+  },
+  "queryParameters": {},
+  "requestBody": {},
+  "responses": {
+    "200": "OK - Returns client details with pending invitations and active main agent",
+    "400": "Bad Request - Invalid service, clientIdType, or clientId format",
+    "401": "Unauthorized - Stride authentication failed",
+    "403": "Forbidden - Stride user does not have required role",
+    "404": "Not Found - Client not found (no invitations and no client details in DES)",
+    "500": "Internal Server Error"
+  },
+  "authentication": "Stride authentication with specific roles (maintain_agent_relationships or maintain_agent_manually_assure)",
+  "audience": "internal",
+  "controller": "StrideClientDetailsController",
+  "controllerMethod": "get",
+  "services": [
+    {
+      "name": "ValidationService",
+      "alias": "VS",
+      "method": "validateForEnrolmentKey",
+      "description": "Validates service identifier, clientIdType, and clientId format"
+    },
+    {
+      "name": "StrideClientDetailsService",
+      "alias": "SCDS",
+      "method": "getClientDetailsWithChecks",
+      "description": "Orchestrates retrieval of invitations, active relationship, and client name"
+    },
+    {
+      "name": "InvitationsRepository",
+      "alias": "InvRepo",
+      "method": "findAllPendingForSuppliedClient",
+      "description": "Retrieves all pending invitations for client and service(s) from MongoDB"
+    },
+    {
+      "name": "AgentAssuranceService",
+      "alias": "AAS",
+      "method": "getNonSuspendedAgentRecord, getAgentRecord",
+      "description": "Retrieves agent details from Agent Maintainer and filters suspended agents"
+    },
+    {
+      "name": "PartialAuthRepository",
+      "alias": "PAuthRepo",
+      "method": "findMainAgent",
+      "description": "For MTD-IT only: Checks if client has PartialAuth main agent in MongoDB"
+    },
+    {
+      "name": "FindRelationshipsService",
+      "alias": "FRS",
+      "method": "getItsaRelationshipForClient, getActiveRelationshipsForClient",
+      "description": "Retrieves active relationships from HIP/IF or Agent-Fi-Relationship"
+    },
+    {
+      "name": "AgentFiRelationshipConnector",
+      "alias": "AFIRC",
+      "method": "findIrvActiveRelationshipForClient",
+      "description": "Retrieves IRV (Personal Income Record) relationships from agent-fi-relationship service"
+    },
+    {
+      "name": "ClientDetailsService",
+      "alias": "CDS",
+      "method": "findClientDetails",
+      "description": "Retrieves client name from appropriate DES service based on identifier type"
+    }
+  ],
+  "interactions": "See ACR28.mmd for complete sequence diagram",
+  "externalDependencies": [
+    {
+      "name": "Agent Maintainer",
+      "description": "Retrieves agent records (name and suspension status) for ARNs in invitations and relationships",
+      "method": "GET /agent-maintainer/agent/{arn}",
+      "note": "Called for each invitation ARN and for active relationship ARN"
+    },
+    {
+      "name": "HIP (ETMP)",
+      "description": "Retrieves active relationships for most services",
+      "method": "GET /registration/relationship",
+      "note": "Not called for IRV service. For MTD-IT, only called if no PartialAuth main agent found"
+    },
+    {
+      "name": "IF (Integration Framework)",
+      "description": "Converts NINO to MtdItId for ITSA relationship queries",
+      "method": "getMtdIdFor",
+      "note": "Only called for MTD-IT service when querying HIP"
+    },
+    {
+      "name": "Agent-Fi-Relationship",
+      "description": "Retrieves IRV (Personal Income Record) relationships for NINO",
+      "method": "GET /relationships/active?service=PERSONAL-INCOME-RECORD",
+      "note": "Only called for PERSONAL-INCOME-RECORD service"
+    },
+    {
+      "name": "DES (Citizen Details, Designatory Details, Subscription Details)",
+      "description": "Retrieves client name based on identifier type",
+      "method": "getCitizenDetails, getDesignatoryDetails, getVrnDisplayDetails, getTrustDetails, getCgtSubscriptionDetails, getPptSubscriptionDetails, getCbcSubscriptionDetails, getPillar2SubscriptionDetails",
+      "note": "Only called if no pending invitations with client name exist. Different endpoint per identifier type"
+    }
+  ],
+  "databaseCollections": [
+    {
+      "name": "invitations",
+      "operation": "READ",
+      "description": "Retrieves all pending invitations for the client and service. Filtered to exclude suspended agents"
+    },
+    {
+      "name": "partial-auth",
+      "operation": "READ",
+      "description": "For MTD-IT only: Checks if client has PartialAuth main agent. If found, used instead of querying HIP"
+    }
+  ],
+  "responseModel": {
+    "ClientDetailsStrideResponse": {
+      "clientName": "Client name (from invitation or DES)",
+      "pendingInvitations": "Array of InvitationWithAgentName objects (non-suspended agents only)",
+      "activeMainAgent": "Optional ActiveMainAgent object (null if no active relationship)"
+    },
+    "InvitationWithAgentName": {
+      "clientType": "Client type (e.g., 'personal', 'business')",
+      "arn": "Agent Reference Number",
+      "service": "Service identifier",
+      "status": "Invitation status (typically 'Pending')",
+      "expiryDate": "Invitation expiry date",
+      "lastUpdated": "Last update timestamp",
+      "invitationId": "Unique invitation ID",
+      "agencyName": "Agent agency name",
+      "clientName": "Client name",
+      "agentIsSuspended": "Always false (suspended agents filtered out)",
+      "isAltItsa": "Whether this is alternative ITSA arrangement"
+    },
+    "ActiveMainAgent": {
+      "agentName": "Agent name from Agent Maintainer",
+      "arn": "Agent Reference Number",
+      "service": "Service identifier"
+    },
+    "example": {
+      "clientName": "John Doe",
+      "pendingInvitations": [
+        {
+          "clientType": "personal",
+          "arn": "AARN1234567",
+          "service": "HMRC-MTD-IT",
+          "status": "Pending",
+          "expiryDate": "2025-02-15",
+          "lastUpdated": "2025-01-15T10:30:00Z",
+          "invitationId": "ABCD1234567890",
+          "agencyName": "XYZ Tax Services",
+          "clientName": "John Doe",
+          "agentIsSuspended": false,
+          "isAltItsa": false
+        }
+      ],
+      "activeMainAgent": {
+        "agentName": "ABC Accountants Ltd",
+        "arn": "AARN9876543",
+        "service": "HMRC-MTD-IT"
+      }
+    }
+  },
+  "businessLogic": {
+    "validation": {
+      "description": "Validates service, clientIdType, and clientId format before processing",
+      "logic": "Uses ValidationService.validateForEnrolmentKey. Same validation as ACR26"
+    },
+    "mtdItServiceExpansion": {
+      "description": "MTD-IT service automatically includes MTD-IT-SUPP",
+      "logic": "When service is HMRC-MTD-IT, searches for invitations for both HMRC-MTD-IT and HMRC-MTD-IT-SUPP"
+    },
+    "pendingInvitationsRetrieval": {
+      "description": "Retrieves pending invitations and enriches with agent details",
+      "logic": "Queries invitations collection, then for each invitation retrieves agent record from Agent Maintainer. Filters out invitations where agent is suspended (getNonSuspendedAgentRecord returns None for suspended agents)"
+    },
+    "suspendedAgentFiltering": {
+      "description": "Suspended agents are excluded from pending invitations",
+      "logic": "AgentAssuranceService.getNonSuspendedAgentRecord returns None for suspended agents. These invitations are filtered out and not included in response"
+    },
+    "activeRelationshipRetrieval": {
+      "description": "Different logic per service type",
+      "logic": "MTD-IT: First checks PartialAuth for main agent, if found uses that, otherwise queries HIP via IF. IRV: Queries agent-fi-relationship directly. Other services: Query HIP directly. If relationship found, enriches with agent name from Agent Maintainer"
+    },
+    "partialAuthPriority": {
+      "description": "For MTD-IT, PartialAuth main agent takes precedence over HIP",
+      "logic": "If PartialAuth.findMainAgent returns a record, that becomes the active relationship and HIP is NOT queried. This ensures correct main agent is shown when PartialAuth is in use"
+    },
+    "clientNameResolution": {
+      "description": "Client name prioritized from invitation if available",
+      "logic": "If pending invitations exist and first has clientName, use that. Otherwise query DES via ClientDetailsService.findClientDetails. Different DES endpoint based on identifier type (getCitizenDetails for NINO, getVrnDisplayDetails for VRN, etc.)"
+    },
+    "notFoundCondition": {
+      "description": "Returns 404 if no client name can be determined",
+      "logic": "If no pending invitations AND DES returns no client details, entire response is None and 404 is returned. Client must be known somewhere (invitation or DES) to return 200"
+    },
+    "strideAuthorization": {
+      "description": "Requires Stride authentication with specific roles",
+      "logic": "User must be authenticated via Stride and have either 'maintain_agent_relationships' or 'maintain_agent_manually_assure' role"
+    }
+  },
+  "errorHandling": [
+    {
+      "scenario": "Invalid service, clientIdType, or clientId format",
+      "response": "400 Bad Request",
+      "message": "Validation error message",
+      "note": "Validation occurs before Stride authorization"
+    },
+    {
+      "scenario": "Stride authentication failure",
+      "response": "401 Unauthorized",
+      "message": "Authentication failed",
+      "note": "User must be authenticated via Stride"
+    },
+    {
+      "scenario": "Insufficient Stride permissions",
+      "response": "403 Forbidden",
+      "message": "Forbidden",
+      "note": "User must have required Stride role"
+    },
+    {
+      "scenario": "No invitations and client not found in DES",
+      "response": "404 Not Found",
+      "message": "No body",
+      "note": "Client must be known in either invitations or DES"
+    },
+    {
+      "scenario": "Active relationship query fails",
+      "response": "200 OK with activeMainAgent = null",
+      "message": "N/A",
+      "note": "Relationship query failures don't fail entire request - just returns no active agent"
+    },
+    {
+      "scenario": "Agent Maintainer returns 404 for invitation ARN",
+      "response": "200 OK with that invitation filtered out",
+      "message": "N/A",
+      "note": "Invitations with missing agent records are excluded from results"
+    },
+    {
+      "scenario": "Agent suspended for invitation",
+      "response": "200 OK with that invitation filtered out",
+      "message": "N/A",
+      "note": "Suspended agents' invitations excluded from response"
+    },
+    {
+      "scenario": "HIP returns error for relationship query",
+      "response": "200 OK with activeMainAgent = null",
+      "message": "N/A",
+      "note": "HIP errors don't fail request - just no active agent shown"
+    }
+  ],
+  "useCases": [
+    {
+      "scenario": "Client with pending invitation and active main agent",
+      "flow": [
+        "Stride user calls endpoint for VAT client",
+        "Validation passes",
+        "Stride authorization succeeds",
+        "Pending invitation found in MongoDB",
+        "Agent record retrieved - not suspended",
+        "Active relationship found in HIP",
+        "Active agent record retrieved from Agent Maintainer",
+        "Client name from invitation",
+        "200 OK with invitation and active agent"
+      ],
+      "response": {
+        "clientName": "CFG Solutions",
+        "pendingInvitations": [
+          {
+            "clientType": "business",
+            "arn": "AARN1234567",
+            "service": "HMRC-MTD-VAT",
+            "status": "Pending",
+            "expiryDate": "2025-02-15",
+            "lastUpdated": "2025-01-15T10:00:00Z",
+            "invitationId": "VWXYZ1234567890",
+            "agencyName": "XYZ Tax Services",
+            "clientName": "CFG Solutions",
+            "agentIsSuspended": false,
+            "isAltItsa": false
+          }
+        ],
+        "activeMainAgent": {
+          "agentName": "ABC Accountants Ltd",
+          "arn": "AARN9876543",
+          "service": "HMRC-MTD-VAT"
+        }
+      },
+      "frontend_action": "Display client details with pending invitation and current agent"
+    },
+    {
+      "scenario": "Client with no invitations but active relationship",
+      "flow": [
+        "Stride user calls endpoint for VAT client",
+        "Validation and authorization succeed",
+        "No pending invitations found",
+        "Active relationship found in HIP",
+        "Active agent record retrieved",
+        "Client name retrieved from DES (getVrnDisplayDetails)",
+        "200 OK with empty invitations array and active agent"
+      ],
+      "response": {
+        "clientName": "CFG Solutions",
+        "pendingInvitations": [],
+        "activeMainAgent": {
+          "agentName": "ABC Ltd",
+          "arn": "AARN0000002",
+          "service": "HMRC-MTD-VAT"
+        }
+      },
+      "frontend_action": "Display current agent relationship"
+    },
+    {
+      "scenario": "Client with pending invitation but no active relationship",
+      "flow": [
+        "Stride user calls endpoint",
+        "Pending invitation found",
+        "Agent not suspended - included in response",
+        "No active relationship found (HIP returns 422 or no relationship)",
+        "Client name from invitation",
+        "200 OK with invitation but no active agent"
+      ],
+      "response": {
+        "clientName": "John Smith",
+        "pendingInvitations": [
+          {
+            "clientType": "personal",
+            "arn": "AARN1111111",
+            "service": "HMRC-MTD-VAT",
+            "status": "Pending",
+            "expiryDate": "2025-03-01",
+            "lastUpdated": "2025-02-01T14:20:00Z",
+            "invitationId": "PQRST9876543210",
+            "agencyName": "New Agent Services",
+            "clientName": "John Smith",
+            "agentIsSuspended": false,
+            "isAltItsa": false
+          }
+        ]
+      },
+      "frontend_action": "Show pending invitation, no current agent"
+    },
+    {
+      "scenario": "Pending invitation from suspended agent - filtered out",
+      "flow": [
+        "Stride user calls endpoint",
+        "Pending invitation found",
+        "Agent Maintainer shows agent is suspended",
+        "getNonSuspendedAgentRecord returns None",
+        "Invitation filtered out",
+        "Active relationship found in HIP",
+        "200 OK with empty invitations and active agent"
+      ],
+      "response": {
+        "clientName": "Acme Ltd",
+        "pendingInvitations": [],
+        "activeMainAgent": {
+          "agentName": "ABC Accountants",
+          "arn": "AARN9999999",
+          "service": "HMRC-MTD-VAT"
+        }
+      },
+      "frontend_action": "Don't show suspended agent's invitation"
+    },
+    {
+      "scenario": "MTD-IT with PartialAuth main agent",
+      "flow": [
+        "Stride user calls with service=HMRC-MTD-IT",
+        "Validation passes",
+        "Check for invitations for both MTD-IT and MTD-IT-SUPP",
+        "Check PartialAuth - main agent found",
+        "Use PartialAuth agent as active relationship (don't query HIP)",
+        "Retrieve agent name from Agent Maintainer",
+        "200 OK with PartialAuth agent as active"
+      ],
+      "response": {
+        "clientName": "Jane Doe",
+        "pendingInvitations": [],
+        "activeMainAgent": {
+          "agentName": "Supporting Agent Ltd",
+          "arn": "AARN2222222",
+          "service": "HMRC-MTD-IT"
+        }
+      },
+      "frontend_action": "Show PartialAuth main agent as active"
+    },
+    {
+      "scenario": "IRV service (PERSONAL-INCOME-RECORD)",
+      "flow": [
+        "Stride user calls with service=PERSONAL-INCOME-RECORD",
+        "Validation and authorization succeed",
+        "No pending invitations (IRV doesn't use invitations typically)",
+        "Query agent-fi-relationship for IRV relationships",
+        "IRV relationship found",
+        "Agent name retrieved from Agent Maintainer",
+        "Client name from DES (getCitizenDetails)",
+        "200 OK with IRV active agent"
+      ],
+      "response": {
+        "clientName": "Robert Johnson",
+        "pendingInvitations": [],
+        "activeMainAgent": {
+          "agentName": "IRV Specialists Ltd",
+          "arn": "AARN7777777",
+          "service": "PERSONAL-INCOME-RECORD"
+        }
+      },
+      "frontend_action": "Display IRV relationship"
+    },
+    {
+      "scenario": "Client not found anywhere",
+      "flow": [
+        "Stride user calls endpoint",
+        "Validation and authorization succeed",
+        "No pending invitations",
+        "No active relationship",
+        "DES client details query returns 404",
+        "No client name available",
+        "404 Not Found returned"
+      ],
+      "response": "404 Not Found (no body)",
+      "frontend_action": "Show 'Client not found' error"
+    },
+    {
+      "scenario": "Invalid service identifier",
+      "flow": [
+        "Stride user provides invalid service",
+        "Validation fails",
+        "400 Bad Request returned before Stride auth check"
+      ],
+      "response": "400 Bad Request - Validation error",
+      "frontend_action": "Show validation error"
+    }
+  ],
+  "importantNotes": [
+    "✅ Stride-only endpoint - not accessible to agents or clients",
+    "✅ Returns comprehensive client view: name, pending invitations, and active agent",
+    "✅ Pending invitations ONLY include non-suspended agents",
+    "✅ For MTD-IT, automatically queries both MTD-IT and MTD-IT-SUPP invitations",
+    "✅ For MTD-IT relationships, PartialAuth main agent takes precedence over HIP",
+    "✅ Client name prioritized from invitation, falls back to DES",
+    "✅ IRV service queries agent-fi-relationship, not HIP",
+    "✅ Different DES endpoints per client identifier type",
+    "✅ Returns 200 with empty invitations/null agent if those queries fail - doesn't fail entire request",
+    "⚠️ Returns 404 ONLY if client name cannot be determined (no invitations AND DES returns no details)",
+    "⚠️ Suspended agents' invitations are silently filtered out - not included in response",
+    "⚠️ Invitations where agent record not found are filtered out",
+    "⚠️ Active relationship query failures result in activeMainAgent = null, not 404 or 500",
+    "⚠️ HIP errors (422, etc.) don't fail the request - just no active agent shown",
+    "⚠️ Validation occurs BEFORE Stride authorization (efficient rejection)",
+    "⚠️ For MTD-IT: If PartialAuth main agent exists, HIP is NOT queried",
+    "⚠️ Each invitation ARN requires Agent Maintainer call - could be slow with many invitations",
+    "⚠️ Active relationship ARN also requires Agent Maintainer call",
+    "⚠️ Single client only - for bulk use ACR27",
+    "⚠️ Requires specific Stride roles: maintain_agent_relationships or maintain_agent_manually_assure"
+  ],
+  "metadata": {
+    "lastUpdated": "2025-11-20",
+    "gitCommitSha": "b2138b4e3958677748c1820c3d715d4fbb9d3b2c",
+    "analysisVersion": "1.0"
+  }
+}
+

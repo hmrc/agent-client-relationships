@@ -184,136 +184,105 @@ This document provides an analysis of the MongoDB collections used by the `agent
     "uid": "550e8400-e29b-41d4-a716-446655440000",
     "runAt": { "$date": "2025-09-11T12:00:00.000Z" }
   }
-    "status": "Pending",
-    "created": { "$date": "2025-09-11T10:00:00.000Z" },
-    "lastUpdated": { "$date": "2025-09-11T10:00:00.000Z" },
-    "expiryDate": { "$date": "2025-10-02T10:00:00.000Z" },
-    "events": [
-      {
-        "time": { "$date": "2025-09-11T10:00:00.000Z" },
-        "status": "Pending"
-      }
-    ]
-  }
   ```
 
 ---
 
-## 2. `partial-auth`
+## 7. `locks`
 
-- **Repository File:** `PartialAuthRepository.scala`
-- **Purpose:** This collection is used to temporarily store information during the "authorisation" process, where a client is attempting to accept an agent's invitation but may need to complete additional authentication steps. It holds the state while the client is redirected to other services (like Government Gateway) to confirm their identity.
+- **Repository File:** `MongoLockRepositoryWithMdc.scala` (extends `MongoLockRepository` from hmrc-mongo library)
+- **Purpose:** This collection provides distributed locking mechanism for scheduled jobs and background processes. It ensures that only one instance of a job runs at a time across multiple application instances. Used by the recovery scheduler and other background jobs to prevent concurrent execution.
 - **Schema Highlights:**
-  - `credId`: The user's credential ID from Government Gateway.
-  - `clientIds`: A list of client identifiers associated with the user's credentials.
-  - `redirectUrl`: The URL to redirect the user back to after they complete the external authentication steps.
+  - `_id`: The lock identifier (unique).
+  - `owner`: The identifier of the process/instance that owns the lock.
+  - `expiryTime`: Timestamp when the lock will automatically expire.
+  - `timeCreated`: Timestamp when the lock was created.
 
 - **Sample Document:**
 
   ```json
   {
-    "credId": "1234567890123456",
-    "clientIds": ["AB123456A", "CD789012B"],
-    "redirectUrl": "/agent-client-relationships/some-continue-url"
+    "_id": "RecoveryJob",
+    "owner": "instance-1",
+    "expiryTime": { "$date": "2025-09-11T12:30:00.000Z" },
+    "timeCreated": { "$date": "2025-09-11T12:00:00.000Z" }
   }
   ```
+
+- **Notes:**
+  - Provided by the `uk.gov.hmrc.mongo.lock.MongoLockRepository` library.
+  - `MongoLockRepositoryWithMdc` wraps the standard lock repository to preserve MDC (Mapped Diagnostic Context) for logging.
+  - Locks have a TTL (Time To Live) to prevent stuck locks from blocking jobs indefinitely.
+  - Used for distributed coordination across multiple application instances.
 
 ---
 
-## 3. `agent-reference`
+## Summary and Key Concepts
 
-- **Repository File:** `AgentReferenceRepository.scala`
-- **Purpose:** This collection stores a mapping between an agent's `arn` (Agent Reference Number) and their `uid` (a unique identifier, likely related to their Government Gateway account). This allows the service to look up agent details using either identifier.
-- **Schema Highlights:**
-  - `uid`: The agent's unique identifier.
-  - `arn`: The agent's Agent Reference Number.
+### Encryption
 
-- **Sample Document:**
+Several collections contain sensitive personal data that is encrypted at rest using AES encryption:
 
-  ```json
-  {
-    "uid": "some-unique-gateway-id",
-    "arn": "TARN0000001"
-  }
-  ```
+- **`invitations`**: `clientId`, `suppliedClientId`, `clientName`, `agencyName`, `agencyEmail`
+- **`partial-auth`**: `nino`
+- **`agent-reference`**: `normalisedAgentNames`
 
----
+The encryption is managed by the `@Named("aes") crypto: Encrypter with Decrypter` dependency injected into each repository. The encrypted fields are stored as encrypted strings but are transparently encrypted/decrypted by the repository layer.
 
-## 4. `relationship-copy-record`
+### Synchronization Status Values
 
-- **Repository File:** `RelationshipCopyRecordRepository.scala`
-- **Purpose:** This collection is used to track the progress of copying client relationships from legacy HMRC systems (like `agent-mapping`) to the modernised `enrolment-store-proxy`. This is a crucial part of the migration strategy to the new agent services platform.
-- **Schema Highlights:**
-  - `arn`: The Agent Reference Number.
-  - `service`: The HMRC service for which relationships are being copied.
-  - `clientIdentifier`: The identifier of the client.
-  - `clientIdentifierType`: The type of the client identifier.
-  - `syncToESStatus`: The status of the synchronisation to the `enrolment-store-proxy` (e.g., `InProgress`, `Success`, `Failed`).
+The `relationship-copy-record` and `delete-record` collections use `syncToETMPStatus` and `syncToESStatus` fields with the following possible values:
 
-- **Sample Document:**
+- **`Success`**: Operation completed successfully
+- **`Failed`**: Operation failed and needs recovery
+- **`InProgress`**: Operation is currently being processed
 
-  ```json
-  {
-    "arn": "TARN0000001",
-    "service": "HMRC-MTD-VAT",
-    "clientIdentifier": "101747641",
-    "clientIdentifierType": "vrn",
-    "syncToESStatus": "Success"
-  }
-  ```
+### Relationship Lifecycle
 
----
+1. **Invitation Created** → Record in `invitations` with status `Pending`
+2. **Client Accepts** → Status changes to `Accepted`, may create `partial-auth` record for ITSA
+3. **Relationship Created** → Record in `relationship-copy-record` to track sync to EACD/ETMP
+4. **Relationship Ended** → Record in `delete-record` to track cleanup in EACD/ETMP
+5. **Recovery** → Failed operations scheduled in `recovery-schedule` for retry
 
-## 5. `delete-record`
+### Collection Relationships
 
-- **Repository File:** `DeleteRecordRepository.scala`
-- **Purpose:** This collection tracks requests to remove or "de-authorise" agent-client relationships. When a relationship is terminated, a record is stored here to keep a log of these events and potentially to manage the cleanup of corresponding enrolments in downstream systems.
-- **Schema Highlights:**
-  - `arn`: The Agent Reference Number.
-  - `service`: The relevant HMRC service.
-  - `clientIdentifier`: The client's identifier.
-  - `clientIdentifierType`: The type of the client identifier.
-  - `syncToESStatus`: The status of the de-authorisation synchronisation with the `enrolment-store-proxy`.
-  - `lastFound`: Timestamp of the last time the record was processed.
+- **`invitations`** ↔ **`agent-reference`**: Invitations reference agent UIDs from agent-reference for external API
+- **`partial-auth`** ↔ **`invitations`**: Partial auth created when invitation accepted for ITSA signup
+- **`relationship-copy-record`** ↔ **`delete-record`**: Mirror collections for create/delete operations
+- **`recovery-schedule`** ↔ **`relationship-copy-record`/`delete-record`**: Recovery tasks for failed sync operations
+- **`locks`**: Ensures only one recovery job runs at a time across instances
 
-- **Sample Document:**
+### Indexes and Performance
 
-  ```json
-  {
-    "arn": "TARN0000001",
-    "service": "HMRC-MTD-IT",
-    "clientIdentifier": "AB123456A",
-    "clientIdentifierType": "ni",
-    "syncToESStatus": "InProgress",
-    "lastFound": { "$date": "2025-09-11T11:00:00.000Z" }
-  }
-  ```
+- **Unique indexes**: `invitations.invitationId`, `agent-reference.uid`, `agent-reference.arn`, `partial-auth` (on service+nino+arn when active)
+- **Compound indexes**: `partial-auth` has compound index on (service, nino, arn, active) for efficient relationship queries
+- **TTL indexes**: Most collections use TTL indexes except `agent-reference` (permanent records) and `locks` (library-managed TTL)
+
+### API Endpoint Usage
+
+- **Internal APIs (ACR01-ACR30)**: Primarily use `invitations`, `partial-auth`, `relationship-copy-record`, `delete-record`
+- **External APIs (ACR31-ACR34)**: Use `agent-reference` for stable agent identifiers (UID) and `invitations` for invitation management
+- **Background Jobs**: Use `locks` for coordination, `recovery-schedule` for retry logic, and update `relationship-copy-record`/`delete-record` statuses
 
 ---
 
-## 6. `recovery-schedule`
+## Additional Notes
 
-- **Repository File:** `RecoveryScheduleRepository.scala`
-- **Purpose:** This collection is used for managing scheduled, asynchronous recovery tasks. If an operation (like creating a relationship in a downstream service) fails, a record can be created here to retry the operation later. This makes the system more resilient to temporary failures in other microservices.
-- **Schema Highlights:**
-  - `arn`: The Agent Reference Number.
-  - `service`: The HMRC service.
-  - `clientIdentifier`: The client's identifier.
-  - `clientIdentifierType`: The type of the client identifier.
-  - `action`: The action to be retried (e.g., `create-relationship`).
-  - `tryCount`: The number of times the recovery has been attempted.
-  - `nextTryTime`: The timestamp for the next scheduled retry attempt.
+- All repositories use `Mdc.preservingMdc` to maintain Mapped Diagnostic Context for logging across async boundaries
+- The service uses `uk.gov.hmrc.mongo.play.json.PlayMongoRepository` from the hmrc-mongo library
+- Encryption uses `uk.gov.hmrc.agentclientrelationships.util.CryptoUtil.encryptedString` helper
+- Most operations are asynchronous returning `Future[T]`
+- The system is designed for eventual consistency with recovery mechanisms for failed operations
 
-- **Sample Document:**
+---
 
-  ```json
-  {
-    "arn": "TARN0000001",
-    "service": "HMRC-MTD-IT",
-    "clientIdentifier": "AB123456A",
-    "clientIdentifierType": "ni",
-    "action": "create-relationship",
-    "tryCount": 2,
-    "nextTryTime": { "$date": "2025-09-11T12:00:00.000Z" }
-  }
-  ```
+## Document Metadata
+
+**Last Updated:** November 2025  
+**Git Commit SHA:** `b2138b4e3958677748c1820c3d715d4fbb9d3b2c`  
+**MongoDB Driver:** org.mongodb.scala (Reactive Streams)  
+**Play Framework Version:** 2.9.x  
+**Scala Version:** 2.13.x
+
+

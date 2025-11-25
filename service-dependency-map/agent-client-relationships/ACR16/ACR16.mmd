@@ -1,0 +1,99 @@
+%% Last Updated: 2025-11-20
+%% Git Commit SHA: b2138b4e3958677748c1820c3d715d4fbb9d3b2c
+%% Analysis Version: 1.0
+
+sequenceDiagram
+    participant Client
+    participant AAC as AuthorisationAcceptController
+    participant IS as InvitationService
+    participant VS as ValidationService
+    participant AAS as AuthorisationAcceptService
+    participant IDCS as ItsaDeauthAndCleanupService
+    participant CRS as CreateRelationshipsService
+    participant ESP as Enrolment Store Proxy<br/>EACD
+    participant PAuth as PartialAuthRepository
+    participant AFRC as agent-fi-relationship
+    participant IR as InvitationsRepository
+    participant Mongo as MongoDB
+    participant ES as EmailService
+    participant FNS as FriendlyNameService
+    participant AS as AuditService
+
+    Client->>+AAC: PUT /authorisation-response/accept/:invitationId
+    Note over AAC: No initial auth<br/>(auth after invitation lookup)
+
+    AAC->>+IS: findInvitation(invitationId)
+    IS-->>-AAC: Option[Invitation]
+
+    alt Invitation not found OR not Pending
+        AAC-->>Client: 403 Forbidden (NoPendingInvitation)
+    else Invitation found and Pending
+        AAC->>+VS: validateForEnrolmentKey(service, clientIdType, clientId)
+        VS-->>-AAC: EnrolmentKey
+
+        AAC->>AAC: authorisedUser(None, clientTaxId, strideRoles)
+        Note over AAC: Validates client OR Stride user
+
+        alt User not authorized
+            AAC-->>Client: 403 Forbidden
+        else User authorized
+            AAC->>+AAS: acceptInvitation(invitation, enrolment)
+
+            alt Service is MTD-IT or MTD-IT-SUPP
+                AAS->>+IDCS: deleteSameAgentRelationship<br/>(remove existing main/supp for same agent)
+                IDCS-->>-AAS: Done
+            end
+
+            alt Service is PIR
+                AAS->>+AFRC: createRelationship(arn, service, clientId, acceptedDate)
+                Note over AFRC: agent-fi-relationship<br/>handles own deauthorisations
+                AFRC-->>-AAS: Done
+            else Service is MTD-IT/MTD-IT-SUPP with Alt-ITSA
+                AAS->>+PAuth: deauth existing partial auth
+                PAuth-->>-AAS: Done
+                AAS->>+PAuth: create(arn, service, nino)
+                Note over PAuth: Create partial auth record
+                PAuth-->>-AAS: PartialAuth
+            else Service is MTD-IT (normal)
+                AAS->>AAS: deauth partial auth for nino
+                AAS->>+CRS: createRelationship(arn, enrolmentKey, oldRefs, failIfAllocate=true)
+                CRS->>+ESP: allocateEnrolmentToAgent(groupId, enrolmentKey, agentCode)
+                ESP-->>-CRS: Allocation result
+                CRS->>CRS: Create relationship in ETMP via HIP
+                CRS-->>-AAS: Done or CreateRelationshipLocked
+            else Other services
+                AAS->>+CRS: createRelationship(arn, enrolmentKey, oldRefs, failIfAllocate=true)
+                CRS->>+ESP: allocateEnrolmentToAgent(groupId, enrolmentKey, agentCode)
+                ESP-->>-CRS: Allocation result
+                CRS->>CRS: Create relationship in ETMP via HIP
+                CRS-->>-AAS: Done or CreateRelationshipLocked
+            end
+
+            AAS->>+IR: updateStatus(invitationId, Accepted/PartialAuth, timestamp)
+            IR->>+Mongo: updateOne({invitationId}, $set: {status, lastUpdated})
+            Mongo-->>-IR: Updated invitation
+            IR-->>-AAS: Invitation
+
+            AAS->>AAS: deauthAcceptedInvitations (async)<br/>Deauth other accepted invitations for this client
+
+            AAS->>+ES: sendAcceptedEmail(invitation)
+            Note over ES: Send acceptance email to agent (async)
+            ES-->>-AAS: Unit
+
+            AAS-->>-AAC: Invitation
+
+            alt CreateRelationshipLocked
+                AAC-->>Client: 423 Locked
+            else Success
+                AAC->>+AS: sendRespondToInvitationAuditEvent(invitation, accepted=true, isStride)
+                AS-->>-AAC: Unit
+
+                AAC->>+FNS: updateFriendlyName(invitation, enrolment)
+                Note over FNS: Update friendly name for client
+                FNS-->>-AAC: Unit
+
+                AAC-->>-Client: 204 No Content
+            end
+        end
+    end
+

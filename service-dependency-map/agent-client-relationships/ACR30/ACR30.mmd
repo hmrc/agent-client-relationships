@@ -1,0 +1,16 @@
+%% Last Updated: 2025-11-20
+%% Git Commit SHA: b2138b4e3958677748c1820c3d715d4fbb9d3b2c
+%% Analysis Version: 1.0
+
+sequenceDiagram
+    participant StrideUser as Stride User
+    participant StrideGetPartialAuthsController
+    participant PartialAuthDB as Partial-Auth Collection
+    participant CitizenDetails
+
+    StrideUser->>StrideGetPartialAuthsController: GET /stride/partial-auths/nino/:nino
+    StrideGetPartialAuthsController->>PartialAuthDB: Get partial-auth records for NINO
+    PartialAuthDB-->>StrideGetPartialAuthsController: Partial-auth records
+    StrideGetPartialAuthsController->>CitizenDetails: GET /nino/:nino
+    CitizenDetails-->>StrideGetPartialAuthsController: Client name
+    StrideGetPartialAuthsController-->>StrideUser: 200 OK - Partial auth records with client name

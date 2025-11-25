@@ -1,0 +1,338 @@
+{
+  "apiId": "ACR29",
+  "apiTitle": "Stride Get IRV Relationships",
+  "description": "Allows a Stride user (HMRC internal staff) to retrieve active IRV (Income Record Viewer / Personal Income Record) relationships for a client identified by NINO. Validates NINO format, queries agent-fi-relationship service for active IRV relationships, enriches each relationship with agent name from Agent Maintainer, and retrieves client name from DES Citizen Details. IRV is a specific service allowing agents to view client income records. Returns client name, NINO, and list of agents with IRV access. Used by HMRC staff for customer support to view IRV authorization status. Requires Stride authentication.",
+  "method": "GET",
+  "path": "/stride/irv-relationships/{nino}",
+  "pathParameters": {
+    "nino": "Client National Insurance Number (must be valid NINO format)"
+  },
+  "queryParameters": {},
+  "requestBody": {},
+  "responses": {
+    "200": "OK - Returns client name, NINO, and list of agents with active IRV relationships",
+    "400": "Bad Request - Invalid NINO format",
+    "401": "Unauthorized - Stride authentication failed",
+    "403": "Forbidden - Stride user does not have required role",
+    "404": "Not Found - Client details not found in DES",
+    "500": "Internal Server Error - Error retrieving client details, agent details, or relationships"
+  },
+  "authentication": "Stride authentication with specific roles (maintain_agent_relationships or maintain_agent_manually_assure)",
+  "audience": "internal",
+  "controller": "StrideClientDetailsController",
+  "controllerMethod": "getIrvRelationships",
+  "services": [
+    {
+      "name": "StrideClientDetailsService",
+      "alias": "SCDS",
+      "method": "findActiveIrvRelationships",
+      "description": "Orchestrates validation, IRV relationship retrieval, agent name enrichment, and client details retrieval"
+    },
+    {
+      "name": "ValidationService",
+      "alias": "VS",
+      "method": "validateForTaxIdentifier",
+      "description": "Validates NINO format"
+    },
+    {
+      "name": "AgentFiRelationshipConnector",
+      "alias": "AFIRC",
+      "method": "findIrvActiveRelationshipForClient",
+      "description": "Retrieves active IRV relationships from agent-fi-relationship service"
+    },
+    {
+      "name": "ClientDetailsService",
+      "alias": "CDS",
+      "method": "findClientDetails",
+      "description": "Retrieves client name from DES Citizen Details"
+    },
+    {
+      "name": "AgentMaintainerConnector",
+      "alias": "AM",
+      "method": "getAgentRecord",
+      "description": "Retrieves agent name for each ARN in IRV relationships"
+    }
+  ],
+  "interactions": "See ACR29.mmd for complete sequence diagram",
+  "externalDependencies": [
+    {
+      "name": "Agent-Fi-Relationship",
+      "description": "Retrieves active IRV (Personal Income Record) relationships for the NINO",
+      "method": "GET /relationships/active?service=PERSONAL-INCOME-RECORD",
+      "note": "IRV relationships are managed by agent-fi-relationship, not HIP/ETMP"
+    },
+    {
+      "name": "DES (Citizen Details)",
+      "description": "Retrieves client name for the NINO",
+      "method": "getCitizenDetails",
+      "note": "Returns individual's name"
+    },
+    {
+      "name": "Agent Maintainer",
+      "description": "Retrieves agent name for each ARN in the relationships",
+      "method": "GET /agent-maintainer/agent/{arn}",
+      "note": "Called once per unique ARN found in IRV relationships"
+    }
+  ],
+  "databaseCollections": [],
+  "responseModel": {
+    "IrvRelationships": {
+      "clientName": "Client name from DES Citizen Details",
+      "nino": "Client NINO (from request)",
+      "agents": "Array of IrvAgent objects"
+    },
+    "IrvAgent": {
+      "name": "Agent name from Agent Maintainer",
+      "arn": "Agent Reference Number"
+    },
+    "example": {
+      "clientName": "Matthew Kovacic",
+      "nino": "AB123456C",
+      "agents": [
+        {
+          "name": "ABC Ltd",
+          "arn": "AARN0000002"
+        },
+        {
+          "name": "XYZ Tax Services",
+          "arn": "AARN1234567"
+        }
+      ]
+    }
+  },
+  "businessLogic": {
+    "validation": {
+      "description": "Validates NINO format before processing",
+      "logic": "Uses ValidationService.validateForTaxIdentifier with NinoType.id. Returns 400 if NINO format is invalid"
+    },
+    "irvRelationshipRetrieval": {
+      "description": "Retrieves IRV relationships from agent-fi-relationship service",
+      "logic": "Queries agent-fi-relationship with service=PERSONAL-INCOME-RECORD. IRV relationships are NOT stored in HIP/ETMP, they're managed separately in agent-fi-relationship"
+    },
+    "errorRecovery": {
+      "description": "IRV relationship not found or suspended errors are recovered",
+      "logic": "If agent-fi-relationship returns RelationshipNotFound or RelationshipSuspended, these are recovered as empty sequence (agents = []). This allows the request to succeed with client details but no agents"
+    },
+    "agentNameEnrichment": {
+      "description": "Each relationship is enriched with agent name",
+      "logic": "For each relationship returned from agent-fi-relationship, retrieves agent name from Agent Maintainer using ARN. Failure to retrieve agent name results in 500 error"
+    },
+    "clientDetailsRetrieval": {
+      "description": "Client name retrieved from DES Citizen Details",
+      "logic": "Uses ClientDetailsService.findClientDetails with service=PERSONAL-INCOME-RECORD. Queries DES getCitizenDetails endpoint. Returns 404 if client not found, 500 if DES error"
+    },
+    "strideAuthorization": {
+      "description": "Requires Stride authentication with specific roles",
+      "logic": "User must be authenticated via Stride and have either 'maintain_agent_relationships' or 'maintain_agent_manually_assure' role"
+    }
+  },
+  "errorHandling": [
+    {
+      "scenario": "Invalid NINO format",
+      "response": "400 Bad Request",
+      "message": "TaxIdentifierError",
+      "note": "NINO must be valid format (e.g., AB123456C)"
+    },
+    {
+      "scenario": "Stride authentication failure",
+      "response": "401 Unauthorized",
+      "message": "Authentication failed",
+      "note": "User must be authenticated via Stride"
+    },
+    {
+      "scenario": "Insufficient Stride permissions",
+      "response": "403 Forbidden",
+      "message": "Forbidden",
+      "note": "User must have required Stride role"
+    },
+    {
+      "scenario": "Client not found in DES",
+      "response": "404 Not Found",
+      "message": "ClientDetailsNotFound",
+      "note": "NINO not found in Citizen Details"
+    },
+    {
+      "scenario": "IRV relationships not found",
+      "response": "200 OK with empty agents array",
+      "message": "N/A",
+      "note": "RelationshipNotFound is recovered - returns success with no agents"
+    },
+    {
+      "scenario": "IRV relationships suspended",
+      "response": "200 OK with empty agents array",
+      "message": "N/A",
+      "note": "RelationshipSuspended is recovered - returns success with no agents"
+    },
+    {
+      "scenario": "Error retrieving client details from DES",
+      "response": "500 Internal Server Error",
+      "message": "ErrorRetrievingClientDetails with status and message",
+      "note": "DES service unavailable or returned error"
+    },
+    {
+      "scenario": "Error retrieving agent details from Agent Maintainer",
+      "response": "500 Internal Server Error",
+      "message": "ErrorRetrievingAgentDetails with message",
+      "note": "Agent Maintainer unavailable or agent not found"
+    },
+    {
+      "scenario": "Error retrieving relationships from agent-fi-relationship",
+      "response": "500 Internal Server Error",
+      "message": "ErrorRetrievingRelationship with status and message",
+      "note": "agent-fi-relationship service unavailable (unless NotFound or Suspended)"
+    },
+    {
+      "scenario": "Any other error",
+      "response": "500 Internal Server Error",
+      "message": "Generic error message",
+      "note": "Unexpected failures"
+    }
+  ],
+  "useCases": [
+    {
+      "scenario": "Client with active IRV relationships",
+      "flow": [
+        "Stride user calls endpoint with valid NINO",
+        "NINO validation passes",
+        "Stride authorization succeeds",
+        "agent-fi-relationship returns 2 active IRV relationships",
+        "Agent names retrieved for both ARNs from Agent Maintainer",
+        "Client name retrieved from DES Citizen Details",
+        "200 OK with client details and 2 agents"
+      ],
+      "response": {
+        "clientName": "Matthew Kovacic",
+        "nino": "AB123456C",
+        "agents": [
+          {
+            "name": "ABC Ltd",
+            "arn": "AARN0000002"
+          },
+          {
+            "name": "XYZ Tax Services",
+            "arn": "AARN1234567"
+          }
+        ]
+      },
+      "frontend_action": "Display client name with list of agents having IRV access"
+    },
+    {
+      "scenario": "Client with no IRV relationships",
+      "flow": [
+        "Stride user calls endpoint with valid NINO",
+        "NINO validation passes",
+        "Stride authorization succeeds",
+        "agent-fi-relationship returns RelationshipNotFound",
+        "Error recovered as empty agents list",
+        "Client name retrieved from DES",
+        "200 OK with client details but empty agents array"
+      ],
+      "response": {
+        "clientName": "John Doe",
+        "nino": "CD987654A",
+        "agents": []
+      },
+      "frontend_action": "Display 'No IRV relationships found for this client'"
+    },
+    {
+      "scenario": "Client with suspended IRV relationships",
+      "flow": [
+        "Stride user calls endpoint",
+        "Validation and authorization succeed",
+        "agent-fi-relationship returns RelationshipSuspended",
+        "Error recovered as empty agents list",
+        "Client name retrieved from DES",
+        "200 OK with empty agents array"
+      ],
+      "response": {
+        "clientName": "Jane Smith",
+        "nino": "EF123456B",
+        "agents": []
+      },
+      "frontend_action": "Display 'No active IRV relationships (may be suspended)'"
+    },
+    {
+      "scenario": "Invalid NINO format",
+      "flow": [
+        "Stride user provides invalid NINO (e.g., 'INVALID_NINO')",
+        "NINO validation fails",
+        "400 Bad Request returned"
+      ],
+      "response": "400 Bad Request - TaxIdentifierError",
+      "frontend_action": "Show 'Invalid NINO format' error"
+    },
+    {
+      "scenario": "Client not found in DES",
+      "flow": [
+        "Stride user calls with valid NINO",
+        "Validation and authorization succeed",
+        "IRV relationships retrieved (or recovered as empty)",
+        "DES Citizen Details returns 404",
+        "404 Not Found returned"
+      ],
+      "response": "404 Not Found - ClientDetailsNotFound",
+      "frontend_action": "Show 'Client not found' error"
+    },
+    {
+      "scenario": "Agent Maintainer unavailable",
+      "flow": [
+        "Stride user calls endpoint",
+        "Validation, authorization, and IRV retrieval succeed",
+        "Agent Maintainer returns 500 when retrieving agent name",
+        "500 Internal Server Error returned"
+      ],
+      "response": "500 Internal Server Error - ErrorRetrievingAgentDetails",
+      "frontend_action": "Show error message, suggest retry"
+    },
+    {
+      "scenario": "DES Citizen Details unavailable",
+      "flow": [
+        "Stride user calls endpoint",
+        "Validation, authorization, and IRV retrieval succeed",
+        "DES returns 500 error",
+        "500 Internal Server Error returned"
+      ],
+      "response": "500 Internal Server Error - ErrorRetrievingClientDetails: 'Unexpected error during getItsaCitizenDetails'",
+      "frontend_action": "Show error message, suggest retry"
+    },
+    {
+      "scenario": "agent-fi-relationship service unavailable",
+      "flow": [
+        "Stride user calls endpoint",
+        "Validation and authorization succeed",
+        "agent-fi-relationship returns 500 error (not NotFound/Suspended)",
+        "500 Internal Server Error returned"
+      ],
+      "response": "500 Internal Server Error - ErrorRetrievingRelationship",
+      "frontend_action": "Show error message, suggest retry"
+    }
+  ],
+  "importantNotes": [
+    "✅ Stride-only endpoint - not accessible to agents or clients",
+    "✅ IRV-specific endpoint - only retrieves PERSONAL-INCOME-RECORD relationships",
+    "✅ Queries agent-fi-relationship service, NOT HIP/ETMP",
+    "✅ IRV relationships managed separately from other services",
+    "✅ Each agent ARN enriched with agent name from Agent Maintainer",
+    "✅ Client name always retrieved from DES Citizen Details",
+    "✅ RelationshipNotFound and RelationshipSuspended are gracefully recovered",
+    "✅ Returns 200 with empty agents array if no IRV relationships found",
+    "✅ NINO-only endpoint - not for other identifier types",
+    "⚠️ Returns 404 only if client not found in DES, not if no relationships",
+    "⚠️ If no IRV relationships, returns 200 with empty agents array (not 404)",
+    "⚠️ Agent Maintainer failure results in 500, not graceful degradation",
+    "⚠️ DES failure results in 404 (not found) or 500 (error), not graceful degradation",
+    "⚠️ agent-fi-relationship errors (except NotFound/Suspended) result in 500",
+    "⚠️ Each agent ARN requires Agent Maintainer call - could be slow with many agents",
+    "⚠️ NINO must be valid format - validation occurs before Stride auth",
+    "⚠️ IRV is separate service from MTD-IT - different data source",
+    "⚠️ Requires specific Stride roles: maintain_agent_relationships or maintain_agent_manually_assure",
+    "⚠️ No database queries - all data from external services",
+    "⚠️ Response can contain multiple agents if client has IRV relationships with multiple agents"
+  ],
+  "metadata": {
+    "lastUpdated": "2025-11-20",
+    "gitCommitSha": "b2138b4e3958677748c1820c3d715d4fbb9d3b2c",
+    "analysisVersion": "1.0"
+  }
+}
+

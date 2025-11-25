@@ -1,0 +1,73 @@
+%% Last Updated: 2025-11-20
+%% Git Commit SHA: b2138b4e3958677748c1820c3d715d4fbb9d3b2c
+%% Analysis Version: 1.0
+
+sequenceDiagram
+    participant Client
+    participant CSC as CustomerStatusController
+    participant IS as InvitationService
+    participant IR as InvitationsRepository
+    participant AAS as AgentAssuranceService
+    participant AA as Agent Assurance<br/>API 2007
+    participant PAuthR as PartialAuthRepository
+    participant AFRC as AgentFiRelationshipConnector
+    participant AFI as Agent FI Relationship
+    participant FRS as FindRelationshipsService
+    participant Cache as MongoDB<br/>customer-status-cache
+    participant HIP as IF/HIP
+    participant ETMP as ETMP
+    participant Mongo as MongoDB<br/>invitations, partial-auth
+
+    Client->>+CSC: GET /customer-status
+    Note over CSC: Authenticate as client<br/>Extract NINO and tax identifiers
+
+    CSC->>+IS: findNonSuspendedClientInvitations(services, identifiers)
+    IS->>+IR: findAllBy(services, clientIds)
+    IR->>+Mongo: Find invitations by service and clientId
+    Mongo-->>-IR: List of invitations
+    IR-->>-IS: List of invitations
+
+    IS->>+AAS: Filter suspended agents
+    loop For each unique ARN
+        AAS->>+AA: GET /agent-record/{arn}
+        AA-->>-AAS: Agent record
+    end
+    AAS-->>-IS: Suspended ARNs list
+    IS-->>-CSC: Non-suspended invitations
+
+    alt Client has NINO
+        CSC->>+PAuthR: findByNino(nino)
+        PAuthR->>+Mongo: Find partial auth by NINO
+        Mongo-->>-PAuthR: Partial auth records
+        PAuthR-->>-CSC: Optional partial auth records
+
+        CSC->>+AFRC: findIrvActiveRelationshipForClient(nino)
+        AFRC->>+AFI: GET /agent-fi-relationship/relationships/active<br/>?service=PERSONAL-INCOME-RECORD&clientId={nino}
+        AFI-->>-AFRC: IRV relationships
+        AFRC-->>-CSC: Boolean (has IRV relationship)
+    end
+
+    alt Has active partial auth OR IRV relationship OR PartialAuth/Accepted invitation
+        Note over CSC: Skip relationship check<br/>hasExistingRelationships = true
+    else No partial auth, IRV, or accepted invitations
+        CSC->>+Cache: Check cache for existing relationships
+        alt Cache hit
+            Cache-->>CSC: Cached result (true/false)
+        else Cache miss
+            CSC->>+FRS: getActiveRelationshipsForClient(identifiers)
+            loop For each supported service
+                FRS->>+HIP: GET /agent-client-relationships/client/relationships/active<br/>?clientIdType={type}&clientId={id}&service={service}
+                HIP->>+ETMP: Query active relationships
+                ETMP-->>-HIP: Relationships
+                HIP-->>-FRS: Active relationships
+            end
+            FRS-->>-CSC: Map of relationships by service
+            CSC->>Cache: Store result (15 min TTL)
+            Cache-->>-CSC: Cached
+        end
+    end
+
+    Note over CSC: Build CustomerStatus response:<br/>- hasPendingInvitations: any Pending status<br/>- hasInvitationsHistory: any invitations or partial auth<br/>- hasExistingRelationships: from above logic
+
+    CSC-->>-Client: 200 OK with CustomerStatus JSON
+
