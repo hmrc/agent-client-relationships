@@ -208,14 +208,13 @@ extends RequestAwareLogging {
   private def expandNinoVariants(id: String): Seq[String] =
     id.replace(" ", "").toUpperCase match {
       case ninoRegex(base, suffix) =>
-        // Generate A–D full variants + suffixless
         Seq(base) ++ Seq(
           "A",
           "B",
           "C",
           "D"
         ).map(base + _)
-      case other => Seq(other) // Not a NINO → leave unchanged (e.g. MTDITID)
+      case other => Seq(other)
     }
 
   private def getClientId(
