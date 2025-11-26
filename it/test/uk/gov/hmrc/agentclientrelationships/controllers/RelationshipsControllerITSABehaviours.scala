@@ -144,12 +144,12 @@ trait RelationshipsControllerITSABehaviours {
         givenAgentCanBeDeallocated(mtdItId, arn)
         givenCacheRefresh(arn)
 
-        await(repo.findBy(arn, mtdItEnrolmentKey)) shouldBe empty
+        await(relationshipCopyRecordRepository.findBy(arn, mtdItEnrolmentKey)) shouldBe empty
 
         val result = doRequest
         result.status shouldBe 200
 
-        await(repo.findBy(arn, mtdItEnrolmentKey)).get should have(
+        await(relationshipCopyRecordRepository.findBy(arn, mtdItEnrolmentKey)).get should have(
           Symbol("arn")(arn.value),
           Symbol("enrolmentKey")(mtdItEnrolmentKey),
           Symbol("references")(Some(Set(SaRef(SaAgentReference("foo"))))),
@@ -401,12 +401,12 @@ trait RelationshipsControllerITSABehaviours {
           withThisAgentCode = "bar"
         )
 
-        await(repo.findBy(arn, mtdItEnrolmentKey)) shouldBe empty
+        await(relationshipCopyRecordRepository.findBy(arn, mtdItEnrolmentKey)) shouldBe empty
 
         val result = doRequest
         result.status shouldBe 200
 
-        await(repo.findBy(arn, mtdItEnrolmentKey)).get should have(
+        await(relationshipCopyRecordRepository.findBy(arn, mtdItEnrolmentKey)).get should have(
           Symbol("arn")(arn.value),
           Symbol("enrolmentKey")(mtdItEnrolmentKey),
           Symbol("references")(Some(Set(SaRef(SaAgentReference("foo"))))),
@@ -444,12 +444,12 @@ trait RelationshipsControllerITSABehaviours {
         givenAgentCanBeDeallocated(mtdItId, arn)
         givenCacheRefresh(arn)
 
-        await(repo.findBy(arn, mtdItEnrolmentKey)) shouldBe None
+        await(relationshipCopyRecordRepository.findBy(arn, mtdItEnrolmentKey)) shouldBe None
 
         val result = doRequest
         result.status shouldBe 200
 
-        await(repo.findBy(arn, mtdItEnrolmentKey)).get should have(
+        await(relationshipCopyRecordRepository.findBy(arn, mtdItEnrolmentKey)).get should have(
           Symbol("arn")(arn.value),
           Symbol("enrolmentKey")(mtdItEnrolmentKey),
           Symbol("references")(Some(Set(SaRef(SaAgentReference("foo"))))),
@@ -503,10 +503,10 @@ trait RelationshipsControllerITSABehaviours {
           withThisAgentCode = "bar"
         )
 
-        await(repo.collection.insertOne(relationshipCopiedSuccessfully).toFuture())
+        await(relationshipCopyRecordRepository.collection.insertOne(relationshipCopiedSuccessfully).toFuture())
         val result = doRequest
         result.status shouldBe 404
-        (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
+        (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND_ALREADY_COPIED"
       }
 
       "return 404 when relationship was previously copied from CESA to ETMP & ES but has since been deleted from ETMP & ES " +
@@ -531,10 +531,10 @@ trait RelationshipsControllerITSABehaviours {
             withThisAgentCode = "bar"
           )
 
-          await(repo.collection.insertOne(relationshipCopiedSuccessfully).toFuture())
+          await(relationshipCopyRecordRepository.collection.insertOne(relationshipCopiedSuccessfully).toFuture())
           val result = doRequest
           result.status shouldBe 404
-          (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND"
+          (result.json \ "code").as[String] shouldBe "RELATIONSHIP_NOT_FOUND_ALREADY_COPIED"
         }
 
       "return 404 when mapping service is unavailable" in {
@@ -707,10 +707,10 @@ trait RelationshipsControllerITSABehaviours {
 
         val enrolmentKey = EnrolmentKey("IR-SA", Seq(Identifier("NINO", nino.value)))
 
-        await(repo.findBy(arn, enrolmentKey)) shouldBe None
+        await(relationshipCopyRecordRepository.findBy(arn, enrolmentKey)) shouldBe None
         val result = doRequest
         result.status shouldBe 200
-        await(repo.findBy(arn, enrolmentKey)) shouldBe None
+        await(relationshipCopyRecordRepository.findBy(arn, enrolmentKey)) shouldBe None
 
         verifyAuditRequestSent(
           1,

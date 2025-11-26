@@ -28,6 +28,7 @@ import play.api.test.Helpers.await
 import play.api.test.Helpers.defaultAwaitTimeout
 import uk.gov.hmrc.agentclientrelationships.model.PartialAuthRelationship
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
+import uk.gov.hmrc.agentclientrelationships.support.RepositoryCleanupSupport
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 
@@ -38,7 +39,8 @@ class PartialAuthRepositoryISpec
 extends AnyWordSpec
 with Matchers
 with GuiceOneAppPerSuite
-with DefaultPlayMongoRepositorySupport[PartialAuthRelationship] {
+with DefaultPlayMongoRepositorySupport[PartialAuthRelationship]
+with RepositoryCleanupSupport {
 
   override lazy val app: Application = new GuiceApplicationBuilder()
     .configure("mongodb.uri" -> mongoUri, "fieldLevelEncryption.enable" -> true)

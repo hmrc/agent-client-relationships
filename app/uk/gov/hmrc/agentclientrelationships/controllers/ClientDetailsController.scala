@@ -34,6 +34,7 @@ import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.Nino
 import play.api.mvc.RequestHeader
+import uk.gov.hmrc.agentclientrelationships.services.CheckRelationshipResult.relationshipNotFoundAlreadyCopied
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.Inject
@@ -94,14 +95,14 @@ with AuthActions {
                     clientId
                   )
                 )
-              currentRelationshipMain <- existingRelationship(
+              (currentRelationshipMain, alreadyCopied) <- existingRelationship(
                 arn,
                 refinedService,
                 clientIdType,
                 clientId
               )
-              currentRelationshipSupp: Option[String] <-
-                multiAgentServices.get(refinedService).fold(Future.successful(Option.empty[String]))(
+              (currentRelationshipSupp, _) <-
+                multiAgentServices.get(refinedService).fold(Future.successful((Option.empty[String], false)))(
                   existingRelationship(
                     arn,
                     _,
@@ -113,7 +114,7 @@ with AuthActions {
               currentRelationship = currentRelationshipMain.orElse(currentRelationshipSupp)
               (isMapped, legacyRelationships) <-
                 currentRelationship match {
-                  case None if !pendingInvitation && Nino.isValid(clientId) && refinedService.equals(HMRCMTDIT) =>
+                  case None if !pendingInvitation && !alreadyCopied && Nino.isValid(clientId) && refinedService.equals(HMRCMTDIT) =>
                     checkAndCopyRelationshipsService
                       .lookupCesaForOldRelationship(arn, Nino(clientId)).map {
                         case (mappedRef, legacyRefs) => (Some(mappedRef.nonEmpty), Some(legacyRefs.map(_.value)))
@@ -142,7 +143,7 @@ with AuthActions {
     service: String,
     clientIdType: String,
     clientId: String
-  )(implicit request: RequestHeader): Future[Option[String]] = checkRelationshipsService
+  )(implicit request: RequestHeader): Future[(Option[String], Boolean)] = checkRelationshipsService
     .checkForRelationship(
       arn,
       service,
@@ -150,21 +151,18 @@ with AuthActions {
       clientId,
       None
     )
-    .map {
-      case CheckRelationshipFound => Some(service)
-      case CheckRelationshipNotFound(_) => None
-      case CheckRelationshipInvalidRequest => throw new RuntimeException("Unexpected error during relationship check")
-    }
     .flatMap {
-      case None if Seq(HMRCMTDIT, HMRCMTDITSUPP).contains(service) =>
+      case CheckRelationshipFound => Future.successful((Some(service), false))
+      case CheckRelationshipNotFound(reason) if Seq(HMRCMTDIT, HMRCMTDITSUPP).contains(service) =>
         partialAuthRepository
           .findActive(
             service,
             Nino(clientId),
             arn
           )
-          .map(_.map(_ => service))
-      case result => Future.successful(result)
+          .map(auth => (auth.map(_ => service), reason.contains(relationshipNotFoundAlreadyCopied)))
+      case CheckRelationshipNotFound(_) => Future.successful((None, false))
+      case CheckRelationshipInvalidRequest => throw new RuntimeException("Unexpected error during relationship check")
     }
 
   private def pendingInvitation(

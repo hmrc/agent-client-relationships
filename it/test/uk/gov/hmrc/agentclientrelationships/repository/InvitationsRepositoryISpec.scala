@@ -36,6 +36,7 @@ import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Vat
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Vrn
+import uk.gov.hmrc.agentclientrelationships.support.RepositoryCleanupSupport
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
@@ -51,7 +52,8 @@ class InvitationsRepositoryISpec
 extends AnyWordSpec
 with Matchers
 with GuiceOneAppPerSuite
-with DefaultPlayMongoRepositorySupport[Invitation] {
+with DefaultPlayMongoRepositorySupport[Invitation]
+with RepositoryCleanupSupport {
 
   override lazy val app: Application = new GuiceApplicationBuilder()
     .configure("mongodb.uri" -> mongoUri, "fieldLevelEncryption.enable" -> true)

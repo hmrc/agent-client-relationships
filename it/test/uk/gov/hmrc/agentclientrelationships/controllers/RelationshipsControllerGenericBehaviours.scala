@@ -104,10 +104,10 @@ trait RelationshipsControllerGenericBehaviours {
         givenAdminUser("foo", "any")
         givenUserIsSubscribedAgent(arn, withThisGroupId = "foo")
         extraSetup(serviceId, clientIdType)
-        await(repo.findBy(arn, enrolmentKey)) shouldBe None
+        await(relationshipCopyRecordRepository.findBy(arn, enrolmentKey)) shouldBe None
         val result = doRequest
         result.status shouldBe 200
-        await(repo.findBy(arn, enrolmentKey)) shouldBe empty
+        await(relationshipCopyRecordRepository.findBy(arn, enrolmentKey)) shouldBe empty
       }
 
       // UNHAPPY PATHS

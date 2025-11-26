@@ -26,13 +26,15 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentReferenceRecord
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
+import uk.gov.hmrc.agentclientrelationships.support.RepositoryCleanupSupport
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 
 class AgentReferenceRepositoryISpec
 extends AnyWordSpec
 with Matchers
 with GuiceOneAppPerSuite
-with DefaultPlayMongoRepositorySupport[AgentReferenceRecord] {
+with DefaultPlayMongoRepositorySupport[AgentReferenceRecord]
+with RepositoryCleanupSupport {
 
   implicit val request = FakeRequest()
 
