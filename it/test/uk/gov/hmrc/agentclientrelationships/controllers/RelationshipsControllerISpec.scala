@@ -93,7 +93,7 @@ with HipStub {
       )
 
       // insert copy-relationship document
-      await(repo.collection.insertOne(relationshipCopiedSuccessfully).toFuture())
+      await(relationshipCopyRecordRepository.collection.insertOne(relationshipCopiedSuccessfully).toFuture())
 
       val result = await(doRequest())
       result.status shouldBe 200
@@ -116,7 +116,7 @@ with HipStub {
 
       // verify termination has deleted all record for that agent
       await(deleteRecordRepository.collection.find(Filters.equal("arn", arn.value)).toFuture()) shouldBe empty
-      await(repo.collection.find(Filters.equal("arn", arn.value)).toFuture()) shouldBe empty
+      await(relationshipCopyRecordRepository.collection.find(Filters.equal("arn", arn.value)).toFuture()) shouldBe empty
     }
   }
 

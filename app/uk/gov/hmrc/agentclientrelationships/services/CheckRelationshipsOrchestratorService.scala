@@ -29,8 +29,8 @@ import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
+import uk.gov.hmrc.agentclientrelationships.services.CheckRelationshipResult._
 import uk.gov.hmrc.domain.Nino
-import uk.gov.hmrc.domain.SaAgentReference
 import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
@@ -145,12 +145,12 @@ with RequestAwareLogging {
             checkOldRelationship(
               arn,
               enrolmentKey,
-              "RELATIONSHIP_NOT_FOUND"
+              relationshipNotFound
             )
         }
       else {
         logger.warn("Denied access because relationship removal is pending.")
-        Future.successful(CheckRelationshipNotFound("RELATIONSHIP_DELETE_PENDING"))
+        Future.successful(CheckRelationshipNotFound(relationshipDeletePending))
       }
     }
   }
@@ -165,7 +165,8 @@ with RequestAwareLogging {
   ): Future[CheckRelationshipResult] = checkOldAndCopyService
     .checkForOldRelationshipAndCopy(arn, enrolmentKey)
     .map {
-      case AlreadyCopiedDidNotCheck | CopyRelationshipNotEnabled | CheckAndCopyNotImplemented => CheckRelationshipNotFound(errorCode)
+      case CopyRelationshipNotEnabled | CheckAndCopyNotImplemented => CheckRelationshipNotFound(errorCode)
+      case AlreadyCopiedDidNotCheck => CheckRelationshipNotFound(relationshipNotFoundAlreadyCopied)
       case cesaResult =>
         if (cesaResult.grantAccess)
           CheckRelationshipFound
@@ -245,5 +246,13 @@ with RequestAwareLogging {
 
 sealed trait CheckRelationshipResult
 case object CheckRelationshipFound extends CheckRelationshipResult
-case class CheckRelationshipNotFound(message: String = "RELATIONSHIP_NOT_FOUND") extends CheckRelationshipResult
+case class CheckRelationshipNotFound(message: String = relationshipNotFound) extends CheckRelationshipResult
 case object CheckRelationshipInvalidRequest extends CheckRelationshipResult
+
+object CheckRelationshipResult {
+
+  val relationshipNotFound = "RELATIONSHIP_NOT_FOUND"
+  val relationshipNotFoundAlreadyCopied = "RELATIONSHIP_NOT_FOUND_ALREADY_COPIED"
+  val relationshipDeletePending = "RELATIONSHIP_DELETE_PENDING"
+
+}

@@ -22,11 +22,11 @@ import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers.await
 import play.api.test.Helpers.defaultAwaitTimeout
-import play.api.test.Helpers.stubControllerComponents
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
 import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
+import uk.gov.hmrc.agentclientrelationships.repository.RelationshipCopyRecord
 import uk.gov.hmrc.agentclientrelationships.services.CheckRelationshipsOrchestratorService
 import uk.gov.hmrc.agentclientrelationships.services.ClientDetailsService
 import uk.gov.hmrc.agentclientrelationships.stubs.ClientDetailsStub
@@ -39,6 +39,8 @@ import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Vrn
+import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus.Success
+import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus.SyncStatus
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.domain.SaAgentReference
@@ -174,6 +176,36 @@ with MappingStubs {
             "hasExistingRelationshipFor" -> "HMRC-MTD-IT"
           )
         }
+
+        "there are no pending invitations or existing relationship and" +
+          " there is an existing mapping for a signed-up SA client but the relationship was copied before (mapping ignored)" in {
+            val request = FakeRequest("GET", "/agent-client-relationships/client/HMRC-MTD-IT/details/AA000001B")
+            setupCommonStubs(request)
+            givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")))
+            givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
+            givenMtdItsaBusinessDetailsExists(Nino("AA000001B"), MtdItId("XAIT0000111122"))
+            givenNinoItsaBusinessDetailsExists(MtdItId("XAIT0000111122"), Nino("AA000001B"))
+            givenArnIsKnownFor(Arn("XARN1234567"), SaAgentReference("A12345"))
+            givenClientHasRelationshipWithAgentInCESA(Nino("AA000001B"), "A12345")
+            relationshipCopyRecordRepository.collection.insertOne(
+              RelationshipCopyRecord(
+                "XARN1234567",
+                EnrolmentKey(Service.MtdIt, MtdItId("XAIT0000111122")),
+                syncToETMPStatus = Some(Success),
+                syncToESStatus = Some(Success)
+              )
+            ).toFuture().futureValue
+
+            val result = doGetRequest(request.uri)
+            result.status shouldBe 200
+            result.json shouldBe Json.obj(
+              "name" -> "Erling Haal",
+              "isOverseas" -> false,
+              "knownFacts" -> Json.arr("AA11AA"),
+              "knownFactType" -> "PostalCode",
+              "hasPendingInvitation" -> false
+            )
+          }
 
         "there is a pending invitation" in {
           val request = FakeRequest("GET", "/agent-client-relationships/client/HMRC-MTD-IT/details/AA000001B")
