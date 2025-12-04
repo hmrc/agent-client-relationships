@@ -171,7 +171,8 @@ with MockAuditService {
           any[Option[String]],
           any[Seq[String]],
           any[Seq[String]],
-          any[Option[InvitationStatus]]
+          any[Option[InvitationStatus]],
+          any[Boolean]
         )
         verify(mockInvitationsRepository, times(1)).deauthInvitation(
           any[String],
@@ -234,7 +235,8 @@ with MockAuditService {
           any[Option[String]],
           any[Seq[String]],
           any[Seq[String]],
-          any[Option[InvitationStatus]]
+          any[Option[InvitationStatus]],
+          any[Boolean]
         )
         verify(mockInvitationsRepository, times(1)).deauthInvitation(
           any[String],
@@ -282,7 +284,8 @@ with MockAuditService {
           any[Option[String]],
           any[Seq[String]],
           any[Seq[String]],
-          any[Option[InvitationStatus]]
+          any[Option[InvitationStatus]],
+          any[Boolean]
         )
         verify(mockInvitationsRepository, times(0)).deauthInvitation(
           any[String],

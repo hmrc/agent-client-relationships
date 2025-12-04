@@ -23,6 +23,7 @@ import uk.gov.hmrc.agentclientrelationships.connectors.AgentFiRelationshipConnec
 import uk.gov.hmrc.agentclientrelationships.model.ActiveRelationship
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.PartialAuthRelationship
+import uk.gov.hmrc.agentclientrelationships.model.Pending
 import uk.gov.hmrc.agentclientrelationships.model.RelationshipFailureResponse
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails._
 import uk.gov.hmrc.agentclientrelationships.model.stride._
@@ -278,7 +279,13 @@ class StrideClientDetailsService @Inject() (
     services: Seq[String]
   )(implicit request: RequestHeader): Future[Seq[InvitationWithAgentName]] =
     for {
-      invitations <- invitationsRepository.findAllPendingForSuppliedClient(clientId, services)
+      invitations <- invitationsRepository.findAllBy(
+        arn = None,
+        services = services,
+        clientIds = Seq(clientId),
+        status = Some(Pending),
+        isSuppliedClientId = true
+      )
       nonSuspended <- Future.sequence(
         invitations.map(i =>
           agentAssuranceService

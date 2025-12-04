@@ -33,11 +33,13 @@ import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureRe
 import uk.gov.hmrc.agentclientrelationships.model.invitation.RemoveAuthorisationRequest
 import uk.gov.hmrc.agentclientrelationships.model.invitation.ValidRequest
 import uk.gov.hmrc.agentclientrelationships.services.DeleteRelationshipsService
+import uk.gov.hmrc.agentclientrelationships.services.InvitationService
 import uk.gov.hmrc.agentclientrelationships.services.RemoveAuthorisationService
 import uk.gov.hmrc.agentclientrelationships.services.ValidationService
 import uk.gov.hmrc.agentclientrelationships.support.{RelationshipNotFound => RelationshipNotFoundEx}
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
+import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository.endedByHMRC
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.UpstreamErrorResponse
@@ -51,6 +53,7 @@ import scala.util.control.NonFatal
 
 @Singleton
 class RemoveAuthorisationController @Inject() (
+  invitationService: InvitationService,
   deauthorisationService: RemoveAuthorisationService,
   agentFiRelationshipConnector: AgentFiRelationshipConnector,
   deleteService: DeleteRelationshipsService,
@@ -133,8 +136,8 @@ with AuthActions {
           )
           .map { result: Boolean =>
             if (result) {
-              val userType = deleteService.determineUserTypeFromAG(currentUser.affinityGroup).getOrElse("HMRC")
-              deleteService.setRelationshipEnded(
+              val userType = deleteService.determineUserTypeFromAG(currentUser.affinityGroup).getOrElse(endedByHMRC)
+              invitationService.deauthoriseInvitation(
                 arn,
                 enrolmentKey,
                 userType
@@ -147,40 +150,30 @@ with AuthActions {
           }
           .recover { case error: UpstreamErrorResponse => Left(RelationshipDeleteFailed(error.getMessage)) }
       case (Service.MtdIt | Service.MtdItSupp, Nino(_)) => // Alt ITSA
-        (
-          for {
-            deauthResult <- EitherT(
-              deauthorisationService
-                .deauthPartialAuth(
-                  arn,
-                  validRequest.suppliedClientId,
-                  validRequest.service
-                )
-                .map { result =>
-                  if (result) {
-                    auditService.sendTerminatePartialAuthAuditEvent(
-                      arn.value,
-                      enrolmentKey.service,
-                      enrolmentKey.oneIdentifier().value
-                    )
-                    Right(result)
-                  }
-                  else
-                    Left(RelationshipDeleteFailed("Remove PartialAuth failed."))
-                }
-            )
-            _ <- EitherT.right[InvitationFailureResponse](
-              deauthorisationService
-                .deauthAltItsaInvitation(
-                  arn,
-                  validRequest.suppliedClientId,
-                  validRequest.service,
-                  currentUser.affinityGroup
-                )
-                .map(_ => true)
-            )
-          } yield deauthResult
-        ).value
+        deauthorisationService
+          .deauthPartialAuth(
+            arn,
+            validRequest.suppliedClientId,
+            validRequest.service
+          )
+          .map { result =>
+            if (result) {
+              val userType = deleteService.determineUserTypeFromAG(currentUser.affinityGroup).getOrElse(endedByHMRC)
+              invitationService.deauthoriseInvitation(
+                arn,
+                enrolmentKey,
+                userType
+              )
+              auditService.sendTerminatePartialAuthAuditEvent(
+                arn.value,
+                enrolmentKey.service,
+                enrolmentKey.oneIdentifier().value
+              )
+              Right(result)
+            }
+            else
+              Left(RelationshipDeleteFailed("Remove PartialAuth failed."))
+          }
       case _ => deleteRelationship(arn, enrolmentKey) // Handles invitation deauth on its own
     }
   // scalastyle:on method.length

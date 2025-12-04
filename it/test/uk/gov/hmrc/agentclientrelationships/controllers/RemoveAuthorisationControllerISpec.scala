@@ -19,9 +19,6 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 import play.api.libs.json.Json
 import play.api.libs.json.Json.toJson
 import play.api.test.Helpers._
-import uk.gov.hmrc.agentclientrelationships.audit.AuditService
-import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.connectors.AgentFiRelationshipConnector
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.ErrorBody
 import uk.gov.hmrc.agentclientrelationships.model.invitation.RemoveAuthorisationRequest
 import uk.gov.hmrc.agentclientrelationships.model._
@@ -29,9 +26,6 @@ import uk.gov.hmrc.agentclientrelationships.repository.DeleteRecord
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
 import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus
-import uk.gov.hmrc.agentclientrelationships.services.DeleteRelationshipsService
-import uk.gov.hmrc.agentclientrelationships.services.RemoveAuthorisationService
-import uk.gov.hmrc.agentclientrelationships.services.ValidationService
 import uk.gov.hmrc.agentclientrelationships.stubs.AfiRelationshipStub
 import uk.gov.hmrc.agentclientrelationships.stubs.ClientDetailsStub
 import uk.gov.hmrc.agentclientrelationships.stubs.HipStub
@@ -52,7 +46,6 @@ import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Ppt
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Trust
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.TrustNT
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Vat
-import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.HttpResponse
@@ -62,7 +55,6 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneOffset
-import scala.concurrent.ExecutionContext
 
 class RemoveAuthorisationControllerISpec
 extends RelationshipsBaseControllerISpec
@@ -71,26 +63,7 @@ with ClientDetailsStub
 with AfiRelationshipStub
 with TestData {
 
-  val deAuthorisationService: RemoveAuthorisationService = app.injector.instanceOf[RemoveAuthorisationService]
-  val authConnector: AuthConnector = app.injector.instanceOf[AuthConnector]
-  implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
-  implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
-  val deleteRelationshipService: DeleteRelationshipsService = app.injector.instanceOf[DeleteRelationshipsService]
-  val validationService: ValidationService = app.injector.instanceOf[ValidationService]
-  val agentFiRelationshipConnector: AgentFiRelationshipConnector = app.injector.instanceOf[AgentFiRelationshipConnector]
-  val auditSerice: AuditService = app.injector.instanceOf[AuditService]
-
-  val controller =
-    new RemoveAuthorisationController(
-      deAuthorisationService,
-      agentFiRelationshipConnector,
-      deleteRelationshipService,
-      authConnector,
-      appConfig,
-      validationService,
-      auditSerice,
-      stubControllerComponents()
-    )
+  val controller = app.injector.instanceOf[RemoveAuthorisationController]
 
   val invitationRepo: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
   val partialAuthRepository: PartialAuthRepository = app.injector.instanceOf[PartialAuthRepository]

@@ -59,13 +59,17 @@ object FieldKeys {
   val arnKey: String = "arn"
   val invitationIdKey: String = "invitationId"
   val clientIdKey: String = "clientId"
+  val clientIdTypeKey: String = "clientIdTypeKey"
   val suppliedClientIdKey: String = "suppliedClientId"
+  val suppliedClientIdTypeKey: String = "suppliedClientIdType"
   val serviceKey: String = "service"
   val statusKey: String = "status"
   val clientNameKey: String = "clientName"
   val expiryDateKey: String = "expiryDate"
   val warningEmaiSentKey: String = "warningEmailSent"
   val expiredEmailSentKey: String = "expiredEmailSent"
+  val lastUpdatedKey: String = "lastUpdated"
+  val relationshipEndedByKey: String = "relationshipEndedBy"
 
 }
 
@@ -195,7 +199,8 @@ with RequestAwareLogging {
     arn: Option[String] = None,
     services: Seq[String] = Nil,
     clientIds: Seq[String] = Nil,
-    status: Option[InvitationStatus] = None
+    status: Option[InvitationStatus] = None,
+    isSuppliedClientId: Boolean = false
   ): Future[Seq[Invitation]] = Mdc.preservingMdc {
     if (arn.isEmpty && clientIds.isEmpty)
       Future.successful(Nil) // no user-specific identifiers were provided
@@ -209,8 +214,14 @@ with RequestAwareLogging {
                 Some(in(serviceKey, services: _*))
               else
                 None,
-              if (clientIds.nonEmpty)
-                Some(in(clientIdKey, clientIds.map(encryptedString): _*))
+              if (clientIds.nonEmpty) {
+                val key =
+                  if (isSuppliedClientId)
+                    suppliedClientIdKey
+                  else
+                    clientIdKey
+                Some(in(key, clientIds.flatMap(expandNinoSuffixes).map(encryptedString): _*))
+              }
               else
                 None,
               status.map(a => equal("status", Codecs.toBson[InvitationStatus](a)))
@@ -218,12 +229,6 @@ with RequestAwareLogging {
           )
         )
         .toFuture()
-  }
-
-  def findOneByIdForClient(invitationId: String): Future[Option[Invitation]] = Mdc.preservingMdc {
-    collection
-      .find(equal(invitationIdKey, invitationId))
-      .headOption()
   }
 
   def findAllForAgent(arn: String): Future[Seq[Invitation]] = Mdc.preservingMdc {
@@ -260,7 +265,7 @@ with RequestAwareLogging {
               suppliedClientIdKey
             else
               clientIdKey,
-            clientIds.map(_.replaceAll(" ", "")).map(encryptedString): _*
+            clientIds.map(_.replaceAll(" ", "")).flatMap(expandNinoSuffixes).map(encryptedString): _*
           )
         )
       )
@@ -293,18 +298,18 @@ with RequestAwareLogging {
       .updateOne(
         filter = and(
           in(
-            "status",
-            "Accepted",
-            "Partialauth"
+            statusKey,
+            Codecs.toBson[InvitationStatus](Accepted),
+            Codecs.toBson[InvitationStatus](PartialAuth)
           ),
-          equal("service", service),
-          equal("clientId", encryptedString(clientId)),
-          equal("arn", arn)
+          equal(serviceKey, service),
+          in(clientIdKey, expandNinoSuffixes(clientId).map(encryptedString): _*),
+          equal(arnKey, arn)
         ),
         update = combine(
-          set("status", Codecs.toBson[InvitationStatus](DeAuthorised)),
-          set("lastUpdated", timestamp.getOrElse(Instant.now())),
-          set("relationshipEndedBy", relationshipEndedBy)
+          set(statusKey, Codecs.toBson[InvitationStatus](DeAuthorised)),
+          set(lastUpdatedKey, timestamp.getOrElse(Instant.now())),
+          set(relationshipEndedByKey, relationshipEndedBy)
         )
       )
       .toFuture()
@@ -339,15 +344,15 @@ with RequestAwareLogging {
       .updateOne(
         and(
           equal(arnKey, arn.value),
-          equal("clientId", encryptedString(nino.value)),
-          equal("service", service),
-          equal("status", Codecs.toBson[InvitationStatus](PartialAuth))
+          in(clientIdKey, expandNinoSuffixes(nino.value).map(encryptedString): _*),
+          equal(serviceKey, service),
+          equal(statusKey, Codecs.toBson[InvitationStatus](PartialAuth))
         ),
         combine(
-          set("status", Codecs.toBson[InvitationStatus](Accepted)),
-          set("lastUpdated", Instant.now),
-          set("clientId", encryptedString(mtdItId.value)),
-          set("clientIdType", "MTDITID")
+          set(statusKey, Codecs.toBson[InvitationStatus](Accepted)),
+          set(lastUpdatedKey, Instant.now),
+          set(clientIdKey, encryptedString(mtdItId.value)),
+          set(clientIdTypeKey, "MTDITID")
         )
       )
       .toFuture()
@@ -380,71 +385,6 @@ with RequestAwareLogging {
       )
       .toFuture()
       .map(_.getModifiedCount == 1L)
-  }
-
-  // Does not support deauthorising partial auth
-  // Must be called with mtditid for ITSA (e.g. remove authorisation controller converts nino to mtditid at the very beginning)
-  def deauthorise(
-    arn: String,
-    clientId: String,
-    service: String,
-    relationshipEndedBy: String
-  ): Future[Option[Invitation]] = Mdc.preservingMdc {
-    collection
-      .findOneAndUpdate(
-        and(
-          equal(arnKey, arn),
-          equal("service", service),
-          equal("clientId", encryptedString(clientId)),
-          equal("status", Codecs.toBson[InvitationStatus](Accepted))
-        ),
-        combine(
-          set("status", Codecs.toBson[InvitationStatus](DeAuthorised)),
-          set("relationshipEndedBy", relationshipEndedBy),
-          set("lastUpdated", Instant.now())
-        ),
-        FindOneAndUpdateOptions().returnDocument(ReturnDocument.AFTER)
-      )
-      .toFutureOption()
-  }
-
-  def findAllPendingForSuppliedClient(
-    clientId: String,
-    services: Seq[String]
-  ): Future[Seq[Invitation]] = Mdc.preservingMdc {
-    collection
-      .find(
-        and(
-          equal(suppliedClientIdKey, encryptedString(clientId)),
-          equal(statusKey, Codecs.toBson[InvitationStatus](Pending)),
-          in(serviceKey, services: _*)
-        )
-      )
-      .toFuture()
-  }
-
-  def updatePartialAuthToDeAuthorisedStatus(
-    arn: Arn,
-    service: String,
-    nino: Nino,
-    relationshipEndedBy: String
-  ): Future[Option[Invitation]] = Mdc.preservingMdc {
-    collection
-      .findOneAndUpdate(
-        and(
-          equal("arn", arn.value),
-          equal("clientId", encryptedString(nino.value)),
-          equal("service", service),
-          equal("status", Codecs.toBson[InvitationStatus](PartialAuth))
-        ),
-        combine(
-          set("status", Codecs.toBson[InvitationStatus](DeAuthorised)),
-          set("relationshipEndedBy", relationshipEndedBy),
-          set("lastUpdated", Instant.now)
-        ),
-        FindOneAndUpdateOptions().returnDocument(ReturnDocument.AFTER)
-      )
-      .toFutureOption()
   }
 
   private def makeTrackRequestsFilters(
@@ -551,6 +491,15 @@ with RequestAwareLogging {
       .updateOne(equal(invitationIdKey, invitationId), set(expiredEmailSentKey, true))
       .toFuture()
       .map(_.getModifiedCount == 1L)
+  }
+
+  private def expandNinoSuffixes(clientId: String): Seq[String] = {
+    clientId match {
+      case nino if Nino.isValid(nino) =>
+        val suffixless = Nino(nino.replaceAll(" ", "")).withoutSuffix
+        Seq(suffixless) ++ Nino.validSuffixes.map(suffix => suffixless + suffix)
+      case clientId => Seq(clientId)
+    }
   }
 
 }

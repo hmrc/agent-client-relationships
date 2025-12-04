@@ -48,13 +48,15 @@ trait MockInvitationsRepository {
     arn: Option[String],
     services: Seq[String],
     clientIds: Seq[String],
-    status: Option[InvitationStatus]
+    status: Option[InvitationStatus],
+    isSuppliedClientId: Boolean = false
   )(response: Future[Seq[Invitation]]): OngoingStubbing[Future[Seq[Invitation]]] = when(
     mockInvitationsRepository.findAllBy(
       eqs(arn),
       eqs(services),
       eqs(clientIds),
-      eqs(status)
+      eqs(status),
+      eqs(isSuppliedClientId)
     )
   ).thenReturn(response)
 
@@ -68,12 +70,5 @@ trait MockInvitationsRepository {
       any[Option[Instant]]
     )
   ).thenReturn(response)
-
-  def mockFindAllPendingForClient(
-    clientId: String,
-    services: Seq[String]
-  )(response: Seq[Invitation]): OngoingStubbing[Future[Seq[Invitation]]] = when(
-    mockInvitationsRepository.findAllPendingForSuppliedClient(clientId, services)
-  ).thenReturn(Future.successful(response))
 
 }

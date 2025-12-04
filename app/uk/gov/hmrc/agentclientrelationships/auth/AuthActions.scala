@@ -29,10 +29,10 @@ import uk.gov.hmrc.auth.core.AffinityGroup.Individual
 import uk.gov.hmrc.auth.core.AffinityGroup.Organisation
 import uk.gov.hmrc.auth.core.AuthProvider.GovernmentGateway
 import uk.gov.hmrc.auth.core.AuthProvider.PrivilegedApplication
-import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals._
 import uk.gov.hmrc.auth.core.retrieve.Credentials
 import uk.gov.hmrc.auth.core.retrieve.~
+import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.HeaderNames
 
@@ -42,6 +42,14 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.util.matching.Regex
 import uk.gov.hmrc.agentclientrelationships.util.RequestSupport._
+import uk.gov.hmrc.auth.core.AffinityGroup
+import uk.gov.hmrc.auth.core.AuthConnector
+import uk.gov.hmrc.auth.core.AuthProviders
+import uk.gov.hmrc.auth.core.AuthorisedFunctions
+import uk.gov.hmrc.auth.core.Enrolment
+import uk.gov.hmrc.auth.core.EnrolmentIdentifier
+import uk.gov.hmrc.auth.core.Enrolments
+import uk.gov.hmrc.auth.core.InsufficientEnrolments
 
 case class CurrentUser(
   credentials: Option[Credentials],
@@ -85,30 +93,6 @@ with RequestAwareLogging {
         .getOrElse(Future successful NoPermissionToPerformOperation)
     }
 
-  def authorisedClientOrStrideUserOrAgent(
-    clientId: TaxIdentifier,
-    strideRoles: Seq[String]
-  )(body: CurrentUser => Future[Result])(implicit request: RequestHeader): Future[Result] =
-    authorised().retrieve(allEnrolments and affinityGroup and credentials) { case enrolments ~ affinity ~ optCreds =>
-      optCreds
-        .collect {
-          case creds @ Credentials(_, "GovernmentGateway")
-              if isAgent(affinity) |
-                hasRequiredEnrolmentMatchingIdentifier(
-                  enrolments,
-                  affinity,
-                  None,
-                  clientId
-                ) =>
-            creds
-          case creds @ Credentials(_, "PrivilegedApplication") if hasRequiredStrideRole(enrolments, strideRoles) => creds
-        }
-        .map { creds =>
-          body(CurrentUser(Option(creds), affinity))
-        }
-        .getOrElse(Future successful NoPermissionToPerformOperation)
-    }
-
   private def hasRequiredEnrolmentMatchingIdentifier(
     enrolments: Enrolments,
     affinity: Option[AffinityGroup],
@@ -132,46 +116,19 @@ with RequestAwareLogging {
         enrolments.enrolments
           .flatMap(_.identifiers)
           .filter(_.key == requiredTaxIdType)
-          .exists(
-            _.value.replace(" ", "") == taxId.value.replace(" ", "")
-          ) // In case NINO comes back without spaces
+          .exists { identifier =>
+            (identifier.value.replace(" ", ""), taxId.value.replace(" ", "")) match {
+              case (credNino, expectedNino) if Nino.isValid(credNino) && Nino.isValid(expectedNino) =>
+                Nino(credNino).withoutSuffix == Nino(expectedNino).withoutSuffix
+              case (credIdentifier, expectedIdentifier) => credIdentifier == expectedIdentifier
+            }
+          }
     }
-
-  private def isAgent(affinity: Option[AffinityGroup]): Boolean = affinity.contains(AffinityGroup.Agent)
 
   def hasRequiredStrideRole(
     enrolments: Enrolments,
     strideRoles: Seq[String]
   ): Boolean = strideRoles.exists(s => enrolments.enrolments.exists(_.key == s))
-
-  private def typedIdentifier(enrolment: Enrolment): Option[TaxIdentifier] = {
-    val service = Service.forId(enrolment.key)
-    val clientIdType = service.supportedClientIdType
-    enrolment.getIdentifier(clientIdType.enrolmentId).map(eid => clientIdType.createUnderlying(eid.value))
-  }
-
-  def authorisedAsClient[A](
-    serviceKey: String
-  )(body: TaxIdentifier => Future[Result])(implicit request: RequestHeader): Future[Result] =
-    authorised(Enrolment(serviceKey) and AuthProviders(GovernmentGateway)).retrieve(
-      authorisedEnrolments and affinityGroup
-    ) { case enrolments ~ affinityG =>
-      affinityG match {
-        case Some(Individual) | Some(Organisation) =>
-          val id =
-            if (supportedServices.exists(_.id == serviceKey)) {
-              enrolments.getEnrolment(serviceKey).flatMap(typedIdentifier)
-            }
-            else
-              None
-
-          id match {
-            case Some(i) => body(i)
-            case _ => Future.successful(NoPermissionToPerformOperation)
-          }
-        case _ => Future.successful(NoPermissionToPerformOperation)
-      }
-    }
 
   // Authorisation request response is a special case where we need to check for multiple services
   def withAuthorisedClientForServiceKeys[
@@ -191,22 +148,6 @@ with RequestAwareLogging {
         requiredEnrolments match {
           case s if s.isEmpty => Future.successful(NoPermissionToPerformOperation)
           case _ => body(requiredEnrolments)
-        }
-    }
-
-  def withAuthorisedAsClient[A, T](body: Map[Service, TaxIdentifier] => Future[Result])(implicit request: RequestHeader): Future[Result] =
-    authorised(AuthProviders(GovernmentGateway) and (Individual or Organisation)).retrieve(allEnrolments) {
-      enrolments =>
-        val identifiers =
-          for {
-            supportedService <- supportedServices
-            enrolment <- enrolments.getEnrolment(supportedService.enrolmentKey)
-            clientId <- enrolment.identifiers.headOption
-          } yield (supportedService, supportedService.supportedClientIdType.createUnderlying(clientId.value))
-
-        identifiers match {
-          case s if s.isEmpty => Future.successful(NoPermissionToPerformOperation)
-          case _ => body(identifiers.toMap)
         }
     }
 
