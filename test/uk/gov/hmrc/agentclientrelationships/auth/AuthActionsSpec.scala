@@ -90,16 +90,14 @@ with Results {
     implicit val request: RequestHeader = NoRequest
 
     def testAuthActions(
-      arn: Arn,
       identifier: TaxIdentifier,
       strideRoles: Seq[String]
-    ) =
-      authorisedClientOrStrideUserOrAgent(identifier, strideRoles) { _ =>
-        Future.successful(Ok)
-      }
-
-    def testAuthorisedAsClient(service: String) =
-      authorisedAsClient(service) { _ =>
+    ): Future[Result] =
+      authorisedUser(
+        None,
+        identifier,
+        strideRoles
+      ) { _ =>
         Future.successful(Ok)
       }
 
@@ -179,7 +177,6 @@ with Results {
       "return Ok if Client has matching MtdItId in their enrolments" in {
         mockClientAuth(enrolment = Set(mtdItIdEnrolment))
         val result: Future[Result] = testAuthImpl.testAuthActions(
-          Arn(arn),
           MtdItId(mtdItId),
           strideRoles
         )
@@ -189,7 +186,6 @@ with Results {
       "return Ok if Client has matching Vrn in their enrolments" in {
         mockClientAuth(enrolment = Set(mtdVatIdEnrolment))
         val result: Future[Result] = testAuthImpl.testAuthActions(
-          Arn(arn),
           Vrn(vrn),
           strideRoles
         )
@@ -199,7 +195,6 @@ with Results {
       "return NoPermissionToPerformOperation if Client has a non-matching MtdItId in their enrolments" in {
         mockClientAuth(enrolment = Set(mtdItIdEnrolment))
         val result: Future[Result] = testAuthImpl.testAuthActions(
-          Arn(arn),
           MtdItId("NON_MATCHING"),
           strideRoles
         )
@@ -209,7 +204,6 @@ with Results {
       "return NoPermissionToPerformOperation if Client has a non-matching Vrn in their enrolments" in {
         mockClientAuth(enrolment = Set(mtdVatIdEnrolment))
         val result: Future[Result] = testAuthImpl.testAuthActions(
-          Arn(arn),
           Vrn("NON_MATCHING"),
           strideRoles
         )
@@ -219,7 +213,6 @@ with Results {
       "return NoPermissionToPerformOperation if Client has only an enrolment with a different identifier type" in {
         mockClientAuth(enrolment = Set(mtdVatIdEnrolment))
         val result: Future[Result] = testAuthImpl.testAuthActions(
-          Arn(arn),
           MtdItId(mtdItId),
           strideRoles
         )
@@ -229,7 +222,6 @@ with Results {
       "return Ok if Client has matching Utr in their enrolments" in {
         mockClientAuth(enrolment = Set(trustEnrolment))
         val result: Future[Result] = testAuthImpl.testAuthActions(
-          Arn(arn),
           Utr(utr),
           strideRoles
         )
@@ -241,7 +233,6 @@ with Results {
       "return Ok if Stride user has required role" in {
         mockStrideAuth(oldRequiredStrideRole)
         val result: Future[Result] = testAuthImpl.testAuthActions(
-          Arn(arn),
           MtdItId(mtdItId),
           strideRoles
         )
@@ -251,7 +242,6 @@ with Results {
       "return Ok if Stride user has new required role" in {
         mockStrideAuth(newRequiredStrideRole)
         val result: Future[Result] = testAuthImpl.testAuthActions(
-          Arn(arn),
           MtdItId(mtdItId),
           strideRoles
         )
@@ -261,26 +251,11 @@ with Results {
       "return NoPermissionToPerformOperation if Stride user has unsupported role" in {
         mockStrideAuth("foo")
         val result: Future[Result] = testAuthImpl.testAuthActions(
-          Arn(arn),
           MtdItId(mtdItId),
           strideRoles
         )
         await(result) shouldBe NoPermissionToPerformOperation
       }
-    }
-  }
-
-  "AuthorisedAsClient" should {
-    "return Ok if client has HMRC-MTD-IT enrolment" in {
-      mockClientAuthWithoutCredRetrieval(enrolment = Set(mtdItIdEnrolment))
-      val result = testAuthImpl.testAuthorisedAsClient("HMRC-MTD-IT")
-      await(result) shouldBe Ok
-    }
-
-    "return Forbidden if client has other enrolment" in {
-      mockClientAuthWithoutCredRetrieval(enrolment = Set(mtdVatIdEnrolment))
-      val result = testAuthImpl.testAuthorisedAsClient("HMRC-AGENT-AGENT")
-      await(result) shouldBe NoPermissionToPerformOperation
     }
   }
 

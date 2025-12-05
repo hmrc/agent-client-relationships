@@ -97,25 +97,6 @@ extends RequestAwareLogging {
       case _ => Future.successful(false)
     }
 
-  def deauthAltItsaInvitation(
-    arn: Arn,
-    clientId: ClientId,
-    service: Service,
-    affinityGroup: Option[AffinityGroup]
-  ): Future[Boolean] =
-    clientId.typeId match {
-      case NinoType.id =>
-        invitationsRepository
-          .updatePartialAuthToDeAuthorisedStatus(
-            arn,
-            service.id,
-            Nino(clientId.value),
-            deleteService.determineUserTypeFromAG(affinityGroup).getOrElse("HMRC")
-          )
-          .map(_.fold(false)(_ => true))
-      case _ => Future.successful(false)
-    }
-
   def replaceEnrolmentKeyForItsa(
     suppliedClientId: ClientId,
     suppliedEnrolmentKey: EnrolmentKey,

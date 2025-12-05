@@ -153,7 +153,13 @@ with MockValidationService {
   "getClientDetailsWithCheck" when {
     "pending invitations exist for HMRC-MTD-IT" should {
       "return Some(ClientDetailsStrideResponse)" in {
-        mockFindAllPendingForClient(testNino.value, Seq(HMRCMTDIT, HMRCMTDITSUPP))(Seq(itsaInvitation))
+        mockFindAllBy(
+          None,
+          Seq(HMRCMTDIT, HMRCMTDITSUPP),
+          Seq(testNino.value),
+          Some(Pending),
+          isSuppliedClientId = true
+        )(Future.successful(Seq(itsaInvitation)))
         mockGetNonSuspendedAgentRecord(testArn)(Some(testAgentDetailsDesResponse))
         mockFindMainAgent(testNino.value)(Future.successful(Some(testPartialauthRelationship)))
         mockGetAgentRecord(testArn2)(testAgentDetailsDesResponse)
@@ -183,7 +189,13 @@ with MockValidationService {
           itsaSuppPendingInvitation,
           testAgentDetailsDesResponse
         )
-        mockFindAllPendingForClient(testNino.value, Seq(HMRCMTDIT, HMRCMTDITSUPP))(Seq(itsaSuppPendingInvitation))
+        mockFindAllBy(
+          None,
+          Seq(HMRCMTDIT, HMRCMTDITSUPP),
+          Seq(testNino.value),
+          Some(Pending),
+          isSuppliedClientId = true
+        )(Future.successful(Seq(itsaSuppPendingInvitation)))
         mockGetNonSuspendedAgentRecord(testArn)(Some(testAgentDetailsDesResponse))
         mockFindMainAgent(testNino.value)(
           Future.successful(Some(testPartialauthRelationship.copy(arn = testArn.value)))
@@ -215,7 +227,13 @@ with MockValidationService {
           irvPendingInvitation,
           testAgentDetailsDesResponse
         )
-        mockFindAllPendingForClient(testNino.value, Seq(PersonalIncomeRecord.id))(Seq(irvPendingInvitation))
+        mockFindAllBy(
+          None,
+          Seq(PersonalIncomeRecord.id),
+          Seq(testNino.value),
+          Some(Pending),
+          isSuppliedClientId = true
+        )(Future.successful(Seq(irvPendingInvitation)))
         mockGetNonSuspendedAgentRecord(testArn)(Some(testAgentDetailsDesResponse))
         mockFindRelationshipForClient(testNino.value)(Right(List(testClientRelationship)))
         mockGetAgentRecord(testArn)(testAgentDetailsDesResponse)
@@ -246,7 +264,13 @@ with MockValidationService {
           vatPendingInvitation,
           testAgentDetailsDesResponse
         )
-        mockFindAllPendingForClient(testVrn.value, Seq(HMRCMTDVAT))(Seq(vatPendingInvitation))
+        mockFindAllBy(
+          None,
+          Seq(HMRCMTDVAT),
+          Seq(testVrn.value),
+          Some(Pending),
+          isSuppliedClientId = true
+        )(Future.successful(Seq(vatPendingInvitation)))
         mockGetNonSuspendedAgentRecord(testArn)(Some(testAgentDetailsDesResponse))
         mockGetActiveRelationshipsForClient(testVrn, Vat)(
           Future.successful(
@@ -286,7 +310,13 @@ with MockValidationService {
           cgtPendingInvitation,
           testAgentDetailsDesResponse
         )
-        mockFindAllPendingForClient(testCgtPdRef.value, Seq(HMRCCGTPD))(Seq(cgtPendingInvitation))
+        mockFindAllBy(
+          None,
+          Seq(HMRCCGTPD),
+          Seq(testCgtPdRef.value),
+          Some(Pending),
+          isSuppliedClientId = true
+        )(Future.successful(Seq(cgtPendingInvitation)))
         mockGetNonSuspendedAgentRecord(testArn)(Some(testAgentDetailsDesResponse))
         mockGetActiveRelationshipsForClient(testCgtPdRef, CapitalGains)(
           Future.successful(
@@ -327,7 +357,13 @@ with MockValidationService {
           cbcPendingInvitation,
           testAgentDetailsDesResponse
         )
-        mockFindAllPendingForClient(testCbcId.value, Seq(HMRCCBCORG))(Seq(cbcPendingInvitation))
+        mockFindAllBy(
+          None,
+          Seq(HMRCCBCORG),
+          Seq(testCbcId.value),
+          Some(Pending),
+          isSuppliedClientId = true
+        )(Future.successful(Seq(cbcPendingInvitation)))
         mockGetNonSuspendedAgentRecord(testArn)(Some(testAgentDetailsDesResponse))
         mockGetActiveRelationshipsForClient(testCbcId, Cbc)(
           Future.successful(
@@ -368,7 +404,13 @@ with MockValidationService {
           pillar2PendingInvitation,
           testAgentDetailsDesResponse
         )
-        mockFindAllPendingForClient(testPillar2Ref.value, Seq(HMRCPILLAR2ORG))(Seq(pillar2PendingInvitation))
+        mockFindAllBy(
+          None,
+          Seq(HMRCPILLAR2ORG),
+          Seq(testPillar2Ref.value),
+          Some(Pending),
+          isSuppliedClientId = true
+        )(Future.successful(Seq(pillar2PendingInvitation)))
         mockGetNonSuspendedAgentRecord(testArn)(Some(testAgentDetailsDesResponse))
         mockGetActiveRelationshipsForClient(testPillar2Ref, Pillar2)(
           Future.successful(
@@ -409,7 +451,13 @@ with MockValidationService {
           pptPendingInvitation,
           testAgentDetailsDesResponse
         )
-        mockFindAllPendingForClient(testPptRef.value, Seq(HMRCPPTORG))(Seq(pptPendingInvitation))
+        mockFindAllBy(
+          None,
+          Seq(HMRCPPTORG),
+          Seq(testPptRef.value),
+          Some(Pending),
+          isSuppliedClientId = true
+        )(Future.successful(Seq(pptPendingInvitation)))
         mockGetNonSuspendedAgentRecord(testArn)(Some(testAgentDetailsDesResponse))
         mockGetActiveRelationshipsForClient(testPptRef, Ppt)(
           Future.successful(

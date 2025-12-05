@@ -246,10 +246,8 @@ with RepositoryCleanupSupport {
 
       lazy val updatedInvitation =
         await(
-          repository.deauthorise(
-            invitation.arn,
-            invitation.clientId,
-            invitation.service,
+          repository.deauthInvitation(
+            invitation.invitationId,
             "This guy"
           )
         ).get
@@ -267,13 +265,13 @@ with RepositoryCleanupSupport {
       await(repository.collection.insertOne(invitation.copy(status = DeAuthorised)).toFuture())
 
       await(
-        repository.deauthorise(
-          invitation.arn,
-          invitation.clientId,
+        repository.deauthAcceptedInvitation(
           invitation.service,
+          invitation.clientId,
+          invitation.arn,
           "This guy"
         )
-      ) shouldBe None
+      ) shouldBe false
     }
 
     "update a client ID and client ID type when a matching invitation is found" in {
@@ -308,32 +306,6 @@ with RepositoryCleanupSupport {
           "ABCType"
         )
       ) shouldBe false
-    }
-
-    "retrieve all pending invitations for client" in {
-      val itsaInv = pendingInvitation().copy(suppliedClientId = "678", service = HMRCMTDIT)
-      val itsaSuppInv = pendingInvitation().copy(suppliedClientId = "678", service = HMRCMTDITSUPP)
-      val otherClientItsaSuppInv = pendingInvitation().copy(suppliedClientId = "789", service = HMRCMTDITSUPP)
-      val expiredInv = pendingInvitation().copy(
-        suppliedClientId = "678",
-        service = HMRCMTDITSUPP,
-        status = Expired
-      )
-      val irvInv = pendingInvitation().copy(suppliedClientId = "678", service = HMRCPIR)
-      val listOfInvitations = Seq(
-        itsaInv,
-        itsaSuppInv,
-        otherClientItsaSuppInv,
-        expiredInv,
-        irvInv
-      )
-
-      await(repository.collection.insertMany(listOfInvitations).toFuture())
-
-      await(repository.findAllPendingForSuppliedClient("678", Seq(HMRCMTDIT, HMRCMTDITSUPP))) shouldBe Seq(
-        itsaInv,
-        itsaSuppInv
-      )
     }
 
     "produce a TrackRequestsResult with the correct pagination" in {
@@ -601,6 +573,57 @@ with RepositoryCleanupSupport {
 
         result shouldBe Nil
       }
+    }
+
+    "return invitations matching all nino suffix variations when searching by Nino" in {
+      val ninoWithoutSuffix = "AB123456"
+      val invitation1 = pendingInvitation(
+        service = MtdIt,
+        clientId = MtdItId("1234567890"),
+        suppliedClientId = Some(Nino(ninoWithoutSuffix + "A"))
+      )
+      val invitation2 = pendingInvitation(
+        service = MtdIt,
+        clientId = MtdItId("1234567890"),
+        suppliedClientId = Some(Nino(ninoWithoutSuffix + "B"))
+      )
+      val invitation3 = pendingInvitation(
+        service = MtdIt,
+        clientId = MtdItId("1234567890"),
+        suppliedClientId = Some(Nino(ninoWithoutSuffix + "C"))
+      )
+      val invitation4 = pendingInvitation(
+        service = MtdIt,
+        clientId = MtdItId("1234567890"),
+        suppliedClientId = Some(Nino(ninoWithoutSuffix + "D"))
+      )
+      // TODO add 5th variation when suffixless nino class is set up
+      //      val invitation5 = pendingInvitation(
+      //        service = MtdIt,
+      //        clientId = MtdItId("1234567890"),
+      //        suppliedClientId = Some(Nino(ninoWithoutSuffix))
+      //      )
+      repository.collection.insertMany(Seq(
+        invitation1,
+        invitation2,
+        invitation3,
+        invitation4
+        //        invitation5
+      )).toFuture().futureValue
+
+      repository.findAllBy(
+        None,
+        Seq(MtdIt.id),
+        Seq(ninoWithoutSuffix + "A"),
+        None,
+        isSuppliedClientId = true
+      ).futureValue shouldBe Seq(
+        invitation1,
+        invitation2,
+        invitation3,
+        invitation4
+        //        invitation5
+      )
     }
   }
 

@@ -33,6 +33,9 @@ import uk.gov.hmrc.agentclientrelationships.support.NoRequest
 import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
 import uk.gov.hmrc.agentclientrelationships.util.RequestSupport._
 import uk.gov.hmrc.agentclientrelationships.model.identifiers._
+import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository.endedByAgent
+import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository.endedByClient
+import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository.endedByHMRC
 import uk.gov.hmrc.auth.core.AffinityGroup
 import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
@@ -350,9 +353,9 @@ with Logging {
 
   def determineUserTypeFromAG(maybeGroup: Option[AffinityGroup]): Option[String] =
     maybeGroup match {
-      case Some(AffinityGroup.Individual) | Some(AffinityGroup.Organisation) => Some("Client")
-      case Some(AffinityGroup.Agent) => Some("Agent")
-      case _ => Some("HMRC")
+      case Some(AffinityGroup.Individual) | Some(AffinityGroup.Organisation) => Some(endedByClient)
+      case Some(AffinityGroup.Agent) => Some(endedByAgent)
+      case _ => Some(endedByHMRC)
     }
 
   def setRelationshipEnded(

@@ -134,16 +134,15 @@ extends RequestAwareLogging {
     enrolmentKey: EnrolmentKey,
     endedBy: String
   ): Future[Boolean] = invitationsRepository
-    .deauthorise(
-      arn.value,
-      enrolmentKey.oneIdentifier().value,
+    .deauthAcceptedInvitation(
       enrolmentKey.service,
+      enrolmentKey.oneIdentifier().value,
+      arn.value,
       endedBy
     )
-    .map(_.fold(false)(_ => true))
 
   def findInvitationForClient(invitationId: String): Future[Option[Invitation]] = invitationsRepository
-    .findOneByIdForClient(invitationId)
+    .findOneById(invitationId)
 
   def findNonSuspendedClientInvitations(
     services: Seq[String],
