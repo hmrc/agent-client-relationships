@@ -19,7 +19,8 @@ package uk.gov.hmrc.agentclientrelationships.services
 import cats.data.EitherT
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.connectors.{ClientDetailsConnector, HipConnector}
+import uk.gov.hmrc.agentclientrelationships.connectors.ClientDetailsConnector
+import uk.gov.hmrc.agentclientrelationships.connectors.HipConnector
 import uk.gov.hmrc.agentclientrelationships.model.CitizenDetails
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientStatus._
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.KnownFactType._
@@ -32,8 +33,10 @@ import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.domain.TaxIdentifier
 
 import java.time.LocalDate
-import javax.inject.{Inject, Singleton}
-import scala.concurrent.{ExecutionContext, Future}
+import javax.inject.Inject
+import javax.inject.Singleton
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 @Singleton
 class ClientDetailsService @Inject() (

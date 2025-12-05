@@ -18,22 +18,32 @@ package uk.gov.hmrc.agentclientrelationships.repository
 
 import org.apache.pekko.Done
 import org.mongodb.scala.bson.BsonDocument
-import org.mongodb.scala.model.Filters.{and, equal, in}
-import org.mongodb.scala.model.{IndexModel, IndexOptions, Indexes}
+import org.mongodb.scala.model.Filters.and
+import org.mongodb.scala.model.Filters.equal
+import org.mongodb.scala.model.Filters.in
+import org.mongodb.scala.model.IndexModel
+import org.mongodb.scala.model.IndexOptions
+import org.mongodb.scala.model.Indexes
 import org.mongodb.scala.model.Updates._
 import uk.gov.hmrc.agentclientrelationships.model.PartialAuthRelationship
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.{Arn, NinoWithoutSuffix}
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.{HMRCMTDIT, HMRCMTDITSUPP}
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDIT
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDITSUPP
 import uk.gov.hmrc.agentclientrelationships.util.CryptoUtil.encryptedString
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
-import uk.gov.hmrc.crypto.{Decrypter, Encrypter}
+import uk.gov.hmrc.crypto.Decrypter
+import uk.gov.hmrc.crypto.Encrypter
 import uk.gov.hmrc.mdc.Mdc
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 
 import java.time.Instant
-import javax.inject.{Inject, Named, Singleton}
-import scala.concurrent.{ExecutionContext, Future}
+import javax.inject.Inject
+import javax.inject.Named
+import javax.inject.Singleton
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 @Singleton
 class PartialAuthRepository @Inject() (mongoComponent: MongoComponent)(implicit
