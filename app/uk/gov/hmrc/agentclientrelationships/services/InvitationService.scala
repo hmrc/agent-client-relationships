@@ -25,6 +25,10 @@ import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.Invitation
 import uk.gov.hmrc.agentclientrelationships.model.Rejected
 import uk.gov.hmrc.agentclientrelationships.model.TrackRequestsResult
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.ClientIdentifier.ClientId
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdIt
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdItSupp
+import uk.gov.hmrc.agentclientrelationships.model.identifiers._
 import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiFailureResponse.InvalidInvitationStatus
 import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiFailureResponse.InvitationNotFound
 import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiFailureResponse.NoPermissionOnAgency
@@ -36,14 +40,6 @@ import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureRe
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgencyDetails
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.ClientIdentifier.ClientId
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.ClientIdentifier
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoType
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdIt
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdItSupp
-import uk.gov.hmrc.domain.Nino
 
 import java.time.Instant
 import java.time.ZoneOffset
@@ -206,7 +202,7 @@ extends RequestAwareLogging {
     (service, suppliedClientId.typeId) match {
       case (MtdIt | MtdItSupp, NinoType.id) =>
         hipConnector
-          .getMtdIdFor(Nino(suppliedClientId.value))
+          .getMtdIdFor(NinoWithoutSuffix(suppliedClientId.value))
           .map(
             _.fold[Either[InvitationFailureResponse, ClientId]](Right(suppliedClientId))(mdtId =>
               Right(ClientIdentifier(mdtId))

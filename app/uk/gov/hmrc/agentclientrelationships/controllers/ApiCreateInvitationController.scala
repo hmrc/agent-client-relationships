@@ -44,7 +44,6 @@ import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdIt
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdItSupp
 import uk.gov.hmrc.agentclientrelationships.model.identifiers._
 import uk.gov.hmrc.auth.core.AuthConnector
-import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import java.time.Instant
@@ -210,7 +209,7 @@ with AuthActions {
     (service, suppliedClientId.typeId) match {
       case (MtdIt | MtdItSupp, NinoType.id) =>
         hipConnector
-          .getMtdIdFor(Nino(suppliedClientId.value))
+          .getMtdIdFor(NinoWithoutSuffix(suppliedClientId.value))
           .map(
             _.fold[Either[ApiFailureResponse, ClientId]](Right(suppliedClientId))(mdtId =>
               Right(ClientIdentifier(mdtId))
@@ -288,7 +287,7 @@ with AuthActions {
         partialAuthRepository
           .findActive(
             service,
-            Nino(clientId),
+            NinoWithoutSuffix(clientId),
             arn
           )
           .map {

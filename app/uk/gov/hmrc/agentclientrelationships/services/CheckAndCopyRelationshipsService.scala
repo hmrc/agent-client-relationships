@@ -17,7 +17,7 @@
 package uk.gov.hmrc.agentclientrelationships.services
 
 import org.apache.pekko.Done
-import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
+import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys._
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.audit.AuditService
@@ -26,21 +26,19 @@ import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors._
 import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax.returnValue
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
-import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.SaRef
-import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _, _}
-import uk.gov.hmrc.agentclientrelationships.support.Monitoring
-import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDIT
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDITSUPP
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Vrn
+import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.SaRef
+import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _, _}
+import uk.gov.hmrc.agentclientrelationships.support.Monitoring
+import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.auth.core.AffinityGroup.Agent
-import uk.gov.hmrc.domain.AgentCode
-import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.domain.SaAgentReference
-import play.api.mvc.RequestHeader
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import javax.inject.Inject
@@ -158,7 +156,7 @@ with RequestAwareLogging {
   private def checkCesaAndCopy(
     arn: Arn,
     mtdItId: MtdItId,
-    nino: Option[Nino]
+    nino: Option[NinoWithoutSuffix]
   )(implicit
     request: RequestHeader,
     auditData: AuditData,
@@ -222,7 +220,7 @@ with RequestAwareLogging {
   private def endPartialAuth(
     arn: Arn,
     service: String,
-    nino: Option[Nino],
+    nino: Option[NinoWithoutSuffix],
     mtdItId: MtdItId
   )(implicit request: RequestHeader): Future[Boolean] =
     nino.fold(Future.successful(false))(ni =>
@@ -250,7 +248,7 @@ with RequestAwareLogging {
 
   private def findPartialAuth(
     arn: Arn,
-    nino: Option[Nino]
+    nino: Option[NinoWithoutSuffix]
   )(implicit auditData: AuditData): Future[Option[String]] =
     nino.fold[Future[Option[String]]](Future.successful(None)) { ni =>
       auditData.set(ninoKey, ni)
@@ -279,7 +277,7 @@ with RequestAwareLogging {
     arn: Arn,
     mtdItId: MtdItId,
     mService: Option[String],
-    mNino: Option[Nino]
+    mNino: Option[NinoWithoutSuffix]
   )(implicit
     request: RequestHeader,
     auditData: AuditData
@@ -376,7 +374,7 @@ with RequestAwareLogging {
 
   def lookupCesaForOldRelationship(
     arn: Arn,
-    nino: Nino
+    nino: NinoWithoutSuffix
   )(implicit
     request: RequestHeader,
     auditData: AuditData = new AuditData()
@@ -399,7 +397,7 @@ with RequestAwareLogging {
 
   def hasPartialAuthOrLegacyRelationshipInCesa(
     arn: Arn,
-    nino: Nino
+    nino: NinoWithoutSuffix
   )(implicit
     ec: ExecutionContext,
     request: RequestHeader,

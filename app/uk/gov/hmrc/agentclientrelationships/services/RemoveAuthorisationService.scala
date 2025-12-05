@@ -16,32 +16,20 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
-import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
-import uk.gov.hmrc.agentclientrelationships.model._
-import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.ClientRegistrationNotFound
-import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.InvalidClientId
-import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.UnsupportedService
-import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse
-import uk.gov.hmrc.agentclientrelationships.model.invitation.ValidRequest
-import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
-import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.ClientIdentifier.ClientId
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdIt
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdItSupp
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.ClientIdentifier
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoType
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
-import uk.gov.hmrc.auth.core.AffinityGroup
-import uk.gov.hmrc.domain.Nino
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.connectors.HipConnector
+import uk.gov.hmrc.agentclientrelationships.model._
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.ClientIdentifier.ClientId
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.{MtdIt, MtdItSupp}
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.{EnrolmentKey, _}
+import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.{ClientRegistrationNotFound, InvalidClientId, UnsupportedService}
+import uk.gov.hmrc.agentclientrelationships.model.invitation.{InvitationFailureResponse, ValidRequest}
+import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 
 import java.time.Instant
-import javax.inject.Inject
-import javax.inject.Singleton
-import scala.concurrent.ExecutionContext
-import scala.concurrent.Future
+import javax.inject.{Inject, Singleton}
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 import scala.util.control.NonFatal
 
@@ -75,7 +63,7 @@ extends RequestAwareLogging {
       case NinoType.id =>
         partialAuthRepository.findActive(
           service.id,
-          Nino(clientId.value),
+          NinoWithoutSuffix(clientId.value),
           arn
         )
       case _ => Future.successful(None)
@@ -90,7 +78,7 @@ extends RequestAwareLogging {
       case NinoType.id =>
         partialAuthRepository.deauthorise(
           service.id,
-          Nino(clientId.value),
+          NinoWithoutSuffix(clientId.value),
           arn,
           Instant.now
         )
@@ -105,7 +93,7 @@ extends RequestAwareLogging {
     (service, suppliedClientId.typeId) match {
       case (MtdIt | MtdItSupp, NinoType.id) =>
         hipConnector
-          .getMtdIdFor(Nino(suppliedClientId.value))
+          .getMtdIdFor(NinoWithoutSuffix(suppliedClientId.value))
           .map {
             case Some(mtdItId) => Right(EnrolmentKey(service, mtdItId))
             case None => Right(suppliedEnrolmentKey)

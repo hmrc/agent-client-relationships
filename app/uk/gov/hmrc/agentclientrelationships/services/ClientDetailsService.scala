@@ -19,8 +19,7 @@ package uk.gov.hmrc.agentclientrelationships.services
 import cats.data.EitherT
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.connectors.ClientDetailsConnector
-import uk.gov.hmrc.agentclientrelationships.connectors.HipConnector
+import uk.gov.hmrc.agentclientrelationships.connectors.{ClientDetailsConnector, HipConnector}
 import uk.gov.hmrc.agentclientrelationships.model.CitizenDetails
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientStatus._
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.KnownFactType._
@@ -28,16 +27,13 @@ import uk.gov.hmrc.agentclientrelationships.model.clientDetails._
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.cgt.CgtSubscriptionDetails
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa.ItsaBusinessDetails
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.vat.VatCustomerDetails
-import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.agentclientrelationships.model.identifiers._
-import uk.gov.hmrc.domain.Nino
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.domain.TaxIdentifier
 
 import java.time.LocalDate
-import javax.inject.Inject
-import javax.inject.Singleton
-import scala.concurrent.ExecutionContext
-import scala.concurrent.Future
+import javax.inject.{Inject, Singleton}
+import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class ClientDetailsService @Inject() (
@@ -51,7 +47,7 @@ extends RequestAwareLogging {
     taxIdentifier: TaxIdentifier
   )(implicit request: RequestHeader): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] =
     taxIdentifier match {
-      case Nino(nino) => EitherT(getItsaClientDetails(nino)).orElse(EitherT(getIrvClientDetails(nino))).value
+      case NinoWithoutSuffix(nino) => EitherT(getItsaClientDetails(nino)).orElse(EitherT(getIrvClientDetails(nino))).value
       case Vrn(vrn) => getVatClientDetails(vrn)
       case Utr(utr) => getTrustClientDetails(utr)
       case Urn(urn) => getTrustClientDetails(urn)

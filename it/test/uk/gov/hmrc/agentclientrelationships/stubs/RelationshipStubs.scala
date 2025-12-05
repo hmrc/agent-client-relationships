@@ -17,11 +17,7 @@
 package uk.gov.hmrc.agentclientrelationships.stubs
 
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Vrn
-import uk.gov.hmrc.domain.Nino
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.{Arn, MtdItId, NinoWithoutSuffix, Service, Vrn}
 
 trait RelationshipStubs
 extends EnrolmentStoreProxyStubs
@@ -52,7 +48,7 @@ with UsersGroupsSearchStubs {
     Set("bar", "foo") ++ ids.toSet
   )
 
-  def givenDelegatedGroupIdsNotExistForNino(nino: Nino) = givenDelegatedGroupIdsNotExistFor(
+  def givenDelegatedGroupIdsNotExistForNino(nino: NinoWithoutSuffix) = givenDelegatedGroupIdsNotExistFor(
     EnrolmentKey(Service.MtdIt, nino)
   )
 

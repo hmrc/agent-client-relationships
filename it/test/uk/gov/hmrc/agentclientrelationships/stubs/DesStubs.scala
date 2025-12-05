@@ -17,7 +17,7 @@
 package uk.gov.hmrc.agentclientrelationships.stubs
 
 import com.github.tomakehurst.wiremock.client.WireMock._
-import uk.gov.hmrc.domain.Nino
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
 
 trait DesStubs {
 
@@ -33,7 +33,7 @@ trait DesStubs {
   val someCeasedAgent = """{"hasAgent":true,"agentId":"ex-agent","agentCeasedDate":"someDate"}"""
 
   def givenClientHasRelationshipWithAgentInCESA(
-    nino: Nino,
+    nino: NinoWithoutSuffix,
     agentId: String
   ) = stubFor(
     get(urlEqualTo(s"/registration/relationship/nino/${nino.value}")).willReturn(
@@ -44,7 +44,7 @@ trait DesStubs {
   )
 
   def givenClientHasRelationshipWithMultipleAgentsInCESA(
-    nino: Nino,
+    nino: NinoWithoutSuffix,
     agentIds: Seq[String]
   ) = stubFor(
     get(urlEqualTo(s"/registration/relationship/nino/${nino.value}")).willReturn(
@@ -57,7 +57,7 @@ trait DesStubs {
   )
 
   def givenClientRelationshipWithAgentCeasedInCESA(
-    nino: Nino,
+    nino: NinoWithoutSuffix,
     agentId: String
   ) = stubFor(
     get(urlEqualTo(s"/registration/relationship/nino/${nino.value}")).willReturn(
@@ -68,7 +68,7 @@ trait DesStubs {
   )
 
   def givenAllClientRelationshipsWithAgentsCeasedInCESA(
-    nino: Nino,
+    nino: NinoWithoutSuffix,
     agentIds: Seq[String]
   ) = stubFor(
     get(urlEqualTo(s"/registration/relationship/nino/${nino.value}")).willReturn(
@@ -80,17 +80,17 @@ trait DesStubs {
     )
   )
 
-  def givenClientHasNoActiveRelationshipWithAgentInCESA(nino: Nino) = stubFor(
+  def givenClientHasNoActiveRelationshipWithAgentInCESA(nino: NinoWithoutSuffix) = stubFor(
     get(urlEqualTo(s"/registration/relationship/nino/${nino.value}"))
       .willReturn(aResponse().withStatus(200).withBody(s"""{"agents":[$someCeasedAgent, $someAlienAgent]}"""))
   )
 
-  def givenClientHasNoRelationshipWithAnyAgentInCESA(nino: Nino) = stubFor(
+  def givenClientHasNoRelationshipWithAnyAgentInCESA(nino: NinoWithoutSuffix) = stubFor(
     get(urlEqualTo(s"/registration/relationship/nino/${nino.value}"))
       .willReturn(aResponse().withStatus(200).withBody(s"""{}"""))
   )
 
-  def givenClientIsUnknownInCESAFor(nino: Nino) = stubFor(
+  def givenClientIsUnknownInCESAFor(nino: NinoWithoutSuffix) = stubFor(
     get(urlEqualTo(s"/registration/relationship/nino/${nino.value}")).willReturn(aResponse().withStatus(404))
   )
 

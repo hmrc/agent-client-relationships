@@ -18,12 +18,10 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.CbcId
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.{CbcId, NinoWithoutSuffix, Service}
 import uk.gov.hmrc.agentclientrelationships.repository.DeleteRecord
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus
 import uk.gov.hmrc.agentclientrelationships.stubs.HipStub
-import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.domain.TaxIdentifier
 
 import java.time.Instant
@@ -83,7 +81,7 @@ trait RelationshipsControllerGenericBehaviours {
       if (serviceId == Service.Cbc.id)
         givenCbcUkExistsInES(CbcId(clientId.value), enrolmentKey.oneIdentifier(Some("UTR")).value)
       if (isItsaNino(clientIdType, serviceId)) {
-        givenMtdItIdIsKnownFor(Nino(clientId.value), mtdItId)
+        givenMtdItIdIsKnownFor(NinoWithoutSuffix(clientId.value), mtdItId)
         getActiveRelationshipsViaClient(mtdItId, arn)
       }
       ()

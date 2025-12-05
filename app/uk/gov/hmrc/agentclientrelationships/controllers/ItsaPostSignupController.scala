@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.agentclientrelationships.controllers
 
-import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import play.api.libs.json.Json
 import play.api.mvc.Action
 import play.api.mvc.AnyContent
@@ -25,15 +24,16 @@ import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.HipConnector
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDIT
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 import uk.gov.hmrc.agentclientrelationships.services.AltItsaCreateRelationshipSuccess
 import uk.gov.hmrc.agentclientrelationships.services.AltItsaNotFoundOrFailed
 import uk.gov.hmrc.agentclientrelationships.services.CheckAndCopyRelationshipsService
 import uk.gov.hmrc.agentclientrelationships.services.FoundAndCopied
 import uk.gov.hmrc.agentclientrelationships.services.{NotFound => CheckAndCopyNotFound}
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDIT
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.auth.core.AuthConnector
-import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.Inject
@@ -55,7 +55,7 @@ with RequestAwareLogging {
 
   val supportedServices: Seq[Service] = appConfig.supportedServices
 
-  def itsaPostSignupCreateRelationship(nino: Nino): Action[AnyContent] = Action.async { implicit request =>
+  def itsaPostSignupCreateRelationship(nino: NinoWithoutSuffix): Action[AnyContent] = Action.async { implicit request =>
     withAuthorisedAsAgent { arn =>
       hipConnector
         .getMtdIdFor(nino)

@@ -18,32 +18,22 @@ package uk.gov.hmrc.agentclientrelationships.repository
 
 import org.apache.pekko.Done
 import org.mongodb.scala.bson.BsonDocument
-import org.mongodb.scala.model.Filters.and
-import org.mongodb.scala.model.Filters.equal
-import org.mongodb.scala.model.Filters.in
+import org.mongodb.scala.model.Filters.{and, equal, in}
+import org.mongodb.scala.model.{IndexModel, IndexOptions, Indexes}
 import org.mongodb.scala.model.Updates._
-import org.mongodb.scala.model.IndexModel
-import org.mongodb.scala.model.IndexOptions
-import org.mongodb.scala.model.Indexes
-import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.agentclientrelationships.model.PartialAuthRelationship
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.{Arn, NinoWithoutSuffix}
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.{HMRCMTDIT, HMRCMTDITSUPP}
 import uk.gov.hmrc.agentclientrelationships.util.CryptoUtil.encryptedString
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDIT
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDITSUPP
-import uk.gov.hmrc.crypto.Decrypter
-import uk.gov.hmrc.crypto.Encrypter
-import uk.gov.hmrc.domain.Nino
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
+import uk.gov.hmrc.crypto.{Decrypter, Encrypter}
+import uk.gov.hmrc.mdc.Mdc
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
-import uk.gov.hmrc.mdc.Mdc
 
 import java.time.Instant
-import javax.inject.Inject
-import javax.inject.Named
-import javax.inject.Singleton
-import scala.concurrent.ExecutionContext
-import scala.concurrent.Future
+import javax.inject.{Inject, Named, Singleton}
+import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class PartialAuthRepository @Inject() (mongoComponent: MongoComponent)(implicit
@@ -90,7 +80,7 @@ with RequestAwareLogging {
     created: Instant,
     arn: Arn,
     service: String,
-    nino: Nino
+    nino: NinoWithoutSuffix
   ): Future[Done] = Mdc.preservingMdc {
     require(List(HMRCMTDIT, HMRCMTDITSUPP).contains(service))
     val partialAuth = PartialAuthRelationship(
@@ -105,7 +95,7 @@ with RequestAwareLogging {
   }
 
   def findActive(
-    nino: Nino,
+    nino: NinoWithoutSuffix,
     arn: Arn
   ): Future[Option[PartialAuthRelationship]] = Mdc.preservingMdc {
     collection
@@ -124,7 +114,7 @@ with RequestAwareLogging {
       .headOption()
   }
 
-  def findActiveByNino(nino: Nino): Future[Seq[PartialAuthRelationship]] = Mdc.preservingMdc {
+  def findActiveByNino(nino: NinoWithoutSuffix): Future[Seq[PartialAuthRelationship]] = Mdc.preservingMdc {
     collection
       .find(and(equal("nino", encryptedString(nino.value)), equal("active", true)))
       .toFuture()
@@ -132,7 +122,7 @@ with RequestAwareLogging {
 
   def findActive(
     serviceId: String,
-    nino: Nino,
+    nino: NinoWithoutSuffix,
     arn: Arn
   ): Future[Option[PartialAuthRelationship]] = Mdc.preservingMdc {
     collection
@@ -147,7 +137,7 @@ with RequestAwareLogging {
       .headOption()
   }
 
-  def findByNino(nino: Nino): Future[Seq[PartialAuthRelationship]] = Mdc.preservingMdc {
+  def findByNino(nino: NinoWithoutSuffix): Future[Seq[PartialAuthRelationship]] = Mdc.preservingMdc {
     collection
       .find(equal("nino", encryptedString(nino.value)))
       .toFuture()
@@ -168,7 +158,7 @@ with RequestAwareLogging {
 
   def deauthorise(
     serviceId: String,
-    nino: Nino,
+    nino: NinoWithoutSuffix,
     arn: Arn,
     updated: Instant
   ): Future[Boolean] = Mdc.preservingMdc {
@@ -189,7 +179,7 @@ with RequestAwareLogging {
   // for example when a partialAuth becomes a MTD relationship we want to delete the partialAuth
   def deleteActivePartialAuth(
     serviceId: String,
-    nino: Nino,
+    nino: NinoWithoutSuffix,
     arn: Arn
   ): Future[Boolean] = Mdc.preservingMdc {
     collection

@@ -18,37 +18,23 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 
 import cats.data.EitherT
 import play.api.Logger
-import play.api.mvc.Action
-import play.api.mvc.ControllerComponents
-import play.api.mvc.RequestHeader
-import play.api.mvc.Result
+import play.api.mvc.{Action, ControllerComponents, RequestHeader, Result}
 import uk.gov.hmrc.agentclientrelationships.audit.AuditService
-import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
-import uk.gov.hmrc.agentclientrelationships.auth.CurrentUser
+import uk.gov.hmrc.agentclientrelationships.auth.{AuthActions, CurrentUser}
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.AgentFiRelationshipConnector
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.{Arn, NinoWithoutSuffix, Service}
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse._
-import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse
-import uk.gov.hmrc.agentclientrelationships.model.invitation.RemoveAuthorisationRequest
-import uk.gov.hmrc.agentclientrelationships.model.invitation.ValidRequest
-import uk.gov.hmrc.agentclientrelationships.services.DeleteRelationshipsService
-import uk.gov.hmrc.agentclientrelationships.services.InvitationService
-import uk.gov.hmrc.agentclientrelationships.services.RemoveAuthorisationService
-import uk.gov.hmrc.agentclientrelationships.services.ValidationService
+import uk.gov.hmrc.agentclientrelationships.model.invitation.{InvitationFailureResponse, RemoveAuthorisationRequest, ValidRequest}
+import uk.gov.hmrc.agentclientrelationships.services.{DeleteRelationshipsService, RemoveAuthorisationService, ValidationService}
 import uk.gov.hmrc.agentclientrelationships.support.{RelationshipNotFound => RelationshipNotFoundEx}
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
-import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository.endedByHMRC
 import uk.gov.hmrc.auth.core.AuthConnector
-import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
-import javax.inject.Inject
-import javax.inject.Singleton
-import scala.concurrent.ExecutionContext
-import scala.concurrent.Future
+import javax.inject.{Inject, Singleton}
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 
 @Singleton
@@ -149,7 +135,7 @@ with AuthActions {
               Left(RelationshipNotFound)
           }
           .recover { case error: UpstreamErrorResponse => Left(RelationshipDeleteFailed(error.getMessage)) }
-      case (Service.MtdIt | Service.MtdItSupp, Nino(_)) => // Alt ITSA
+      case (Service.MtdIt | Service.MtdItSupp, NinoWithoutSuffix(_)) => // Alt ITSA
         deauthorisationService
           .deauthPartialAuth(
             arn,

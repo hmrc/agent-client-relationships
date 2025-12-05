@@ -35,7 +35,8 @@ lazy val root = (project in file("."))
       "uk.gov.hmrc.agentclientrelationships.binders.PathBinders._",
       "uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn",
       "uk.gov.hmrc.domain.Nino",
-      "uk.gov.hmrc.agentclientrelationships.model.InvitationStatus"
+      "uk.gov.hmrc.agentclientrelationships.model.InvitationStatus",
+      "uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix"
     ),
 
     Compile / scalafmtOnCompile := true,

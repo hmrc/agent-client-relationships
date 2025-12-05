@@ -35,7 +35,6 @@ import uk.gov.hmrc.agentclientrelationships.services.AgentCacheProvider
 import uk.gov.hmrc.agentclientrelationships.util.RequestSupport._
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDITSUPP
 import uk.gov.hmrc.agentclientrelationships.model.identifiers._
-import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.HttpResponse
@@ -195,7 +194,7 @@ extends RequestAwareLogging {
   }
 
   // API#5266 https://admin.tax.service.gov.uk/integration-hub/apis/details/e54e8843-c146-4551-a499-c93ecac4c6fd#Endpoints
-  def getNinoFor(mtdId: MtdItId)(implicit request: RequestHeader): Future[Option[Nino]] = {
+  def getNinoFor(mtdId: MtdItId)(implicit request: RequestHeader): Future[Option[NinoWithoutSuffix]] = {
     val encodedMtdId = UriEncoding.encodePathSegment(mtdId.value, "UTF-8")
     val url = new URL(s"$baseUrl/etmp/RESTAdapter/itsa/taxpayer/business-details?mtdReference=$encodedMtdId")
 
@@ -204,7 +203,7 @@ extends RequestAwareLogging {
       url,
       () => headers.makeSubscriptionBusinessDetailsHeaders()
     ).map {
-      case Right(response) => Option((response.json \ "success" \ "taxPayerDisplayResponse" \ "nino").as[Nino])
+      case Right(response) => Option((response.json \ "success" \ "taxPayerDisplayResponse" \ "nino").as[NinoWithoutSuffix])
       case Left(errorResponse) =>
         errorResponse.statusCode match {
           case Status.NOT_FOUND => None
@@ -220,7 +219,7 @@ extends RequestAwareLogging {
   }
 
   // API#5266 https://admin.tax.service.gov.uk/integration-hub/apis/details/e54e8843-c146-4551-a499-c93ecac4c6fd#Endpoints
-  def getMtdIdFor(nino: Nino)(implicit request: RequestHeader): Future[Option[MtdItId]] = {
+  def getMtdIdFor(nino: NinoWithoutSuffix)(implicit request: RequestHeader): Future[Option[MtdItId]] = {
     val encodedNino = UriEncoding.encodePathSegment(nino.value, "UTF-8")
     val url = new URL(s"$baseUrl/etmp/RESTAdapter/itsa/taxpayer/business-details?nino=$encodedNino")
 

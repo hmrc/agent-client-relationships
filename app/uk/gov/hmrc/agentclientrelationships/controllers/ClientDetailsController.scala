@@ -22,19 +22,18 @@ import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.Pending
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails._
-import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
-import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
-import uk.gov.hmrc.agentclientrelationships.services._
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCCBCNONUKORG
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCCBCORG
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDIT
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDITSUPP
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
-import uk.gov.hmrc.auth.core.AuthConnector
-import uk.gov.hmrc.domain.Nino
-import play.api.mvc.RequestHeader
+import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
+import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
 import uk.gov.hmrc.agentclientrelationships.services.CheckRelationshipResult.relationshipNotFoundAlreadyCopied
+import uk.gov.hmrc.agentclientrelationships.services._
+import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.Inject
@@ -114,9 +113,9 @@ with AuthActions {
               currentRelationship = currentRelationshipMain.orElse(currentRelationshipSupp)
               (isMapped, legacyRelationships) <-
                 currentRelationship match {
-                  case None if !pendingInvitation && !alreadyCopied && Nino.isValid(clientId) && refinedService.equals(HMRCMTDIT) =>
+                  case None if !pendingInvitation && !alreadyCopied && NinoWithoutSuffix.isValid(clientId) && refinedService.equals(HMRCMTDIT) =>
                     checkAndCopyRelationshipsService
-                      .lookupCesaForOldRelationship(arn, Nino(clientId)).map {
+                      .lookupCesaForOldRelationship(arn, NinoWithoutSuffix(clientId)).map {
                         case (mappedRef, legacyRefs) => (Some(mappedRef.nonEmpty), Some(legacyRefs.map(_.value)))
                       }
                   case _ => Future.successful((None, None))
@@ -157,7 +156,7 @@ with AuthActions {
         partialAuthRepository
           .findActive(
             service,
-            Nino(clientId),
+            NinoWithoutSuffix(clientId),
             arn
           )
           .map(auth => (auth.map(_ => service), reason.contains(relationshipNotFoundAlreadyCopied)))

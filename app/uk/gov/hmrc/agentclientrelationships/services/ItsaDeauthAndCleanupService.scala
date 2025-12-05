@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
+import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys.agentRoleChange
 import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys.howPartialAuthTerminatedKey
 import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys.howRelationshipTerminatedKey
@@ -26,16 +27,15 @@ import uk.gov.hmrc.agentclientrelationships.model.Accepted
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.Invitation
 import uk.gov.hmrc.agentclientrelationships.model.PartialAuth
-import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository.endedByClient
-import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
-import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDIT
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDITSUPP
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
-import uk.gov.hmrc.domain.Nino
-import play.api.mvc.RequestHeader
+import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository.endedByClient
+import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
+import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
 
 import java.time.Instant
 import javax.inject.Inject
@@ -75,7 +75,7 @@ class ItsaDeauthAndCleanupService @Inject() (
           // Attempt to remove existing alt itsa partial auth
           altItsa <- partialAuthRepository.deauthorise(
             serviceToCheck.id,
-            Nino(nino),
+            NinoWithoutSuffix(nino),
             Arn(arn),
             timestamp
           )

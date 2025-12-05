@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
-import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys.arnKey
@@ -24,13 +23,14 @@ import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys.credIdKey
 import uk.gov.hmrc.agentclientrelationships.connectors._
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.UserId
-import uk.gov.hmrc.agentclientrelationships.support.Monitoring
-import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 import uk.gov.hmrc.agentclientrelationships.services.CheckRelationshipResult._
-import uk.gov.hmrc.domain.Nino
+import uk.gov.hmrc.agentclientrelationships.support.Monitoring
+import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
@@ -65,12 +65,12 @@ with RequestAwareLogging {
 
     (service, clientIdType, clientId) match {
       // Used by BTA to handle non MTD ITSA users
-      case ("IR-SA", _, _) if Nino.isValid(clientId) =>
+      case ("IR-SA", _, _) if NinoWithoutSuffix.isValid(clientId) =>
         withIrSaSuspensionCheck(arn) {
-          checkLegacyWithNinoOrPartialAuth(arn, Nino(clientId))
+          checkLegacyWithNinoOrPartialAuth(arn, NinoWithoutSuffix(clientId))
         }
       // MTD ITSA uses nino as supplied clientId while the actual clientId is MTDITID
-      case (Service.MtdIt.id | Service.MtdItSupp.id, "ni" | "NI" | "NINO", _) if Nino.isValid(clientId) =>
+      case (Service.MtdIt.id | Service.MtdItSupp.id, "ni" | "NI" | "NINO", _) if NinoWithoutSuffix.isValid(clientId) =>
         withMtdItId(clientId) { mtdItId =>
           checkWithTaxIdentifier(
             arn,
@@ -200,7 +200,7 @@ with RequestAwareLogging {
   private def withMtdItId(clientId: String)(
     proceed: MtdItId => Future[CheckRelationshipResult]
   )(implicit request: RequestHeader): Future[CheckRelationshipResult] = hipConnector
-    .getMtdIdFor(Nino(clientId))
+    .getMtdIdFor(NinoWithoutSuffix(clientId))
     .flatMap {
       case Some(mtdItId) => proceed(mtdItId)
       case None => Future.successful(CheckRelationshipNotFound())
@@ -219,7 +219,7 @@ with RequestAwareLogging {
 
   private def checkLegacyWithNinoOrPartialAuth(
     arn: Arn,
-    nino: Nino
+    nino: NinoWithoutSuffix
   )(implicit request: RequestHeader): Future[CheckRelationshipResult] = {
     implicit val auditData: AuditData = new AuditData()
     auditData.set(arnKey, arn)

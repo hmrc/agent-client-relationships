@@ -23,15 +23,15 @@ import play.api.mvc.ControllerComponents
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.controllers.ErrorResults.ErrorBody
-import uk.gov.hmrc.agentclientrelationships.model.stride.PartialAuthWithAgentName
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 import uk.gov.hmrc.agentclientrelationships.model.stride.PartialAuthRelationships
+import uk.gov.hmrc.agentclientrelationships.model.stride.PartialAuthWithAgentName
 import uk.gov.hmrc.agentclientrelationships.services.AgentAssuranceService
 import uk.gov.hmrc.agentclientrelationships.services.CitizenDetailsService
 import uk.gov.hmrc.agentclientrelationships.services.StrideClientDetailsService
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 import uk.gov.hmrc.auth.core.AuthConnector
-import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import java.time.ZoneId
@@ -57,7 +57,7 @@ with AuthActions {
   def getPartialAuths(nino: String): Action[AnyContent] = Action.async { implicit request =>
     authorisedWithStride(appConfig.partialAuthStrideRole) { _ =>
       for {
-        partialAuthsWithoutAgentName <- strideClientDetailsService.getPartialAuthsForNino(Nino(nino))
+        partialAuthsWithoutAgentName <- strideClientDetailsService.getPartialAuthsForNino(NinoWithoutSuffix(nino))
         citizenDetails <- citizenDetailsService.getCitizenDetails(nino)
         partialAuths <- Future.sequence(
           partialAuthsWithoutAgentName.map { partialAuth =>

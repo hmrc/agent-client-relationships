@@ -19,7 +19,6 @@ package uk.gov.hmrc.agentclientrelationships.stubs
 import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.stubbing.StubMapping
 import uk.gov.hmrc.agentclientrelationships.model.identifiers._
-import uk.gov.hmrc.domain.Nino
 
 trait IfStub {
 
@@ -33,7 +32,7 @@ trait IfStub {
 
   def givenNinoIsKnownFor(
     mtdId: MtdItId,
-    nino: Nino
+    nino: NinoWithoutSuffix
   ): StubMapping = stubFor(
     get(urlEqualTo(s"/registration/business-details/mtdId/${mtdId.value}"))
       .willReturn(aResponse().withStatus(200).withBody(s"""{"taxPayerDisplayResponse":{"nino": "${nino.value}" }}"""))
@@ -48,18 +47,18 @@ trait IfStub {
   )
 
   def givenMtdItIdIsKnownFor(
-    nino: Nino,
+    nino: NinoWithoutSuffix,
     mtdId: MtdItId
   ): StubMapping = stubFor(
     get(urlEqualTo(s"/registration/business-details/nino/${nino.value}"))
       .willReturn(aResponse().withStatus(200).withBody(s"""{"taxPayerDisplayResponse":{"mtdId": "${mtdId.value}" }}"""))
   )
 
-  def givenMtdItIdIsUnKnownFor(nino: Nino): StubMapping = stubFor(
+  def givenMtdItIdIsUnKnownFor(nino: NinoWithoutSuffix): StubMapping = stubFor(
     get(urlEqualTo(s"/registration/business-details/nino/${nino.value}")).willReturn(aResponse().withStatus(404))
   )
 
-  def givenNinoIsInvalid(nino: Nino): StubMapping = stubFor(
+  def givenNinoIsInvalid(nino: NinoWithoutSuffix): StubMapping = stubFor(
     get(urlMatching(s"/registration/.*?/nino/${nino.value}")).willReturn(aResponse().withStatus(400))
   )
 
