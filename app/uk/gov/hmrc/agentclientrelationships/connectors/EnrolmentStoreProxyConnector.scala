@@ -232,7 +232,6 @@ extends RequestAwareLogging {
         response.status match {
           case Status.NO_CONTENT => Done
           case other =>
-            // TODO: verify that other 2xx are rally errors, use HttpReadsImplicits to idiomatically handle that
             throw UpstreamErrorResponse(
               response.body,
               other,
@@ -257,7 +256,6 @@ extends RequestAwareLogging {
       response.status match {
         case Status.NO_CONTENT =>
         case other =>
-          // TODO: verify that other 2xx are rally errors, use HttpReadsImplicits to idiomatically handle that
           throw UpstreamErrorResponse(
             response.body,
             other,

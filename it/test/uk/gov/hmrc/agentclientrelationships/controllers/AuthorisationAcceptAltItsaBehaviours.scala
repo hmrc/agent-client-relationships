@@ -108,7 +108,7 @@ trait AuthorisationAcceptAltItsaBehaviours {
         invitations.size shouldBe 1
         invitations.head.status shouldBe PartialAuth
 
-        val partialAuthInvitations: Option[PartialAuthRelationship] = partialAuthRepository.findActive(nino, arn).futureValue
+        val partialAuthInvitations: Option[PartialAuthRelationship] = partialAuthRepository.findActiveForAgent(nino, arn).futureValue
         partialAuthInvitations.size shouldBe 1
         partialAuthInvitations.head.active shouldBe true
 

@@ -29,10 +29,12 @@ extends TaxIdentifier
 with SimpleName {
 
   require(NinoWithoutSuffix.isValid(nino), s"$nino is not a valid nino.")
-  override def value: String = nino.replace(" ", "").take(suffixlessNino)
-  override def toString = nino
-  override val name: String = "nino-no-suffix"
-  val suffixlessNino = 8
+
+  override def value: String = nino.replace(" ", "").take(suffixlessNinoLength)
+  override def toString: String = nino
+  override val name: String = "nino-without-suffix"
+  private val suffixlessNinoLength = 8
+  def variations: Seq[String] = Nino.validSuffixes.map(suffix => value + suffix) ++ Seq(value)
 
 }
 
@@ -40,8 +42,8 @@ object NinoWithoutSuffix
 extends (String => NinoWithoutSuffix) {
 
   implicit val ninoWrite: Writes[NinoWithoutSuffix] = new SimpleObjectWrites[NinoWithoutSuffix](_.value)
-  implicit val ninoRead: Reads[NinoWithoutSuffix] = new SimpleObjectReads[NinoWithoutSuffix]("nino-no-suffix", NinoWithoutSuffix.apply)
+  implicit val ninoRead: Reads[NinoWithoutSuffix] = new SimpleObjectReads[NinoWithoutSuffix]("nino-without-suffix", NinoWithoutSuffix.apply)
 
-  def isValid(nino: String) = nino != null && (Nino.isValid(nino + "A") || Nino.isValid(nino))
+  def isValid(nino: String): Boolean = nino != null && (Nino.isValid(nino + "A") || Nino.isValid(nino))
 
 }

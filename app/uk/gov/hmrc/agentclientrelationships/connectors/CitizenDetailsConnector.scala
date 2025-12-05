@@ -19,6 +19,7 @@ package uk.gov.hmrc.agentclientrelationships.connectors
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.CitizenDetails
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.agentclientrelationships.util.RequestSupport.hc
 import uk.gov.hmrc.http.HttpReads.Implicits._
@@ -40,9 +41,9 @@ class CitizenDetailsConnector @Inject() (
 extends RequestAwareLogging {
 
   def getCitizenDetails(
-    nino: String
+    nino: NinoWithoutSuffix
   )(implicit rh: RequestHeader): Future[CitizenDetails] = httpClient
-    .get(url"${appConfig.citizenDetailsBaseUrl}/citizen-details/nino/$nino")
+    .get(url"${appConfig.citizenDetailsBaseUrl}/citizen-details/nino/${nino.value}")
     .execute[CitizenDetails]
 
 }

@@ -39,7 +39,6 @@ import uk.gov.hmrc.agentclientrelationships.util.CryptoUtil.encryptedString
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.crypto.Decrypter
 import uk.gov.hmrc.crypto.Encrypter
-import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.mdc.Mdc
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.Codecs
@@ -496,9 +495,7 @@ with RequestAwareLogging {
 
   private def expandNinoSuffixes(clientId: String): Seq[String] = {
     clientId match {
-      case nino if NinoWithoutSuffix.isValid(nino) =>
-        val suffixless = NinoWithoutSuffix(nino.replaceAll(" ", "")).value
-        Seq(suffixless) ++ Nino.validSuffixes.map(suffix => suffixless + suffix)
+      case nino if NinoWithoutSuffix.isValid(nino) => NinoWithoutSuffix(nino).variations
       case clientId => Seq(clientId)
     }
   }

@@ -104,7 +104,7 @@ with RequestAwareLogging {
     collection.insertOne(partialAuth).toFuture().map(_ => Done)
   }
 
-  def findActive(
+  def findActiveForAgent(
     nino: NinoWithoutSuffix,
     arn: Arn
   ): Future[Option[PartialAuthRelationship]] = Mdc.preservingMdc {
@@ -116,7 +116,7 @@ with RequestAwareLogging {
             HMRCMTDIT,
             HMRCMTDITSUPP
           ),
-          equal("nino", encryptedString(nino.value)),
+          equal("nino", nino.variations.map(encryptedString)),
           equal("arn", arn.value),
           equal("active", true)
         )
@@ -124,9 +124,9 @@ with RequestAwareLogging {
       .headOption()
   }
 
-  def findActiveByNino(nino: NinoWithoutSuffix): Future[Seq[PartialAuthRelationship]] = Mdc.preservingMdc {
+  def findActiveForClient(nino: NinoWithoutSuffix): Future[Seq[PartialAuthRelationship]] = Mdc.preservingMdc {
     collection
-      .find(and(equal("nino", encryptedString(nino.value)), equal("active", true)))
+      .find(and(equal("nino", nino.variations.map(encryptedString)), equal("active", true)))
       .toFuture()
   }
 
@@ -139,7 +139,7 @@ with RequestAwareLogging {
       .find(
         and(
           equal("service", serviceId),
-          equal("nino", encryptedString(nino.value)),
+          equal("nino", nino.variations.map(encryptedString)),
           equal("arn", arn.value),
           equal("active", true)
         )
@@ -147,9 +147,9 @@ with RequestAwareLogging {
       .headOption()
   }
 
-  def findByNino(nino: NinoWithoutSuffix): Future[Seq[PartialAuthRelationship]] = Mdc.preservingMdc {
+  def findAllForClient(nino: NinoWithoutSuffix): Future[Seq[PartialAuthRelationship]] = Mdc.preservingMdc {
     collection
-      .find(equal("nino", encryptedString(nino.value)))
+      .find(equal("nino", nino.variations.map(encryptedString)))
       .toFuture()
   }
 
@@ -159,7 +159,7 @@ with RequestAwareLogging {
       .find(
         and(
           equal("service", HMRCMTDIT),
-          equal("nino", encryptedString(nino)),
+          equal("nino", NinoWithoutSuffix(nino).variations.map(encryptedString)),
           equal("active", true)
         )
       )
@@ -176,7 +176,7 @@ with RequestAwareLogging {
       .updateOne(
         and(
           equal("service", serviceId),
-          equal("nino", encryptedString(nino.value)),
+          equal("nino", nino.variations.map(encryptedString)),
           equal("arn", arn.value),
           equal("active", true)
         ),
@@ -196,7 +196,7 @@ with RequestAwareLogging {
       .deleteOne(
         and(
           equal("service", serviceId),
-          equal("nino", encryptedString(nino.value)),
+          equal("nino", nino.variations.map(encryptedString)),
           equal("arn", arn.value),
           equal("active", true)
         )

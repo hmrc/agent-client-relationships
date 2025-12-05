@@ -67,7 +67,7 @@ with AuthActions {
         invitations <- invitationsService.findNonSuspendedClientInvitations(services, identifiers)
         partialAuthRecords <-
           authResponse.getNino match {
-            case Some(ni) => partialAuthRepository.findByNino(NinoWithoutSuffix(ni))
+            case Some(ni) => partialAuthRepository.findAllForClient(NinoWithoutSuffix(ni))
             case None => Future.successful(None)
           }
         irvRelationshipExists <-

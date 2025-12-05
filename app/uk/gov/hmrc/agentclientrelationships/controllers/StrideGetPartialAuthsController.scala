@@ -58,7 +58,7 @@ with AuthActions {
     authorisedWithStride(appConfig.partialAuthStrideRole) { _ =>
       for {
         partialAuthsWithoutAgentName <- strideClientDetailsService.getPartialAuthsForNino(NinoWithoutSuffix(nino))
-        citizenDetails <- citizenDetailsService.getCitizenDetails(nino)
+        citizenDetails <- citizenDetailsService.getCitizenDetails(NinoWithoutSuffix(nino))
         partialAuths <- Future.sequence(
           partialAuthsWithoutAgentName.map { partialAuth =>
             for {

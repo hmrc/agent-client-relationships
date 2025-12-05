@@ -19,6 +19,7 @@ package uk.gov.hmrc.agentclientrelationships.services
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.connectors.CitizenDetailsConnector
 import uk.gov.hmrc.agentclientrelationships.model.CitizenDetails
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
 
 import javax.inject.Inject
 import scala.concurrent.Future
@@ -28,7 +29,7 @@ class CitizenDetailsService @Inject() (
 ) {
 
   def getCitizenDetails(
-    nino: String
+    nino: NinoWithoutSuffix
   )(implicit rh: RequestHeader): Future[CitizenDetails] = citizenDetailsConnector.getCitizenDetails(nino)
 
 }

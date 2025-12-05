@@ -651,7 +651,7 @@ with ResettingMockitoSugar {
   ).thenReturn(Future successful Some(nino))
 
   private def partialAuthExists(service: String): OngoingStubbing[Future[Option[PartialAuthRelationship]]] = when(
-    partialAuthRepository.findActive(eqs(nino), eqs(arn))
+    partialAuthRepository.findActiveForAgent(eqs(nino), eqs(arn))
   ).thenReturn(
     Future.successful(
       Some(
@@ -685,7 +685,7 @@ with ResettingMockitoSugar {
   ).thenReturn(Future.successful(true))
 
   private def partialAuthDoesNotExist(): OngoingStubbing[Future[Option[PartialAuthRelationship]]] = when(
-    partialAuthRepository.findActive(eqs(nino), eqs(arn))
+    partialAuthRepository.findActiveForAgent(eqs(nino), eqs(arn))
   ).thenReturn(Future.successful(None))
 
   private def cesaRelationshipExists(): OngoingStubbing[Future[Seq[SaAgentReference]]] = {

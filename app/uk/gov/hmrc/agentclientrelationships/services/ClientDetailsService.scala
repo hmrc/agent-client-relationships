@@ -110,7 +110,7 @@ extends RequestAwareLogging {
     "SCOTLAND"
   ).contains(countryName)
 
-  private def checkCitizenDetails(nino: String)(implicit rh: RequestHeader): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] =
+  private def checkCitizenDetails(nino: NinoWithoutSuffix)(implicit rh: RequestHeader): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] =
     (
       for {
         citizenDetails <- EitherT(clientDetailsConnector.getItsaCitizenDetails(nino))
@@ -134,7 +134,7 @@ extends RequestAwareLogging {
   private def getItsaClientDetails(nino: String)(implicit
     request: RequestHeader
   ): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] = hipConnector
-    .getItsaBusinessDetails(nino)
+    .getItsaBusinessDetails(NinoWithoutSuffix(nino))
     .flatMap {
       case Right(details @ ItsaBusinessDetails(
             _,
@@ -158,7 +158,7 @@ extends RequestAwareLogging {
       case Right(_) =>
         logger.warn(s"[getItsaClientDetails] - Valid business details not found in ETMP for $nino")
         Future.successful(Left(ClientDetailsNotFound))
-      case Left(ClientDetailsNotFound) => checkCitizenDetails(nino)
+      case Left(ClientDetailsNotFound) => checkCitizenDetails(NinoWithoutSuffix(nino))
       case Left(err) => Future.successful(Left(err))
     }
 
@@ -229,7 +229,7 @@ extends RequestAwareLogging {
   private def getIrvClientDetails(nino: String)(implicit
     request: RequestHeader
   ): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] = clientDetailsConnector
-    .getItsaCitizenDetails(nino)
+    .getItsaCitizenDetails(NinoWithoutSuffix(nino))
     .map {
       case Right(
             details @ CitizenDetails(

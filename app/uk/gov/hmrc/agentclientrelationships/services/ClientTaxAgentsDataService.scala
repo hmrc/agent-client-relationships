@@ -176,7 +176,7 @@ class ClientTaxAgentsDataService @Inject() (
       case Some(n) =>
         EitherT.right[RelationshipFailureResponse](
           partialAuthRepository
-            .findByNino(NinoWithoutSuffix(n))
+            .findAllForClient(NinoWithoutSuffix(n))
             .map(
               _.map(pa =>
                 ClientAuthorisationForTaxId(

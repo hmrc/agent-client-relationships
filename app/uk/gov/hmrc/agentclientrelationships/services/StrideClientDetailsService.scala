@@ -211,7 +211,7 @@ class StrideClientDetailsService @Inject() (
     taxIdentifier match {
       case nino @ NinoWithoutSuffix(_) =>
         partialAuthRepository
-          .findActiveByNino(nino)
+          .findActiveForClient(nino)
           .map(
             _.map(pa =>
               ClientRelationship(
@@ -229,7 +229,7 @@ class StrideClientDetailsService @Inject() (
     }
 
   def getPartialAuthsForNino(nino: NinoWithoutSuffix): Future[Seq[PartialAuthRelationship]] = partialAuthRepository
-    .findActiveByNino(nino)
+    .findActiveForClient(nino)
 
   private def findAgentNameForActiveRelationships(
     activeRelationships: Seq[ClientRelationship],

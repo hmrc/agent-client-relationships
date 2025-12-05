@@ -252,7 +252,7 @@ with RequestAwareLogging {
   )(implicit auditData: AuditData): Future[Option[String]] =
     nino.fold[Future[Option[String]]](Future.successful(None)) { ni =>
       auditData.set(ninoKey, ni)
-      partialAuthRepo.findActive(ni, arn).map(_.map(_.service))
+      partialAuthRepo.findActiveForAgent(ni, arn).map(_.map(_.service))
     }
 
   private def tryCreateRelationshipFromPartialAuth(
@@ -405,7 +405,7 @@ with RequestAwareLogging {
   ): Future[Boolean] = lookupCesaForOldRelationship(arn, nino).flatMap { case (matching, _) =>
     if (matching.isEmpty) {
       partialAuthRepo
-        .findActive(nino, arn)
+        .findActiveForAgent(nino, arn)
         .map { optPartialAuth =>
           auditData.set("partialAuth", optPartialAuth.nonEmpty)
           auditService.sendCheckCesaAndPartialAuthAuditEvent()

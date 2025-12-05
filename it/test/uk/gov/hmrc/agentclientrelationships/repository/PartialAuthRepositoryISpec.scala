@@ -192,11 +192,11 @@ with RepositoryCleanupSupport {
 
     "retrieves records for a given nino" in {
       await(repository.collection.insertOne(partialAuth).toFuture())
-      await(repository.findByNino(NinoWithoutSuffix("SX579189D"))) shouldBe Seq(partialAuth)
+      await(repository.findAllForClient(NinoWithoutSuffix("SX579189D"))) shouldBe Seq(partialAuth)
     }
 
     "fail to retrieve records when none are found for the given nino" in {
-      await(repository.findByNino(NinoWithoutSuffix("AA111111A"))) shouldBe Seq.empty
+      await(repository.findAllForClient(NinoWithoutSuffix("AA111111A"))) shouldBe Seq.empty
     }
   }
 
