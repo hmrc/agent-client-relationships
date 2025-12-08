@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 HM Revenue & Customs
+ * Copyright 2025 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,7 +27,6 @@ import uk.gov.hmrc.agentclientrelationships.controllers.ErrorResults.NoPermissio
 import uk.gov.hmrc.agentclientrelationships.support.NoRequest
 import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Utr
@@ -52,7 +51,6 @@ with Results {
   lazy val mockAuthConnector = mock[AuthConnector]
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
 
-  private val arn = "TARN0000001"
   private val mtdItId = "ABCDEFGH"
   private val vrn = "101747641"
   val utr = "3087612352"

@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 HM Revenue & Customs
+ * Copyright 2025 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,7 +36,7 @@ with GuiceOneAppPerSuite
 with DefaultPlayMongoRepositorySupport[AgentReferenceRecord]
 with RepositoryCleanupSupport {
 
-  implicit val request = FakeRequest()
+  implicit val request: FakeRequest[Any] = FakeRequest()
 
   override lazy val app: Application = new GuiceApplicationBuilder()
     .configure("mongodb.uri" -> mongoUri, "fieldLevelEncryption.enable" -> true)

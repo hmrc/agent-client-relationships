@@ -35,9 +35,7 @@ import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDITS
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Vrn
 import uk.gov.hmrc.auth.core.AffinityGroup.Agent
-import uk.gov.hmrc.domain.AgentCode
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.domain.SaAgentReference
 import play.api.mvc.RequestHeader

@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 HM Revenue & Customs
+ * Copyright 2025 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,9 +19,7 @@ package uk.gov.hmrc.agentclientrelationships.model
 import play.api.libs.functional.syntax._
 import play.api.libs.json.Format
 import play.api.libs.json.Json
-import play.api.libs.json.Reads
 import play.api.libs.json.__
-import uk.gov.hmrc.agentclientrelationships.model.transitional.StatusChangeEvent
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.ClientIdentifier.ClientId
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDIT
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDITSUPP
@@ -34,7 +32,6 @@ import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 
 import java.time.Instant
 import java.time.LocalDate
-import java.time.ZoneOffset
 
 case class Invitation(
   invitationId: String,
