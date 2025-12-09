@@ -35,6 +35,7 @@ import uk.gov.hmrc.http.StringContextOps
 import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
+import uk.gov.hmrc.http.HttpReads.Implicits.readRaw
 
 import java.net.URL
 import java.time.LocalDateTime
