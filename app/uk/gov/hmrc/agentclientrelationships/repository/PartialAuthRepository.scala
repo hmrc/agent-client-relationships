@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.agentclientrelationships.repository
 
+import com.mongodb.MongoWriteException
+import com.mongodb.WriteError
 import org.apache.pekko.Done
 import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.Filters.and
@@ -101,7 +103,17 @@ with RequestAwareLogging {
       active = true,
       lastUpdated = created
     )
-    collection.insertOne(partialAuth).toFuture().map(_ => Done)
+    findActive(
+      service,
+      nino,
+      arn
+    ).flatMap {
+      case Some(_) =>
+        // TODO This prevents duplicates with different suffixes from being created, which would bypass mongo indexing.
+        //  Once old data is updated to not have a suffix this can be removed.
+        throw new RuntimeException(s"Attempted to create a duplicate active partial auth relationship for ${arn.value} and ${nino.value}")
+      case None => collection.insertOne(partialAuth).toFuture().map(_ => Done)
+    }
   }
 
   def findActiveForAgent(

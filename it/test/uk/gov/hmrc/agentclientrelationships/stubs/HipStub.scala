@@ -931,11 +931,6 @@ trait HipStub {
       )
   )
 
-  def givenNinoIsInvalid(nino: NinoWithoutSuffix): StubMapping = stubFor(
-    get(urlMatching(s"/etmp/RESTAdapter/itsa/taxpayer/business-details?nino=${nino.value}"))
-      .willReturn(aResponse().withStatus(400))
-  )
-
   // idType: String, id: String, foundId: String = "XAIT0000111122"
   def givenNinoItsaBusinessDetailsExists(
     mtdId: MtdItId,
@@ -997,8 +992,8 @@ trait HipStub {
       )
   )
 
-  def givenMultipleItsaBusinessDetailsExists(nino: String): StubMapping = stubFor(
-    get(urlEqualTo(s"/etmp/RESTAdapter/itsa/taxpayer/business-details?nino=$nino"))
+  def givenMultipleItsaBusinessDetailsExists(nino: NinoWithoutSuffix): StubMapping = stubFor(
+    get(urlEqualTo(s"/etmp/RESTAdapter/itsa/taxpayer/business-details?nino=${nino.value}"))
       .willReturn(
         aResponse()
           .withBody(s"""
@@ -1028,8 +1023,8 @@ trait HipStub {
       )
   )
 
-  def givenEmptyItsaBusinessDetailsExists(nino: String): StubMapping = stubFor(
-    get(urlEqualTo(s"/etmp/RESTAdapter/itsa/taxpayer/business-details?nino=$nino"))
+  def givenEmptyItsaBusinessDetailsExists(nino: NinoWithoutSuffix): StubMapping = stubFor(
+    get(urlEqualTo(s"/etmp/RESTAdapter/itsa/taxpayer/business-details?nino=${nino.value}"))
       .willReturn(
         aResponse()
           .withBody(s"""
@@ -1045,10 +1040,10 @@ trait HipStub {
   )
 
   def givenItsaBusinessDetailsError(
-    nino: String,
+    nino: NinoWithoutSuffix,
     status: Int
   ): StubMapping = stubFor(
-    get(urlEqualTo(s"/etmp/RESTAdapter/itsa/taxpayer/business-details?nino=$nino"))
+    get(urlEqualTo(s"/etmp/RESTAdapter/itsa/taxpayer/business-details?nino=${nino.value}"))
       .willReturn(aResponse().withStatus(status))
   )
 

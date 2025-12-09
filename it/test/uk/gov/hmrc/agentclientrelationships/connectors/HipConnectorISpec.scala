@@ -68,7 +68,7 @@ with DataStreamStub {
   val hipHeaders: HipHeaders = app.injector.instanceOf[HipHeaders]
   implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
 
-  val testNino: NinoWithoutSuffix = NinoWithoutSuffix("AB123456A")
+  val testNino = NinoWithoutSuffix("AA000001B")
 
   protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder().configure(
     "microservice.services.enrolment-store-proxy.port" -> wireMockPort,
@@ -613,7 +613,7 @@ with DataStreamStub {
 
     "return business details when receiving a 200 status" in {
       givenAuditConnector()
-      givenMtdItsaBusinessDetailsExists(NinoWithoutSuffix("AA000001B"), MtdItId("XAIT0000111122"))
+      givenMtdItsaBusinessDetailsExists(testNino, MtdItId("XAIT0000111122"))
       await(hipConnector.getItsaBusinessDetails(testNino)) shouldBe Right(
         ItsaBusinessDetails(
           "Erling Haal",
@@ -625,7 +625,7 @@ with DataStreamStub {
 
     "return the first set of business details when receiving multiple" in {
       givenAuditConnector()
-      givenMultipleItsaBusinessDetailsExists("AA000001B")
+      givenMultipleItsaBusinessDetailsExists(testNino)
       await(hipConnector.getItsaBusinessDetails(testNino)) shouldBe Right(
         ItsaBusinessDetails(
           "Erling Haal",
@@ -637,19 +637,19 @@ with DataStreamStub {
 
     "return a ClientDetailsNotFound error when no items are returned in the businessData array" in {
       givenAuditConnector()
-      givenEmptyItsaBusinessDetailsExists("AA000001B")
+      givenEmptyItsaBusinessDetailsExists(testNino)
       await(hipConnector.getItsaBusinessDetails(testNino)) shouldBe Left(ClientDetailsNotFound)
     }
 
     "return a ClientDetailsNotFound error when receiving a 404 status" in {
       givenAuditConnector()
-      givenItsaBusinessDetailsError("AA000001B", NOT_FOUND)
+      givenItsaBusinessDetailsError(testNino, NOT_FOUND)
       await(hipConnector.getItsaBusinessDetails(testNino)) shouldBe Left(ClientDetailsNotFound)
     }
 
     "return an ErrorRetrievingClientDetails error when receiving an unexpected status" in {
       givenAuditConnector()
-      givenItsaBusinessDetailsError("AA000001B", INTERNAL_SERVER_ERROR)
+      givenItsaBusinessDetailsError(testNino, INTERNAL_SERVER_ERROR)
       await(hipConnector.getItsaBusinessDetails(testNino)) should matchPattern {
         case Left(ErrorRetrievingClientDetails(INTERNAL_SERVER_ERROR, msg))
             if msg.startsWith("Unexpected error during 'getItsaBusinessDetails'") =>

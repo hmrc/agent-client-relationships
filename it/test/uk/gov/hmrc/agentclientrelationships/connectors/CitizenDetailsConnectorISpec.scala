@@ -56,7 +56,7 @@ with CitizenDetailsStub {
 
     "return citizen details when receiving a 200 status" in {
       givenAuditConnector()
-      givenCitizenDetailsExists("AA000001B")
+      givenCitizenDetailsExists(testNino)
       val expectedModel = CitizenDetails(
         Some("Matthew"),
         Some("Kovacic"),

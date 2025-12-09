@@ -63,12 +63,13 @@ with RepositoryCleanupSupport {
   val repository: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
 
   def pendingInvitation(
+    arn: String = "XARN1234567",
     service: Service = Vat,
     clientId: TaxIdentifier = Vrn("123456789"),
     suppliedClientId: Option[TaxIdentifier] = None
   ): Invitation = Invitation
     .createNew(
-      "XARN1234567",
+      arn,
       service,
       clientId,
       suppliedClientId.getOrElse(clientId),
@@ -238,9 +239,9 @@ with RepositoryCleanupSupport {
 
     "de-authorise and return the invitation when a matching Authorised invitation is found" in {
       val invitation = pendingInvitation(
-        MtdIt,
-        MtdItId("1234567890"),
-        Some(NinoWithoutSuffix("AB213308A"))
+        service = MtdIt,
+        clientId = MtdItId("1234567890"),
+        suppliedClientId = Some(NinoWithoutSuffix("AB213308A"))
       )
       await(repository.collection.insertOne(invitation.copy(status = Accepted)).toFuture())
 
@@ -258,9 +259,9 @@ with RepositoryCleanupSupport {
 
     "return None when a matching Authorised invitation is not found" in {
       val invitation = pendingInvitation(
-        MtdIt,
-        MtdItId("1234567890"),
-        Some(NinoWithoutSuffix("AB213308A"))
+        service = MtdIt,
+        clientId = MtdItId("1234567890"),
+        suppliedClientId = Some(NinoWithoutSuffix("AB213308A"))
       )
       await(repository.collection.insertOne(invitation.copy(status = DeAuthorised)).toFuture())
 
@@ -575,40 +576,73 @@ with RepositoryCleanupSupport {
       }
     }
 
+    "return duplicate error when trying to create the same invitation with different suffixes" in {
+      val ninoWithoutSuffix = "AB123456"
+
+      repository.create(
+        "XARN1234567",
+        MtdIt,
+        MtdItId("1234567890"),
+        NinoWithoutSuffix(ninoWithoutSuffix + "A"),
+        "client name",
+        "agent name",
+        "test@email.com",
+        LocalDate.now().plusDays(1),
+        Some("personal")
+      ).futureValue
+
+      intercept[MongoWriteException](
+        await(repository.create(
+          "XARN1234567",
+          MtdIt,
+          MtdItId("1234567890"),
+          NinoWithoutSuffix(ninoWithoutSuffix + "B"),
+          "client name",
+          "agent name",
+          "test@email.com",
+          LocalDate.now().plusDays(1),
+          Some("personal")
+        ))
+      )
+    }
     "return invitations matching all nino suffix variations when searching by Nino" in {
       val ninoWithoutSuffix = "AB123456"
       val invitation1 = pendingInvitation(
+        arn = "XARN1234567",
         service = MtdIt,
         clientId = MtdItId("1234567890"),
         suppliedClientId = Some(NinoWithoutSuffix(ninoWithoutSuffix + "A"))
       )
       val invitation2 = pendingInvitation(
+        arn = "XARN1234568",
         service = MtdIt,
         clientId = MtdItId("1234567890"),
         suppliedClientId = Some(NinoWithoutSuffix(ninoWithoutSuffix + "B"))
       )
       val invitation3 = pendingInvitation(
+        arn = "XARN1234569",
         service = MtdIt,
         clientId = MtdItId("1234567890"),
         suppliedClientId = Some(NinoWithoutSuffix(ninoWithoutSuffix + "C"))
       )
       val invitation4 = pendingInvitation(
+        arn = "XARN1234570",
         service = MtdIt,
         clientId = MtdItId("1234567890"),
         suppliedClientId = Some(NinoWithoutSuffix(ninoWithoutSuffix + "D"))
       )
-      // TODO add 5th variation when suffixless nino class is set up
-      //      val invitation5 = pendingInvitation(
-      //        service = MtdIt,
-      //        clientId = MtdItId("1234567890"),
-      //        suppliedClientId = Some(Nino(ninoWithoutSuffix))
-      //      )
+      val invitation5 = pendingInvitation(
+        arn = "XARN1234571",
+        service = MtdIt,
+        clientId = MtdItId("1234567890"),
+        suppliedClientId = Some(NinoWithoutSuffix(ninoWithoutSuffix))
+      )
       repository.collection.insertMany(Seq(
         invitation1,
         invitation2,
         invitation3,
-        invitation4
-        //        invitation5
+        invitation4,
+        invitation5
       )).toFuture().futureValue
 
       repository.findAllBy(
@@ -621,8 +655,8 @@ with RepositoryCleanupSupport {
         invitation1,
         invitation2,
         invitation3,
-        invitation4
-        //        invitation5
+        invitation4,
+        invitation5
       )
     }
   }

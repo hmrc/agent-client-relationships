@@ -76,19 +76,19 @@ with HipStub {
 
     "return designatory details when receiving a 200 status" in {
       givenAuditConnector()
-      givenItsaDesignatoryDetailsExists("AA000001B")
+      givenItsaDesignatoryDetailsExists(testNino)
       await(connector.getItsaDesignatoryDetails(testNino)) shouldBe Right(ItsaDesignatoryDetails(Some("AA1 1AA"), Some(greatBritain)))
     }
 
     "return a ClientDetailsNotFound error when receiving a 404 status" in {
       givenAuditConnector()
-      givenItsaDesignatoryDetailsError("AA000001B", NOT_FOUND)
+      givenItsaDesignatoryDetailsError(testNino, NOT_FOUND)
       await(connector.getItsaDesignatoryDetails(testNino)) shouldBe Left(ClientDetailsNotFound)
     }
 
     "return an ErrorRetrievingClientDetails error when receiving an unexpected status" in {
       givenAuditConnector()
-      givenItsaDesignatoryDetailsError("AA000001B", INTERNAL_SERVER_ERROR)
+      givenItsaDesignatoryDetailsError(testNino, INTERNAL_SERVER_ERROR)
       await(connector.getItsaDesignatoryDetails(testNino)) shouldBe
         Left(ErrorRetrievingClientDetails(INTERNAL_SERVER_ERROR, "Unexpected error during 'getItsaDesignatoryDetails'"))
     }
@@ -98,7 +98,7 @@ with HipStub {
 
     "return citizen details when receiving a 200 status" in {
       givenAuditConnector()
-      givenItsaCitizenDetailsExists("AA000001B")
+      givenItsaCitizenDetailsExists(testNino)
       val expectedModel = CitizenDetails(
         Some("Matthew"),
         Some("Kovacic"),
@@ -110,13 +110,13 @@ with HipStub {
 
     "return a ClientDetailsNotFound error when receiving a 404 status" in {
       givenAuditConnector()
-      givenItsaCitizenDetailsError("AA000001B", NOT_FOUND)
+      givenItsaCitizenDetailsError(testNino, NOT_FOUND)
       await(connector.getItsaCitizenDetails(testNino)) shouldBe Left(ClientDetailsNotFound)
     }
 
     "return an ErrorRetrievingClientDetails error when receiving an unexpected status" in {
       givenAuditConnector()
-      givenItsaCitizenDetailsError("AA000001B", INTERNAL_SERVER_ERROR)
+      givenItsaCitizenDetailsError(testNino, INTERNAL_SERVER_ERROR)
       await(connector.getItsaCitizenDetails(testNino)) shouldBe
         Left(ErrorRetrievingClientDetails(INTERNAL_SERVER_ERROR, "Unexpected error during 'getItsaCitizenDetails'"))
     }

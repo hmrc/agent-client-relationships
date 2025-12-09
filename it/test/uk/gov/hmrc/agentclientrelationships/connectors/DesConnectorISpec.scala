@@ -28,7 +28,6 @@ import uk.gov.hmrc.agentclientrelationships.model.identifiers._
 import uk.gov.hmrc.agentclientrelationships.stubs.DataStreamStub
 import uk.gov.hmrc.agentclientrelationships.stubs.DesStubs
 import uk.gov.hmrc.agentclientrelationships.stubs.DesStubsGet
-import uk.gov.hmrc.agentclientrelationships.stubs.IfStub
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 import uk.gov.hmrc.agentclientrelationships.support.WireMockSupport
 import uk.gov.hmrc.domain.SaAgentReference
@@ -43,8 +42,7 @@ with GuiceOneServerPerSuite
 with WireMockSupport
 with DesStubs
 with DesStubsGet
-with DataStreamStub
-with IfStub {
+with DataStreamStub {
 
   override implicit lazy val app: Application = appBuilder.build()
 

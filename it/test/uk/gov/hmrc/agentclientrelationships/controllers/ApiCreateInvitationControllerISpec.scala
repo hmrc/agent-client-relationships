@@ -246,7 +246,7 @@ with CitizenDetailsStub {
     s"return UnprocessableEntity status and valid JSON CLIENT_REGISTRATION_NOT_FOUND when invitation is created for Alt Itsa - no client mtdItId" in {
       val inputData: ApiCreateInvitationRequest = baseInvitationInputData
 
-      givenCitizenDetailsError(nino.value, 404)
+      givenCitizenDetailsError(nino, 404)
       getStandardStubForCreateInvitation(HMRCMTDIT)
       givenMtdItIdIsUnKnownFor(nino)
       givenNinoIsUnknownFor(mtdItId)
@@ -477,7 +477,7 @@ with CitizenDetailsStub {
     s"return UNPROCESSABLE_ENTITY status and valid JSON CLIENT_REGISTRATION_NOT_FOUND when invitation is created for Alt Itsa - no client mtdItId and PartialAuth relationship exists" in {
       val inputData: ApiCreateInvitationRequest = baseInvitationInputData
 
-      givenCitizenDetailsError(nino.value, 404)
+      givenCitizenDetailsError(nino, 404)
       getStandardStubForCreateInvitation(HMRCMTDIT)
       givenMtdItIdIsUnKnownFor(nino)
       givenNinoIsUnknownFor(mtdItId)

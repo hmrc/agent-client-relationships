@@ -122,8 +122,8 @@ with MappingStubs {
           val request = FakeRequest("GET", "/agent-client-relationships/client/HMRC-MTD-IT/details/AA000001B")
           setupCommonStubs(request)
           givenMtdItIdIsUnKnownFor(NinoWithoutSuffix("AA000001B"))
-          givenItsaCitizenDetailsExists("AA000001B")
-          givenItsaDesignatoryDetailsExists("AA000001B")
+          givenItsaCitizenDetailsExists(NinoWithoutSuffix("AA000001B"))
+          givenItsaDesignatoryDetailsExists(NinoWithoutSuffix("AA000001B"))
           givenArnIsKnownFor(Arn("XARN1234567"), SaAgentReference("A12345"))
           givenClientHasRelationshipWithAgentInCESA(NinoWithoutSuffix("AA000001B"), "A12345")
 
@@ -333,8 +333,8 @@ with MappingStubs {
           val request = FakeRequest("GET", "/agent-client-relationships/client/HMRC-MTD-IT/details/AA000001B")
           setupCommonStubs(request)
           givenMtdItIdIsUnKnownFor(NinoWithoutSuffix("AA000001B"))
-          givenItsaCitizenDetailsExists("AA000001B")
-          givenItsaDesignatoryDetailsExists("AA000001B")
+          givenItsaCitizenDetailsExists(NinoWithoutSuffix("AA000001B"))
+          givenItsaDesignatoryDetailsExists(NinoWithoutSuffix("AA000001B"))
           await(
             partialAuthRepo.create(
               Instant.parse("2020-01-01T00:00:00.000Z"),
@@ -360,8 +360,8 @@ with MappingStubs {
           val request = FakeRequest("GET", "/agent-client-relationships/client/HMRC-MTD-IT/details/AA000001B")
           setupCommonStubs(request)
           givenMtdItIdIsUnKnownFor(NinoWithoutSuffix("AA000001B"))
-          givenItsaCitizenDetailsExists("AA000001B")
-          givenItsaDesignatoryDetailsExists("AA000001B")
+          givenItsaCitizenDetailsExists(NinoWithoutSuffix("AA000001B"))
+          givenItsaDesignatoryDetailsExists(NinoWithoutSuffix("AA000001B"))
           await(
             partialAuthRepo.create(
               Instant.now(),

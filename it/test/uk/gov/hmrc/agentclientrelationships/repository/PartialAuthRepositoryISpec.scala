@@ -115,19 +115,34 @@ with RepositoryCleanupSupport {
     }
 
     "throw an exception if duplicate active record is passed in" in {
+      repository.create(
+        Instant.parse("2020-01-01T00:00:00.000Z"),
+        Arn("XARN1234567"),
+        "HMRC-MTD-IT",
+        NinoWithoutSuffix("SX579189D")
+      ).futureValue
 
+      intercept[RuntimeException](
+        await(repository
+          .create(
+            Instant.parse("2020-01-01T00:00:00.000Z"),
+            Arn("XARN1234567"),
+            "HMRC-MTD-IT",
+            NinoWithoutSuffix("SX579189D")
+          ))
+      )
+    }
+    "throw an exception if duplicate active record is passed in while the original was created with a suffix" in {
       await(repository.collection.insertOne(partialAuth).toFuture())
 
-      an[MongoWriteException] shouldBe thrownBy(
-        await(
-          repository
-            .create(
-              Instant.parse("2020-01-01T00:00:00.000Z"),
-              Arn("XARN1234567"),
-              "HMRC-MTD-IT",
-              NinoWithoutSuffix("SX579189D")
-            )
-        )
+      intercept[RuntimeException](
+        await(repository
+          .create(
+            Instant.parse("2020-01-01T00:00:00.000Z"),
+            Arn("XARN1234567"),
+            "HMRC-MTD-IT",
+            NinoWithoutSuffix("SX579189D")
+          ))
       )
     }
   }

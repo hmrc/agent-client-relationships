@@ -82,12 +82,12 @@ with CitizenDetailsStub {
       givenAuthorisedAsStrideUser(req, "user-123")
       givenAuditConnector()
       partialAuthRepo.collection.insertOne(partialAuthRelationship).toFuture().futureValue
-      givenCitizenDetailsExists(nino.value)
+      givenCitizenDetailsExists(nino)
       givenAgentRecordFound(arn, testAgentRecord)
 
       val expectedJsonBody = Json.obj(
         "clientName" -> "Matthew Kovacic",
-        "nino" -> "AB123456C",
+        "nino" -> "AB123456",
         "partialAuths" -> Json.arr(
           Json.toJson(partialAuth)
         )
@@ -101,7 +101,7 @@ with CitizenDetailsStub {
     "return 422 with error body with code NOT_FOUND when no partial auths are found" in {
       givenAuthorisedAsStrideUser(req, "user-123")
       givenAuditConnector()
-      givenCitizenDetailsExists(nino.value)
+      givenCitizenDetailsExists(nino)
       givenAgentRecordFound(arn, testAgentRecord)
       val result = doGetRequest(requestPath(nino.value))
       result.status shouldBe UNPROCESSABLE_ENTITY
@@ -115,12 +115,12 @@ with CitizenDetailsStub {
       givenAuthorisedAsStrideUser(req, "user-123")
       givenAuditConnector()
       partialAuthRepo.collection.insertOne(partialAuthRelationship).toFuture().futureValue
-      givenCitizenDetailsError(nino.value, SERVICE_UNAVAILABLE)
+      givenCitizenDetailsError(nino, SERVICE_UNAVAILABLE)
       val result = doGetRequest(requestPath(nino.value))
       result.status shouldBe BAD_GATEWAY
       result.json shouldBe Json.obj(
         "statusCode" -> 502,
-        "message" -> s"GET of 'http://localhost:${wireMockPort.toString}/citizen-details/nino/AB123456C' returned 503. Response body: ''"
+        "message" -> s"GET of 'http://localhost:${wireMockPort.toString}/citizen-details/nino/AB123456' returned 503. Response body: ''"
       )
     }
 
@@ -128,7 +128,7 @@ with CitizenDetailsStub {
       givenAuthorisedAsStrideUser(req, "user-123")
       givenAuditConnector()
       partialAuthRepo.collection.insertOne(partialAuthRelationship).toFuture().futureValue
-      givenCitizenDetailsHasNoName(nino.value)
+      givenCitizenDetailsHasNoName(nino)
       givenAgentRecordFound(arn, testAgentRecord)
       val result = doGetRequest(requestPath(nino.value))
       result.status shouldBe INTERNAL_SERVER_ERROR

@@ -17,6 +17,7 @@
 package uk.gov.hmrc.agentclientrelationships.stubs
 
 import com.github.tomakehurst.wiremock.client.WireMock._
+import com.github.tomakehurst.wiremock.stubbing.StubMapping
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
 
 trait DesStubs {
@@ -92,6 +93,10 @@ trait DesStubs {
 
   def givenClientIsUnknownInCESAFor(nino: NinoWithoutSuffix) = stubFor(
     get(urlEqualTo(s"/registration/relationship/nino/${nino.value}")).willReturn(aResponse().withStatus(404))
+  )
+
+  def givenNinoIsInvalid(nino: NinoWithoutSuffix): StubMapping = stubFor(
+    get(urlMatching(s"/registration/relationship/nino/${nino.value}")).willReturn(aResponse().withStatus(400))
   )
 
 }

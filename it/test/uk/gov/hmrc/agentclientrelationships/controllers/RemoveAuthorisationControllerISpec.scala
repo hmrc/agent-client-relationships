@@ -543,7 +543,7 @@ with TestData {
 
     "MtdId business details errors" should {
       "return Forbidden 403 status and JSON Error when MtdId business details record is empty " in {
-        givenEmptyItsaBusinessDetailsExists(nino.value)
+        givenEmptyItsaBusinessDetailsExists(nino)
         val result = doAgentPostRequest(
           requestPath,
           Json.toJson(RemoveAuthorisationRequest(nino.value, MtdIt.id)).toString()
