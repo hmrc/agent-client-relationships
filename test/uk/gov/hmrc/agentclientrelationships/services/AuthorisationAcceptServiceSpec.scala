@@ -87,7 +87,7 @@ with MockAuditService {
   val testAgentEmail = "agent@email.com"
   val testOldInvitationId = "testOldInvitationId"
   val testVrn: Vrn = Vrn("1234567890")
-  val testNino: NinoWithoutSuffix = NinoWithoutSuffix("AB123456A")
+  val testNino: NinoWithoutSuffix = NinoWithoutSuffix("AB123456")
   val testMtdItId: MtdItId = MtdItId("XAIT0000111122")
 
   val vatEnrolment: EnrolmentKey = EnrolmentKey(Vat, testVrn)

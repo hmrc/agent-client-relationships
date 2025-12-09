@@ -95,7 +95,7 @@ with ResettingMockitoSugar {
     )
   )
   val nino: Nino = testDataGenerator.nextNino
-  val testNino: NinoWithoutSuffix = NinoWithoutSuffix("AB123456A")
+  val testNino: NinoWithoutSuffix = NinoWithoutSuffix(nino.value)
 
   val defaultRecord: RelationshipCopyRecord = RelationshipCopyRecord(
     arn.value,
@@ -654,10 +654,10 @@ with ResettingMockitoSugar {
 
   private def ninoExists(): OngoingStubbing[Future[Option[NinoWithoutSuffix]]] = when(
     hipConnector.getNinoFor(eqs(mtdItId))(any[RequestHeader]())
-  ).thenReturn(Future successful Some(NinoWithoutSuffix(nino.value)))
+  ).thenReturn(Future successful Some(testNino))
 
   private def partialAuthExists(service: String): OngoingStubbing[Future[Option[PartialAuthRelationship]]] = when(
-    partialAuthRepository.findActiveForAgent(eqs(NinoWithoutSuffix(nino.value)), eqs(arn))
+    partialAuthRepository.findActiveForAgent(eqs(testNino), eqs(arn))
   ).thenReturn(
     Future.successful(
       Some(
@@ -691,12 +691,12 @@ with ResettingMockitoSugar {
   ).thenReturn(Future.successful(true))
 
   private def partialAuthDoesNotExist(): OngoingStubbing[Future[Option[PartialAuthRelationship]]] = when(
-    partialAuthRepository.findActiveForAgent(eqs(NinoWithoutSuffix(nino.value)), eqs(arn))
+    partialAuthRepository.findActiveForAgent(eqs(testNino), eqs(arn))
   ).thenReturn(Future.successful(None))
 
   private def cesaRelationshipExists(): OngoingStubbing[Future[Seq[SaAgentReference]]] = {
-    when(hipConnector.getNinoFor(eqs(mtdItId))(any[RequestHeader]())).thenReturn(Future successful Some(NinoWithoutSuffix(nino.value)))
-    when(des.getClientSaAgentSaReferences(eqs(NinoWithoutSuffix(nino.value)))(any[RequestHeader]())).thenReturn(
+    when(hipConnector.getNinoFor(eqs(mtdItId))(any[RequestHeader]())).thenReturn(Future successful Some(testNino))
+    when(des.getClientSaAgentSaReferences(eqs(testNino))(any[RequestHeader]())).thenReturn(
       Future successful Seq(saAgentRef)
     )
     when(mapping.getSaAgentReferencesFor(eqs(arn))(any[RequestHeader]())).thenReturn(Future successful Seq(saAgentRef))
@@ -752,7 +752,7 @@ with ResettingMockitoSugar {
       any[String],
       eqs(arn.value),
       eqs(Some(mtdItId.value)),
-      eqs(nino.value),
+      eqs(testNino.value),
       any[Instant]
     )(any[RequestHeader](), any[CurrentUser])
   ).thenReturn(Future.successful(true))
