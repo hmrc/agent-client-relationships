@@ -27,7 +27,8 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.Helpers.await
 import play.api.test.Helpers.defaultAwaitTimeout
 import uk.gov.hmrc.agentclientrelationships.model.PartialAuthRelationship
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.{Arn, NinoWithoutSuffix}
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
 import uk.gov.hmrc.agentclientrelationships.support.RepositoryCleanupSupport
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 

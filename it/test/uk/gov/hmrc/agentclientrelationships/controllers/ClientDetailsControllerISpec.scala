@@ -24,25 +24,20 @@ import play.api.test.Helpers.await
 import play.api.test.Helpers.defaultAwaitTimeout
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdIt
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdItSupp
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Vat
+import uk.gov.hmrc.agentclientrelationships.model.identifiers._
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
 import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipCopyRecord
+import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus.Success
 import uk.gov.hmrc.agentclientrelationships.services.CheckRelationshipsOrchestratorService
 import uk.gov.hmrc.agentclientrelationships.services.ClientDetailsService
 import uk.gov.hmrc.agentclientrelationships.stubs.ClientDetailsStub
 import uk.gov.hmrc.agentclientrelationships.stubs.HipStub
 import uk.gov.hmrc.agentclientrelationships.stubs.MappingStubs
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdIt
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdItSupp
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Vat
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Vrn
-import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus.Success
-import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus.SyncStatus
 import uk.gov.hmrc.auth.core.AuthConnector
-import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.domain.SaAgentReference
 
 import java.time.Instant
@@ -82,9 +77,9 @@ with MappingStubs {
           setupCommonStubs(request)
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
-          givenMtdItsaBusinessDetailsExists(Nino("AA000001B"), MtdItId("XAIT0000111122"))
-          givenNinoItsaBusinessDetailsExists(MtdItId("XAIT0000111122"), Nino("AA000001B"))
-          givenClientHasNoRelationshipWithAnyAgentInCESA(nino = Nino("AA000001B"))
+          givenMtdItsaBusinessDetailsExists(NinoWithoutSuffix("AA000001B"), MtdItId("XAIT0000111122"))
+          givenNinoItsaBusinessDetailsExists(MtdItId("XAIT0000111122"), NinoWithoutSuffix("AA000001B"))
+          givenClientHasNoRelationshipWithAnyAgentInCESA(nino = NinoWithoutSuffix("AA000001B"))
           givenArnIsUnknownFor(Arn("XARN1234567"))
 
           val result = doGetRequest(request.uri)
@@ -105,10 +100,10 @@ with MappingStubs {
           setupCommonStubs(request)
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
-          givenMtdItsaBusinessDetailsExists(Nino("AA000001B"), MtdItId("XAIT0000111122"))
-          givenNinoItsaBusinessDetailsExists(MtdItId("XAIT0000111122"), Nino("AA000001B"))
+          givenMtdItsaBusinessDetailsExists(NinoWithoutSuffix("AA000001B"), MtdItId("XAIT0000111122"))
+          givenNinoItsaBusinessDetailsExists(MtdItId("XAIT0000111122"), NinoWithoutSuffix("AA000001B"))
           givenArnIsUnknownFor(Arn("XARN1234567"))
-          givenClientHasRelationshipWithAgentInCESA(Nino("AA000001B"), "A12345")
+          givenClientHasRelationshipWithAgentInCESA(NinoWithoutSuffix("AA000001B"), "A12345")
 
           val result = doGetRequest(request.uri)
           result.status shouldBe 200
@@ -126,11 +121,11 @@ with MappingStubs {
         "there are no pending invitations or existing relationship and there is an existing mapping for a non signed-up SA client" in {
           val request = FakeRequest("GET", "/agent-client-relationships/client/HMRC-MTD-IT/details/AA000001B")
           setupCommonStubs(request)
-          givenMtdItIdIsUnKnownFor(Nino("AA000001B"))
+          givenMtdItIdIsUnKnownFor(NinoWithoutSuffix("AA000001B"))
           givenItsaCitizenDetailsExists("AA000001B")
           givenItsaDesignatoryDetailsExists("AA000001B")
           givenArnIsKnownFor(Arn("XARN1234567"), SaAgentReference("A12345"))
-          givenClientHasRelationshipWithAgentInCESA(Nino("AA000001B"), "A12345")
+          givenClientHasRelationshipWithAgentInCESA(NinoWithoutSuffix("AA000001B"), "A12345")
 
           val result = doGetRequest(request.uri)
           result.status shouldBe 200
@@ -150,10 +145,10 @@ with MappingStubs {
           setupCommonStubs(request)
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
-          givenMtdItsaBusinessDetailsExists(Nino("AA000001B"), MtdItId("XAIT0000111122"))
-          givenNinoItsaBusinessDetailsExists(MtdItId("XAIT0000111122"), Nino("AA000001B"))
+          givenMtdItsaBusinessDetailsExists(NinoWithoutSuffix("AA000001B"), MtdItId("XAIT0000111122"))
+          givenNinoItsaBusinessDetailsExists(MtdItId("XAIT0000111122"), NinoWithoutSuffix("AA000001B"))
           givenArnIsKnownFor(Arn("XARN1234567"), SaAgentReference("A12345"))
-          givenClientHasRelationshipWithAgentInCESA(Nino("AA000001B"), "A12345")
+          givenClientHasRelationshipWithAgentInCESA(NinoWithoutSuffix("AA000001B"), "A12345")
           givenAgentCanBeAllocated(MtdItId("XAIT0000111122"), Arn("XARN1234567"))
           givenAgentGroupExistsFor("foo")
           givenAdminUser("foo", "bar")
@@ -183,10 +178,10 @@ with MappingStubs {
             setupCommonStubs(request)
             givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")))
             givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
-            givenMtdItsaBusinessDetailsExists(Nino("AA000001B"), MtdItId("XAIT0000111122"))
-            givenNinoItsaBusinessDetailsExists(MtdItId("XAIT0000111122"), Nino("AA000001B"))
+            givenMtdItsaBusinessDetailsExists(NinoWithoutSuffix("AA000001B"), MtdItId("XAIT0000111122"))
+            givenNinoItsaBusinessDetailsExists(MtdItId("XAIT0000111122"), NinoWithoutSuffix("AA000001B"))
             givenArnIsKnownFor(Arn("XARN1234567"), SaAgentReference("A12345"))
-            givenClientHasRelationshipWithAgentInCESA(Nino("AA000001B"), "A12345")
+            givenClientHasRelationshipWithAgentInCESA(NinoWithoutSuffix("AA000001B"), "A12345")
             relationshipCopyRecordRepository.collection.insertOne(
               RelationshipCopyRecord(
                 "XARN1234567",
@@ -210,18 +205,18 @@ with MappingStubs {
         "there is a pending invitation" in {
           val request = FakeRequest("GET", "/agent-client-relationships/client/HMRC-MTD-IT/details/AA000001B")
           setupCommonStubs(request)
-          givenMtdItsaBusinessDetailsExists(Nino("AA000001B"), MtdItId("XAIT0000111122"))
-          givenNinoItsaBusinessDetailsExists(MtdItId("XAIT0000111122"), Nino("AA000001B"))
+          givenMtdItsaBusinessDetailsExists(NinoWithoutSuffix("AA000001B"), MtdItId("XAIT0000111122"))
+          givenNinoItsaBusinessDetailsExists(MtdItId("XAIT0000111122"), NinoWithoutSuffix("AA000001B"))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
-          givenClientHasNoRelationshipWithAnyAgentInCESA(nino = Nino("AA000001B"))
+          givenClientHasNoRelationshipWithAnyAgentInCESA(nino = NinoWithoutSuffix("AA000001B"))
 
           await(
             invitationsRepo.create(
               "XARN1234567",
               MtdIt,
-              Nino("AA000001B"),
-              Nino("AA000001B"),
+              NinoWithoutSuffix("AA000001B"),
+              NinoWithoutSuffix("AA000001B"),
               "Erling Haal",
               "testAgentName",
               "agent@email.com",
@@ -244,17 +239,17 @@ with MappingStubs {
         "there is a pending supporting ITSA invitation" in {
           val request = FakeRequest("GET", "/agent-client-relationships/client/HMRC-MTD-IT/details/AA000001B")
           setupCommonStubs(request)
-          givenMtdItsaBusinessDetailsExists(Nino("AA000001B"), MtdItId("XAIT0000111122"))
-          givenNinoItsaBusinessDetailsExists(MtdItId("XAIT0000111122"), Nino("AA000001B"))
+          givenMtdItsaBusinessDetailsExists(NinoWithoutSuffix("AA000001B"), MtdItId("XAIT0000111122"))
+          givenNinoItsaBusinessDetailsExists(MtdItId("XAIT0000111122"), NinoWithoutSuffix("AA000001B"))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
-          givenClientHasNoRelationshipWithAnyAgentInCESA(nino = Nino("AA000001B"))
+          givenClientHasNoRelationshipWithAnyAgentInCESA(nino = NinoWithoutSuffix("AA000001B"))
           await(
             invitationsRepo.create(
               "XARN1234567",
               MtdItSupp,
-              Nino("AA000001B"),
-              Nino("AA000001B"),
+              NinoWithoutSuffix("AA000001B"),
+              NinoWithoutSuffix("AA000001B"),
               "Erling Haal",
               "testAgentName",
               "agent@email.com",
@@ -277,8 +272,8 @@ with MappingStubs {
         "there is an existing relationship in a main role" in {
           val request = FakeRequest("GET", "/agent-client-relationships/client/HMRC-MTD-IT/details/AA000001B")
           setupCommonStubs(request)
-          givenMtdItsaBusinessDetailsExists(Nino("AA000001B"), MtdItId("XAIT0000111122"))
-          givenNinoItsaBusinessDetailsExists(MtdItId("XAIT0000111122"), Nino("AA000001B"))
+          givenMtdItsaBusinessDetailsExists(NinoWithoutSuffix("AA000001B"), MtdItId("XAIT0000111122"))
+          givenNinoItsaBusinessDetailsExists(MtdItId("XAIT0000111122"), NinoWithoutSuffix("AA000001B"))
           givenDelegatedGroupIdsExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")), Set("foo"))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
 
@@ -297,11 +292,11 @@ with MappingStubs {
         "there is an existing relationship in a supporting role" in {
           val request = FakeRequest("GET", "/agent-client-relationships/client/HMRC-MTD-IT/details/AA000001B")
           setupCommonStubs(request)
-          givenMtdItsaBusinessDetailsExists(Nino("AA000001B"), MtdItId("XAIT0000111122"))
-          givenNinoItsaBusinessDetailsExists(MtdItId("XAIT0000111122"), Nino("AA000001B"))
+          givenMtdItsaBusinessDetailsExists(NinoWithoutSuffix("AA000001B"), MtdItId("XAIT0000111122"))
+          givenNinoItsaBusinessDetailsExists(MtdItId("XAIT0000111122"), NinoWithoutSuffix("AA000001B"))
           givenDelegatedGroupIdsExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")), Set("foo"))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")))
-          givenClientHasNoRelationshipWithAnyAgentInCESA(nino = Nino("AA000001B"))
+          givenClientHasNoRelationshipWithAnyAgentInCESA(nino = NinoWithoutSuffix("AA000001B"))
 
           val result = doGetRequest(request.uri)
           result.status shouldBe 200
@@ -337,7 +332,7 @@ with MappingStubs {
         "there is an existing relationship in the form of a PartialAuth invitation (alt-itsa), in a main role" in {
           val request = FakeRequest("GET", "/agent-client-relationships/client/HMRC-MTD-IT/details/AA000001B")
           setupCommonStubs(request)
-          givenMtdItIdIsUnKnownFor(Nino("AA000001B"))
+          givenMtdItIdIsUnKnownFor(NinoWithoutSuffix("AA000001B"))
           givenItsaCitizenDetailsExists("AA000001B")
           givenItsaDesignatoryDetailsExists("AA000001B")
           await(
@@ -345,7 +340,7 @@ with MappingStubs {
               Instant.parse("2020-01-01T00:00:00.000Z"),
               Arn("XARN1234567"),
               MtdIt.toString(),
-              Nino("AA000001B")
+              NinoWithoutSuffix("AA000001B")
             )
           )
 
@@ -364,7 +359,7 @@ with MappingStubs {
         "there is an existing relationship in the form of a PartialAuth invitation (alt-itsa), in a supporting role" in {
           val request = FakeRequest("GET", "/agent-client-relationships/client/HMRC-MTD-IT/details/AA000001B")
           setupCommonStubs(request)
-          givenMtdItIdIsUnKnownFor(Nino("AA000001B"))
+          givenMtdItIdIsUnKnownFor(NinoWithoutSuffix("AA000001B"))
           givenItsaCitizenDetailsExists("AA000001B")
           givenItsaDesignatoryDetailsExists("AA000001B")
           await(
@@ -372,7 +367,7 @@ with MappingStubs {
               Instant.now(),
               Arn("XARN1234567"),
               MtdItSupp.toString(),
-              Nino("AA000001B")
+              NinoWithoutSuffix("AA000001B")
             )
           )
 
@@ -391,16 +386,16 @@ with MappingStubs {
         "there is both a pending invitation and an existing relationship" in {
           val request = FakeRequest("GET", "/agent-client-relationships/client/HMRC-MTD-IT/details/AA000001B")
           setupCommonStubs(request)
-          givenMtdItsaBusinessDetailsExists(Nino("AA000001B"), MtdItId("XAIT0000111122"))
-          givenNinoItsaBusinessDetailsExists(MtdItId("XAIT0000111122"), Nino("AA000001B"))
+          givenMtdItsaBusinessDetailsExists(NinoWithoutSuffix("AA000001B"), MtdItId("XAIT0000111122"))
+          givenNinoItsaBusinessDetailsExists(MtdItId("XAIT0000111122"), NinoWithoutSuffix("AA000001B"))
           givenDelegatedGroupIdsExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")), Set("foo"))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
           await(
             invitationsRepo.create(
               "XARN1234567",
               MtdIt,
-              Nino("AA000001B"),
-              Nino("AA000001B"),
+              NinoWithoutSuffix("AA000001B"),
+              NinoWithoutSuffix("AA000001B"),
               "Erling Haal",
               "testAgentName",
               "agent@email.com",

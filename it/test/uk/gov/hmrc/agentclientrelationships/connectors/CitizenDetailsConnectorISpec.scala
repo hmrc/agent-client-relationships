@@ -24,6 +24,7 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers.await
 import play.api.test.Helpers.defaultAwaitTimeout
 import uk.gov.hmrc.agentclientrelationships.model.CitizenDetails
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
 import uk.gov.hmrc.agentclientrelationships.stubs.CitizenDetailsStub
 import uk.gov.hmrc.agentclientrelationships.stubs.DataStreamStub
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
@@ -49,6 +50,7 @@ with CitizenDetailsStub {
   implicit val request: RequestHeader = FakeRequest()
 
   val connector: CitizenDetailsConnector = app.injector.instanceOf[CitizenDetailsConnector]
+  val testNino: NinoWithoutSuffix = NinoWithoutSuffix("AA000001B")
 
   ".getCitizenDetails" should {
 
@@ -61,7 +63,7 @@ with CitizenDetailsStub {
         Some(LocalDate.parse("2000-01-01")),
         Some("11223344")
       )
-      await(connector.getCitizenDetails("AA000001B")) shouldBe expectedModel
+      await(connector.getCitizenDetails(testNino)) shouldBe expectedModel
     }
   }
 

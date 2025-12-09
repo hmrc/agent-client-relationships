@@ -29,20 +29,15 @@ import play.api.mvc.RequestHeader
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import play.utils.UriEncoding
+import uk.gov.hmrc.agentclientrelationships.model.identifiers._
 import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey => LocalEnrolmentKey}
-import uk.gov.hmrc.agentclientrelationships.repository.DeleteRecord
-import uk.gov.hmrc.agentclientrelationships.repository.DeleteRecordRepository
-import uk.gov.hmrc.agentclientrelationships.repository.MongoLockRepositoryWithMdc
-import uk.gov.hmrc.agentclientrelationships.repository.RelationshipCopyRecordRepository
-import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus
+import uk.gov.hmrc.agentclientrelationships.repository._
 import uk.gov.hmrc.agentclientrelationships.services.MongoLockService
 import uk.gov.hmrc.agentclientrelationships.services.MongoLockServiceImpl
 import uk.gov.hmrc.agentclientrelationships.stubs._
 import uk.gov.hmrc.agentclientrelationships.support._
-import uk.gov.hmrc.agentclientrelationships.model.identifiers._
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.auth.core.PlayAuthConnector
-import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.HttpResponse
 import uk.gov.hmrc.mongo.CurrentTimestampSupport
@@ -166,7 +161,7 @@ with IntegrationPatience {
   val testVatRegDate = "2020-01-01"
   val vatEnrolmentKey: LocalEnrolmentKey = LocalEnrolmentKey(Service.Vat, vrn)
   val vrnUriEncoded: String = UriEncoding.encodePathSegment(vrn.value, "UTF-8")
-  val nino = Nino("AB123456C")
+  val nino = NinoWithoutSuffix("AB123456C")
   val mtdItIdType = "MTDITID"
   val mtdVatIdType = "VRN"
   val oldAgentCode = "oldAgentCode"

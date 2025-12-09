@@ -18,7 +18,9 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.{CbcId, NinoWithoutSuffix, Service}
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.CbcId
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 import uk.gov.hmrc.agentclientrelationships.repository.DeleteRecord
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus
 import uk.gov.hmrc.agentclientrelationships.stubs.HipStub

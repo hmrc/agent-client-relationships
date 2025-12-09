@@ -24,14 +24,13 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.helpers.CorrelationIdGenerator
+import uk.gov.hmrc.agentclientrelationships.model.identifiers._
 import uk.gov.hmrc.agentclientrelationships.stubs.DataStreamStub
 import uk.gov.hmrc.agentclientrelationships.stubs.DesStubs
 import uk.gov.hmrc.agentclientrelationships.stubs.DesStubsGet
 import uk.gov.hmrc.agentclientrelationships.stubs.IfStub
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 import uk.gov.hmrc.agentclientrelationships.support.WireMockSupport
-import uk.gov.hmrc.agentclientrelationships.model.identifiers._
-import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.domain.SaAgentReference
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
@@ -87,7 +86,7 @@ with IfStub {
 
   "DesConnector GetStatusAgentRelationship" should {
 
-    val nino = Nino("AB123456C")
+    val nino = NinoWithoutSuffix("AB123456C")
 
     "return a CESA identifier when client has an active agent" in {
       val agentId = "bar"

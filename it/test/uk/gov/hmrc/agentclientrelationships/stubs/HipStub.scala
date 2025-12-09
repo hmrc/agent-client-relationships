@@ -20,7 +20,6 @@ import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.stubbing.StubMapping
 import org.scalatest.concurrent.Eventually.eventually
 import uk.gov.hmrc.agentclientrelationships.model.identifiers._
-import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.domain.TaxIdentifier
 
 import java.time.LocalDate
@@ -873,7 +872,7 @@ trait HipStub {
 
   def givenNinoIsKnownFor(
     mtdId: MtdItId,
-    nino: Nino
+    nino: NinoWithoutSuffix
   ): StubMapping = stubFor(
     get(urlEqualTo(s"/etmp/RESTAdapter/itsa/taxpayer/business-details?mtdReference=${mtdId.value}"))
       .willReturn(
@@ -905,7 +904,7 @@ trait HipStub {
   )
 
   def givenMtdItIdIsKnownFor(
-    nino: Nino,
+    nino: NinoWithoutSuffix,
     mtdId: MtdItId
   ): StubMapping = stubFor(
     get(urlEqualTo(s"/etmp/RESTAdapter/itsa/taxpayer/business-details?nino=${nino.value}"))
@@ -916,7 +915,7 @@ trait HipStub {
       )
   )
 
-  def givenMtdItIdIsUnKnownFor(nino: Nino): StubMapping = stubFor(
+  def givenMtdItIdIsUnKnownFor(nino: NinoWithoutSuffix): StubMapping = stubFor(
     get(urlEqualTo(s"/etmp/RESTAdapter/itsa/taxpayer/business-details?nino=${nino.value}"))
       .willReturn(
         aResponse()
@@ -932,7 +931,7 @@ trait HipStub {
       )
   )
 
-  def givenNinoIsInvalid(nino: Nino): StubMapping = stubFor(
+  def givenNinoIsInvalid(nino: NinoWithoutSuffix): StubMapping = stubFor(
     get(urlMatching(s"/etmp/RESTAdapter/itsa/taxpayer/business-details?nino=${nino.value}"))
       .willReturn(aResponse().withStatus(400))
   )
@@ -940,7 +939,7 @@ trait HipStub {
   // idType: String, id: String, foundId: String = "XAIT0000111122"
   def givenNinoItsaBusinessDetailsExists(
     mtdId: MtdItId,
-    nino: Nino,
+    nino: NinoWithoutSuffix,
     postCode: String = "AA1 1AA",
     countryCode: String = "GB"
   ): StubMapping = stubFor(
@@ -969,7 +968,7 @@ trait HipStub {
   )
 
   def givenMtdItsaBusinessDetailsExists(
-    nino: Nino,
+    nino: NinoWithoutSuffix,
     mtdId: MtdItId,
     postCode: String = "AA1 1AA",
     countryCode: String = "GB"

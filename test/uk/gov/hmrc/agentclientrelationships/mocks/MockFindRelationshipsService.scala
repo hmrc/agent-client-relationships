@@ -20,13 +20,13 @@ import org.mockito.ArgumentMatchers.any
 import org.mockito.ArgumentMatchers.{eq => eqs}
 import org.mockito.Mockito.when
 import org.mockito.stubbing.OngoingStubbing
+import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.model.ActiveRelationship
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 import uk.gov.hmrc.agentclientrelationships.services.FindRelationshipsService
 import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
-import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.domain.TaxIdentifier
-import play.api.mvc.RequestHeader
 
 import scala.concurrent.Future
 
@@ -36,7 +36,7 @@ trait MockFindRelationshipsService {
   val mockFindRelationshipService: FindRelationshipsService = resettingMock[FindRelationshipsService]
 
   def mockGetItsaRelationshipsForClient(
-    nino: Nino,
+    nino: NinoWithoutSuffix,
     service: Service
   )(response: Future[Option[ActiveRelationship]]): OngoingStubbing[Future[Option[ActiveRelationship]]] = when(
     mockFindRelationshipService.getItsaRelationshipForClient(eqs(nino), eqs(service))(any[RequestHeader])

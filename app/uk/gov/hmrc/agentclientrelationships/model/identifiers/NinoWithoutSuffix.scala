@@ -31,9 +31,21 @@ with SimpleName {
   require(NinoWithoutSuffix.isValid(nino), s"$nino is not a valid nino.")
 
   override def value: String = nino.replace(" ", "").take(suffixlessNinoLength)
+
   override def toString: String = nino
+
   override val name: String = "nino-without-suffix"
   private val suffixlessNinoLength = 8
+
+  override def hashCode(): Int = value.hashCode
+
+  override def equals(obj: Any): Boolean =
+    obj match {
+
+      case that: NinoWithoutSuffix => this.value == that.value
+      case _ => false
+    }
+
   def variations: Seq[String] = Nino.validSuffixes.map(suffix => value + suffix) ++ Seq(value)
 
 }

@@ -34,6 +34,7 @@ import uk.gov.hmrc.agentclientrelationships.model.identifiers.CbcId
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.ClientIdentifier
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Identifier
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.CapitalGains
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Cbc
@@ -46,7 +47,6 @@ import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Ppt
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Trust
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.TrustNT
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Vat
-import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.HttpResponse
 import uk.gov.hmrc.mongo.lock.Lock
@@ -138,7 +138,7 @@ with TestData {
                 cbcId,
                 Some(Seq(Identifier("cbcId", cbcId.value)))
               )
-            case _ @Nino(_) if service == PersonalIncomeRecord =>
+            case _ @NinoWithoutSuffix(_) if service == PersonalIncomeRecord =>
               givenTerminateAfiRelationshipSucceeds(
                 arn,
                 PersonalIncomeRecord.id,

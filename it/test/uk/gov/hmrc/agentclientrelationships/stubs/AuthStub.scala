@@ -41,7 +41,7 @@ trait AuthStub {
   def givenLoginClientIndAll(
     mtdItId: MtdItId,
     vrn: Vrn,
-    nino: Nino,
+    nino: NinoWithoutSuffix,
     cgtRef: CgtRef,
     pptRef: PptRef,
     withThisGgUserId: String = "12345-credId"

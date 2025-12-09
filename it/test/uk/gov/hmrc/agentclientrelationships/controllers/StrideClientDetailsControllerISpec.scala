@@ -19,27 +19,26 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 import play.api.libs.json.Json
 import play.api.mvc.AnyContentAsEmpty
 import play.api.test.FakeRequest
-import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ActiveMainAgent
-import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsStrideResponse
-import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgencyDetails
-import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentDetailsDesResponse
-import uk.gov.hmrc.agentclientrelationships.model.stride._
 import uk.gov.hmrc.agentclientrelationships.model.Invitation
 import uk.gov.hmrc.agentclientrelationships.model.PartialAuthRelationship
 import uk.gov.hmrc.agentclientrelationships.model.Pending
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ActiveMainAgent
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsStrideResponse
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Cbc
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.CbcNonUk
+import uk.gov.hmrc.agentclientrelationships.model.identifiers._
+import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgencyDetails
+import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentDetailsDesResponse
+import uk.gov.hmrc.agentclientrelationships.model.stride._
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
 import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
 import uk.gov.hmrc.agentclientrelationships.stubs.AfiRelationshipStub
 import uk.gov.hmrc.agentclientrelationships.stubs.ClientDetailsStub
 import uk.gov.hmrc.agentclientrelationships.stubs.HipStub
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Cbc
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.CbcNonUk
-import uk.gov.hmrc.agentclientrelationships.model.identifiers._
-import uk.gov.hmrc.domain.Nino
 
-import java.time.temporal.ChronoUnit
 import java.time.Instant
 import java.time.LocalDate
+import java.time.temporal.ChronoUnit
 
 class StrideClientDetailsControllerISpec
 extends BaseControllerISpec
@@ -604,7 +603,7 @@ with AfiRelationshipStub {
 
           cr.clientIdType match {
             case NinoType.id =>
-              givenMtdItIdIsKnownFor(Nino(cr.clientId), mtdItId)
+              givenMtdItIdIsKnownFor(NinoWithoutSuffix(cr.clientId), mtdItId)
               getItsaMainAndSupportingActiveRelationshipsViaClient(
                 mtdItId,
                 arn,
@@ -805,7 +804,7 @@ with AfiRelationshipStub {
 
           cr.clientIdType match {
             case NinoType.id =>
-              givenMtdItIdIsKnownFor(Nino(cr.clientId), mtdItId)
+              givenMtdItIdIsKnownFor(NinoWithoutSuffix(cr.clientId), mtdItId)
               getAllActiveRelationshipFailsWith(mtdItId, status = 404)
               givenAfiRelationshipForClientNotFound(cr.clientId)
               givenItsaCitizenDetailsExists(nino.value)
@@ -862,7 +861,7 @@ with AfiRelationshipStub {
 
           cr.clientIdType match {
             case NinoType.id =>
-              givenMtdItIdIsKnownFor(Nino(cr.clientId), mtdItId)
+              givenMtdItIdIsKnownFor(NinoWithoutSuffix(cr.clientId), mtdItId)
               getAllActiveRelationshipFailsWithNotFound(mtdItId, status = 422)
               givenAfiRelationshipForClientNotFound(cr.clientId)
               givenItsaCitizenDetailsExists(nino.value)
@@ -918,7 +917,7 @@ with AfiRelationshipStub {
         .foreach { cr =>
           cr.clientIdType match {
             case NinoType.id =>
-              givenMtdItIdIsKnownFor(Nino(cr.clientId), mtdItId)
+              givenMtdItIdIsKnownFor(NinoWithoutSuffix(cr.clientId), mtdItId)
               getAllActiveRelationshipFailsWith(mtdItId, status = 404)
               givenAfiRelationshipForClientNotFound(cr.clientId)
               givenItsaCitizenDetailsExists(nino.value)
@@ -974,7 +973,7 @@ with AfiRelationshipStub {
         .foreach { cr =>
           cr.clientIdType match {
             case NinoType.id =>
-              givenMtdItIdIsKnownFor(Nino(cr.clientId), mtdItId)
+              givenMtdItIdIsKnownFor(NinoWithoutSuffix(cr.clientId), mtdItId)
               getAllActiveRelationshipFailsWithSuspended(mtdItId)
               givenAfiRelationshipForClientNotFound(cr.clientId)
               givenItsaCitizenDetailsExists(nino.value)
@@ -1050,7 +1049,7 @@ with AfiRelationshipStub {
         .foreach { cr =>
           cr.clientIdType match {
             case NinoType.id =>
-              givenMtdItIdIsKnownFor(Nino(cr.clientId), mtdItId)
+              givenMtdItIdIsKnownFor(NinoWithoutSuffix(cr.clientId), mtdItId)
               getItsaMainAndSupportingActiveRelationshipsViaClient(
                 mtdItId,
                 arn,
@@ -1088,7 +1087,7 @@ with AfiRelationshipStub {
         .foreach { cr =>
           cr.clientIdType match {
             case NinoType.id =>
-              givenMtdItIdIsKnownFor(Nino(cr.clientId), mtdItId)
+              givenMtdItIdIsKnownFor(NinoWithoutSuffix(cr.clientId), mtdItId)
               getItsaMainAndSupportingActiveRelationshipsViaClient(
                 mtdItId,
                 arn,

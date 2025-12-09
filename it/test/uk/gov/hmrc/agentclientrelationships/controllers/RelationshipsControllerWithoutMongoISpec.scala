@@ -38,7 +38,6 @@ import uk.gov.hmrc.agentclientrelationships.stubs._
 import uk.gov.hmrc.agentclientrelationships.support.Resource
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 import uk.gov.hmrc.agentclientrelationships.support.WireMockSupport
-import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.domain.SaAgentReference
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.test.MongoSupport
@@ -114,7 +113,7 @@ with AuthStub {
   val arn = Arn("AARN0000002")
   val mtditid = MtdItId("ABCDEF123456789")
   val mtdItEnrolmentKey: EnrolmentKey = EnrolmentKey(Service.MtdIt, mtditid)
-  val nino = Nino("AB123456C")
+  val nino = NinoWithoutSuffix("AB123456C")
   val oldAgentCode = "oldAgentCode"
 
   def partialAuthRelationship(service: String): PartialAuthRelationship = PartialAuthRelationship(

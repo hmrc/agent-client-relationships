@@ -26,23 +26,21 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers.await
 import play.api.test.Helpers.defaultAwaitTimeout
 import uk.gov.hmrc.agentclientrelationships.model.CitizenDetails
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsNotFound
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ErrorRetrievingClientDetails
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.cbc.SimpleCbcSubscription
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.cgt.CgtSubscriptionDetails
-import uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa.ItsaBusinessDetails
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa.ItsaDesignatoryDetails
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.pillar2.Pillar2Record
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ppt.PptSubscriptionDetails
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.vat.VatCustomerDetails
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.vat.VatIndividual
-import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsNotFound
-import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ErrorRetrievingClientDetails
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
 import uk.gov.hmrc.agentclientrelationships.stubs.ClientDetailsStub
 import uk.gov.hmrc.agentclientrelationships.stubs.DataStreamStub
 import uk.gov.hmrc.agentclientrelationships.stubs.HipStub
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 import uk.gov.hmrc.agentclientrelationships.support.WireMockSupport
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
-import uk.gov.hmrc.domain.Nino
 
 import java.time.LocalDate
 
@@ -72,25 +70,26 @@ with HipStub {
   val connector: ClientDetailsConnector = app.injector.instanceOf[ClientDetailsConnector]
   val hipConnector: HipConnector = app.injector.instanceOf[HipConnector]
   private val greatBritain: String = "GREAT BRITAIN"
+  val testNino: NinoWithoutSuffix = NinoWithoutSuffix("AA000001B")
 
   ".getItsaDesignatoryDetails" should {
 
     "return designatory details when receiving a 200 status" in {
       givenAuditConnector()
       givenItsaDesignatoryDetailsExists("AA000001B")
-      await(connector.getItsaDesignatoryDetails("AA000001B")) shouldBe Right(ItsaDesignatoryDetails(Some("AA1 1AA"), Some(greatBritain)))
+      await(connector.getItsaDesignatoryDetails(testNino)) shouldBe Right(ItsaDesignatoryDetails(Some("AA1 1AA"), Some(greatBritain)))
     }
 
     "return a ClientDetailsNotFound error when receiving a 404 status" in {
       givenAuditConnector()
       givenItsaDesignatoryDetailsError("AA000001B", NOT_FOUND)
-      await(connector.getItsaDesignatoryDetails("AA000001B")) shouldBe Left(ClientDetailsNotFound)
+      await(connector.getItsaDesignatoryDetails(testNino)) shouldBe Left(ClientDetailsNotFound)
     }
 
     "return an ErrorRetrievingClientDetails error when receiving an unexpected status" in {
       givenAuditConnector()
       givenItsaDesignatoryDetailsError("AA000001B", INTERNAL_SERVER_ERROR)
-      await(connector.getItsaDesignatoryDetails("AA000001B")) shouldBe
+      await(connector.getItsaDesignatoryDetails(testNino)) shouldBe
         Left(ErrorRetrievingClientDetails(INTERNAL_SERVER_ERROR, "Unexpected error during 'getItsaDesignatoryDetails'"))
     }
   }
@@ -106,19 +105,19 @@ with HipStub {
         Some(LocalDate.parse("2000-01-01")),
         Some("11223344")
       )
-      await(connector.getItsaCitizenDetails("AA000001B")) shouldBe Right(expectedModel)
+      await(connector.getItsaCitizenDetails(testNino)) shouldBe Right(expectedModel)
     }
 
     "return a ClientDetailsNotFound error when receiving a 404 status" in {
       givenAuditConnector()
       givenItsaCitizenDetailsError("AA000001B", NOT_FOUND)
-      await(connector.getItsaCitizenDetails("AA000001B")) shouldBe Left(ClientDetailsNotFound)
+      await(connector.getItsaCitizenDetails(testNino)) shouldBe Left(ClientDetailsNotFound)
     }
 
     "return an ErrorRetrievingClientDetails error when receiving an unexpected status" in {
       givenAuditConnector()
       givenItsaCitizenDetailsError("AA000001B", INTERNAL_SERVER_ERROR)
-      await(connector.getItsaCitizenDetails("AA000001B")) shouldBe
+      await(connector.getItsaCitizenDetails(testNino)) shouldBe
         Left(ErrorRetrievingClientDetails(INTERNAL_SERVER_ERROR, "Unexpected error during 'getItsaCitizenDetails'"))
     }
   }

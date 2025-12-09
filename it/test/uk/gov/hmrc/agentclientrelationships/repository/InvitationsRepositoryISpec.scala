@@ -34,10 +34,10 @@ import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCPIR
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdIt
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Vat
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Vrn
 import uk.gov.hmrc.agentclientrelationships.support.RepositoryCleanupSupport
-import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 
@@ -240,7 +240,7 @@ with RepositoryCleanupSupport {
       val invitation = pendingInvitation(
         MtdIt,
         MtdItId("1234567890"),
-        Some(Nino("AB213308A"))
+        Some(NinoWithoutSuffix("AB213308A"))
       )
       await(repository.collection.insertOne(invitation.copy(status = Accepted)).toFuture())
 
@@ -260,7 +260,7 @@ with RepositoryCleanupSupport {
       val invitation = pendingInvitation(
         MtdIt,
         MtdItId("1234567890"),
-        Some(Nino("AB213308A"))
+        Some(NinoWithoutSuffix("AB213308A"))
       )
       await(repository.collection.insertOne(invitation.copy(status = DeAuthorised)).toFuture())
 
@@ -580,22 +580,22 @@ with RepositoryCleanupSupport {
       val invitation1 = pendingInvitation(
         service = MtdIt,
         clientId = MtdItId("1234567890"),
-        suppliedClientId = Some(Nino(ninoWithoutSuffix + "A"))
+        suppliedClientId = Some(NinoWithoutSuffix(ninoWithoutSuffix + "A"))
       )
       val invitation2 = pendingInvitation(
         service = MtdIt,
         clientId = MtdItId("1234567890"),
-        suppliedClientId = Some(Nino(ninoWithoutSuffix + "B"))
+        suppliedClientId = Some(NinoWithoutSuffix(ninoWithoutSuffix + "B"))
       )
       val invitation3 = pendingInvitation(
         service = MtdIt,
         clientId = MtdItId("1234567890"),
-        suppliedClientId = Some(Nino(ninoWithoutSuffix + "C"))
+        suppliedClientId = Some(NinoWithoutSuffix(ninoWithoutSuffix + "C"))
       )
       val invitation4 = pendingInvitation(
         service = MtdIt,
         clientId = MtdItId("1234567890"),
-        suppliedClientId = Some(Nino(ninoWithoutSuffix + "D"))
+        suppliedClientId = Some(NinoWithoutSuffix(ninoWithoutSuffix + "D"))
       )
       // TODO add 5th variation when suffixless nino class is set up
       //      val invitation5 = pendingInvitation(

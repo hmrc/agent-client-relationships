@@ -18,9 +18,11 @@ package uk.gov.hmrc.agentclientrelationships.services
 
 import org.apache.pekko.Done
 import org.mockito.ArgumentMatchers.any
+import org.mockito.ArgumentMatchers.{eq => eqs}
 import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
 import play.api.mvc.AnyContentAsEmpty
+import play.api.mvc.RequestHeader
 import play.api.test.FakeRequest
 import play.api.test.Helpers.await
 import play.api.test.Helpers.defaultAwaitTimeout
@@ -28,18 +30,17 @@ import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.auth.CurrentUser
 import uk.gov.hmrc.agentclientrelationships.mocks._
 import uk.gov.hmrc.agentclientrelationships.model._
-import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
-import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdIt
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdItSupp
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.PersonalIncomeRecord
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Vat
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Vrn
+import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
+import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 import uk.gov.hmrc.auth.core.retrieve.Credentials
-import uk.gov.hmrc.domain.Nino
-import play.api.mvc.RequestHeader
 
 import java.time.Instant
 import java.time.LocalDate
@@ -86,7 +87,7 @@ with MockAuditService {
   val testAgentEmail = "agent@email.com"
   val testOldInvitationId = "testOldInvitationId"
   val testVrn: Vrn = Vrn("1234567890")
-  val testNino: Nino = Nino("AB123456A")
+  val testNino: NinoWithoutSuffix = NinoWithoutSuffix("AB123456A")
   val testMtdItId: MtdItId = MtdItId("XAIT0000111122")
 
   val vatEnrolment: EnrolmentKey = EnrolmentKey(Vat, testVrn)
@@ -246,6 +247,9 @@ with MockAuditService {
             mockSendAcceptedEmail(vatInvitation)()
 
             TestService.acceptInvitation(vatInvitation, vatEnrolment).futureValue shouldBe vatInvitation.copy(status = Accepted)
+
+            println(TestService.acceptInvitation(vatInvitation, vatEnrolment).futureValue)
+            println(vatInvitation.copy(status = Accepted))
 
             // Verifying non blocking side effects actually happen
             verifySideEffectsOccur { _ =>
