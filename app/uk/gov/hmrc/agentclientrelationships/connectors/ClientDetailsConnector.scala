@@ -72,7 +72,7 @@ extends RequestAwareLogging {
   def getItsaDesignatoryDetails(
     nino: NinoWithoutSuffix
   )(implicit rh: RequestHeader): Future[Either[ClientDetailsFailureResponse, ItsaDesignatoryDetails]] = {
-    val url = url"${appConfig.citizenDetailsBaseUrl}/citizen-details/${nino.value}/designatory-details"
+    val url = url"${appConfig.citizenDetailsBaseUrl}/citizen-details/${nino.suffixlessValue}/designatory-details"
     httpClient
       .get(url)
       .execute[HttpResponse]
@@ -90,7 +90,7 @@ extends RequestAwareLogging {
   def getItsaCitizenDetails(
     nino: NinoWithoutSuffix
   )(implicit rh: RequestHeader): Future[Either[ClientDetailsFailureResponse, CitizenDetails]] = httpClient
-    .get(url"${appConfig.citizenDetailsBaseUrl}/citizen-details/nino/${nino.value}")
+    .get(url"${appConfig.citizenDetailsBaseUrl}/citizen-details/nino/${nino.suffixlessValue}")
     .execute[HttpResponse]
     .map { response =>
       response.status match {

@@ -87,7 +87,7 @@ with CitizenDetailsStub {
 
       val expectedJsonBody = Json.obj(
         "clientName" -> "Matthew Kovacic",
-        "nino" -> "AB123456",
+        "nino" -> "AB123456C",
         "partialAuths" -> Json.arr(
           Json.toJson(partialAuth)
         )

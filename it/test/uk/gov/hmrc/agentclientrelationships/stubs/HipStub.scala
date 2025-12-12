@@ -907,7 +907,7 @@ trait HipStub {
     nino: NinoWithoutSuffix,
     mtdId: MtdItId
   ): StubMapping = stubFor(
-    get(urlEqualTo(s"/etmp/RESTAdapter/itsa/taxpayer/business-details?nino=${nino.value}"))
+    get(urlEqualTo(s"/etmp/RESTAdapter/itsa/taxpayer/business-details?nino=${nino.suffixlessValue}"))
       .willReturn(
         aResponse()
           .withStatus(200)
@@ -916,7 +916,7 @@ trait HipStub {
   )
 
   def givenMtdItIdIsUnKnownFor(nino: NinoWithoutSuffix): StubMapping = stubFor(
-    get(urlEqualTo(s"/etmp/RESTAdapter/itsa/taxpayer/business-details?nino=${nino.value}"))
+    get(urlEqualTo(s"/etmp/RESTAdapter/itsa/taxpayer/business-details?nino=${nino.suffixlessValue}"))
       .willReturn(
         aResponse()
           .withStatus(422)
@@ -968,7 +968,7 @@ trait HipStub {
     postCode: String = "AA1 1AA",
     countryCode: String = "GB"
   ): StubMapping = stubFor(
-    get(urlEqualTo(s"/etmp/RESTAdapter/itsa/taxpayer/business-details?nino=${nino.value}"))
+    get(urlEqualTo(s"/etmp/RESTAdapter/itsa/taxpayer/business-details?nino=${nino.suffixlessValue}"))
       .willReturn(
         aResponse()
           .withBody(s"""
@@ -993,7 +993,7 @@ trait HipStub {
   )
 
   def givenMultipleItsaBusinessDetailsExists(nino: NinoWithoutSuffix): StubMapping = stubFor(
-    get(urlEqualTo(s"/etmp/RESTAdapter/itsa/taxpayer/business-details?nino=${nino.value}"))
+    get(urlEqualTo(s"/etmp/RESTAdapter/itsa/taxpayer/business-details?nino=${nino.suffixlessValue}"))
       .willReturn(
         aResponse()
           .withBody(s"""
@@ -1024,7 +1024,7 @@ trait HipStub {
   )
 
   def givenEmptyItsaBusinessDetailsExists(nino: NinoWithoutSuffix): StubMapping = stubFor(
-    get(urlEqualTo(s"/etmp/RESTAdapter/itsa/taxpayer/business-details?nino=${nino.value}"))
+    get(urlEqualTo(s"/etmp/RESTAdapter/itsa/taxpayer/business-details?nino=${nino.suffixlessValue}"))
       .willReturn(
         aResponse()
           .withBody(s"""
@@ -1043,7 +1043,7 @@ trait HipStub {
     nino: NinoWithoutSuffix,
     status: Int
   ): StubMapping = stubFor(
-    get(urlEqualTo(s"/etmp/RESTAdapter/itsa/taxpayer/business-details?nino=${nino.value}"))
+    get(urlEqualTo(s"/etmp/RESTAdapter/itsa/taxpayer/business-details?nino=${nino.suffixlessValue}"))
       .willReturn(aResponse().withStatus(status))
   )
 
