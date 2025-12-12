@@ -90,7 +90,7 @@ extends UnitSpec {
             Some(PostalCode)
           )
 
-          await(service.findClientDetails("HMRC-MTD-IT", "AA000001")) shouldBe Right(resultModel)
+          await(service.findClientDetails("HMRC-MTD-IT", "AA000001B")) shouldBe Right(resultModel)
         }
 
         "return a ClientDetailsNotFound error if no postcode was returned" in {

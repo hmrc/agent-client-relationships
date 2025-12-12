@@ -43,7 +43,7 @@ extends RequestAwareLogging {
   def getCitizenDetails(
     nino: NinoWithoutSuffix
   )(implicit rh: RequestHeader): Future[CitizenDetails] = httpClient
-    .get(url"${appConfig.citizenDetailsBaseUrl}/citizen-details/nino/${nino.value}")
+    .get(url"${appConfig.citizenDetailsBaseUrl}/citizen-details/nino/${nino.suffixlessValue}")
     .execute[CitizenDetails]
 
 }

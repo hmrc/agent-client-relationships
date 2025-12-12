@@ -30,7 +30,8 @@ with SimpleName {
 
   require(NinoWithoutSuffix.isValid(nino), s"$nino is not a valid nino.")
 
-  override def value: String = nino.replace(" ", "").take(suffixlessNinoLength)
+  override def value: String = nino.replace(" ", "")
+  def suffixlessValue: String = value.take(suffixlessNinoLength)
 
   override def toString: String = nino
 
@@ -45,7 +46,7 @@ with SimpleName {
       case _ => false
     }
 
-  def variations: Seq[String] = Nino.validSuffixes.map(suffix => value + suffix) ++ Seq(value)
+  def variations: Seq[String] = Nino.validSuffixes.map(suffix => suffixlessValue + suffix) ++ Seq(suffixlessValue)
 
 }
 

@@ -23,7 +23,7 @@ import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
 trait CitizenDetailsStub {
 
   def givenCitizenDetailsExists(nino: NinoWithoutSuffix): StubMapping = stubFor(
-    get(urlEqualTo(s"/citizen-details/nino/${nino.value}"))
+    get(urlEqualTo(s"/citizen-details/nino/${nino.suffixlessValue}"))
       .willReturn(
         aResponse()
           .withBody(
@@ -47,7 +47,7 @@ trait CitizenDetailsStub {
   )
 
   def givenCitizenDetailsHasNoName(nino: NinoWithoutSuffix): StubMapping = stubFor(
-    get(urlEqualTo(s"/citizen-details/nino/${nino.value}"))
+    get(urlEqualTo(s"/citizen-details/nino/${nino.suffixlessValue}"))
       .willReturn(
         aResponse()
           .withBody(
@@ -68,7 +68,7 @@ trait CitizenDetailsStub {
     nino: NinoWithoutSuffix,
     status: Int
   ): StubMapping = stubFor(
-    get(urlEqualTo(s"/citizen-details/nino/${nino.value}"))
+    get(urlEqualTo(s"/citizen-details/nino/${nino.suffixlessValue}"))
       .willReturn(aResponse().withStatus(status))
   )
 
