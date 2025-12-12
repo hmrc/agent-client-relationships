@@ -21,9 +21,9 @@ import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.helpers.CorrelationIdGenerator
 import uk.gov.hmrc.agentclientrelationships.model._
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.agentclientrelationships.util.RequestSupport._
-import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.domain.SaAgentReference
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.HeaderNames
@@ -55,7 +55,7 @@ extends RequestAwareLogging {
   private val Environment = "Environment"
   private val CorrelationId = "CorrelationId"
 
-  def getClientSaAgentSaReferences(nino: Nino)(implicit request: RequestHeader): Future[Seq[SaAgentReference]] = {
+  def getClientSaAgentSaReferences(nino: NinoWithoutSuffix)(implicit request: RequestHeader): Future[Seq[SaAgentReference]] = {
     val url = url"${appConfig.desUrl}/registration/relationship/nino/${nino.value}"
 
     getWithDesHeaders(url).map { response =>

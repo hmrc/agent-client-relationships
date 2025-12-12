@@ -28,7 +28,6 @@ import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.RelationshipFailureResponse
 import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _}
 import uk.gov.hmrc.agentclientrelationships.model.identifiers._
-import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.domain.TaxIdentifier
 
 import javax.inject.Inject
@@ -52,10 +51,11 @@ extends RequestAwareLogging {
   )(implicit rh: RequestHeader): Future[Either[String, EnrolmentKey]] =
     (serviceKey, clientType) match {
       // "special" cases
-      case ("IR-SA", "ni" | "NI" | "NINO") if Nino.isValid(clientId) => Future.successful(Right(EnrolmentKey("IR-SA", Nino(clientId))))
-      case (Service.MtdIt.id | Service.MtdItSupp.id, "ni" | "NI" | "NINO") if Nino.isValid(clientId) =>
-        Future.successful(Right(EnrolmentKey(serviceKey, Nino(clientId))))
-      case (Service.PersonalIncomeRecord.id, "NINO") => Future.successful(Right(EnrolmentKey(serviceKey, Nino(clientId))))
+      case ("IR-SA", "ni" | "NI" | "NINO") if NinoWithoutSuffix.isValid(clientId) =>
+        Future.successful(Right(EnrolmentKey("IR-SA", NinoWithoutSuffix(clientId))))
+      case (Service.MtdIt.id | Service.MtdItSupp.id, "ni" | "NI" | "NINO") if NinoWithoutSuffix.isValid(clientId) =>
+        Future.successful(Right(EnrolmentKey(serviceKey, NinoWithoutSuffix(clientId))))
+      case (Service.PersonalIncomeRecord.id, "NINO") => Future.successful(Right(EnrolmentKey(serviceKey, NinoWithoutSuffix(clientId))))
       case (Service.Cbc.id, CbcIdType.enrolmentId) => makeSanitisedCbcEnrolmentKey(CbcId(clientId))
       // "normal" cases
       case (serviceKey, _) =>
@@ -108,10 +108,10 @@ extends RequestAwareLogging {
   )(implicit rh: RequestHeader): Future[Either[RelationshipFailureResponse, Service]] =
     service.fold {
       (taxIdentifier, authProfile, relationshipSource) match {
-        case (Nino(_), Some("ALL00001"), HipOrIfApi) => Future.successful(Right(Service.MtdIt))
-        case (Nino(_), Some("ITSAS001"), HipOrIfApi) => Future.successful(Right(Service.MtdItSupp))
-        case (Nino(_), None, HipOrIfApi) => Future.successful(Right(Service.MtdIt))
-        case (Nino(_), _, AfrRelationshipRepo) => Future.successful(Right(Service.PersonalIncomeRecord))
+        case (NinoWithoutSuffix(_), Some("ALL00001"), HipOrIfApi) => Future.successful(Right(Service.MtdIt))
+        case (NinoWithoutSuffix(_), Some("ITSAS001"), HipOrIfApi) => Future.successful(Right(Service.MtdItSupp))
+        case (NinoWithoutSuffix(_), None, HipOrIfApi) => Future.successful(Right(Service.MtdIt))
+        case (NinoWithoutSuffix(_), _, AfrRelationshipRepo) => Future.successful(Right(Service.PersonalIncomeRecord))
         case (Vrn(_), _, _) => Future.successful(Right(Service.Vat))
         case (Utr(_), _, _) => Future.successful(Right(Service.Trust))
         case (CgtRef(_), _, _) => Future.successful(Right(Service.CapitalGains))

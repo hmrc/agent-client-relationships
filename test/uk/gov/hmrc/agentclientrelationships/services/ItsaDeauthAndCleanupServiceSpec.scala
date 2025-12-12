@@ -20,6 +20,7 @@ import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
 import play.api.mvc.AnyContentAsEmpty
+import play.api.mvc.RequestHeader
 import play.api.test.FakeRequest
 import play.api.test.Helpers.await
 import play.api.test.Helpers.defaultAwaitTimeout
@@ -27,17 +28,16 @@ import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.auth.CurrentUser
 import uk.gov.hmrc.agentclientrelationships.mocks._
 import uk.gov.hmrc.agentclientrelationships.model._
-import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
-import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdIt
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdItSupp
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Vat
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
+import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
+import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 import uk.gov.hmrc.auth.core.AffinityGroup
 import uk.gov.hmrc.auth.core.retrieve.Credentials
-import uk.gov.hmrc.domain.Nino
-import play.api.mvc.RequestHeader
 
 import java.time.Instant
 import java.time.LocalDate
@@ -76,8 +76,9 @@ with MockAuditService {
   val testAgentEmail = "agent@email.com"
   val testOldInvitationId = "testOldInvitationId"
 
-  val testNino: Nino = Nino("AB123456A")
+  val testNino: NinoWithoutSuffix = NinoWithoutSuffix("AB123456")
   val testMtdItId: MtdItId = MtdItId("XAIT0000111122")
+  override val mockDeleteRelationshipsService: DeleteRelationshipsService = resettingMock[DeleteRelationshipsService]
 
   val itsaEnrolment: EnrolmentKey = EnrolmentKey(MtdIt, testMtdItId)
   val itsaSuppEnrolment: EnrolmentKey = EnrolmentKey(MtdItSupp, testMtdItId)
@@ -151,7 +152,7 @@ with MockAuditService {
 
         verify(mockPartialAuthRepository, times(1)).deauthorise(
           any[String],
-          any[Nino],
+          any[NinoWithoutSuffix],
           any[Arn],
           any[Instant]
         )
@@ -215,7 +216,7 @@ with MockAuditService {
 
         verify(mockPartialAuthRepository, times(1)).deauthorise(
           any[String],
-          any[Nino],
+          any[NinoWithoutSuffix],
           any[Arn],
           any[Instant]
         )
@@ -264,7 +265,7 @@ with MockAuditService {
 
         verify(mockPartialAuthRepository, times(1)).deauthorise(
           any[String],
-          any[Nino],
+          any[NinoWithoutSuffix],
           any[Arn],
           any[Instant]
         )

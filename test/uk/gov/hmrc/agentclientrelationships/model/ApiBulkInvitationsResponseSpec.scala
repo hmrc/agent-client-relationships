@@ -19,13 +19,13 @@ package models
 import play.api.libs.json._
 import uk.gov.hmrc.agentclientrelationships.model.Accepted
 import uk.gov.hmrc.agentclientrelationships.model.Invitation
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiBulkInvitationResponse
 import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiBulkInvitationsResponse
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
-import uk.gov.hmrc.domain.Nino
 
 import java.time.Instant
 import java.time.LocalDate
@@ -39,7 +39,7 @@ extends UnitSpec {
   val testNormalizedAgentName = "testagentname"
   val testClientName = "testClientName"
   val testAgentEmail = "agent@email.com"
-  val testNino: Nino = Nino("AB123456A")
+  val testNino: NinoWithoutSuffix = NinoWithoutSuffix("AB123456A")
   val testMtdItId: MtdItId = MtdItId("XAIT0000111122")
   val testUId: String = "testUID"
   val now = Instant.now

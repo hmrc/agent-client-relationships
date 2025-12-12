@@ -26,17 +26,17 @@ import uk.gov.hmrc.agentclientrelationships.model.PartialAuthRelationship
 import uk.gov.hmrc.agentclientrelationships.model.Pending
 import uk.gov.hmrc.agentclientrelationships.model.RelationshipFailureResponse
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails._
-import uk.gov.hmrc.agentclientrelationships.model.stride._
-import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
-import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoType
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDIT
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDITSUPP
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdIt
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.PersonalIncomeRecord
-import uk.gov.hmrc.domain.Nino
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoType
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
+import uk.gov.hmrc.agentclientrelationships.model.stride._
+import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
+import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
 import uk.gov.hmrc.domain.TaxIdentifier
 
 import java.time.ZoneId
@@ -156,12 +156,12 @@ class StrideClientDetailsService @Inject() (
   )(implicit request: RequestHeader): Future[Either[RelationshipFailureResponse, Seq[ClientRelationship]]] =
     (
       taxIdentifier match {
-        case Nino(_) =>
+        case NinoWithoutSuffix(_) =>
           (
             for {
               itsaActiveRelationships <- EitherT(
                 findRelationshipsService.getAllActiveItsaRelationshipForClient(
-                  nino = Nino(taxIdentifier.value),
+                  nino = NinoWithoutSuffix(taxIdentifier.value),
                   activeOnly = true
                 )
               )
@@ -209,9 +209,9 @@ class StrideClientDetailsService @Inject() (
 
   def getPartialAuthAuthorisations(taxIdentifier: TaxIdentifier): Future[Seq[ClientRelationship]] =
     taxIdentifier match {
-      case nino @ Nino(_) =>
+      case nino @ NinoWithoutSuffix(_) =>
         partialAuthRepository
-          .findActiveByNino(nino)
+          .findActiveForClient(nino)
           .map(
             _.map(pa =>
               ClientRelationship(
@@ -228,8 +228,8 @@ class StrideClientDetailsService @Inject() (
       case _ => Future.successful(Seq.empty[ClientRelationship])
     }
 
-  def getPartialAuthsForNino(nino: Nino): Future[Seq[PartialAuthRelationship]] = partialAuthRepository
-    .findActiveByNino(nino)
+  def getPartialAuthsForNino(nino: NinoWithoutSuffix): Future[Seq[PartialAuthRelationship]] = partialAuthRepository
+    .findActiveForClient(nino)
 
   private def findAgentNameForActiveRelationships(
     activeRelationships: Seq[ClientRelationship],
@@ -303,12 +303,12 @@ class StrideClientDetailsService @Inject() (
     service: Service
   )(implicit request: RequestHeader): Future[Option[ActiveMainAgentRelationship]] =
     (taxIdentifier, service) match {
-      case (_: Nino, MtdIt) =>
+      case (_: NinoWithoutSuffix, MtdIt) =>
         for {
           partialAuth <- partialAuthRepository.findMainAgent(taxIdentifier.value)
           mRel <-
             if (partialAuth.isEmpty) {
-              findRelationshipsService.getItsaRelationshipForClient(Nino(taxIdentifier.value), service)
+              findRelationshipsService.getItsaRelationshipForClient(NinoWithoutSuffix(taxIdentifier.value), service)
             }
             else
               Future.successful(
@@ -323,7 +323,7 @@ class StrideClientDetailsService @Inject() (
           result = mRel.map(r => ActiveMainAgentRelationship(r.arn.value, service.id))
         } yield result
 
-      case (_: Nino, PersonalIncomeRecord) =>
+      case (_: NinoWithoutSuffix, PersonalIncomeRecord) =>
         for {
           irv <- agentFiRelationshipConnector.findIrvActiveRelationshipForClient(taxIdentifier.value).map(_.toOption)
           activeRel = irv.flatMap(_.headOption.map(r => ActiveMainAgentRelationship(r.arn.value, service.id)))

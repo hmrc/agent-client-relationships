@@ -17,22 +17,22 @@
 package uk.gov.hmrc.agentclientrelationships.services
 
 import org.apache.pekko.Done
-import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
+import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys._
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.audit.AuditService
 import uk.gov.hmrc.agentclientrelationships.auth.CurrentUser
 import uk.gov.hmrc.agentclientrelationships.connectors.AgentFiRelationshipConnector
 import uk.gov.hmrc.agentclientrelationships.model._
-import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository.endedByClient
-import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
-import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDIT
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDITSUPP
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCPIR
-import uk.gov.hmrc.domain.Nino
-import play.api.mvc.RequestHeader
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
+import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository.endedByClient
+import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
+import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 
 import java.time.Instant
 import java.time.LocalDateTime
@@ -167,7 +167,7 @@ extends RequestAwareLogging {
             created = timestamp,
             arn = arn,
             service = enrolment.service,
-            nino = Nino(enrolment.oneIdentifier().value)
+            nino = NinoWithoutSuffix(enrolment.oneIdentifier().value)
           )
           .andThen { case Success(_) => auditService.sendCreatePartialAuthAuditEvent() }
       case `HMRCMTDIT` if isAltItsa => // Deauthorises current agent by updating partial auth
@@ -177,7 +177,7 @@ extends RequestAwareLogging {
               created = timestamp,
               arn = arn,
               service = enrolment.service,
-              nino = Nino(enrolment.oneIdentifier().value)
+              nino = NinoWithoutSuffix(enrolment.oneIdentifier().value)
             )
             .andThen { case Success(_) => auditService.sendCreatePartialAuthAuditEvent() }
         }
@@ -223,7 +223,7 @@ extends RequestAwareLogging {
         partialAuthRepository
           .deauthorise(
             mainAuth.service,
-            Nino(mainAuth.nino),
+            NinoWithoutSuffix(mainAuth.nino),
             Arn(mainAuth.arn),
             timestamp
           )

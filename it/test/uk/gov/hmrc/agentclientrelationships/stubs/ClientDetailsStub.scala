@@ -18,11 +18,12 @@ package uk.gov.hmrc.agentclientrelationships.stubs
 
 import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.stubbing.StubMapping
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
 
 trait ClientDetailsStub {
 
-  def givenItsaDesignatoryDetailsExists(nino: String): StubMapping = stubFor(
-    get(urlEqualTo(s"/citizen-details/$nino/designatory-details"))
+  def givenItsaDesignatoryDetailsExists(nino: NinoWithoutSuffix): StubMapping = stubFor(
+    get(urlEqualTo(s"/citizen-details/${nino.value}/designatory-details"))
       .willReturn(
         aResponse()
           .withBody(
@@ -40,15 +41,15 @@ trait ClientDetailsStub {
   )
 
   def givenItsaDesignatoryDetailsError(
-    nino: String,
+    nino: NinoWithoutSuffix,
     status: Int
   ): StubMapping = stubFor(
-    get(urlEqualTo(s"/citizen-details/$nino/designatory-details"))
+    get(urlEqualTo(s"/citizen-details/${nino.value}/designatory-details"))
       .willReturn(aResponse().withStatus(status))
   )
 
-  def givenItsaCitizenDetailsExists(nino: String): StubMapping = stubFor(
-    get(urlEqualTo(s"/citizen-details/nino/$nino"))
+  def givenItsaCitizenDetailsExists(nino: NinoWithoutSuffix): StubMapping = stubFor(
+    get(urlEqualTo(s"/citizen-details/nino/${nino.value}"))
       .willReturn(
         aResponse()
           .withBody(s"""
@@ -69,10 +70,10 @@ trait ClientDetailsStub {
   )
 
   def givenItsaCitizenDetailsError(
-    nino: String,
+    nino: NinoWithoutSuffix,
     status: Int
   ): StubMapping = stubFor(
-    get(urlEqualTo(s"/citizen-details/nino/$nino"))
+    get(urlEqualTo(s"/citizen-details/nino/${nino.value}"))
       .willReturn(aResponse().withStatus(status))
   )
 

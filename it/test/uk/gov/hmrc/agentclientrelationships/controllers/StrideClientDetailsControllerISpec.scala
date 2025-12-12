@@ -19,27 +19,26 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 import play.api.libs.json.Json
 import play.api.mvc.AnyContentAsEmpty
 import play.api.test.FakeRequest
-import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ActiveMainAgent
-import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsStrideResponse
-import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgencyDetails
-import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentDetailsDesResponse
-import uk.gov.hmrc.agentclientrelationships.model.stride._
 import uk.gov.hmrc.agentclientrelationships.model.Invitation
 import uk.gov.hmrc.agentclientrelationships.model.PartialAuthRelationship
 import uk.gov.hmrc.agentclientrelationships.model.Pending
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ActiveMainAgent
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsStrideResponse
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Cbc
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.CbcNonUk
+import uk.gov.hmrc.agentclientrelationships.model.identifiers._
+import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgencyDetails
+import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentDetailsDesResponse
+import uk.gov.hmrc.agentclientrelationships.model.stride._
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
 import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
 import uk.gov.hmrc.agentclientrelationships.stubs.AfiRelationshipStub
 import uk.gov.hmrc.agentclientrelationships.stubs.ClientDetailsStub
 import uk.gov.hmrc.agentclientrelationships.stubs.HipStub
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Cbc
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.CbcNonUk
-import uk.gov.hmrc.agentclientrelationships.model.identifiers._
-import uk.gov.hmrc.domain.Nino
 
-import java.time.temporal.ChronoUnit
 import java.time.Instant
 import java.time.LocalDate
+import java.time.temporal.ChronoUnit
 
 class StrideClientDetailsControllerISpec
 extends BaseControllerISpec
@@ -604,7 +603,7 @@ with AfiRelationshipStub {
 
           cr.clientIdType match {
             case NinoType.id =>
-              givenMtdItIdIsKnownFor(Nino(cr.clientId), mtdItId)
+              givenMtdItIdIsKnownFor(NinoWithoutSuffix(cr.clientId), mtdItId)
               getItsaMainAndSupportingActiveRelationshipsViaClient(
                 mtdItId,
                 arn,
@@ -616,8 +615,8 @@ with AfiRelationshipStub {
                 nino.value,
                 true
               )
-              givenItsaCitizenDetailsExists(nino.value)
-              givenItsaDesignatoryDetailsExists(nino.value)
+              givenItsaCitizenDetailsExists(nino)
+              givenItsaDesignatoryDetailsExists(nino)
               givenAgentRecordFound(arn, testAgentRecord)
               givenAgentRecordFound(arn2, testAgentRecord2)
               partialAuthRepo.collection.insertOne(partialAuthRelationship).toFuture().futureValue
@@ -740,8 +739,8 @@ with AfiRelationshipStub {
       givenMtdItIdIsUnKnownFor(nino)
       getAllActiveRelationshipFailsWith(mtdItId, status = 404)
       givenAfiRelationshipForClientNotFound(nino.value)
-      givenItsaCitizenDetailsExists(nino.value)
-      givenItsaDesignatoryDetailsExists(nino.value)
+      givenItsaCitizenDetailsExists(nino)
+      givenItsaDesignatoryDetailsExists(nino)
       givenAgentRecordFound(arn2, testAgentRecord2)
       partialAuthRepo.collection.insertOne(partialAuthRelationship).toFuture().futureValue
 
@@ -769,8 +768,8 @@ with AfiRelationshipStub {
       givenMtdItIdIsKnownFor(nino, mtdItId)
       getAllActiveRelationshipFailsWith(mtdItId, status = 404)
       givenAfiRelationshipForClientNotFound(nino.value)
-      givenItsaCitizenDetailsExists(nino.value)
-      givenItsaDesignatoryDetailsExists(nino.value)
+      givenItsaCitizenDetailsExists(nino)
+      givenItsaDesignatoryDetailsExists(nino)
       givenAgentRecordFound(arn2, testAgentRecord2)
       partialAuthRepo.collection.insertOne(partialAuthRelationship).toFuture().futureValue
 
@@ -805,11 +804,11 @@ with AfiRelationshipStub {
 
           cr.clientIdType match {
             case NinoType.id =>
-              givenMtdItIdIsKnownFor(Nino(cr.clientId), mtdItId)
+              givenMtdItIdIsKnownFor(NinoWithoutSuffix(cr.clientId), mtdItId)
               getAllActiveRelationshipFailsWith(mtdItId, status = 404)
               givenAfiRelationshipForClientNotFound(cr.clientId)
-              givenItsaCitizenDetailsExists(nino.value)
-              givenItsaDesignatoryDetailsExists(nino.value)
+              givenItsaCitizenDetailsExists(nino)
+              givenItsaDesignatoryDetailsExists(nino)
             case VrnType.id =>
               getVrnIsKnownInETMPFor2(vrn)
               getAllActiveRelationshipsViaClient(taxIdentifier, arn)
@@ -862,11 +861,11 @@ with AfiRelationshipStub {
 
           cr.clientIdType match {
             case NinoType.id =>
-              givenMtdItIdIsKnownFor(Nino(cr.clientId), mtdItId)
+              givenMtdItIdIsKnownFor(NinoWithoutSuffix(cr.clientId), mtdItId)
               getAllActiveRelationshipFailsWithNotFound(mtdItId, status = 422)
               givenAfiRelationshipForClientNotFound(cr.clientId)
-              givenItsaCitizenDetailsExists(nino.value)
-              givenItsaDesignatoryDetailsExists(nino.value)
+              givenItsaCitizenDetailsExists(nino)
+              givenItsaDesignatoryDetailsExists(nino)
             case VrnType.id =>
               getVrnIsKnownInETMPFor2(vrn)
               getAllActiveRelationshipsViaClient(taxIdentifier, arn)
@@ -918,11 +917,11 @@ with AfiRelationshipStub {
         .foreach { cr =>
           cr.clientIdType match {
             case NinoType.id =>
-              givenMtdItIdIsKnownFor(Nino(cr.clientId), mtdItId)
+              givenMtdItIdIsKnownFor(NinoWithoutSuffix(cr.clientId), mtdItId)
               getAllActiveRelationshipFailsWith(mtdItId, status = 404)
               givenAfiRelationshipForClientNotFound(cr.clientId)
-              givenItsaCitizenDetailsExists(nino.value)
-              givenItsaDesignatoryDetailsExists(nino.value)
+              givenItsaCitizenDetailsExists(nino)
+              givenItsaDesignatoryDetailsExists(nino)
             case VrnType.id =>
               getVrnIsKnownInETMPFor2(vrn)
               getAllActiveRelationshipFailsWith(vrn, status = 404)
@@ -974,11 +973,11 @@ with AfiRelationshipStub {
         .foreach { cr =>
           cr.clientIdType match {
             case NinoType.id =>
-              givenMtdItIdIsKnownFor(Nino(cr.clientId), mtdItId)
+              givenMtdItIdIsKnownFor(NinoWithoutSuffix(cr.clientId), mtdItId)
               getAllActiveRelationshipFailsWithSuspended(mtdItId)
               givenAfiRelationshipForClientNotFound(cr.clientId)
-              givenItsaCitizenDetailsExists(nino.value)
-              givenItsaDesignatoryDetailsExists(nino.value)
+              givenItsaCitizenDetailsExists(nino)
+              givenItsaDesignatoryDetailsExists(nino)
             case VrnType.id =>
               getVrnIsKnownInETMPFor2(vrn)
               getAllActiveRelationshipFailsWithSuspended(vrn)
@@ -1050,15 +1049,15 @@ with AfiRelationshipStub {
         .foreach { cr =>
           cr.clientIdType match {
             case NinoType.id =>
-              givenMtdItIdIsKnownFor(Nino(cr.clientId), mtdItId)
+              givenMtdItIdIsKnownFor(NinoWithoutSuffix(cr.clientId), mtdItId)
               getItsaMainAndSupportingActiveRelationshipsViaClient(
                 mtdItId,
                 arn,
                 arn2
               )
               givenAfiRelationshipForClientNotFound(cr.clientId)
-              givenItsaCitizenDetailsError(nino.value, 403)
-              givenItsaDesignatoryDetailsExists(nino.value)
+              givenItsaCitizenDetailsError(nino, 403)
+              givenItsaDesignatoryDetailsExists(nino)
               givenAgentRecordFound(arn, testAgentRecord)
               givenAgentRecordFound(arn2, testAgentRecord2)
             case VrnType.id =>
@@ -1088,15 +1087,15 @@ with AfiRelationshipStub {
         .foreach { cr =>
           cr.clientIdType match {
             case NinoType.id =>
-              givenMtdItIdIsKnownFor(Nino(cr.clientId), mtdItId)
+              givenMtdItIdIsKnownFor(NinoWithoutSuffix(cr.clientId), mtdItId)
               getItsaMainAndSupportingActiveRelationshipsViaClient(
                 mtdItId,
                 arn,
                 arn2
               )
               givenAfiRelationshipForClientNotFound(cr.clientId)
-              givenItsaCitizenDetailsExists(nino.value)
-              givenItsaDesignatoryDetailsExists(nino.value)
+              givenItsaCitizenDetailsExists(nino)
+              givenItsaDesignatoryDetailsExists(nino)
               givenAgentRecordFound(arn, testAgentRecord)
               givenAgentDetailsErrorResponse(arn2, 404)
             case VrnType.id =>
@@ -1151,12 +1150,12 @@ with AfiRelationshipStub {
         nino.value,
         fromCesa = true
       )
-      givenItsaCitizenDetailsExists(nino.value)
+      givenItsaCitizenDetailsExists(nino)
       givenAgentRecordFound(arn, testAgentRecord)
 
       val expectedJsonBody = Json.obj(
         "clientName" -> "Matthew Kovacic",
-        "nino" -> "AB123456C",
+        "nino" -> "AB123456",
         "agents" -> Json.arr(Json.obj("name" -> "ABC Ltd", "arn" -> "AARN0000002"))
       )
 
@@ -1185,7 +1184,7 @@ with AfiRelationshipStub {
       givenAuthorisedAsStrideUser(req, "user-123")
       givenAuditConnector()
       givenAfiRelationshipForClientNotFound(nino.value)
-      givenItsaCitizenDetailsError(nino.value, 404)
+      givenItsaCitizenDetailsError(nino, 404)
 
       val result = doGetRequest(requestPath(nino.value))
       result.status shouldBe 404
@@ -1197,7 +1196,7 @@ with AfiRelationshipStub {
         givenAuthorisedAsStrideUser(req, "user-123")
         givenAuditConnector()
         givenAfiRelationshipForClientNotFound(nino.value)
-        givenItsaCitizenDetailsError(nino.value, 500)
+        givenItsaCitizenDetailsError(nino, 500)
 
         val result = doGetRequest(requestPath(nino.value))
         result.status shouldBe 500
@@ -1213,7 +1212,7 @@ with AfiRelationshipStub {
           nino.value,
           fromCesa = true
         )
-        givenItsaCitizenDetailsExists(nino.value)
+        givenItsaCitizenDetailsExists(nino)
         givenAgentDetailsErrorResponse(arn, 500)
 
         val result = doGetRequest(requestPath(nino.value))
@@ -1225,7 +1224,7 @@ with AfiRelationshipStub {
         givenAuthorisedAsStrideUser(req, "user-123")
         givenAuditConnector()
         givenAfiRelationshipForClientNotFound(nino.value, 500)
-        givenItsaCitizenDetailsExists(nino.value)
+        givenItsaCitizenDetailsExists(nino)
 
         val result = doGetRequest(requestPath(nino.value))
         result.status shouldBe 500

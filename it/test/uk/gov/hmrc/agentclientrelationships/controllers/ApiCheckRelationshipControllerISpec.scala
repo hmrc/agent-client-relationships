@@ -104,9 +104,9 @@ with TestData {
     "return 422 with CLIENT_REGISTRATION_NOT_FOUND when client details not found" in {
       givenAuditConnector()
       givenAgentRecordFound(arn, agentRecordResponse)
-      givenItsaBusinessDetailsError(nino.value, 404)
+      givenItsaBusinessDetailsError(nino, 404)
       givenUserAuthorised()
-      givenCitizenDetailsError(nino.value, NOT_FOUND)
+      givenCitizenDetailsError(nino, NOT_FOUND)
 
       val testData = ApiCheckRelationshipRequest(
         HMRCMTDIT,

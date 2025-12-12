@@ -31,9 +31,9 @@ import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
 import uk.gov.hmrc.agentclientrelationships.services.AgentCacheProvider
 import uk.gov.hmrc.agentclientrelationships.services.FindRelationshipsService
 import uk.gov.hmrc.agentclientrelationships.services.InvitationService
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 import uk.gov.hmrc.auth.core.AuthConnector
-import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
@@ -67,7 +67,7 @@ with AuthActions {
         invitations <- invitationsService.findNonSuspendedClientInvitations(services, identifiers)
         partialAuthRecords <-
           authResponse.getNino match {
-            case Some(ni) => partialAuthRepository.findByNino(Nino(ni))
+            case Some(ni) => partialAuthRepository.findAllForClient(NinoWithoutSuffix(ni))
             case None => Future.successful(None)
           }
         irvRelationshipExists <-

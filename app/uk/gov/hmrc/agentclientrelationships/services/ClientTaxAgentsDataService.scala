@@ -18,18 +18,18 @@ package uk.gov.hmrc.agentclientrelationships.services
 
 import cats.data.EitherT
 import cats.implicits._
+import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.AgentFiRelationshipConnector
 import uk.gov.hmrc.agentclientrelationships.model._
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentDetailsDesResponse
 import uk.gov.hmrc.agentclientrelationships.model.stride.ClientRelationship
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
 import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
-import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.domain.TaxIdentifier
-import play.api.mvc.RequestHeader
 
 import java.time.LocalDate
 import java.time.ZoneId
@@ -176,7 +176,7 @@ class ClientTaxAgentsDataService @Inject() (
       case Some(n) =>
         EitherT.right[RelationshipFailureResponse](
           partialAuthRepository
-            .findByNino(Nino(n))
+            .findAllForClient(NinoWithoutSuffix(n))
             .map(
               _.map(pa =>
                 ClientAuthorisationForTaxId(
@@ -224,7 +224,7 @@ class ClientTaxAgentsDataService @Inject() (
     Seq[ClientAuthorisationForTaxId]
   ] =
     taxIdentifier match {
-      case Nino(_) =>
+      case NinoWithoutSuffix(_) =>
         for {
           irvActiveRelationship <- EitherT(
             agentFiRelationshipConnector.findIrvActiveRelationshipForClient(taxIdentifier.value)

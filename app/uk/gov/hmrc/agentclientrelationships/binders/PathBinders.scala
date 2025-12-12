@@ -18,14 +18,13 @@ package uk.gov.hmrc.agentclientrelationships.binders
 
 import uk.gov.hmrc.agentclientrelationships.model.UserId
 import uk.gov.hmrc.agentclientrelationships.model.identifiers._
-import uk.gov.hmrc.domain.Nino
 
 // scalafmt: { binPack.parentConstructors = Always }
 object PathBinders {
 
   implicit object ArnBinder extends SimpleObjectBinder[Arn](Arn.apply, _.value)
   implicit object MtdItIdBinder extends SimpleObjectBinder[MtdItId](MtdItId.apply, _.value)
-  implicit object NinoBinder extends SimpleObjectBinder[Nino](Nino.apply, _.value)
+  implicit object NinoBinder extends SimpleObjectBinder[NinoWithoutSuffix](NinoWithoutSuffix.apply, _.value)
   implicit object VrnBinder extends SimpleObjectBinder[Vrn](Vrn.apply, _.value)
   implicit object UtrBinder extends SimpleObjectBinder[Utr](Utr.apply, _.value)
   implicit object PptRefBinder extends SimpleObjectBinder[PptRef](PptRef.apply, _.value)

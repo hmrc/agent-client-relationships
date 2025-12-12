@@ -33,7 +33,6 @@ import uk.gov.hmrc.agentclientrelationships.support.WireMockSupport
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdIt
 import uk.gov.hmrc.agentclientrelationships.model.identifiers._
 import uk.gov.hmrc.domain.AgentCode
-import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http._
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
@@ -119,20 +118,20 @@ with MockitoSugar {
     "return some agents's groupIds for given NINO" in {
       givenAuditConnector()
       givenDelegatedGroupIdsExistFor(
-        EnrolmentKey(Service.MtdIt, Nino("AB123456C")),
+        EnrolmentKey(Service.MtdIt, NinoWithoutSuffix("AB123456C")),
         Set(
           "bar",
           "car",
           "dar"
         )
       )
-      await(connector.getDelegatedGroupIdsFor(EnrolmentKey(Service.MtdIt, Nino("AB123456C")))) should contain("bar")
+      await(connector.getDelegatedGroupIdsFor(EnrolmentKey(Service.MtdIt, NinoWithoutSuffix("AB123456C")))) should contain("bar")
     }
 
     "return Empty when NINO not found" in {
       givenAuditConnector()
-      givenDelegatedGroupIdsNotExistFor(EnrolmentKey(Service.MtdIt, Nino("AB123456C")))
-      await(connector.getDelegatedGroupIdsFor(EnrolmentKey(Service.MtdIt, Nino("AB123456C")))) should be(empty)
+      givenDelegatedGroupIdsNotExistFor(EnrolmentKey(Service.MtdIt, NinoWithoutSuffix("AB123456C")))
+      await(connector.getDelegatedGroupIdsFor(EnrolmentKey(Service.MtdIt, NinoWithoutSuffix("AB123456C")))) should be(empty)
     }
 
     "return some agents's groupIds for given VRN" in {

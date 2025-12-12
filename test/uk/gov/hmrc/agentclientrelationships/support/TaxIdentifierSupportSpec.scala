@@ -17,7 +17,6 @@
 package uk.gov.hmrc.agentclientrelationships.support
 
 import uk.gov.hmrc.agentclientrelationships.model.identifiers._
-import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.agentclientrelationships.support.TaxIdentifierSupport._
 
 class TaxIdentifierSupportSpec
@@ -37,7 +36,7 @@ extends UnitSpec {
     }
 
     "return NINO when tax identifier is of Nino type" in {
-      identifierNickname(Nino("AB123456A")) shouldBe "NINO"
+      identifierNickname(NinoWithoutSuffix("AB123456A")) shouldBe "NINO"
     }
 
     "return CGTPDRef when tax identifier is of CgtRef type" in {
@@ -53,7 +52,7 @@ extends UnitSpec {
     "return appropriate tax identifier when given value and type" in {
       TaxIdentifierSupport.from("foo", "MTDITID") shouldBe MtdItId("foo")
 
-      TaxIdentifierSupport.from("AB123456A", "NINO") shouldBe Nino("AB123456A")
+      TaxIdentifierSupport.from("AB123456A", "NINO") shouldBe NinoWithoutSuffix("AB123456A")
 
       TaxIdentifierSupport.from("foo", "VRN") shouldBe Vrn("foo")
 

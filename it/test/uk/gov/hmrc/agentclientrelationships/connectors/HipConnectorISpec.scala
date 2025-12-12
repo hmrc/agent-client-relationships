@@ -31,9 +31,9 @@ import uk.gov.hmrc.agentclientrelationships.model.ActiveRelationship
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.InactiveRelationship
 import uk.gov.hmrc.agentclientrelationships.model.RegistrationRelationshipResponse
-import uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa.ItsaBusinessDetails
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsNotFound
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ErrorRetrievingClientDetails
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa.ItsaBusinessDetails
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Cbc
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdIt
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Pillar2
@@ -44,7 +44,6 @@ import uk.gov.hmrc.agentclientrelationships.stubs.DataStreamStub
 import uk.gov.hmrc.agentclientrelationships.stubs.HipStub
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 import uk.gov.hmrc.agentclientrelationships.support.WireMockSupport
-import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.http.client.HttpClientV2
@@ -68,6 +67,8 @@ with DataStreamStub {
   val agentCacheProvider: AgentCacheProvider = app.injector.instanceOf[AgentCacheProvider]
   val hipHeaders: HipHeaders = app.injector.instanceOf[HipHeaders]
   implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
+
+  val testNino = NinoWithoutSuffix("AA000001B")
 
   protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder().configure(
     "microservice.services.enrolment-store-proxy.port" -> wireMockPort,
@@ -612,8 +613,8 @@ with DataStreamStub {
 
     "return business details when receiving a 200 status" in {
       givenAuditConnector()
-      givenMtdItsaBusinessDetailsExists(Nino("AA000001B"), MtdItId("XAIT0000111122"))
-      await(hipConnector.getItsaBusinessDetails("AA000001B")) shouldBe Right(
+      givenMtdItsaBusinessDetailsExists(testNino, MtdItId("XAIT0000111122"))
+      await(hipConnector.getItsaBusinessDetails(testNino)) shouldBe Right(
         ItsaBusinessDetails(
           "Erling Haal",
           Some("AA1 1AA"),
@@ -624,8 +625,8 @@ with DataStreamStub {
 
     "return the first set of business details when receiving multiple" in {
       givenAuditConnector()
-      givenMultipleItsaBusinessDetailsExists("AA000001B")
-      await(hipConnector.getItsaBusinessDetails("AA000001B")) shouldBe Right(
+      givenMultipleItsaBusinessDetailsExists(testNino)
+      await(hipConnector.getItsaBusinessDetails(testNino)) shouldBe Right(
         ItsaBusinessDetails(
           "Erling Haal",
           Some("AA1 1AA"),
@@ -636,20 +637,20 @@ with DataStreamStub {
 
     "return a ClientDetailsNotFound error when no items are returned in the businessData array" in {
       givenAuditConnector()
-      givenEmptyItsaBusinessDetailsExists("AA000001B")
-      await(hipConnector.getItsaBusinessDetails("AA000001B")) shouldBe Left(ClientDetailsNotFound)
+      givenEmptyItsaBusinessDetailsExists(testNino)
+      await(hipConnector.getItsaBusinessDetails(testNino)) shouldBe Left(ClientDetailsNotFound)
     }
 
     "return a ClientDetailsNotFound error when receiving a 404 status" in {
       givenAuditConnector()
-      givenItsaBusinessDetailsError("AA000001B", NOT_FOUND)
-      await(hipConnector.getItsaBusinessDetails("AA000001B")) shouldBe Left(ClientDetailsNotFound)
+      givenItsaBusinessDetailsError(testNino, NOT_FOUND)
+      await(hipConnector.getItsaBusinessDetails(testNino)) shouldBe Left(ClientDetailsNotFound)
     }
 
     "return an ErrorRetrievingClientDetails error when receiving an unexpected status" in {
       givenAuditConnector()
-      givenItsaBusinessDetailsError("AA000001B", INTERNAL_SERVER_ERROR)
-      await(hipConnector.getItsaBusinessDetails("AA000001B")) should matchPattern {
+      givenItsaBusinessDetailsError(testNino, INTERNAL_SERVER_ERROR)
+      await(hipConnector.getItsaBusinessDetails(testNino)) should matchPattern {
         case Left(ErrorRetrievingClientDetails(INTERNAL_SERVER_ERROR, msg))
             if msg.startsWith("Unexpected error during 'getItsaBusinessDetails'") =>
       }

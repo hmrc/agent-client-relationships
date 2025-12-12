@@ -22,7 +22,7 @@ GET           /agent/:arn/authorisation-requests                             @uk
 POST          /agent/:arn/remove-authorisation                               @uk.gov.hmrc.agentclientrelationships.controllers.RemoveAuthorisationController.removeAuthorisation(arn: Arn)
 PUT           /agent/cancel-invitation/:invitationId                         @uk.gov.hmrc.agentclientrelationships.controllers.InvitationController.cancelInvitation(invitationId: String)
 
-POST          /itsa-post-signup/create-relationship/:nino                    @uk.gov.hmrc.agentclientrelationships.controllers.ItsaPostSignupController.itsaPostSignupCreateRelationship(nino: Nino)
+POST          /itsa-post-signup/create-relationship/:nino                    @uk.gov.hmrc.agentclientrelationships.controllers.ItsaPostSignupController.itsaPostSignupCreateRelationship(nino: NinoWithoutSuffix)
 
 POST          /invitations/trusts-enrolment-orchestrator/:urn/update         @uk.gov.hmrc.agentclientrelationships.controllers.InvitationController.replaceUrnWithUtr(urn: String)
 

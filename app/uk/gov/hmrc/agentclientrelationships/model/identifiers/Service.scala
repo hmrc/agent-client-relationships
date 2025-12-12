@@ -17,7 +17,6 @@
 package uk.gov.hmrc.agentclientrelationships.model.identifiers
 
 import play.api.libs.json.Format
-import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.domain.SimpleObjectReads
 import uk.gov.hmrc.domain.SimpleObjectWrites
 import uk.gov.hmrc.domain.TaxIdentifier
@@ -209,12 +208,12 @@ object ClientIdType {
 
 case object NinoType
 extends ClientIdType(
-  classOf[Nino],
+  classOf[NinoWithoutSuffix],
   "ni",
   "NINO",
-  Nino.apply
+  NinoWithoutSuffix.apply
 ) {
-  override def isValid(value: String): Boolean = Nino.isValid(value)
+  override def isValid(value: String): Boolean = NinoWithoutSuffix.isValid(value)
 }
 
 case object MtdItIdType

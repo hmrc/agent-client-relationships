@@ -22,7 +22,6 @@ import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import uk.gov.hmrc.agentclientrelationships.support.WireMockSupport
 import uk.gov.hmrc.agentclientrelationships.model.identifiers._
-import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.SessionKeys
 
@@ -42,7 +41,7 @@ trait AuthStub {
   def givenLoginClientIndAll(
     mtdItId: MtdItId,
     vrn: Vrn,
-    nino: Nino,
+    nino: NinoWithoutSuffix,
     cgtRef: CgtRef,
     pptRef: PptRef,
     withThisGgUserId: String = "12345-credId"
@@ -69,7 +68,7 @@ trait AuthStub {
   private def givenLoginClientIndAllJsonResponseBody(
     mtdItId: MtdItId,
     vrn: Vrn,
-    nino: Nino,
+    nino: NinoWithoutSuffix,
     cgtRef: CgtRef,
     pptRef: PptRef,
     withThisGgUserId: String
@@ -378,7 +377,7 @@ trait AuthStub {
   ): AuthStub = {
     val (service, key, value) =
       identifier match {
-        case Nino(v) => ("HMRC-PT", "NINO", v)
+        case NinoWithoutSuffix(v) => ("HMRC-PT", "NINO", v)
         case MtdItId(v) => ("HMRC-MTD-IT", "MTDITID", v)
         case Vrn(v) => ("HMRC-MTD-VAT", "VRN", v)
         case Utr(v) => ("HMRC-TERS-ORG", "SAUTR", v)
@@ -525,7 +524,7 @@ trait AuthStub {
 
   def givenAuthorisedAsClientWithNino[A](
     request: FakeRequest[A],
-    nino: Nino
+    nino: NinoWithoutSuffix
   ): FakeRequest[A] = {
     givenAuthorisedFor(
       Json.obj("retrieve" -> Json.arr("allEnrolments")).toString,
@@ -569,7 +568,7 @@ trait AuthStub {
   def givenAuthorisedItsaClientWithNino(
     request: FakeRequest[?],
     mtdItId: MtdItId,
-    nino: Nino
+    nino: NinoWithoutSuffix
   ): FakeRequest[?] = {
     givenAuthorisedFor(
       Json.obj("retrieve" -> Json.arr("allEnrolments", "nino")).toString,

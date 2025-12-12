@@ -29,6 +29,7 @@ import uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa._
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.pillar2.Pillar2Record
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ppt.PptSubscriptionDetails
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.vat.VatCustomerDetails
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.agentclientrelationships.util.RequestSupport.hc
 import uk.gov.hmrc.http.HttpReads.Implicits._
@@ -69,9 +70,9 @@ extends RequestAwareLogging {
   )
 
   def getItsaDesignatoryDetails(
-    nino: String
+    nino: NinoWithoutSuffix
   )(implicit rh: RequestHeader): Future[Either[ClientDetailsFailureResponse, ItsaDesignatoryDetails]] = {
-    val url = url"${appConfig.citizenDetailsBaseUrl}/citizen-details/$nino/designatory-details"
+    val url = url"${appConfig.citizenDetailsBaseUrl}/citizen-details/${nino.value}/designatory-details"
     httpClient
       .get(url)
       .execute[HttpResponse]
@@ -87,9 +88,9 @@ extends RequestAwareLogging {
   }
 
   def getItsaCitizenDetails(
-    nino: String
+    nino: NinoWithoutSuffix
   )(implicit rh: RequestHeader): Future[Either[ClientDetailsFailureResponse, CitizenDetails]] = httpClient
-    .get(url"${appConfig.citizenDetailsBaseUrl}/citizen-details/nino/$nino")
+    .get(url"${appConfig.citizenDetailsBaseUrl}/citizen-details/nino/${nino.value}")
     .execute[HttpResponse]
     .map { response =>
       response.status match {

@@ -19,22 +19,19 @@ package uk.gov.hmrc.agentclientrelationships.model
 import play.api.libs.functional.syntax._
 import play.api.libs.json.Format
 import play.api.libs.json.Json
-import play.api.libs.json.Reads
 import play.api.libs.json.__
-import uk.gov.hmrc.agentclientrelationships.model.transitional.StatusChangeEvent
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.ClientIdentifier.ClientId
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDIT
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDITSUPP
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.InvitationId
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
-import uk.gov.hmrc.crypto.json.JsonEncryption.stringEncrypterDecrypter
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDIT
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDITSUPP
 import uk.gov.hmrc.crypto.Decrypter
 import uk.gov.hmrc.crypto.Encrypter
+import uk.gov.hmrc.crypto.json.JsonEncryption.stringEncrypterDecrypter
 import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 
 import java.time.Instant
 import java.time.LocalDate
-import java.time.ZoneOffset
 
 case class Invitation(
   invitationId: String,

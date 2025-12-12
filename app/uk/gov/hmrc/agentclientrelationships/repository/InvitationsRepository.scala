@@ -27,22 +27,22 @@ import org.mongodb.scala.model.Updates.set
 import org.mongodb.scala.model._
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model._
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.ClientIdentifier.ClientId
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 import uk.gov.hmrc.agentclientrelationships.model.invitation.CancelInvitationResponse
 import uk.gov.hmrc.agentclientrelationships.model.invitation.CancelInvitationResponse._
 import uk.gov.hmrc.agentclientrelationships.repository.FieldKeys._
 import uk.gov.hmrc.agentclientrelationships.util.CryptoUtil.encryptedString
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.ClientIdentifier.ClientId
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 import uk.gov.hmrc.crypto.Decrypter
 import uk.gov.hmrc.crypto.Encrypter
-import uk.gov.hmrc.domain.Nino
+import uk.gov.hmrc.mdc.Mdc
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.Codecs
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
-import uk.gov.hmrc.mdc.Mdc
 
 import java.net.URLDecoder
 import java.time.Instant
@@ -337,7 +337,7 @@ with RequestAwareLogging {
   def updatePartialAuthToAcceptedStatus(
     arn: Arn,
     service: String,
-    nino: Nino,
+    nino: NinoWithoutSuffix,
     mtdItId: MtdItId
   ): Future[Boolean] = Mdc.preservingMdc {
     collection
@@ -495,9 +495,7 @@ with RequestAwareLogging {
 
   private def expandNinoSuffixes(clientId: String): Seq[String] = {
     clientId match {
-      case nino if Nino.isValid(nino) =>
-        val suffixless = Nino(nino.replaceAll(" ", "")).withoutSuffix
-        Seq(suffixless) ++ Nino.validSuffixes.map(suffix => suffixless + suffix)
+      case nino if NinoWithoutSuffix.isValid(nino) => NinoWithoutSuffix(nino).variations
       case clientId => Seq(clientId)
     }
   }

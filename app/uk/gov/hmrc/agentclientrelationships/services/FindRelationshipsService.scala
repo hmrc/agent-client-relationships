@@ -25,7 +25,6 @@ import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentclientrelationships.model.stride.ClientRelationship
 import uk.gov.hmrc.agentclientrelationships.support.Monitoring
 import uk.gov.hmrc.agentclientrelationships.model.identifiers._
-import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.domain.TaxIdentifier
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
@@ -45,7 +44,7 @@ extends Monitoring
 with RequestAwareLogging {
 
   def getItsaRelationshipForClient(
-    nino: Nino,
+    nino: NinoWithoutSuffix,
     service: Service
   )(implicit request: RequestHeader): Future[Option[ActiveRelationship]] =
     for {
@@ -57,7 +56,7 @@ with RequestAwareLogging {
     } yield relationships
 
   def getAllActiveItsaRelationshipForClient(
-    nino: Nino,
+    nino: NinoWithoutSuffix,
     activeOnly: Boolean
   )(implicit request: RequestHeader): Future[Either[RelationshipFailureResponse, Seq[ClientRelationship]]] =
     (

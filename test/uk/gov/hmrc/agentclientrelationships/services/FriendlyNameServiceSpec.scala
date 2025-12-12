@@ -27,12 +27,11 @@ import play.api.test.Helpers.defaultAwaitTimeout
 import uk.gov.hmrc.agentclientrelationships.connectors.EnrolmentStoreProxyConnector
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.Invitation
-import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdIt
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdItSupp
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.PersonalIncomeRecord
 import uk.gov.hmrc.agentclientrelationships.model.identifiers._
-import uk.gov.hmrc.domain.Nino
+import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 import uk.gov.hmrc.http.UpstreamErrorResponse
 
 import java.time.LocalDate
@@ -61,7 +60,7 @@ with BeforeAndAfterEach {
     arn = "testArn",
     service = MtdIt,
     clientId = MtdItId("ABCDEF123456789"),
-    suppliedClientId = Nino("AB123456A"),
+    suppliedClientId = NinoWithoutSuffix("AB123456A"),
     clientName = "test Name",
     agencyName = "AgentName",
     agencyEmail = "agent@email.com",

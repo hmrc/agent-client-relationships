@@ -49,9 +49,13 @@ import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDIT
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDITSUPP
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Vrn
-import uk.gov.hmrc.domain._
+import uk.gov.hmrc.domain.AgentCode
+import uk.gov.hmrc.domain.Generator
+import uk.gov.hmrc.domain.Nino
+import uk.gov.hmrc.domain.SaAgentReference
 import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
@@ -91,6 +95,8 @@ with ResettingMockitoSugar {
     )
   )
   val nino: Nino = testDataGenerator.nextNino
+  val testNino: NinoWithoutSuffix = NinoWithoutSuffix(nino.value)
+
   val defaultRecord: RelationshipCopyRecord = RelationshipCopyRecord(
     arn.value,
     mtdItEnrolmentKey,
@@ -514,7 +520,7 @@ with ResettingMockitoSugar {
       val auditData = new AuditData()
 
       mappingServiceUnavailable()
-      val check = relationshipsService.lookupCesaForOldRelationship(arn, nino)(request, auditData)
+      val check = relationshipsService.lookupCesaForOldRelationship(arn, NinoWithoutSuffix(nino.value))(request, auditData)
 
       an[UpstreamErrorResponse] should be thrownBy await(check)
       verifyEsRecordNotCreated()
@@ -626,14 +632,14 @@ with ResettingMockitoSugar {
   }
 
   private def cesaRelationshipDoesNotExist(): OngoingStubbing[Future[Seq[SaAgentReference]]] = {
-    when(hipConnector.getNinoFor(eqs(mtdItId))(any[RequestHeader]())).thenReturn(Future successful Some(nino))
-    when(des.getClientSaAgentSaReferences(eqs(nino))(any[RequestHeader]())).thenReturn(Future successful Seq())
+    when(hipConnector.getNinoFor(eqs(mtdItId))(any[RequestHeader]())).thenReturn(Future successful Some(NinoWithoutSuffix(nino.value)))
+    when(des.getClientSaAgentSaReferences(eqs(NinoWithoutSuffix(nino.value)))(any[RequestHeader]())).thenReturn(Future successful Seq())
     when(mapping.getSaAgentReferencesFor(eqs(arn))(any[RequestHeader]())).thenReturn(Future successful Seq())
   }
 
   private def mappingServiceUnavailable(): OngoingStubbing[Future[Seq[SaAgentReference]]] = {
-    when(hipConnector.getNinoFor(eqs(mtdItId))(any[RequestHeader]())).thenReturn(Future successful Some(nino))
-    when(des.getClientSaAgentSaReferences(eqs(nino))(any[RequestHeader]())).thenReturn(
+    when(hipConnector.getNinoFor(eqs(mtdItId))(any[RequestHeader]())).thenReturn(Future successful Some(NinoWithoutSuffix(nino.value)))
+    when(des.getClientSaAgentSaReferences(eqs(NinoWithoutSuffix(nino.value)))(any[RequestHeader]())).thenReturn(
       Future successful Seq(saAgentRef)
     )
     when(mapping.getSaAgentReferencesFor(eqs(arn))(any[RequestHeader]())).thenReturn(
@@ -646,12 +652,12 @@ with ResettingMockitoSugar {
     )
   }
 
-  private def ninoExists(): OngoingStubbing[Future[Option[Nino]]] = when(
+  private def ninoExists(): OngoingStubbing[Future[Option[NinoWithoutSuffix]]] = when(
     hipConnector.getNinoFor(eqs(mtdItId))(any[RequestHeader]())
-  ).thenReturn(Future successful Some(nino))
+  ).thenReturn(Future successful Some(testNino))
 
   private def partialAuthExists(service: String): OngoingStubbing[Future[Option[PartialAuthRelationship]]] = when(
-    partialAuthRepository.findActive(eqs(nino), eqs(arn))
+    partialAuthRepository.findActiveForAgent(eqs(testNino), eqs(arn))
   ).thenReturn(
     Future.successful(
       Some(
@@ -670,7 +676,7 @@ with ResettingMockitoSugar {
   private def partialAuthDeleted(service: String): OngoingStubbing[Future[Boolean]] = when(
     partialAuthRepository.deleteActivePartialAuth(
       eqs(service),
-      eqs(nino),
+      eqs(NinoWithoutSuffix(nino.value)),
       eqs(arn)
     )
   ).thenReturn(Future.successful(true))
@@ -679,18 +685,18 @@ with ResettingMockitoSugar {
     invitationsRepository.updatePartialAuthToAcceptedStatus(
       eqs(arn),
       eqs(service),
-      eqs(nino),
+      eqs(NinoWithoutSuffix(nino.value)),
       eqs(mtdItId)
     )
   ).thenReturn(Future.successful(true))
 
   private def partialAuthDoesNotExist(): OngoingStubbing[Future[Option[PartialAuthRelationship]]] = when(
-    partialAuthRepository.findActive(eqs(nino), eqs(arn))
+    partialAuthRepository.findActiveForAgent(eqs(testNino), eqs(arn))
   ).thenReturn(Future.successful(None))
 
   private def cesaRelationshipExists(): OngoingStubbing[Future[Seq[SaAgentReference]]] = {
-    when(hipConnector.getNinoFor(eqs(mtdItId))(any[RequestHeader]())).thenReturn(Future successful Some(nino))
-    when(des.getClientSaAgentSaReferences(eqs(nino))(any[RequestHeader]())).thenReturn(
+    when(hipConnector.getNinoFor(eqs(mtdItId))(any[RequestHeader]())).thenReturn(Future successful Some(testNino))
+    when(des.getClientSaAgentSaReferences(eqs(testNino))(any[RequestHeader]())).thenReturn(
       Future successful Seq(saAgentRef)
     )
     when(mapping.getSaAgentReferencesFor(eqs(arn))(any[RequestHeader]())).thenReturn(Future successful Seq(saAgentRef))
@@ -746,7 +752,7 @@ with ResettingMockitoSugar {
       any[String],
       eqs(arn.value),
       eqs(Some(mtdItId.value)),
-      eqs(nino.value),
+      eqs(testNino.value),
       any[Instant]
     )(any[RequestHeader](), any[CurrentUser])
   ).thenReturn(Future.successful(true))
@@ -780,7 +786,7 @@ with ResettingMockitoSugar {
     val auditDetails = auditData.getDetails
     auditDetails("saAgentRef") shouldBe saAgentRef.value
     auditDetails("cesaRelationship") shouldBe true
-    auditDetails("nino") shouldBe nino
+    auditDetails("nino") shouldBe testNino
     auditDetails
   }
 

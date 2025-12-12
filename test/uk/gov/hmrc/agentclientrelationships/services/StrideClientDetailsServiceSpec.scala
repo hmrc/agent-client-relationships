@@ -16,41 +16,41 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
+import play.api.mvc.RequestHeader
+import play.api.test.FakeRequest
 import play.api.test.Helpers.await
 import play.api.test.Helpers.defaultAwaitTimeout
 import uk.gov.hmrc.agentclientrelationships.mocks._
+import uk.gov.hmrc.agentclientrelationships.model.RelationshipFailureResponse.ErrorRetrievingAgentDetails
+import uk.gov.hmrc.agentclientrelationships.model.RelationshipFailureResponse.ErrorRetrievingRelationship
+import uk.gov.hmrc.agentclientrelationships.model.RelationshipFailureResponse.RelationshipNotFound
+import uk.gov.hmrc.agentclientrelationships.model.RelationshipFailureResponse.TaxIdentifierError
+import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ActiveMainAgent
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsNotFound
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsResponse
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsStrideResponse
-import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgencyDetails
-import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentDetailsDesResponse
-import uk.gov.hmrc.agentclientrelationships.model._
-import uk.gov.hmrc.agentclientrelationships.model.stride.RelationshipSource.AfrRelationshipRepo
-import uk.gov.hmrc.agentclientrelationships.model.stride.ClientRelationship
-import uk.gov.hmrc.agentclientrelationships.model.stride.InvitationWithAgentName
-import uk.gov.hmrc.agentclientrelationships.model.stride.IrvAgent
-import uk.gov.hmrc.agentclientrelationships.model.stride.IrvRelationships
-import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
-import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.KnownFactType.PostalCode
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service._
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.CbcId
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.CgtRef
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoType
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.PlrId
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.PptRef
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Vrn
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service._
-import uk.gov.hmrc.domain.Nino
-import play.api.mvc.RequestHeader
-import play.api.test.FakeRequest
-import uk.gov.hmrc.agentclientrelationships.model.RelationshipFailureResponse.ErrorRetrievingAgentDetails
-import uk.gov.hmrc.agentclientrelationships.model.RelationshipFailureResponse.ErrorRetrievingRelationship
-import uk.gov.hmrc.agentclientrelationships.model.RelationshipFailureResponse.RelationshipNotFound
-import uk.gov.hmrc.agentclientrelationships.model.RelationshipFailureResponse.TaxIdentifierError
-import uk.gov.hmrc.agentclientrelationships.model.clientDetails.KnownFactType.PostalCode
+import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgencyDetails
+import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentDetailsDesResponse
+import uk.gov.hmrc.agentclientrelationships.model.stride.ClientRelationship
+import uk.gov.hmrc.agentclientrelationships.model.stride.InvitationWithAgentName
+import uk.gov.hmrc.agentclientrelationships.model.stride.IrvAgent
+import uk.gov.hmrc.agentclientrelationships.model.stride.IrvRelationships
+import uk.gov.hmrc.agentclientrelationships.model.stride.RelationshipSource.AfrRelationshipRepo
+import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
+import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 
 import java.time.Instant
 import java.time.LocalDate
@@ -86,7 +86,7 @@ with MockValidationService {
   val testAgentEmail = "agent@email.com"
   val testOldInvitationId = "testOldInvitationId"
 
-  val testNino: Nino = Nino("AB123456A")
+  val testNino: NinoWithoutSuffix = NinoWithoutSuffix("AB123456A")
   val testMtdItId: MtdItId = MtdItId("XAIT0000111122")
 
   val testVrn: Vrn = Vrn("1234567890")

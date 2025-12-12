@@ -31,7 +31,7 @@ import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDITS
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCPIR
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Enrolment
-import uk.gov.hmrc.domain.Nino
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
@@ -145,7 +145,7 @@ with RequestAwareLogging {
           )
       case None =>
         hipConnector
-          .getMtdIdFor(Nino(invitation.clientId))
+          .getMtdIdFor(NinoWithoutSuffix(invitation.clientId))
           .flatMap {
             case Some(mtdItId) =>
               getArnForDelegatedEnrolmentKey(LocalEnrolmentKey(enrolmentKey(HMRCMTDIT, mtdItId.value))).flatMap {
@@ -168,7 +168,7 @@ with RequestAwareLogging {
     enrolment: Option[LocalEnrolmentKey]
   )(implicit request: RequestHeader): Future[Option[ExistingMainAgent]] =
     invitation.service match {
-      case HMRCMTDIT | HMRCMTDITSUPP if Nino.isValid(invitation.clientId) => findMainAgentForNino(invitation)
+      case HMRCMTDIT | HMRCMTDITSUPP if NinoWithoutSuffix.isValid(invitation.clientId) => findMainAgentForNino(invitation)
       case HMRCPIR =>
         agentFiRelationshipConnector
           .findIrvActiveRelationshipForClient(invitation.clientId)

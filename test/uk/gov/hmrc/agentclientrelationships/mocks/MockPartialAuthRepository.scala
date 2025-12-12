@@ -22,10 +22,10 @@ import org.mockito.ArgumentMatchers.{eq => eqs}
 import org.mockito.Mockito.when
 import org.mockito.stubbing.OngoingStubbing
 import uk.gov.hmrc.agentclientrelationships.model.PartialAuthRelationship
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
 import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
 import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
-import uk.gov.hmrc.domain.Nino
 
 import java.time.Instant
 import scala.concurrent.Future
@@ -42,7 +42,7 @@ trait MockPartialAuthRepository {
 
   def mockDeauthorisePartialAuth(
     service: String,
-    nino: Nino,
+    nino: NinoWithoutSuffix,
     arn: Arn
   )(response: Future[Boolean]): OngoingStubbing[Future[Boolean]] = when(
     mockPartialAuthRepository.deauthorise(
@@ -56,7 +56,7 @@ trait MockPartialAuthRepository {
   def mockCreatePartialAuth(
     arn: Arn,
     service: String,
-    nino: Nino
+    nino: NinoWithoutSuffix
   )(response: Future[Done] = Future.successful(Done)): OngoingStubbing[Future[Done]] = when(
     mockPartialAuthRepository.create(
       any[Instant],
