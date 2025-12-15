@@ -119,7 +119,7 @@ with RequestAwareLogging {
           .exists { identifier =>
             (identifier.value.replace(" ", ""), taxId.value.replace(" ", "")) match {
               case (credNino, expectedNino) if NinoWithoutSuffix.isValid(credNino) && NinoWithoutSuffix.isValid(expectedNino) =>
-                NinoWithoutSuffix(credNino).value == NinoWithoutSuffix(expectedNino).value
+                NinoWithoutSuffix(credNino) == NinoWithoutSuffix(expectedNino)
               case (credIdentifier, expectedIdentifier) => credIdentifier == expectedIdentifier
             }
           }
