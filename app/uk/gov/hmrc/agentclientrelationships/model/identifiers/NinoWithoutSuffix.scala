@@ -42,7 +42,7 @@ with SimpleName {
 
   override def equals(obj: Any): Boolean =
     obj match {
-      case that: NinoWithoutSuffix => this.value == that.value
+      case that: NinoWithoutSuffix => this.suffixlessValue == that.suffixlessValue
       case _ => false
     }
 
