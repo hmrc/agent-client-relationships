@@ -28,7 +28,7 @@
       "type": "API Call",
       "service": "citizen-details",
       "method": "GET",
-      "path": "/citizen-details/nino/:nino",
+      "path": "/citizen-details/nino-no-suffix/:nino",
       "description": "Get the client's name from Citizen Details"
     }
   ],

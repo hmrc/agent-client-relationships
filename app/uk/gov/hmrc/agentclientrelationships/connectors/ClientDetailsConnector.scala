@@ -72,7 +72,8 @@ extends RequestAwareLogging {
   def getItsaDesignatoryDetails(
     nino: NinoWithoutSuffix
   )(implicit rh: RequestHeader): Future[Either[ClientDetailsFailureResponse, ItsaDesignatoryDetails]] = {
-    val url = url"${appConfig.citizenDetailsBaseUrl}/citizen-details/${nino.suffixlessValue}/designatory-details"
+    // Designatory details API requires a NINO with suffix but does not use it when calling backend systems
+    val url = url"${appConfig.citizenDetailsBaseUrl}/citizen-details/${nino.anySuffixValue}/designatory-details"
     httpClient
       .get(url)
       .execute[HttpResponse]
@@ -90,7 +91,7 @@ extends RequestAwareLogging {
   def getItsaCitizenDetails(
     nino: NinoWithoutSuffix
   )(implicit rh: RequestHeader): Future[Either[ClientDetailsFailureResponse, CitizenDetails]] = httpClient
-    .get(url"${appConfig.citizenDetailsBaseUrl}/citizen-details/nino/${nino.suffixlessValue}")
+    .get(url"${appConfig.citizenDetailsBaseUrl}/citizen-details/nino-no-suffix/${nino.suffixlessValue}")
     .execute[HttpResponse]
     .map { response =>
       response.status match {

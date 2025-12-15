@@ -23,7 +23,7 @@ import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
 trait ClientDetailsStub {
 
   def givenItsaDesignatoryDetailsExists(nino: NinoWithoutSuffix): StubMapping = stubFor(
-    get(urlEqualTo(s"/citizen-details/${nino.suffixlessValue}/designatory-details"))
+    get(urlEqualTo(s"/citizen-details/${nino.anySuffixValue}/designatory-details"))
       .willReturn(
         aResponse()
           .withBody(
@@ -44,12 +44,12 @@ trait ClientDetailsStub {
     nino: NinoWithoutSuffix,
     status: Int
   ): StubMapping = stubFor(
-    get(urlEqualTo(s"/citizen-details/${nino.suffixlessValue}/designatory-details"))
+    get(urlEqualTo(s"/citizen-details/${nino.anySuffixValue}/designatory-details"))
       .willReturn(aResponse().withStatus(status))
   )
 
   def givenItsaCitizenDetailsExists(nino: NinoWithoutSuffix): StubMapping = stubFor(
-    get(urlEqualTo(s"/citizen-details/nino/${nino.suffixlessValue}"))
+    get(urlEqualTo(s"/citizen-details/nino-no-suffix/${nino.suffixlessValue}"))
       .willReturn(
         aResponse()
           .withBody(s"""
@@ -73,7 +73,7 @@ trait ClientDetailsStub {
     nino: NinoWithoutSuffix,
     status: Int
   ): StubMapping = stubFor(
-    get(urlEqualTo(s"/citizen-details/nino/${nino.suffixlessValue}"))
+    get(urlEqualTo(s"/citizen-details/nino-no-suffix/${nino.suffixlessValue}"))
       .willReturn(aResponse().withStatus(status))
   )
 
