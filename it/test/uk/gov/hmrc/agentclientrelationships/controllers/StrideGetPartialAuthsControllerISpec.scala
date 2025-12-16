@@ -120,7 +120,7 @@ with CitizenDetailsStub {
       result.status shouldBe BAD_GATEWAY
       result.json shouldBe Json.obj(
         "statusCode" -> 502,
-        "message" -> s"GET of 'http://localhost:${wireMockPort.toString}/citizen-details/nino/AB123456' returned 503. Response body: ''"
+        "message" -> s"GET of 'http://localhost:${wireMockPort.toString}/citizen-details/nino-no-suffix/AB123456' returned 503. Response body: ''"
       )
     }
 

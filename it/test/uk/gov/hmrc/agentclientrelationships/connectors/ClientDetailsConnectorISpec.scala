@@ -80,6 +80,13 @@ with HipStub {
       await(connector.getItsaDesignatoryDetails(testNino)) shouldBe Right(ItsaDesignatoryDetails(Some("AA1 1AA"), Some(greatBritain)))
     }
 
+    "return designatory details when receiving a 200 status after calling using a suffixless nino" in {
+      val testNino: NinoWithoutSuffix = NinoWithoutSuffix("AA000001")
+      givenAuditConnector()
+      givenItsaDesignatoryDetailsExists(testNino)
+      await(connector.getItsaDesignatoryDetails(testNino)) shouldBe Right(ItsaDesignatoryDetails(Some("AA1 1AA"), Some(greatBritain)))
+    }
+
     "return a ClientDetailsNotFound error when receiving a 404 status" in {
       givenAuditConnector()
       givenItsaDesignatoryDetailsError(testNino, NOT_FOUND)
