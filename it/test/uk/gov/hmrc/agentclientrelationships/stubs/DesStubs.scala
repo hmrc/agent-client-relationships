@@ -37,7 +37,7 @@ trait DesStubs {
     nino: NinoWithoutSuffix,
     agentId: String
   ) = stubFor(
-    get(urlEqualTo(s"/registration/relationship/nino/${nino.suffixlessValue}")).willReturn(
+    get(urlEqualTo(s"/registration/relationship/nino/${nino.anySuffixValue}")).willReturn(
       aResponse()
         .withStatus(200)
         .withBody(s"""{"agents":[$someCeasedAgent,{"hasAgent":true,"agentId":"$agentId"}, $someAlienAgent]}""")
@@ -48,7 +48,7 @@ trait DesStubs {
     nino: NinoWithoutSuffix,
     agentIds: Seq[String]
   ) = stubFor(
-    get(urlEqualTo(s"/registration/relationship/nino/${nino.suffixlessValue}")).willReturn(
+    get(urlEqualTo(s"/registration/relationship/nino/${nino.anySuffixValue}")).willReturn(
       aResponse()
         .withStatus(200)
         .withBody(s"""{"agents":[${agentIds
@@ -61,7 +61,7 @@ trait DesStubs {
     nino: NinoWithoutSuffix,
     agentId: String
   ) = stubFor(
-    get(urlEqualTo(s"/registration/relationship/nino/${nino.suffixlessValue}")).willReturn(
+    get(urlEqualTo(s"/registration/relationship/nino/${nino.anySuffixValue}")).willReturn(
       aResponse()
         .withStatus(200)
         .withBody(s"""{"agents":[{"hasAgent":true,"agentId":"$agentId","agentCeasedDate":"2010-01-01"}]}""")
@@ -72,7 +72,7 @@ trait DesStubs {
     nino: NinoWithoutSuffix,
     agentIds: Seq[String]
   ) = stubFor(
-    get(urlEqualTo(s"/registration/relationship/nino/${nino.suffixlessValue}")).willReturn(
+    get(urlEqualTo(s"/registration/relationship/nino/${nino.anySuffixValue}")).willReturn(
       aResponse()
         .withStatus(200)
         .withBody(s"""{"agents":[${agentIds
@@ -82,21 +82,21 @@ trait DesStubs {
   )
 
   def givenClientHasNoActiveRelationshipWithAgentInCESA(nino: NinoWithoutSuffix) = stubFor(
-    get(urlEqualTo(s"/registration/relationship/nino/${nino.suffixlessValue}"))
+    get(urlEqualTo(s"/registration/relationship/nino/${nino.anySuffixValue}"))
       .willReturn(aResponse().withStatus(200).withBody(s"""{"agents":[$someCeasedAgent, $someAlienAgent]}"""))
   )
 
   def givenClientHasNoRelationshipWithAnyAgentInCESA(nino: NinoWithoutSuffix) = stubFor(
-    get(urlEqualTo(s"/registration/relationship/nino/${nino.suffixlessValue}"))
+    get(urlEqualTo(s"/registration/relationship/nino/${nino.anySuffixValue}"))
       .willReturn(aResponse().withStatus(200).withBody(s"""{}"""))
   )
 
   def givenClientIsUnknownInCESAFor(nino: NinoWithoutSuffix) = stubFor(
-    get(urlEqualTo(s"/registration/relationship/nino/${nino.suffixlessValue}")).willReturn(aResponse().withStatus(404))
+    get(urlEqualTo(s"/registration/relationship/nino/${nino.anySuffixValue}")).willReturn(aResponse().withStatus(404))
   )
 
   def givenNinoIsInvalid(nino: NinoWithoutSuffix): StubMapping = stubFor(
-    get(urlMatching(s"/registration/relationship/nino/${nino.suffixlessValue}")).willReturn(aResponse().withStatus(400))
+    get(urlMatching(s"/registration/relationship/nino/${nino.anySuffixValue}")).willReturn(aResponse().withStatus(400))
   )
 
 }
