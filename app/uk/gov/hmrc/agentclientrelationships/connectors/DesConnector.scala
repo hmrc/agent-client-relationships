@@ -56,7 +56,7 @@ extends RequestAwareLogging {
   private val CorrelationId = "CorrelationId"
 
   def getClientSaAgentSaReferences(nino: NinoWithoutSuffix)(implicit request: RequestHeader): Future[Seq[SaAgentReference]] = {
-    val url = url"${appConfig.desUrl}/registration/relationship/nino/${nino.suffixlessValue}"
+    val url = url"${appConfig.desUrl}/registration/relationship/nino/${nino.anySuffixValue}" // TODO review CESA api behaviour around suffixless NINOs
 
     getWithDesHeaders(url).map { response =>
       response.status match {
