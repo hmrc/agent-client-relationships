@@ -1452,6 +1452,39 @@ with TestData {
       agent2AuthorisationEvents.exists(x => x.service == Service.MtdIt.id && x.eventType == Accepted) shouldBe true
     }
 
+    "active authorisations for ITSA Main and Supporting when client has NINO but no HMRC-MTD-IT enrolment" in {
+      givenAuthorisedAsClientWithNino(fakeRequest, nino)
+      givenAuditConnector()
+
+      givenMtdItIdIsKnownFor(nino, mtdItId) // <-- verify helper exists in HipStub
+
+      getItsaMainAndSupportingActiveRelationshipsViaClient(
+        taxIdentifier = mtdItId,
+        arnMain = arn,
+        arnSup = arn2,
+        activeOnly = false
+      )
+
+      givenAgentRecordFound(arn, testAgentRecord1)
+      givenAgentRecordFound(arn2, testAgentRecord2)
+
+      val result = doGetRequest(testEndpoint)
+      result.status shouldBe 200
+
+      val clientTaxAgentsData = result.json.as[ClientTaxAgentsData]
+
+      clientTaxAgentsData.agentsInvitations.agentsInvitations.size shouldBe 0
+
+      clientTaxAgentsData.agentsAuthorisations.agentsAuthorisations.size shouldBe 2
+
+      val agent1Authorisations = clientTaxAgentsData.agentsAuthorisations.agentsAuthorisations.find(_.arn == arn.value).get.authorisations
+      agent1Authorisations.size shouldBe 1
+      agent1Authorisations.exists(_.service == Service.MtdIt.id) shouldBe true
+
+      val agent2Authorisations = clientTaxAgentsData.agentsAuthorisations.agentsAuthorisations.find(_.arn == arn2.value).get.authorisations
+      agent2Authorisations.size shouldBe 1
+      agent2Authorisations.exists(_.service == Service.MtdItSupp.id) shouldBe true
+    }
   }
 
   s"GET $testEndpoint " should {
