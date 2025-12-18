@@ -441,30 +441,4 @@ class ClientTaxAgentsDataService @Inject() (
     lefts.headOption.toLeft(rights)
   }
 
-  private def resolveMtditidIfMissing(
-    auth: EnrolmentsWithNino
-  )(implicit
-    rh: RequestHeader
-  ): EitherT[
-    Future,
-    RelationshipFailureResponse,
-    Option[MtdItId]
-  ] = {
-
-    val hasMtdItEnrolment = auth.getIdentifierKeyMap(appConfig.supportedServices)
-      .values
-      .exists(_.isInstanceOf[MtdItId])
-
-    if (hasMtdItEnrolment)
-      EitherT.rightT(None)
-    else
-      auth.getNino match {
-        case Some(nino) =>
-          EitherT.right(
-            hipConnector.getMtdIdFor(NinoWithoutSuffix(nino))
-          )
-        case None => EitherT.rightT(None)
-      }
-  }
-
 }
