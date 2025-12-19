@@ -21,8 +21,10 @@ import cats.implicits._
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.AgentFiRelationshipConnector
+import uk.gov.hmrc.agentclientrelationships.connectors.HipConnector
 import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentDetailsDesResponse
@@ -46,7 +48,8 @@ class ClientTaxAgentsDataService @Inject() (
   invitationLinkService: InvitationLinkService,
   agentFiRelationshipConnector: AgentFiRelationshipConnector,
   findRelationshipsService: FindRelationshipsService,
-  partialAuthRepository: PartialAuthRepository
+  partialAuthRepository: PartialAuthRepository,
+  hipConnector: HipConnector
 )(implicit
   ec: ExecutionContext,
   appConfig: AppConfig
@@ -60,11 +63,34 @@ class ClientTaxAgentsDataService @Inject() (
     val clientIds: Seq[String] = authResponse.getIdentifierMap(supportedServices).values.toSeq.map(_.value)
     val identifiers: Map[String, TaxIdentifier] = authResponse.getIdentifierKeyMap(supportedServices)
     val nino: Option[String] = authResponse.getNino
-    val allClientIds: Seq[String] = nino.fold(clientIds)(n => clientIds ++ Seq(n))
+    val hasMtdItId: Boolean = identifiers.values.exists(_.isInstanceOf[MtdItId])
     (
       for {
+        derivedMtdItIdOpt <- EitherT.liftF[
+          Future,
+          RelationshipFailureResponse,
+          Option[MtdItId]
+        ](
+          if (!hasMtdItId)
+            nino
+              .map(n => hipConnector.getMtdIdFor(NinoWithoutSuffix(n)))
+              .getOrElse(Future.successful(None))
+          else
+            Future.successful(None)
+        )
+        enrichedIdentifiers: Map[String, TaxIdentifier] =
+          derivedMtdItIdOpt match {
+            case Some(mtdItId) => identifiers + (Service.MtdIt.id -> mtdItId)
+            case None => identifiers
+          }
+        enrichedClientIds: Seq[String] =
+          derivedMtdItIdOpt match {
+            case Some(mtdItId) => clientIds :+ mtdItId.value
+            case None => clientIds
+          }
+        allClientIds: Seq[String] = nino.fold(enrichedClientIds)(n => enrichedClientIds :+ n)
         allInvitations <- getAllInvitationsForAllServices(allClientIds)
-        allAuthorisations <- getAllAuthorisationsForAllServices(identifiers)
+        allAuthorisations <- getAllAuthorisationsForAllServices(enrichedIdentifiers)
         activePartialAuth <- getActivePartialAuth(nino)
         allAuth = allAuthorisations ++ activePartialAuth
         agentsAuthorisations <- getAgentDateForRelationships(allAuth)

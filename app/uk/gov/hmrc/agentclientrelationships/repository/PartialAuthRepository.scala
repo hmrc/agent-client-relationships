@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 HM Revenue & Customs
+ * Copyright 2025 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,6 @@
 
 package uk.gov.hmrc.agentclientrelationships.repository
 
-import com.mongodb.MongoWriteException
-import com.mongodb.WriteError
 import org.apache.pekko.Done
 import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.Filters.and
