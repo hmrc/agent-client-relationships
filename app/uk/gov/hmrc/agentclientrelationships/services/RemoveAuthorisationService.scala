@@ -53,6 +53,12 @@ class RemoveAuthorisationService @Inject() (
 )(implicit ec: ExecutionContext)
 extends RequestAwareLogging {
 
+  sealed trait PartialAuthDeauthResult
+  case object PartialAuthDeauthorised
+  extends PartialAuthDeauthResult
+  case object PartialAuthNotFound
+  extends PartialAuthDeauthResult
+
   def validateRequest(
     serviceStr: String,
     clientIdStr: String
@@ -84,7 +90,7 @@ extends RequestAwareLogging {
     arn: Arn,
     clientId: ClientId,
     service: Service
-  ): Future[Boolean] =
+  ): Future[PartialAuthDeauthResult] =
     clientId.typeId match {
       case NinoType.id =>
         partialAuthRepository.deauthorise(
@@ -92,8 +98,11 @@ extends RequestAwareLogging {
           NinoWithoutSuffix(clientId.value),
           arn,
           Instant.now
-        )
-      case _ => Future.successful(false)
+        ).map {
+          case true => PartialAuthDeauthorised
+          case false => PartialAuthNotFound
+        }
+      case _ => Future.successful(PartialAuthNotFound)
     }
 
   def replaceEnrolmentKeyForItsa(

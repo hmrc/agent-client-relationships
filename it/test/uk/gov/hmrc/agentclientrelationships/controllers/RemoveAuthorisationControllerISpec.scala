@@ -408,13 +408,16 @@ with TestData {
       )
     }
 
-    "return None when PartialAuth do not exists in PartialAuth Repo" in new StubsForThisScenario {
+    "return 404 RELATIONSHIP_NOT_FOUND when PartialAuth does not exist in PartialAuth Repo" in new StubsForThisScenario {
       val result: HttpResponse = doAgentPostRequest(
         requestPath,
         Json.toJson(RemoveAuthorisationRequest(nino.value, MtdIt.id)).toString()
       )
 
-      result.status >= 400 && result.status < 600
+      result.status shouldBe 404
+      result.json shouldBe toJson(
+        ErrorBody("RELATIONSHIP_NOT_FOUND", "The specified relationship was not found.")
+      )
 
       val partialAuthInvitations: Option[PartialAuthRelationship] =
         partialAuthRepository

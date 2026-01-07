@@ -156,8 +156,8 @@ with AuthActions {
             validRequest.suppliedClientId,
             validRequest.service
           )
-          .map { result =>
-            if (result) {
+          .map {
+            case deauthResult @ deauthorisationService.PartialAuthDeauthorised =>
               val userType = deleteService.determineUserTypeFromAG(currentUser.affinityGroup).getOrElse(endedByHMRC)
               invitationService.deauthoriseInvitation(
                 arn,
@@ -169,10 +169,8 @@ with AuthActions {
                 enrolmentKey.service,
                 enrolmentKey.oneIdentifier().value
               )
-              Right(result)
-            }
-            else
-              Left(RelationshipDeleteFailed("Remove PartialAuth failed."))
+              Right(deauthResult == deauthorisationService.PartialAuthDeauthorised)
+            case deauthorisationService.PartialAuthNotFound => Left(RelationshipNotFound)
           }
       case _ => deleteRelationship(arn, enrolmentKey) // Handles invitation deauth on its own
     }
