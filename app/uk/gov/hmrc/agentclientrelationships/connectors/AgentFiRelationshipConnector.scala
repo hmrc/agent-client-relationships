@@ -34,7 +34,6 @@ import uk.gov.hmrc.http.HttpResponse
 import uk.gov.hmrc.http.StringContextOps
 import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.http.client.HttpClientV2
-import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 import uk.gov.hmrc.http.HttpReads.Implicits.readRaw
 
 import java.net.URL
@@ -47,8 +46,7 @@ import scala.concurrent.Future
 @Singleton
 class AgentFiRelationshipConnector @Inject() (
   appConfig: AppConfig,
-  httpClient: HttpClientV2,
-  val metrics: Metrics
+  httpClient: HttpClientV2
 )(implicit val ec: ExecutionContext) {
 
   private def afiRelationshipUrl(

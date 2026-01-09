@@ -29,7 +29,6 @@ import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 import uk.gov.hmrc.agentclientrelationships.support.WireMockSupport
 import uk.gov.hmrc.domain.AgentCode
 import uk.gov.hmrc.http.client.HttpClientV2
-import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import scala.concurrent.ExecutionContext
 
@@ -64,7 +63,7 @@ with UsersGroupsSearchStubs {
 
   implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
 
-  val connector = new UsersGroupsSearchConnector(httpClient, app.injector.instanceOf[AppConfig])(app.injector.instanceOf[Metrics], ec)
+  val connector = new UsersGroupsSearchConnector(httpClient, app.injector.instanceOf[AppConfig])(ec)
 
   "UsersGroupsSearchConnector" should {
 

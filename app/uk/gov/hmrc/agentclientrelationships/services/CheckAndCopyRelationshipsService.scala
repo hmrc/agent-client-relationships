@@ -34,12 +34,10 @@ import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.SaRef
 import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _, _}
-import uk.gov.hmrc.agentclientrelationships.support.Monitoring
 import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.auth.core.AffinityGroup.Agent
 import uk.gov.hmrc.domain.SaAgentReference
-import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -114,11 +112,9 @@ class CheckAndCopyRelationshipsService @Inject() (
   invitationsRepository: InvitationsRepository,
   itsaDeauthAndCleanupService: ItsaDeauthAndCleanupService,
   val auditService: AuditService,
-  val metrics: Metrics,
   val appConfig: AppConfig
 )(implicit ec: ExecutionContext)
-extends Monitoring
-with RequestAwareLogging {
+extends RequestAwareLogging {
 
   private val copyMtdItRelationshipFlag = appConfig.copyMtdItRelationshipFlag
 
@@ -197,10 +193,8 @@ with RequestAwareLogging {
                             ni.value
                           )
                         )
-                      _ = mark("Count-CopyRelationship-ITSA-FoundAndCopied")
                     } yield FoundAndCopied
                   case None =>
-                    mark("Count-CopyRelationship-ITSA-FoundButLockedCouldNotCopy")
                     logger.warn(s"FoundButLockedCouldNotCopy- unable to copy relationship for ITSA")
                     Future.successful(FoundButLockedCouldNotCopy)
                 }.recover { case NonFatal(ex) =>
@@ -208,7 +202,6 @@ with RequestAwareLogging {
                     s"Failed to copy CESA relationship for ${arn.value}, ${mtdItId.value} (${mtdItId.getClass.getName})",
                     ex
                   )
-                  mark("Count-CopyRelationship-ITSA-FoundAndFailedToCopy")
                   FoundAndFailedToCopy
                 }
               else

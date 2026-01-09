@@ -28,7 +28,6 @@ import uk.gov.hmrc.agentclientrelationships.connectors._
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
 import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _, _}
-import uk.gov.hmrc.agentclientrelationships.support.Monitoring
 import uk.gov.hmrc.agentclientrelationships.support.NoRequest
 import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
 import uk.gov.hmrc.agentclientrelationships.util.RequestSupport._
@@ -38,7 +37,6 @@ import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository.end
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository.endedByHMRC
 import uk.gov.hmrc.auth.core.AffinityGroup
 import uk.gov.hmrc.http.UpstreamErrorResponse
-import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import java.time.Instant
 import java.time.ZoneOffset
@@ -57,12 +55,10 @@ class DeleteRelationshipsService @Inject() (
   lockService: MongoLockService,
   checkService: CheckRelationshipsService,
   auditService: AuditService,
-  val metrics: Metrics,
   invitationService: InvitationService,
   appConfig: AppConfig
 )(implicit ec: ExecutionContext)
-extends Monitoring
-with Logging {
+extends Logging {
 
   private val recoveryTimeout: Int = appConfig.recoveryTimeout
 

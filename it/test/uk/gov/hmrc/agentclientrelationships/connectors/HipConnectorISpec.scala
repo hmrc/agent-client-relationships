@@ -47,7 +47,6 @@ import uk.gov.hmrc.agentclientrelationships.support.WireMockSupport
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.http.client.HttpClientV2
-import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import java.time.LocalDate
 import scala.concurrent.ExecutionContext
@@ -63,7 +62,6 @@ with DataStreamStub {
   override implicit lazy val app: Application = appBuilder.build()
 
   val httpClient: HttpClientV2 = app.injector.instanceOf[HttpClientV2]
-  val metrics: Metrics = app.injector.instanceOf[Metrics]
   val agentCacheProvider: AgentCacheProvider = app.injector.instanceOf[AgentCacheProvider]
   val hipHeaders: HipHeaders = app.injector.instanceOf[HipHeaders]
   implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
@@ -97,7 +95,7 @@ with DataStreamStub {
       agentCacheProvider,
       hipHeaders,
       appConfig
-    )(metrics, ec)
+    )(ec)
 
   val mtdItId: MtdItId = MtdItId("ABCDEF123456789")
   val vrn: Vrn = Vrn("101747641")

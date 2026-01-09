@@ -23,13 +23,11 @@ import play.api.http.Status
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.util.RequestSupport.hc
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
-import uk.gov.hmrc.domain.AgentCode
 import uk.gov.hmrc.domain.SaAgentReference
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.HttpResponse
 import uk.gov.hmrc.http.StringContextOps
 import uk.gov.hmrc.http.client.HttpClientV2
-import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -49,26 +47,11 @@ object SaMappings {
 
 }
 
-case class AgentCodeMappings(mappings: Seq[AgentCodeMapping])
-
-case class AgentCodeMapping(
-  arn: Arn,
-  agentCode: AgentCode
-)
-
-object AgentCodeMappings {
-
-  implicit val mappingReads: Reads[AgentCodeMapping] = Json.reads[AgentCodeMapping]
-  implicit val reads: Reads[AgentCodeMappings] = Json.reads[AgentCodeMappings]
-
-}
-
 @Singleton
 class MappingConnector @Inject() (
   httpClient: HttpClientV2,
   appConfig: AppConfig
 )(implicit
-  val metrics: Metrics,
   val ec: ExecutionContext
 )
 extends RequestAwareLogging {

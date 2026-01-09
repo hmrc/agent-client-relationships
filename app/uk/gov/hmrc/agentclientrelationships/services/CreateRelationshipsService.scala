@@ -26,13 +26,11 @@ import uk.gov.hmrc.agentclientrelationships.connectors._
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
 import uk.gov.hmrc.agentclientrelationships.repository._
-import uk.gov.hmrc.agentclientrelationships.support.Monitoring
 import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.agentclientrelationships.util.RequestSupport._
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
-import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -49,11 +47,9 @@ class CreateRelationshipsService @Inject() (
   auditService: AuditService,
   deleteRecordRepository: DeleteRecordRepository,
   agentUserService: AgentUserService,
-  agentUserClientDetailsConnector: AgentUserClientDetailsConnector,
-  val metrics: Metrics
+  agentUserClientDetailsConnector: AgentUserClientDetailsConnector
 )(implicit ec: ExecutionContext)
-extends Monitoring
-with RequestAwareLogging {
+extends RequestAwareLogging {
 
   // noinspection ScalaStyle
   def createRelationship(

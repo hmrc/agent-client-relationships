@@ -23,11 +23,9 @@ import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors._
 import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentclientrelationships.model.stride.ClientRelationship
-import uk.gov.hmrc.agentclientrelationships.support.Monitoring
 import uk.gov.hmrc.agentclientrelationships.model.identifiers._
 import uk.gov.hmrc.domain.TaxIdentifier
 import play.api.mvc.RequestHeader
-import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -37,11 +35,9 @@ import scala.concurrent.Future
 @Singleton
 class FindRelationshipsService @Inject() (
   hipConnector: HipConnector,
-  appConfig: AppConfig,
-  val metrics: Metrics
+  appConfig: AppConfig
 )(implicit executionContext: ExecutionContext)
-extends Monitoring
-with RequestAwareLogging {
+extends RequestAwareLogging {
 
   def getItsaRelationshipForClient(
     nino: NinoWithoutSuffix,

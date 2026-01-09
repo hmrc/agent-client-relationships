@@ -49,7 +49,6 @@ import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 import uk.gov.hmrc.auth.core.retrieve.Credentials
 import uk.gov.hmrc.domain._
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
-import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import java.time.Instant
 import java.time.LocalDateTime
@@ -694,7 +693,6 @@ extends UnitSpec {
     val es: EnrolmentStoreProxyConnector = mock[EnrolmentStoreProxyConnector]
     val auditService: AuditService = mock[AuditService]
     val checkService: CheckRelationshipsService = mock[CheckRelationshipsService]
-    val metrics: Metrics = mock[Metrics]
     val hipConnector: HipConnector = mock[HipConnector]
     val aucdConnector: AgentUserClientDetailsConnector = mock[AgentUserClientDetailsConnector]
     val invitationService: InvitationService = mock[InvitationService]
@@ -725,7 +723,6 @@ extends UnitSpec {
         lockService,
         checkService,
         auditService,
-        metrics,
         invitationService,
         appConfig
       )(ec)

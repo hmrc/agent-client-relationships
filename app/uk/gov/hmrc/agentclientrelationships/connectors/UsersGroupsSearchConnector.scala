@@ -16,8 +16,6 @@
 
 package uk.gov.hmrc.agentclientrelationships.connectors
 
-import uk.gov.hmrc.play.bootstrap.metrics.Metrics
-
 import javax.inject.Inject
 import javax.inject.Singleton
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
@@ -69,7 +67,6 @@ class UsersGroupsSearchConnector @Inject() (
   httpClient: HttpClientV2,
   appConfig: AppConfig
 )(implicit
-  val metrics: Metrics,
   val ec: ExecutionContext
 )
 extends HttpErrorFunctions
