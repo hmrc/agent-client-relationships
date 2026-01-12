@@ -17,7 +17,6 @@
 package uk.gov.hmrc.agentclientrelationships.services
 
 import org.apache.pekko.Done
-import play.api.Logging
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys._
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
@@ -35,6 +34,7 @@ import uk.gov.hmrc.agentclientrelationships.model.identifiers._
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository.endedByAgent
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository.endedByClient
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository.endedByHMRC
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.auth.core.AffinityGroup
 import uk.gov.hmrc.http.UpstreamErrorResponse
 
@@ -58,7 +58,7 @@ class DeleteRelationshipsService @Inject() (
   invitationService: InvitationService,
   appConfig: AppConfig
 )(implicit ec: ExecutionContext)
-extends Logging {
+extends RequestAwareLogging {
 
   private val recoveryTimeout: Int = appConfig.recoveryTimeout
 
@@ -206,10 +206,7 @@ extends Logging {
 
   def createDeleteRecord(record: DeleteRecord): Future[Done] = deleteRecordRepository
     .create(record)
-    .recoverWith { case ex =>
-      logger.warn(s"[DeleteRelationshipsService] Inserting delete record into mongo failed for ${record.arn}, ${record.enrolmentKey}: ${ex.getMessage}")
-      Future.failed(new Exception("RELATIONSHIP_DELETE_FAILED_DB"))
-    }
+    .recoverWith { case ex => Future.failed(new Exception("RELATIONSHIP_DELETE_FAILED_DB")) }
 
   def removeDeleteRecord(
     arn: Arn,
@@ -218,7 +215,7 @@ extends Logging {
     .remove(arn, enrolmentKey)
     .map(_ > 0)
     .recoverWith { case NonFatal(ex) =>
-      logger.warn(s"[DeleteRelationshipsService] Removing delete record from mongo failed for ${arn.value}, $enrolmentKey : ${ex.getMessage}")
+      logger.warn(s"[DeleteRelationshipsService] Removing delete record from mongo failed for ${arn.value}, $enrolmentKey : ${ex.getMessage}")(NoRequest)
       Future.successful(false)
     }
 
@@ -364,13 +361,6 @@ extends Logging {
       enrolmentKey,
       endedBy
     )
-    .map(success =>
-      if (success)
-        Done
-      else {
-        logger.warn("setRelationshipEnded failed")
-        Done
-      }
-    )
+    .map(_ => Done)
 
 }

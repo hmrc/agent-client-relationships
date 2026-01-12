@@ -94,18 +94,11 @@ extends CheckAndCopyResult {
   override val grantAccess = false
 }
 
-case object VrnNotFoundInEtmp
-extends CheckAndCopyResult {
-  override val grantAccess = true
-}
-
 @Singleton
 class CheckAndCopyRelationshipsService @Inject() (
-  es: EnrolmentStoreProxyConnector,
   hipConnector: HipConnector,
   des: DesConnector,
   mapping: MappingConnector,
-  ugs: UsersGroupsSearchConnector,
   relationshipCopyRepository: RelationshipCopyRecordRepository,
   createRelationshipsService: CreateRelationshipsService,
   partialAuthRepo: PartialAuthRepository,

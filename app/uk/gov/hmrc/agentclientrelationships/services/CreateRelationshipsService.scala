@@ -214,12 +214,12 @@ extends RequestAwareLogging {
                     )
                     deleteRecordRepository
                       .create(deleteRecord)
-                      .recover { case NonFatal(ex) =>
+                      .recover { case ex =>
                         logger.warn(
                           s"[CreateRelationshipsService] Inserting delete record into mongo failed for ${newArn.value}, ${enrolmentKey.tag}",
                           ex
                         )
-                        false
+                        Done
                       }
                 }
               _ <- es.deallocateEnrolmentFromAgent(groupId, enrolmentKey)

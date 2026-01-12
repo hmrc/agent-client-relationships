@@ -401,7 +401,7 @@ with RequestAwareLogging {
         )
         .getOrElse(Filters.exists(statusKey)),
       clientName
-        .map(name => equal(clientNameKey, encryptedString(URLDecoder.decode(name))))
+        .map(name => equal(clientNameKey, encryptedString(URLDecoder.decode(name, "UTF-8"))))
         .getOrElse(Filters.exists(clientNameKey))
     )
   )

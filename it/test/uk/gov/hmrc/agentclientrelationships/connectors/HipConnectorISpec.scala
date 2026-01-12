@@ -62,7 +62,6 @@ with DataStreamStub {
   override implicit lazy val app: Application = appBuilder.build()
 
   val httpClient: HttpClientV2 = app.injector.instanceOf[HttpClientV2]
-  val agentCacheProvider: AgentCacheProvider = app.injector.instanceOf[AgentCacheProvider]
   val hipHeaders: HipHeaders = app.injector.instanceOf[HipHeaders]
   implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
 
@@ -92,7 +91,6 @@ with DataStreamStub {
   val hipConnector =
     new HipConnector(
       httpClient,
-      agentCacheProvider,
       hipHeaders,
       appConfig
     )(ec)

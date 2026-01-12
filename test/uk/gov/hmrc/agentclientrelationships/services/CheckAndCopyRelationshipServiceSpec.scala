@@ -106,7 +106,6 @@ with ResettingMockitoSugar {
   val des = resettingMock[DesConnector]
   val hipConnector = resettingMock[HipConnector]
   val mapping = resettingMock[MappingConnector]
-  val ugs = resettingMock[UsersGroupsSearchConnector]
   val auditService = resettingMock[AuditService]
   val deleteRecordRepository = resettingMock[DeleteRecordRepository]
   val agentUserService = resettingMock[AgentUserService]
@@ -145,11 +144,9 @@ with ResettingMockitoSugar {
 
   val relationshipsService =
     new CheckAndCopyRelationshipsService(
-      es,
       hipConnector,
       des,
       mapping,
-      ugs,
       relationshipCopyRepository,
       new CreateRelationshipsService(
         es,
@@ -527,11 +524,9 @@ with ResettingMockitoSugar {
 
       val relationshipsService =
         new CheckAndCopyRelationshipsService(
-          es,
           hipConnector,
           des,
           mapping,
-          ugs,
           relationshipCopyRepository,
           new CreateRelationshipsService(
             es,
@@ -574,11 +569,9 @@ with ResettingMockitoSugar {
 
       val relationshipsService =
         new CheckAndCopyRelationshipsService(
-          es,
           hipConnector,
           des,
           mapping,
-          ugs,
           relationshipCopyRepository,
           new CreateRelationshipsService(
             es,
