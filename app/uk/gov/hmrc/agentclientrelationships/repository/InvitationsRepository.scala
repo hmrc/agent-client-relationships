@@ -288,43 +288,14 @@ with RequestAwareLogging {
       .map(_.getOrElse(throw new RuntimeException(s"Could not find an invitation with invitationId '$invitationId'")))
   }
 
-  def deauthAcceptedInvitation(
-    service: String,
-    clientId: String,
-    arn: String,
-    relationshipEndedBy: String,
-    timestamp: Option[Instant] = None
-  ): Future[Boolean] = Mdc.preservingMdc {
-    collection
-      .updateOne(
-        filter = and(
-          in(
-            statusKey,
-            Codecs.toBson[InvitationStatus](Accepted),
-            Codecs.toBson[InvitationStatus](PartialAuth)
-          ),
-          equal(serviceKey, service),
-          in(clientIdKey, expandNinoSuffixes(clientId).map(encryptedString): _*),
-          equal(arnKey, arn)
-        ),
-        update = combine(
-          set(statusKey, Codecs.toBson[InvitationStatus](DeAuthorised)),
-          set(lastUpdatedKey, timestamp.getOrElse(Instant.now())),
-          set(relationshipEndedByKey, relationshipEndedBy)
-        )
-      )
-      .toFuture()
-      .map(_.getModifiedCount == 1L)
-  }
-
-  def deauthOldInvitations(
+  def deauthAcceptedInvitations(
     service: String,
     optArn: Option[String],
     clientId: String,
     invitationIdToIgnore: Option[String],
     relationshipEndedBy: String,
-    timestamp: Instant
-  ): Future[Done] = Mdc.preservingMdc {
+    timestamp: Instant = Instant.now()
+  ): Future[Boolean] = Mdc.preservingMdc {
     collection
       .updateMany(
         and(
@@ -349,7 +320,7 @@ with RequestAwareLogging {
         UpdateOptions()
       )
       .toFuture()
-      .map(_ => Done)
+      .map(_.getModifiedCount > 0)
   }
 
   def updatePartialAuthToAcceptedStatus(

@@ -235,14 +235,14 @@ with MockAuditService {
             mockUpdateStatus(vatInvitation.invitationId, Accepted)(
               Future.successful(vatInvitation.copy(status = Accepted))
             )
-            mockDeauthOldInvitations(
+            mockDeauthAcceptedInvitations(
               vatEnrolment.service,
               None,
               vatInvitation.suppliedClientId,
               Some(vatInvitation.invitationId),
               endedByClient
             )(
-              Future.successful(Done)
+              Future.successful(true)
             )
             mockSendAcceptedEmail(vatInvitation)()
 
@@ -259,7 +259,7 @@ with MockAuditService {
                 any[Seq[String]],
                 any[Option[InvitationStatus]]
               )
-              verify(mockInvitationsRepository, times(1)).deauthOldInvitations(
+              verify(mockInvitationsRepository, times(1)).deauthAcceptedInvitations(
                 any[String],
                 any[Option[String]],
                 any[String],
@@ -285,14 +285,14 @@ with MockAuditService {
             mockUpdateStatus(pirInvitation.invitationId, Accepted)(
               Future.successful(pirInvitation.copy(status = Accepted))
             )
-            mockDeauthOldInvitations(
+            mockDeauthAcceptedInvitations(
               pirEnrolment.service,
               None,
               pirInvitation.suppliedClientId,
               Some(pirInvitation.invitationId),
               endedByClient
             )(
-              Future.successful(Done)
+              Future.successful(true)
             )
             mockSendAcceptedEmail(pirInvitation)()
 
@@ -306,7 +306,7 @@ with MockAuditService {
                 any[Seq[String]],
                 any[Option[InvitationStatus]]
               )
-              verify(mockInvitationsRepository, times(1)).deauthOldInvitations(
+              verify(mockInvitationsRepository, times(1)).deauthAcceptedInvitations(
                 any[String],
                 any[Option[String]],
                 any[String],
@@ -342,14 +342,14 @@ with MockAuditService {
                 mockUpdateStatus(itsaInvitation.invitationId, Accepted)(
                   Future.successful(itsaInvitation.copy(status = Accepted))
                 )
-                mockDeauthOldInvitations(
+                mockDeauthAcceptedInvitations(
                   itsaEnrolment.service,
                   None,
                   itsaInvitation.suppliedClientId,
                   Some(itsaInvitation.invitationId),
                   endedByClient
                 )(
-                  Future.successful(Done)
+                  Future.successful(true)
                 )
                 mockSendAcceptedEmail(itsaInvitation)()
 
@@ -363,7 +363,7 @@ with MockAuditService {
                     any[Seq[String]],
                     any[Option[InvitationStatus]]
                   )
-                  verify(mockInvitationsRepository, times(1)).deauthOldInvitations(
+                  verify(mockInvitationsRepository, times(1)).deauthAcceptedInvitations(
                     any[String],
                     any[Option[String]],
                     any[String],
@@ -434,14 +434,14 @@ with MockAuditService {
                 mockUpdateStatus(altItsaInvitation.invitationId, PartialAuth)(
                   Future.successful(altItsaInvitation.copy(status = PartialAuth))
                 )
-                mockDeauthOldInvitations(
+                mockDeauthAcceptedInvitations(
                   altItsaInvitation.service,
                   None,
                   altItsaInvitation.suppliedClientId,
                   Some(altItsaInvitation.invitationId),
                   endedByClient
                 )(
-                  Future.successful(Done)
+                  Future.successful(true)
                 )
                 mockSendAcceptedEmail(altItsaInvitation)()
 
@@ -456,7 +456,7 @@ with MockAuditService {
                     any[Seq[String]],
                     any[Option[InvitationStatus]]
                   )
-                  verify(mockInvitationsRepository, times(1)).deauthOldInvitations(
+                  verify(mockInvitationsRepository, times(1)).deauthAcceptedInvitations(
                     any[String],
                     any[Option[String]],
                     any[String],

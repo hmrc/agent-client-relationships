@@ -106,7 +106,7 @@ extends RequestAwareLogging {
       // Deauth previously accepted invitations (non blocking)
       _ <- Future.successful(
         if (invitation.service != HMRCMTDITSUPP)
-          invitationsRepository.deauthOldInvitations(
+          invitationsRepository.deauthAcceptedInvitations(
             service = invitation.service,
             optArn = None,
             clientId = invitation.suppliedClientId,

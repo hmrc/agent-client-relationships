@@ -61,14 +61,14 @@ trait MockInvitationsRepository {
     )
   ).thenReturn(response)
 
-  def mockDeauthOldInvitations(
+  def mockDeauthAcceptedInvitations(
     service: String,
     arn: Option[String],
     clientId: String,
     invitationIdToIgnore: Option[String],
     relationshipEndedBy: String
-  )(response: Future[Done]): OngoingStubbing[Future[Done]] = when(
-    mockInvitationsRepository.deauthOldInvitations(
+  )(response: Future[Boolean]): OngoingStubbing[Future[Boolean]] = when(
+    mockInvitationsRepository.deauthAcceptedInvitations(
       eqs(service),
       eqs(arn),
       eqs(clientId),

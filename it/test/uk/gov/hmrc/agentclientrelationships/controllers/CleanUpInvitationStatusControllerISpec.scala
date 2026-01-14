@@ -125,6 +125,7 @@ with TestData {
             .copy(
               service = serviceId,
               clientId = clientId.value,
+              suppliedClientId = clientId.value,
               status = Accepted
             )
 

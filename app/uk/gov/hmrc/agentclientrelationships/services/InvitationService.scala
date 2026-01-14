@@ -130,10 +130,11 @@ extends RequestAwareLogging {
     enrolmentKey: EnrolmentKey,
     endedBy: String
   ): Future[Boolean] = invitationsRepository
-    .deauthAcceptedInvitation(
+    .deauthAcceptedInvitations(
       enrolmentKey.service,
+      Some(arn.value),
       enrolmentKey.oneIdentifier().value,
-      arn.value,
+      None,
       endedBy
     )
 

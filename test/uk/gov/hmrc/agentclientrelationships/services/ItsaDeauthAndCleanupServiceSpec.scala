@@ -133,14 +133,14 @@ with MockAuditService {
           testArn
         )(Future.successful(true))
         mockCheckForRelationshipAgencyLevel(testArn, itsaSuppEnrolment)(Future.successful((false, "groupId")))
-        mockDeauthOldInvitations(
+        mockDeauthAcceptedInvitations(
           MtdItSupp.id,
           Some(testArn.value),
           testNino.value,
           None,
           endedByClient
         )(
-          Future.successful(Done)
+          Future.successful(true)
         )
 
         await(
@@ -170,7 +170,7 @@ with MockAuditService {
           any[CurrentUser],
           any[AuditData]
         )
-        verify(mockInvitationsRepository, times(1)).deauthOldInvitations(
+        verify(mockInvitationsRepository, times(1)).deauthAcceptedInvitations(
           any[String],
           any[Option[String]],
           any[String],
@@ -193,14 +193,14 @@ with MockAuditService {
           itsaSuppEnrolment,
           currentUser.affinityGroup
         )()
-        mockDeauthOldInvitations(
+        mockDeauthAcceptedInvitations(
           MtdItSupp.id,
           Some(testArn.value),
           testNino.value,
           None,
           endedByClient
         )(
-          Future.successful(Done)
+          Future.successful(true)
         )
 
         await(
@@ -230,7 +230,7 @@ with MockAuditService {
           any[CurrentUser],
           any[AuditData]
         )
-        verify(mockInvitationsRepository, times(1)).deauthOldInvitations(
+        verify(mockInvitationsRepository, times(1)).deauthAcceptedInvitations(
           any[String],
           any[Option[String]],
           any[String],
@@ -275,7 +275,7 @@ with MockAuditService {
           any[CurrentUser],
           any[AuditData]
         )
-        verify(mockInvitationsRepository, times(1)).deauthOldInvitations(
+        verify(mockInvitationsRepository, times(1)).deauthAcceptedInvitations(
           any[String],
           any[Option[String]],
           any[String],

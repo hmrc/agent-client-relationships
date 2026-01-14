@@ -26,6 +26,7 @@ import uk.gov.hmrc.agentclientrelationships.model.identifiers.ClientIdentifier.C
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.ClientIdentifier
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 
+import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
 import scala.concurrent.ExecutionContext
@@ -60,10 +61,11 @@ extends RequestAwareLogging {
     service: String,
     relationshipEndedBy: String
   ): Future[Either[InvitationFailureResponse, Unit]] = invitationsRepository
-    .deauthAcceptedInvitation(
-      arn = arn,
-      clientId = clientId,
+    .deauthAcceptedInvitations(
       service = service,
+      optArn = Some(arn),
+      clientId = clientId,
+      invitationIdToIgnore = None,
       relationshipEndedBy = relationshipEndedBy
     )
     .map {

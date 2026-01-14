@@ -110,7 +110,7 @@ class ItsaDeauthAndCleanupService @Inject() (
             }
           // Clean up accepted invitations
           _ <- Future.successful(
-            invitationsRepository.deauthOldInvitations(
+            invitationsRepository.deauthAcceptedInvitations(
               service = serviceToCheck.id,
               optArn = Some(arn),
               clientId = nino,

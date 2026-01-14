@@ -256,7 +256,7 @@ with RepositoryCleanupSupport {
       repository.collection.insertOne(invitationAlt.copy(status = PartialAuth)).toFuture().futureValue
       repository.collection.insertOne(newInvitation.copy(status = Accepted)).toFuture().futureValue
 
-      repository.deauthOldInvitations(
+      repository.deauthAcceptedInvitations(
         invitation.service,
         None,
         invitation.suppliedClientId,
@@ -292,7 +292,7 @@ with RepositoryCleanupSupport {
       repository.collection.insertOne(invitationAlt.copy(status = PartialAuth)).toFuture().futureValue
       repository.collection.insertOne(otherInvitation.copy(status = Accepted)).toFuture().futureValue
 
-      repository.deauthOldInvitations(
+      repository.deauthAcceptedInvitations(
         invitation.service,
         Some(invitation.arn),
         invitation.suppliedClientId,
@@ -308,7 +308,7 @@ with RepositoryCleanupSupport {
       repository.findOneById(otherInvitation.invitationId).futureValue.get.status shouldBe Accepted
     }
 
-    "return None when a matching Authorised invitation is not found" in {
+    "de-authorise no invitations when nothing is matched" in {
       val invitation = pendingInvitation(
         service = MtdIt,
         clientId = MtdItId("1234567890"),
@@ -317,11 +317,13 @@ with RepositoryCleanupSupport {
       await(repository.collection.insertOne(invitation.copy(status = DeAuthorised)).toFuture())
 
       await(
-        repository.deauthAcceptedInvitation(
+        repository.deauthAcceptedInvitations(
           invitation.service,
-          invitation.clientId,
-          invitation.arn,
-          "This guy"
+          Some(invitation.arn),
+          invitation.suppliedClientId,
+          None,
+          "TEST",
+          Instant.now()
         )
       ) shouldBe false
     }
