@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.mocks
 
+import org.apache.pekko.Done
 import org.mockito.ArgumentMatchers.any
 import org.mockito.ArgumentMatchers.{eq => eqs}
 import org.mockito.Mockito.when
@@ -60,14 +61,20 @@ trait MockInvitationsRepository {
     )
   ).thenReturn(response)
 
-  def mockDeauthInvitation(
-    invitationId: String,
-    endedBy: String
-  )(response: Future[Option[Invitation]]): OngoingStubbing[Future[Option[Invitation]]] = when(
-    mockInvitationsRepository.deauthInvitation(
-      eqs(invitationId),
-      eqs("Client"),
-      any[Option[Instant]]
+  def mockDeauthOldInvitations(
+    service: String,
+    arn: Option[String],
+    clientId: String,
+    invitationIdToIgnore: Option[String],
+    relationshipEndedBy: String
+  )(response: Future[Done]): OngoingStubbing[Future[Done]] = when(
+    mockInvitationsRepository.deauthOldInvitations(
+      eqs(service),
+      eqs(arn),
+      eqs(clientId),
+      eqs(invitationIdToIgnore),
+      eqs(relationshipEndedBy),
+      any[Instant]
     )
   ).thenReturn(response)
 

@@ -34,7 +34,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 import scala.concurrent.ExecutionContext
 
-class AuthorisationRequestInfoControllerISpec
+class InvitationInfoControllerISpec
 extends BaseControllerISpec
 with TestData {
 

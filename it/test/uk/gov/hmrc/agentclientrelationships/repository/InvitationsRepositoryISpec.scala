@@ -237,24 +237,75 @@ with RepositoryCleanupSupport {
       intercept[RuntimeException](await(repository.updateStatus("ABC", Accepted)))
     }
 
-    "de-authorise and return the invitation when a matching Authorised invitation is found" in {
+    "de-authorise all old invitations for a client (including alt itsa)" in {
       val invitation = pendingInvitation(
         service = MtdIt,
         clientId = MtdItId("1234567890"),
         suppliedClientId = Some(NinoWithoutSuffix("AB213308"))
       )
-      await(repository.collection.insertOne(invitation.copy(status = Accepted)).toFuture())
+      val invitationAlt = pendingInvitation(
+        service = MtdIt,
+        clientId = NinoWithoutSuffix("AB213308A")
+      )
+      val newInvitation = pendingInvitation(
+        service = MtdIt,
+        clientId = MtdItId("1234567890"),
+        suppliedClientId = Some(NinoWithoutSuffix("AB213308A"))
+      )
+      repository.collection.insertOne(invitation.copy(status = Accepted)).toFuture().futureValue
+      repository.collection.insertOne(invitationAlt.copy(status = PartialAuth)).toFuture().futureValue
+      repository.collection.insertOne(newInvitation.copy(status = Accepted)).toFuture().futureValue
 
-      lazy val updatedInvitation =
-        await(
-          repository.deauthInvitation(
-            invitation.invitationId,
-            "This guy"
-          )
-        ).get
-      updatedInvitation.status shouldBe DeAuthorised
-      updatedInvitation.relationshipEndedBy shouldBe Some("This guy")
-      updatedInvitation.lastUpdated.isAfter(pendingInvitation().lastUpdated)
+      repository.deauthOldInvitations(
+        invitation.service,
+        None,
+        invitation.suppliedClientId,
+        Some(newInvitation.invitationId),
+        "TEST",
+        Instant.now()
+      ).futureValue
+
+      repository.findOneById(invitation.invitationId).futureValue.get.status shouldBe DeAuthorised
+      repository.findOneById(invitation.invitationId).futureValue.get.relationshipEndedBy shouldBe Some("TEST")
+      repository.findOneById(invitationAlt.invitationId).futureValue.get.status shouldBe DeAuthorised
+      repository.findOneById(invitationAlt.invitationId).futureValue.get.relationshipEndedBy shouldBe Some("TEST")
+      repository.findOneById(newInvitation.invitationId).futureValue.get.status shouldBe Accepted
+    }
+
+    "de-authorise all invitations for an agent (including alt itsa)" in {
+      val invitation = pendingInvitation(
+        service = MtdIt,
+        clientId = MtdItId("1234567890"),
+        suppliedClientId = Some(NinoWithoutSuffix("AB213308A"))
+      )
+      val invitationAlt = pendingInvitation(
+        service = MtdIt,
+        clientId = NinoWithoutSuffix("AB213308A")
+      )
+      val otherInvitation = pendingInvitation(
+        arn = "XARN9999999",
+        service = MtdIt,
+        clientId = MtdItId("1234567890"),
+        suppliedClientId = Some(NinoWithoutSuffix("AB213308A"))
+      )
+      repository.collection.insertOne(invitation.copy(status = Accepted)).toFuture().futureValue
+      repository.collection.insertOne(invitationAlt.copy(status = PartialAuth)).toFuture().futureValue
+      repository.collection.insertOne(otherInvitation.copy(status = Accepted)).toFuture().futureValue
+
+      repository.deauthOldInvitations(
+        invitation.service,
+        Some(invitation.arn),
+        invitation.suppliedClientId,
+        None,
+        "TEST",
+        Instant.now()
+      ).futureValue
+
+      repository.findOneById(invitation.invitationId).futureValue.get.status shouldBe DeAuthorised
+      repository.findOneById(invitation.invitationId).futureValue.get.relationshipEndedBy shouldBe Some("TEST")
+      repository.findOneById(invitationAlt.invitationId).futureValue.get.status shouldBe DeAuthorised
+      repository.findOneById(invitationAlt.invitationId).futureValue.get.relationshipEndedBy shouldBe Some("TEST")
+      repository.findOneById(otherInvitation.invitationId).futureValue.get.status shouldBe Accepted
     }
 
     "return None when a matching Authorised invitation is not found" in {

@@ -44,7 +44,7 @@ import scala.concurrent.Future
 import scala.util.Success
 
 @Singleton
-class AuthorisationAcceptService @Inject() (
+class InvitationAcceptService @Inject() (
   createRelationshipsService: CreateRelationshipsService,
   emailService: EmailService,
   itsaDeauthAndCleanupService: ItsaDeauthAndCleanupService,
@@ -106,26 +106,12 @@ extends RequestAwareLogging {
       // Deauth previously accepted invitations (non blocking)
       _ <- Future.successful(
         if (invitation.service != HMRCMTDITSUPP)
-          deauthAcceptedInvitations(
-            service = invitation.service,
-            optArn = None,
-            clientId = invitation.clientId,
-            optInvitationId = Some(invitation.invitationId),
-            isAltItsa = isAltItsa,
-            timestamp = timestamp
-          )
-        else
-          Future.unit
-      )
-      // Deauth previously accepted alt itsa invitations in case the client is mtd itsa (non blocking)
-      _ <- Future.successful(
-        if (invitation.service == HMRCMTDIT && !isAltItsa)
-          deauthAcceptedInvitations(
+          invitationsRepository.deauthOldInvitations(
             service = invitation.service,
             optArn = None,
             clientId = invitation.suppliedClientId,
-            optInvitationId = Some(invitation.invitationId),
-            isAltItsa = true,
+            invitationIdToIgnore = Some(invitation.invitationId),
+            relationshipEndedBy = endedByClient,
             timestamp = timestamp
           )
         else
@@ -241,40 +227,6 @@ extends RequestAwareLogging {
           }
       case None => Future.successful(false)
     }
-
-  private def deauthAcceptedInvitations(
-    service: String,
-    optArn: Option[String],
-    clientId: String,
-    optInvitationId: Option[String],
-    isAltItsa: Boolean,
-    timestamp: Instant
-  ) = {
-    val acceptedStatus =
-      if (isAltItsa)
-        PartialAuth
-      else
-        Accepted
-    invitationsRepository
-      .findAllBy(
-        arn = optArn,
-        services = Seq(service),
-        clientIds = Seq(clientId),
-        status = Some(acceptedStatus)
-      )
-      .fallbackTo(Future.successful(Nil))
-      .map { acceptedInvitations: Seq[Invitation] =>
-        acceptedInvitations
-          .filterNot(invitation => optInvitationId.contains(invitation.invitationId))
-          .foreach(acceptedInvitation =>
-            invitationsRepository.deauthInvitation(
-              acceptedInvitation.invitationId,
-              endedByClient,
-              Some(timestamp)
-            )
-          )
-      }
-  }
 
 }
 

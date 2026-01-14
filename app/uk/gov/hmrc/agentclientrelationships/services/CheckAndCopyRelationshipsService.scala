@@ -24,7 +24,6 @@ import uk.gov.hmrc.agentclientrelationships.audit.AuditService
 import uk.gov.hmrc.agentclientrelationships.auth.CurrentUser
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors._
-import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax.returnValue
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDIT
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDITSUPP
@@ -124,7 +123,7 @@ extends RequestAwareLogging {
         body
       }
       else {
-        returnValue(CopyRelationshipNotEnabled)
+        Future.successful(CopyRelationshipNotEnabled)
       }
 
     enrolmentKey.oneTaxIdentifier() match {
@@ -407,7 +406,7 @@ extends RequestAwareLogging {
 
     if (referenceIdSet.isEmpty) {
       // logger.warn(s"The references (${referenceIdSet.getClass.getName}) in cesa/es are empty.")
-      returnValue(Set.empty)
+      Future.successful(Set.empty)
     }
     else
       mappingServiceCall.map { mappingServiceIds =>

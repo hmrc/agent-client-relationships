@@ -42,9 +42,9 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 @Singleton
-class AuthorisationAcceptController @Inject() (
+class InvitationAcceptController @Inject() (
   invitationService: InvitationService,
-  authorisationAcceptService: AuthorisationAcceptService,
+  authorisationAcceptService: InvitationAcceptService,
   validationService: ValidationService,
   friendlyNameService: FriendlyNameService,
   auditService: AuditService,

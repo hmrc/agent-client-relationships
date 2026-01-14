@@ -113,8 +113,7 @@ class AgentFiRelationshipConnector @Inject() (
     clientId: String
   )(implicit
     rh: RequestHeader
-  ): Future[Boolean] // TODO: Verify the boolean is really needed. It seems that NotFound is transformed into false, which is then transformed into NotFound ...
-  = httpClient
+  ): Future[Boolean] = httpClient
     .delete(
       afiRelationshipUrl(
         arn,

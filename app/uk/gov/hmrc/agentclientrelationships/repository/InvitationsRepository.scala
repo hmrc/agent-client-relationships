@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.repository
 
+import org.apache.pekko.Done
 import org.mongodb.scala.Observable
 import org.mongodb.scala.bson.BsonValue
 import org.mongodb.scala.bson.conversions
@@ -316,22 +317,39 @@ with RequestAwareLogging {
       .map(_.getModifiedCount == 1L)
   }
 
-  def deauthInvitation(
-    invitationId: String,
+  def deauthOldInvitations(
+    service: String,
+    optArn: Option[String],
+    clientId: String,
+    invitationIdToIgnore: Option[String],
     relationshipEndedBy: String,
-    timestamp: Option[Instant] = None
-  ): Future[Option[Invitation]] = Mdc.preservingMdc {
+    timestamp: Instant
+  ): Future[Done] = Mdc.preservingMdc {
     collection
-      .findOneAndUpdate(
-        equal(invitationIdKey, invitationId),
-        combine(
-          set("status", Codecs.toBson[InvitationStatus](DeAuthorised)),
-          set("lastUpdated", timestamp.getOrElse(Instant.now())),
-          set("relationshipEndedBy", relationshipEndedBy)
+      .updateMany(
+        and(
+          Seq(
+            Some(in(
+              statusKey,
+              Codecs.toBson[InvitationStatus](Accepted),
+              Codecs.toBson[InvitationStatus](PartialAuth)
+            )),
+            Some(equal(serviceKey, service)),
+            Some(in(suppliedClientIdKey, expandNinoSuffixes(clientId).map(encryptedString): _*)),
+            optArn.map(a => equal(arnKey, a)),
+            invitationIdToIgnore
+              .map(id => notEqual(invitationIdKey, id))
+          ).flatten: _*
         ),
-        FindOneAndUpdateOptions().returnDocument(ReturnDocument.AFTER)
+        combine(
+          set(statusKey, Codecs.toBson[InvitationStatus](DeAuthorised)),
+          set(lastUpdatedKey, timestamp),
+          set(relationshipEndedByKey, relationshipEndedBy)
+        ),
+        UpdateOptions()
       )
-      .toFutureOption()
+      .toFuture()
+      .map(_ => Done)
   }
 
   def updatePartialAuthToAcceptedStatus(

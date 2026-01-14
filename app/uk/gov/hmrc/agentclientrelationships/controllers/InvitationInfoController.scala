@@ -39,7 +39,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 @Singleton
-class AuthorisationRequestInfoController @Inject() (
+class InvitationInfoController @Inject() (
   invitationService: InvitationService,
   invitationLinkService: InvitationLinkService,
   agentAssuranceService: AgentAssuranceService,

@@ -28,7 +28,7 @@ import uk.gov.hmrc.agentclientrelationships.stubs.HipStub
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-class AuthorisationAcceptControllerISpec
+class InvitationAcceptControllerISpec
 extends BaseControllerISpec
 with AuthorisationAcceptGenericBehaviours
 with AuthorisationAcceptAltItsaBehaviours

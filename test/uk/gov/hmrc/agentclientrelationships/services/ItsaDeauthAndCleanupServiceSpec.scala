@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
+import org.apache.pekko.Done
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
@@ -34,6 +35,7 @@ import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Vat
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
+import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository.endedByClient
 import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 import uk.gov.hmrc.auth.core.AffinityGroup
@@ -131,14 +133,14 @@ with MockAuditService {
           testArn
         )(Future.successful(true))
         mockCheckForRelationshipAgencyLevel(testArn, itsaSuppEnrolment)(Future.successful((false, "groupId")))
-        mockFindAllBy(
+        mockDeauthOldInvitations(
+          MtdItSupp.id,
           Some(testArn.value),
-          Seq(MtdItSupp.id),
-          Seq(testNino.value),
-          Some(PartialAuth)
-        )(Future.successful(Seq(oldAltItsaInvitation)))
-        mockDeauthInvitation(oldAltItsaInvitation.invitationId, "Client")(
-          Future.successful(Some(oldAltItsaInvitation.copy(status = DeAuthorised)))
+          testNino.value,
+          None,
+          endedByClient
+        )(
+          Future.successful(Done)
         )
 
         await(
@@ -168,17 +170,13 @@ with MockAuditService {
           any[CurrentUser],
           any[AuditData]
         )
-        verify(mockInvitationsRepository, times(1)).findAllBy(
+        verify(mockInvitationsRepository, times(1)).deauthOldInvitations(
+          any[String],
           any[Option[String]],
-          any[Seq[String]],
-          any[Seq[String]],
-          any[Option[InvitationStatus]],
-          any[Boolean]
-        )
-        verify(mockInvitationsRepository, times(1)).deauthInvitation(
           any[String],
+          any[Option[String]],
           any[String],
-          any[Option[Instant]]
+          any[Instant]
         )
       }
     }
@@ -195,14 +193,14 @@ with MockAuditService {
           itsaSuppEnrolment,
           currentUser.affinityGroup
         )()
-        mockFindAllBy(
+        mockDeauthOldInvitations(
+          MtdItSupp.id,
           Some(testArn.value),
-          Seq(MtdItSupp.id),
-          Seq(testMtdItId.value),
-          Some(Accepted)
-        )(Future.successful(Seq(oldItsaInvitation)))
-        mockDeauthInvitation(oldAltItsaInvitation.invitationId, "Client")(
-          Future.successful(Some(oldItsaInvitation.copy(status = DeAuthorised)))
+          testNino.value,
+          None,
+          endedByClient
+        )(
+          Future.successful(Done)
         )
 
         await(
@@ -232,17 +230,13 @@ with MockAuditService {
           any[CurrentUser],
           any[AuditData]
         )
-        verify(mockInvitationsRepository, times(1)).findAllBy(
+        verify(mockInvitationsRepository, times(1)).deauthOldInvitations(
+          any[String],
           any[Option[String]],
-          any[Seq[String]],
-          any[Seq[String]],
-          any[Option[InvitationStatus]],
-          any[Boolean]
-        )
-        verify(mockInvitationsRepository, times(1)).deauthInvitation(
           any[String],
+          any[Option[String]],
           any[String],
-          any[Option[Instant]]
+          any[Instant]
         )
       }
     }
@@ -281,17 +275,13 @@ with MockAuditService {
           any[CurrentUser],
           any[AuditData]
         )
-        verify(mockInvitationsRepository, times(0)).findAllBy(
+        verify(mockInvitationsRepository, times(1)).deauthOldInvitations(
+          any[String],
           any[Option[String]],
-          any[Seq[String]],
-          any[Seq[String]],
-          any[Option[InvitationStatus]],
-          any[Boolean]
-        )
-        verify(mockInvitationsRepository, times(0)).deauthInvitation(
           any[String],
+          any[Option[String]],
           any[String],
-          any[Option[Instant]]
+          any[Instant]
         )
       }
     }
