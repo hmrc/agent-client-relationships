@@ -50,7 +50,7 @@ with MockPartialAuthRepository {
     )
 
   private val arn: Arn = Arn("AARN0000002")
-  private val nino: NinoWithoutSuffix = NinoWithoutSuffix("AB123456C")
+  private val nino: NinoWithoutSuffix = NinoWithoutSuffix("AB123456")
   private val clientId: ClientIdentifier.ClientId = ClientIdentifier(nino.value, NinoType.id)
 
   private implicit val request: FakeRequest[?] = FakeRequest()

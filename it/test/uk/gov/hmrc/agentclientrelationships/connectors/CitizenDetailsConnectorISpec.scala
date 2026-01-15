@@ -50,7 +50,7 @@ with CitizenDetailsStub {
   implicit val request: RequestHeader = FakeRequest()
 
   val connector: CitizenDetailsConnector = app.injector.instanceOf[CitizenDetailsConnector]
-  val testNino: NinoWithoutSuffix = NinoWithoutSuffix("AA000001B")
+  val testNino: NinoWithoutSuffix = NinoWithoutSuffix("AA000001")
 
   ".getCitizenDetails" should {
 

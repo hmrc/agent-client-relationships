@@ -61,7 +61,7 @@ extends UnitSpec {
       mockAppConfig
     )
   implicit val request: RequestHeader = FakeRequest()
-  val nino: NinoWithoutSuffix = NinoWithoutSuffix("AA000001B")
+  val nino: NinoWithoutSuffix = NinoWithoutSuffix("AA000001")
 
   ".findClientDetails" when {
 

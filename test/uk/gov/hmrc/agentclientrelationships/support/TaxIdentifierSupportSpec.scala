@@ -36,7 +36,7 @@ extends UnitSpec {
     }
 
     "return NINO when tax identifier is of Nino type" in {
-      identifierNickname(NinoWithoutSuffix("AB123456A")) shouldBe "NINO"
+      identifierNickname(NinoWithoutSuffix("AB123456")) shouldBe "NINO"
     }
 
     "return CGTPDRef when tax identifier is of CgtRef type" in {
@@ -52,7 +52,7 @@ extends UnitSpec {
     "return appropriate tax identifier when given value and type" in {
       TaxIdentifierSupport.from("foo", "MTDITID") shouldBe MtdItId("foo")
 
-      TaxIdentifierSupport.from("AB123456A", "NINO") shouldBe NinoWithoutSuffix("AB123456A")
+      TaxIdentifierSupport.from("AB123456", "NINO") shouldBe NinoWithoutSuffix("AB123456")
 
       TaxIdentifierSupport.from("foo", "VRN") shouldBe Vrn("foo")
 

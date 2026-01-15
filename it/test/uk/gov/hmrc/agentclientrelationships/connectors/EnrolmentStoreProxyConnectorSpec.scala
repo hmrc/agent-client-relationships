@@ -118,20 +118,20 @@ with MockitoSugar {
     "return some agents's groupIds for given NINO" in {
       givenAuditConnector()
       givenDelegatedGroupIdsExistFor(
-        EnrolmentKey(Service.MtdIt, NinoWithoutSuffix("AB123456C")),
+        EnrolmentKey(Service.MtdIt, NinoWithoutSuffix("AB123456")),
         Set(
           "bar",
           "car",
           "dar"
         )
       )
-      await(connector.getDelegatedGroupIdsFor(EnrolmentKey(Service.MtdIt, NinoWithoutSuffix("AB123456C")))) should contain("bar")
+      await(connector.getDelegatedGroupIdsFor(EnrolmentKey(Service.MtdIt, NinoWithoutSuffix("AB123456")))) should contain("bar")
     }
 
     "return Empty when NINO not found" in {
       givenAuditConnector()
-      givenDelegatedGroupIdsNotExistFor(EnrolmentKey(Service.MtdIt, NinoWithoutSuffix("AB123456C")))
-      await(connector.getDelegatedGroupIdsFor(EnrolmentKey(Service.MtdIt, NinoWithoutSuffix("AB123456C")))) should be(empty)
+      givenDelegatedGroupIdsNotExistFor(EnrolmentKey(Service.MtdIt, NinoWithoutSuffix("AB123456")))
+      await(connector.getDelegatedGroupIdsFor(EnrolmentKey(Service.MtdIt, NinoWithoutSuffix("AB123456")))) should be(empty)
     }
 
     "return some agents's groupIds for given VRN" in {

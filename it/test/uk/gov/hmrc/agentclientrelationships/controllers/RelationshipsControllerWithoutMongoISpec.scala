@@ -113,7 +113,7 @@ with AuthStub {
   val arn = Arn("AARN0000002")
   val mtditid = MtdItId("ABCDEF123456789")
   val mtdItEnrolmentKey: EnrolmentKey = EnrolmentKey(Service.MtdIt, mtditid)
-  val nino = NinoWithoutSuffix("AB123456C")
+  val nino = NinoWithoutSuffix("AB123456")
   val oldAgentCode = "oldAgentCode"
 
   def partialAuthRelationship(service: String): PartialAuthRelationship = PartialAuthRelationship(
