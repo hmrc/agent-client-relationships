@@ -18,7 +18,6 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 
 import cats.data.EitherT
 import play.api.Logger
-import play.api.libs.json.JsValue
 import play.api.mvc.Action
 import play.api.mvc.ControllerComponents
 import play.api.mvc.Result
@@ -53,43 +52,38 @@ with AuthActions {
   val supportedServices: Seq[Service] = appConfig.supportedServicesWithoutPir
   val apiSupportedServices: Seq[Service] = appConfig.apiSupportedServices
 
-  def deauthoriseInvitation: Action[JsValue] =
-    Action.async(parse.json) { implicit request =>
+  def deauthoriseInvitation: Action[CleanUpInvitationStatusRequest] =
+    Action.async(parse.json[CleanUpInvitationStatusRequest]) { implicit request =>
       authorised() {
-        request.body
-          .validate[CleanUpInvitationStatusRequest]
-          .fold(
-            errs => Future.successful(BadRequest(s"Invalid payload: $errs")),
-            payload => {
-              val responseT =
-                for {
-                  service <- EitherT.fromEither[Future](setRelationshipEndedService.validateService(payload.service))
-                  clientId <- EitherT.fromEither[Future](
-                    setRelationshipEndedService.validateClientId(service, payload.clientId)
-                  )
-                  result <- EitherT(
-                    setRelationshipEndedService.deauthoriseInvitation(
-                      arn = payload.arn,
-                      clientId = clientId.value,
-                      service = service.id,
-                      relationshipEndedBy = "HMRC"
-                    )
-                  )
-                } yield result
+        val payload = request.body
 
-              responseT.value
-                .map(
-                  _.fold(
-                    failureResponse =>
-                      invitationErrorHandler(
-                        invitationFailureResponse = failureResponse,
-                        service = payload.service,
-                        clientId = payload.clientId
-                      ),
-                    _ => NoContent
-                  )
-                )
-            }
+        val responseT =
+          for {
+            service <- EitherT.fromEither[Future](setRelationshipEndedService.validateService(payload.service))
+            clientId <- EitherT.fromEither[Future](
+              setRelationshipEndedService.validateClientId(service, payload.clientId)
+            )
+            result <- EitherT(
+              setRelationshipEndedService.deauthoriseInvitation(
+                arn = payload.arn,
+                clientId = clientId.value,
+                service = service.id,
+                relationshipEndedBy = "HMRC"
+              )
+            )
+          } yield result
+
+        responseT.value
+          .map(
+            _.fold(
+              failureResponse =>
+                invitationErrorHandler(
+                  invitationFailureResponse = failureResponse,
+                  service = payload.service,
+                  clientId = payload.clientId
+                ),
+              _ => NoContent
+            )
           )
       }
     }
