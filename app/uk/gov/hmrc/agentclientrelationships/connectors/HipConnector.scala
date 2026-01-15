@@ -220,7 +220,7 @@ extends RequestAwareLogging {
 
   // API#5266 https://admin.tax.service.gov.uk/integration-hub/apis/details/e54e8843-c146-4551-a499-c93ecac4c6fd#Endpoints
   def getMtdIdFor(nino: NinoWithoutSuffix)(implicit request: RequestHeader): Future[Option[MtdItId]] = {
-    val encodedNino = UriEncoding.encodePathSegment(nino.suffixlessValue, "UTF-8")
+    val encodedNino = UriEncoding.encodePathSegment(nino.value, "UTF-8")
     val url = new URL(s"$baseUrl/etmp/RESTAdapter/itsa/taxpayer/business-details?nino=$encodedNino")
 
     getWithHipHeaders(
@@ -247,7 +247,7 @@ extends RequestAwareLogging {
   def getItsaBusinessDetails(nino: NinoWithoutSuffix)(implicit
     request: RequestHeader
   ): Future[Either[ClientDetailsFailureResponse, ItsaBusinessDetails]] = {
-    val encodedNino = UriEncoding.encodePathSegment(nino.suffixlessValue, "UTF-8")
+    val encodedNino = UriEncoding.encodePathSegment(nino.value, "UTF-8")
     val url = new URL(s"$baseUrl/etmp/RESTAdapter/itsa/taxpayer/business-details?nino=$encodedNino")
 
     getWithHipHeaders(

@@ -68,7 +68,7 @@ with DataStreamStub {
   val hipHeaders: HipHeaders = app.injector.instanceOf[HipHeaders]
   implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
 
-  val testNino = NinoWithoutSuffix("AA000001B")
+  val testNino = NinoWithoutSuffix("AA000001")
 
   protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder().configure(
     "microservice.services.enrolment-store-proxy.port" -> wireMockPort,

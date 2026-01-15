@@ -84,7 +84,7 @@ with DataStreamStub {
 
   "DesConnector GetStatusAgentRelationship" should {
 
-    val nino = NinoWithoutSuffix("AB123456C")
+    val nino = NinoWithoutSuffix("AB123456")
 
     "return a CESA identifier when client has an active agent" in {
       val agentId = "bar"

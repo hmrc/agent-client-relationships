@@ -1155,7 +1155,7 @@ with AfiRelationshipStub {
 
       val expectedJsonBody = Json.obj(
         "clientName" -> "Matthew Kovacic",
-        "nino" -> "AB123456C",
+        "nino" -> "AB123456",
         "agents" -> Json.arr(Json.obj("name" -> "ABC Ltd", "arn" -> "AARN0000002"))
       )
 

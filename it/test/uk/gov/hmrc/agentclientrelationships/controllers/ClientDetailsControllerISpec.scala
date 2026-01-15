@@ -77,8 +77,8 @@ with MappingStubs {
           setupCommonStubs(request)
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
-          givenMtdItsaBusinessDetailsExists(NinoWithoutSuffix("AA000001B"), MtdItId("XAIT0000111122"))
-          givenNinoItsaBusinessDetailsExists(MtdItId("XAIT0000111122"), NinoWithoutSuffix("AA000001B"))
+          givenMtdItsaBusinessDetailsExists(NinoWithoutSuffix("AA000001"), MtdItId("XAIT0000111122"))
+          givenNinoItsaBusinessDetailsExists(MtdItId("XAIT0000111122"), NinoWithoutSuffix("AA000001"))
           givenClientHasNoRelationshipWithAnyAgentInCESA(nino = NinoWithoutSuffix("AA000001B"))
           givenArnIsUnknownFor(Arn("XARN1234567"))
 

@@ -86,7 +86,7 @@ with MockValidationService {
   val testAgentEmail = "agent@email.com"
   val testOldInvitationId = "testOldInvitationId"
 
-  val testNino: NinoWithoutSuffix = NinoWithoutSuffix("AB123456A")
+  val testNino: NinoWithoutSuffix = NinoWithoutSuffix("AB123456")
   val testMtdItId: MtdItId = MtdItId("XAIT0000111122")
 
   val testVrn: Vrn = Vrn("1234567890")

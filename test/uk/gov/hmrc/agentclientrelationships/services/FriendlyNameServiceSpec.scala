@@ -60,7 +60,7 @@ with BeforeAndAfterEach {
     arn = "testArn",
     service = MtdIt,
     clientId = MtdItId("ABCDEF123456789"),
-    suppliedClientId = NinoWithoutSuffix("AB123456A"),
+    suppliedClientId = NinoWithoutSuffix("AB123456"),
     clientName = "test Name",
     agencyName = "AgentName",
     agencyEmail = "agent@email.com",

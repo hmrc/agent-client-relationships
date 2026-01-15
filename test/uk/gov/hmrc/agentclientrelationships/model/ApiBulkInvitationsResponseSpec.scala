@@ -39,7 +39,7 @@ extends UnitSpec {
   val testNormalizedAgentName = "testagentname"
   val testClientName = "testClientName"
   val testAgentEmail = "agent@email.com"
-  val testNino: NinoWithoutSuffix = NinoWithoutSuffix("AB123456A")
+  val testNino: NinoWithoutSuffix = NinoWithoutSuffix("AB123456")
   val testMtdItId: MtdItId = MtdItId("XAIT0000111122")
   val testUId: String = "testUID"
   val now = Instant.now

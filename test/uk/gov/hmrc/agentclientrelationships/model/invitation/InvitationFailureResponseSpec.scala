@@ -49,9 +49,8 @@ with Matchers {
 
   private def bodyAsString(result: play.api.mvc.Result): String =
     result.body match {
-      case HttpEntity.Strict(data, _) =>
-        data.utf8String
-      case other =>
-        fail(s"Expected strict body but got $other")
+      case HttpEntity.Strict(data, _) => data.utf8String
+      case other => fail(s"Expected strict body but got $other")
     }
+
 }

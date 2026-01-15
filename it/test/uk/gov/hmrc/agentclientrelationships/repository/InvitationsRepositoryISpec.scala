@@ -241,7 +241,7 @@ with RepositoryCleanupSupport {
       val invitation = pendingInvitation(
         service = MtdIt,
         clientId = MtdItId("1234567890"),
-        suppliedClientId = Some(NinoWithoutSuffix("AB213308A"))
+        suppliedClientId = Some(NinoWithoutSuffix("AB213308"))
       )
       await(repository.collection.insertOne(invitation.copy(status = Accepted)).toFuture())
 
@@ -261,7 +261,7 @@ with RepositoryCleanupSupport {
       val invitation = pendingInvitation(
         service = MtdIt,
         clientId = MtdItId("1234567890"),
-        suppliedClientId = Some(NinoWithoutSuffix("AB213308A"))
+        suppliedClientId = Some(NinoWithoutSuffix("AB213308"))
       )
       await(repository.collection.insertOne(invitation.copy(status = DeAuthorised)).toFuture())
 

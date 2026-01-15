@@ -70,7 +70,7 @@ with HipStub {
   val connector: ClientDetailsConnector = app.injector.instanceOf[ClientDetailsConnector]
   val hipConnector: HipConnector = app.injector.instanceOf[HipConnector]
   private val greatBritain: String = "GREAT BRITAIN"
-  val testNino: NinoWithoutSuffix = NinoWithoutSuffix("AA000001B")
+  val testNino: NinoWithoutSuffix = NinoWithoutSuffix("AA000001")
 
   ".getItsaDesignatoryDetails" should {
 
