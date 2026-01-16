@@ -248,17 +248,8 @@ with MockAuditService {
 
             TestService.acceptInvitation(vatInvitation, vatEnrolment).futureValue shouldBe vatInvitation.copy(status = Accepted)
 
-            println(TestService.acceptInvitation(vatInvitation, vatEnrolment).futureValue)
-            println(vatInvitation.copy(status = Accepted))
-
             // Verifying non blocking side effects actually happen
             verifySideEffectsOccur { _ =>
-              verify(mockInvitationsRepository, times(1)).findAllBy(
-                any[Option[String]],
-                any[Seq[String]],
-                any[Seq[String]],
-                any[Option[InvitationStatus]]
-              )
               verify(mockInvitationsRepository, times(1)).deauthAcceptedInvitations(
                 any[String],
                 any[Option[String]],
@@ -300,12 +291,6 @@ with MockAuditService {
 
             // Verifying non blocking side effects actually happen
             verifySideEffectsOccur { _ =>
-              verify(mockInvitationsRepository, times(1)).findAllBy(
-                any[Option[String]],
-                any[Seq[String]],
-                any[Seq[String]],
-                any[Option[InvitationStatus]]
-              )
               verify(mockInvitationsRepository, times(1)).deauthAcceptedInvitations(
                 any[String],
                 any[Option[String]],
@@ -357,12 +342,6 @@ with MockAuditService {
 
                 // Verifying non blocking side effects actually happen
                 verifySideEffectsOccur { _ =>
-                  verify(mockInvitationsRepository, times(2)).findAllBy(
-                    any[Option[String]],
-                    any[Seq[String]],
-                    any[Seq[String]],
-                    any[Option[InvitationStatus]]
-                  )
                   verify(mockInvitationsRepository, times(1)).deauthAcceptedInvitations(
                     any[String],
                     any[Option[String]],
@@ -450,12 +429,6 @@ with MockAuditService {
 
                 // Verifying non blocking side effects actually happen
                 verifySideEffectsOccur { _ =>
-                  verify(mockInvitationsRepository, times(1)).findAllBy(
-                    any[Option[String]],
-                    any[Seq[String]],
-                    any[Seq[String]],
-                    any[Option[InvitationStatus]]
-                  )
                   verify(mockInvitationsRepository, times(1)).deauthAcceptedInvitations(
                     any[String],
                     any[Option[String]],

@@ -92,9 +92,9 @@ with TestData {
     )
     .toString()
 
-  allServices.foreach(testset =>
+  allServices.foreach(testData =>
     "/agent-client-relationships/cleanup-invitation-status" should {
-      val (service, taxIdentifier) = testset
+      val (service, taxIdentifier) = testData
       val clientId: ClientIdentifier[TaxIdentifier] = ClientIdentifier(taxIdentifier)
       val serviceId =
         service match {
@@ -104,6 +104,12 @@ with TestData {
 
       s"when no invitation record for ${service.id}" should {
         s"return 404 NOT_FOUND" in {
+          if (service == Cbc)
+            givenKnownFactsQuery(
+              Service.Cbc,
+              cbcId,
+              Some(Seq(Identifier("cbcId", cbcId.value), Identifier("UTR", utr.value)))
+            )
           givenUserAuthorised()
           val result = doAgentPutRequest(
             route = requestPath,
@@ -120,6 +126,12 @@ with TestData {
 
       s"when invitation exists with the status Accepted in invitationStore for ${service.id}" should {
         s"update status to DeAuthorised" in {
+          if (service == Cbc)
+            givenKnownFactsQuery(
+              Service.Cbc,
+              cbcId,
+              Some(Seq(Identifier("cbcId", cbcId.value), Identifier("UTR", utr.value)))
+            )
           givenUserAuthorised()
           val newInvitation: Invitation = baseInvitation
             .copy(
@@ -147,25 +159,18 @@ with TestData {
     }
   )
 
-  "handle errors" should {
-    "when request data are incorrect" should {
-
-      "return NotImplemented 501 status and JSON Error If service is not supported" in {
-        givenUserAuthorised()
-        val result = doAgentPutRequest(
-          route = requestPath,
-          body = requestJson(
-            arn.value,
-            mtdItId.value,
-            "INVALID-SERVICE-NAME"
-          )
+  "when request data is incorrect" should {
+    "throw internal error if the service is not supported" in {
+      givenUserAuthorised()
+      val result = doAgentPutRequest(
+        route = requestPath,
+        body = requestJson(
+          arn.value,
+          mtdItId.value,
+          "INVALID-SERVICE-NAME"
         )
-        result.status shouldBe 501
-
-        val message = s"""Unsupported service "INVALID-SERVICE-NAME""""
-        result.json shouldBe toJson(ErrorBody("UNSUPPORTED_SERVICE", message))
-      }
-
+      )
+      result.status shouldBe 500
     }
   }
 

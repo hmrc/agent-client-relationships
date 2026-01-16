@@ -23,10 +23,7 @@ import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys.howRelationshipTermi
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.audit.AuditService
 import uk.gov.hmrc.agentclientrelationships.auth.CurrentUser
-import uk.gov.hmrc.agentclientrelationships.model.Accepted
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
-import uk.gov.hmrc.agentclientrelationships.model.Invitation
-import uk.gov.hmrc.agentclientrelationships.model.PartialAuth
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
