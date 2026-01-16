@@ -35,7 +35,11 @@ with SimpleName {
   override def value: String = nino.replace(" ", "").take(suffixlessNinoLength)
 
   // When using this make sure whatever uses the nino does not actually care about the suffix
-  def anySuffixValue: String = value + "A"
+  def anySuffixValue: String =
+    nino.length match {
+      case len if len > suffixlessNinoLength => nino
+      case _ => value + "A"
+    }
 
   override def toString: String = nino
 
