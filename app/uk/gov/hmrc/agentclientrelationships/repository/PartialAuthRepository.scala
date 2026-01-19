@@ -215,4 +215,16 @@ with RequestAwareLogging {
       .map(_.getDeletedCount == 1L)
   }
 
+  def countAllRecordsInPartialAuth(): Future[Long] = Mdc.preservingMdc {
+    collection
+      .countDocuments()
+      .toFuture()
+  }
+
+  def countActive(): Future[Long] = Mdc.preservingMdc {
+    collection
+      .countDocuments(equal("active", true))
+      .toFuture()
+  }
+
 }

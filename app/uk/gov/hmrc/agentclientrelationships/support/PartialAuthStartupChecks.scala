@@ -18,6 +18,9 @@ package uk.gov.hmrc.agentclientrelationships.support
 
 import org.apache.pekko.stream.Materializer
 import play.api.Logging
+import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
+
+import scala.concurrent.Future
 //import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
 
 import javax.inject.Inject
@@ -26,7 +29,7 @@ import scala.concurrent.ExecutionContext
 
 @Singleton
 class PartialAuthStartupChecks @Inject() (
-  // partialAuthRepository: PartialAuthRepository
+  partialAuthRepository: PartialAuthRepository
 )(implicit
   ec: ExecutionContext,
   mat: Materializer
@@ -37,4 +40,8 @@ extends Logging {
   val duplicateRecords = 0
   logger.info(s"[PartialAuthStartupChecks] duplicate partial auth records: $duplicateRecords")
 
+  val records: Future[Long] = partialAuthRepository.countAllRecordsInPartialAuth()
+  records.map(x =>
+    logger.info(s"[PartialAuthStartupChecks] Number of records is: $x")
+  )
 }
