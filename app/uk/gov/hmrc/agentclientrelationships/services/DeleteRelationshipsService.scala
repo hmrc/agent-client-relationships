@@ -28,7 +28,6 @@ import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
 import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _, _}
 import uk.gov.hmrc.agentclientrelationships.support.NoRequest
-import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
 import uk.gov.hmrc.agentclientrelationships.util.RequestSupport._
 import uk.gov.hmrc.agentclientrelationships.model.identifiers._
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository.endedByAgent
@@ -71,46 +70,44 @@ extends RequestAwareLogging {
     request: RequestHeader,
     currentUser: CurrentUser,
     auditData: AuditData = new AuditData
-  ): Future[Boolean] = {
+  ): Future[Option[Boolean]] = {
     auditService.setAuditDataForTermination(arn, enrolmentKey)
 
-    def delete(): Future[Boolean] = lockService
-      .recoveryLock(arn, enrolmentKey) {
-        val endedBy = determineUserTypeFromAG(affinityGroup)
-        val record = DeleteRecord(
-          arn.value,
-          enrolmentKey,
-          headerCarrier = Some(hc),
-          relationshipEndedBy = endedBy
-        )
+    def delete(): Future[Option[Boolean]] =
+      lockService
+        .recoveryLock(arn, enrolmentKey) {
+          val endedBy = determineUserTypeFromAG(affinityGroup)
+          val record = DeleteRecord(
+            arn.value,
+            enrolmentKey,
+            headerCarrier = Some(hc),
+            relationshipEndedBy = endedBy
+          )
 
-        for {
-          groupId <- es.getPrincipalGroupIdFor(arn)
-          _ <- createDeleteRecord(record)
-          enrolmentDeallocated <- deallocateEsEnrolment(
-            arn,
-            enrolmentKey,
-            groupId
-          )
-          etmpRelationshipRemoved <- removeEtmpRelationship(arn, enrolmentKey)
-          _ <- removeDeleteRecord(arn, enrolmentKey)
-          _ <- setRelationshipEnded(
-            arn,
-            enrolmentKey,
-            endedBy.getOrElse("HMRC")
-          )
-        } yield {
-          if (enrolmentDeallocated || etmpRelationshipRemoved)
-            true
-          else {
-            logger.warn(s"[DeleteRelationshipsService] did not find ES or ETMP records for ${arn.value}, $enrolmentKey")
-            throw RelationshipNotFound("RELATIONSHIP_NOT_FOUND")
-            // TODO ideally should change deleteRelationship to return a deleteStatus ADT with the calling code handling
-            // it properly, but that requires refactoring parts of the service to change current exception handling to a case match
-            // keeping it as an exception in this refactor to keep the rest of the service working as is
+          for {
+            groupId <- es.getPrincipalGroupIdFor(arn)
+            _ <- createDeleteRecord(record)
+            enrolmentDeallocated <- deallocateEsEnrolment(
+              arn,
+              enrolmentKey,
+              groupId
+            )
+            etmpRelationshipRemoved <- removeEtmpRelationship(arn, enrolmentKey)
+            _ <- removeDeleteRecord(arn, enrolmentKey)
+            _ <- setRelationshipEnded(
+              arn,
+              enrolmentKey,
+              endedBy.getOrElse("HMRC")
+            )
+          } yield {
+            if (enrolmentDeallocated || etmpRelationshipRemoved)
+              true
+            else {
+              logger.warn(s"[DeleteRelationshipsService] did not find ES or ETMP records for ${arn.value}, $enrolmentKey")
+              false
+            }
           }
         }
-      }.map(_.getOrElse(false))
 
     for {
       recordOpt <- deleteRecordRepository.findBy(arn, enrolmentKey)
@@ -120,7 +117,7 @@ extends RequestAwareLogging {
           case None => delete()
         }
       _ =
-        if (isDone)
+        if (isDone.contains(true))
           auditService.sendTerminateRelationshipAuditEvent()
     } yield isDone
   }
@@ -250,7 +247,7 @@ extends RequestAwareLogging {
                   .plusSeconds(recoveryTimeout)
                   .isAfter(Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime)
               ) {
-                resumeRelationshipRemoval(record)
+                resumeRelationshipRemoval(record).map(_.getOrElse(false))
               }
               else {
                 logger.error(s"[DeleteRelationshipsService] Terminating recovery of failed de-authorisation $record because timeout has passed.")
@@ -276,7 +273,7 @@ extends RequestAwareLogging {
   def resumeRelationshipRemoval(deleteRecord: DeleteRecord)(implicit
     request: RequestHeader,
     auditData: AuditData
-  ): Future[Boolean] = {
+  ): Future[Option[Boolean]] = {
     val arn = Arn(deleteRecord.arn)
     val enrolmentKey: EnrolmentKey = deleteRecord.enrolmentKey
     lockService
@@ -341,7 +338,6 @@ extends RequestAwareLogging {
             removeDeleteRecord(arn, enrolmentKey).map(_ => true)
         }
       }
-      .map(_.getOrElse(false))
   }
 
   def determineUserTypeFromAG(maybeGroup: Option[AffinityGroup]): Option[String] =

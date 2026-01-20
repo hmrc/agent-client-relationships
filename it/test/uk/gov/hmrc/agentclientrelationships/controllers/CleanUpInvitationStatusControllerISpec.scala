@@ -160,7 +160,7 @@ with TestData {
   )
 
   "when request data is incorrect" should {
-    "throw internal error if the service is not supported" in {
+    "return a bad request if the service is not supported" in {
       givenUserAuthorised()
       val result = doAgentPutRequest(
         route = requestPath,
@@ -170,7 +170,7 @@ with TestData {
           "INVALID-SERVICE-NAME"
         )
       )
-      result.status shouldBe 500
+      result.status shouldBe 400
     }
   }
 

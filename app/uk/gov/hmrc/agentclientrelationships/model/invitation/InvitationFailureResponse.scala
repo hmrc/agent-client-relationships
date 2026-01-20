@@ -29,7 +29,7 @@ import play.api.mvc.Results.NotFound
 import play.api.mvc.Results.NotImplemented
 
 sealed trait InvitationFailureResponse {
-  def getResult(message: String): Result
+  def getResult(message: String = ""): Result
 }
 
 object InvitationFailureResponse {
@@ -93,6 +93,14 @@ object InvitationFailureResponse {
     def getResult(message: String): Result = NotFound(
       toJson(ErrorBody("RELATIONSHIP_NOT_FOUND", "The specified relationship was not found."))
     )
+  }
+
+  case object AlreadyBeingProcessed
+  extends InvitationFailureResponse {
+    def getResult(message: String = "More than one request received to create the same invitation."): Result = Locked(toJson(ErrorBody(
+      "ALREADY_BEING_PROCESSED",
+      message
+    )))
   }
 
   case class RelationshipDeleteFailed(msg: String)

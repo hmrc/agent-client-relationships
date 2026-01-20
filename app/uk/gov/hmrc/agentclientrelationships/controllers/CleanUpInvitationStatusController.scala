@@ -54,9 +54,8 @@ with RequestAwareLogging {
       authorised() {
         val payload = request.body
 
-        validationService.validateForEnrolmentKey(
+        validationService.validateForEnrolmentKeyEither(
           payload.service,
-          Service(payload.service).supportedClientIdType.enrolmentId,
           payload.clientId
         ).flatMap {
           case Right(enrolment) =>

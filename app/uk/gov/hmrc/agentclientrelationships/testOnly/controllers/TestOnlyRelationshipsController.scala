@@ -61,10 +61,10 @@ extends BackendController(controllerComponents) {
     clientIdType: String,
     clientId: String
   ): Action[AnyContent] = Action.async { implicit request =>
-    validationService.validateForEnrolmentKey(
+    validationService.validateForEnrolmentKeyEither(
       service,
-      clientIdType,
-      clientId
+      clientId,
+      Some(clientIdType)
     ).flatMap {
       case Right(enrolmentKey) =>
         implicit val auditData: AuditData = new AuditData()

@@ -85,8 +85,8 @@ extends RequestAwareLogging {
       case (svc, idType, id) =>
         withValidEnrolment(
           service,
-          clientIdType,
-          clientId
+          clientId,
+          clientIdType
         ) { enrolmentKey =>
           checkWithTaxIdentifier(
             arn,
@@ -99,15 +99,15 @@ extends RequestAwareLogging {
 
   private def withValidEnrolment(
     service: String,
-    clientIdType: String,
-    clientId: String
+    clientId: String,
+    clientIdType: String
   )(
     proceed: EnrolmentKey => Future[CheckRelationshipResult]
   )(implicit request: RequestHeader): Future[CheckRelationshipResult] = validationService
-    .validateForEnrolmentKey(
+    .validateForEnrolmentKeyEither(
       service,
-      clientIdType,
-      clientId
+      clientId,
+      Some(clientIdType)
     )
     .flatMap {
       case Right(enrolmentKey) => proceed(enrolmentKey)

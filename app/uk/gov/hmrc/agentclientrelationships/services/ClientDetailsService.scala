@@ -28,6 +28,8 @@ import uk.gov.hmrc.agentclientrelationships.model.clientDetails._
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.cgt.CgtSubscriptionDetails
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa.ItsaBusinessDetails
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.vat.VatCustomerDetails
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdIt
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdItSupp
 import uk.gov.hmrc.agentclientrelationships.model.identifiers._
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.domain.TaxIdentifier
@@ -45,6 +47,26 @@ class ClientDetailsService @Inject() (
   appConfig: AppConfig
 )(implicit ec: ExecutionContext)
 extends RequestAwareLogging {
+
+  // Expands either of the ITSA clientIds to both NINO and MTDITID where possible
+  // NINO is mandatory as we treat it as a primary ITSA identifier in ASA
+  def expandClientId(
+    service: Service,
+    clientId: TaxIdentifier
+  )(implicit request: RequestHeader): Future[(TaxIdentifier, Option[TaxIdentifier])] =
+    (service, clientId) match {
+      case (MtdIt | MtdItSupp, nino @ NinoWithoutSuffix(_)) =>
+        hipConnector.getMtdIdFor(nino).map {
+          case Some(mtdId) => (nino, Some(mtdId))
+          case None => (clientId, None)
+        }
+      case (MtdIt | MtdItSupp, mtdId @ MtdItId(_)) =>
+        hipConnector.getNinoFor(mtdId).map {
+          case Some(nino) => (nino, Some(mtdId))
+          case None => throw new RuntimeException(s"NINO not found for MTDITID: ${mtdId.value}")
+        }
+      case _ => Future.successful((clientId, None))
+    }
 
   def findClientDetailsByTaxIdentifier(
     taxIdentifier: TaxIdentifier

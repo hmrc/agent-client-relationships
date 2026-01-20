@@ -124,19 +124,11 @@ with AuthActions {
       .flatMap {
         case Some(invitation) if invitation.status == Pending =>
           for {
-            enrolment <- validationService
-              .validateForEnrolmentKey(
-                invitation.service,
-                ClientIdType.forId(invitation.clientIdType).enrolmentId,
-                invitation.clientId
-              )
-              .map(either =>
-                either.getOrElse(
-                  throw new RuntimeException(
-                    s"Could not parse invitation details into enrolment reason: ${either.left}"
-                  )
-                )
-              )
+            enrolment <- validationService.validateForEnrolmentKey(
+              invitation.service,
+              invitation.clientId,
+              Some(ClientIdType.forId(invitation.clientIdType).enrolmentId)
+            )
             result <-
               authorisedUser(
                 None,

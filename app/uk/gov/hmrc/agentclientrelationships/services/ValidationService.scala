@@ -42,28 +42,38 @@ class ValidationService @Inject() (
 )(implicit ec: ExecutionContext)
 extends RequestAwareLogging {
 
-  // TODO look into updating this to not be an either as we never actually handle the Left it returns in a useful way
-  // noinspection ScalaStyle
   def validateForEnrolmentKey(
     serviceKey: String,
-    clientType: String,
-    clientId: String
+    clientId: String,
+    clientType: Option[String] = None
+  )(implicit rh: RequestHeader): Future[EnrolmentKey] = validateForEnrolmentKeyEither(
+    serviceKey,
+    clientId,
+    clientType
+  ).map {
+    case Right(enrolmentKey) => enrolmentKey
+    case Left(errorMessage) => throw new IllegalArgumentException(s"Failed to build enrolment key because: $errorMessage")
+  }
+
+  // noinspection ScalaStyle
+  def validateForEnrolmentKeyEither(
+    serviceKey: String,
+    clientId: String,
+    clientType: Option[String] = None
   )(implicit rh: RequestHeader): Future[Either[String, EnrolmentKey]] =
     (serviceKey, clientType) match {
       // "special" cases
-      case ("IR-SA", "ni" | "NI" | "NINO") if NinoWithoutSuffix.isValid(clientId) =>
-        Future.successful(Right(EnrolmentKey("IR-SA", NinoWithoutSuffix(clientId))))
-      case (Service.MtdIt.id | Service.MtdItSupp.id, "ni" | "NI" | "NINO") if NinoWithoutSuffix.isValid(clientId) =>
+      case ("IR-SA" | Service.MtdIt.id | Service.MtdItSupp.id | Service.PersonalIncomeRecord.id, None | Some("ni" | "NI" | "NINO"))
+          if NinoWithoutSuffix.isValid(clientId) =>
         Future.successful(Right(EnrolmentKey(serviceKey, NinoWithoutSuffix(clientId))))
-      case (Service.PersonalIncomeRecord.id, "NINO") => Future.successful(Right(EnrolmentKey(serviceKey, NinoWithoutSuffix(clientId))))
-      case (Service.Cbc.id, CbcIdType.enrolmentId) => makeSanitisedCbcEnrolmentKey(CbcId(clientId))
+      case (Service.Cbc.id, None | Some(CbcIdType.enrolmentId)) => makeSanitisedCbcEnrolmentKey(CbcId(clientId))
       // "normal" cases
       case (serviceKey, _) =>
         if (appConfig.supportedServicesWithoutPir.exists(_.id == serviceKey))
           validateSupportedServiceForEnrolmentKey(
             serviceKey,
-            clientType,
-            clientId
+            clientId,
+            clientType
           )
         else
           Future.successful(Left(s"Unknown service $serviceKey"))
@@ -133,17 +143,17 @@ extends RequestAwareLogging {
 
   private def validateSupportedServiceForEnrolmentKey(
     serviceKey: String,
-    taxIdType: String,
-    clientId: String
+    clientId: String,
+    taxIdType: Option[String]
   ): Future[Either[String, EnrolmentKey]] = {
     val service: Service = Service.forId(serviceKey)
     val clientIdType: ClientIdType[TaxIdentifier] = service.supportedClientIdType
-    if (taxIdType == clientIdType.enrolmentId) {
+    if (taxIdType.isEmpty || taxIdType.contains(clientIdType.enrolmentId)) {
       if (clientIdType.isValid(clientId))
         Future.successful(Right(EnrolmentKey(service, clientIdType.createUnderlying(clientId))))
       else
         Future.successful(
-          Left(s"Identifier $clientId of stated type $taxIdType provided for service $serviceKey failed validation")
+          Left(s"Identifier $clientId of type $clientIdType provided for service $serviceKey failed validation")
         )
     }
     else
