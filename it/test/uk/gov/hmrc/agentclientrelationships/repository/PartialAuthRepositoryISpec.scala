@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.agentclientrelationships.repository
 
-import org.mongodb.scala.MongoWriteException
 import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.Indexes
 import org.scalatest.matchers.should.Matchers
@@ -26,6 +25,7 @@ import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.Helpers.await
 import play.api.test.Helpers.defaultAwaitTimeout
+import uk.gov.hmrc.agentclientrelationships.model.ActiveNinoWithSuffixAggregationResult
 import uk.gov.hmrc.agentclientrelationships.model.PartialAuthRelationship
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
@@ -213,6 +213,51 @@ with RepositoryCleanupSupport {
 
     "fail to retrieve records when none are found for the given nino" in {
       await(repository.findAllForClient(NinoWithoutSuffix("AA111111A"))) shouldBe Seq.empty
+    }
+  }
+
+  ".findActiveWithNinoSuffix" should {
+
+    "retrieves records for a given nino" in {
+      val recordWoNinoSuffix = partialAuth.copy(nino = "AB123456")
+      val recordWithNinoSuffix = partialAuth.copy(nino = "BA654321A")
+      await(repository.collection.insertMany(Seq(
+        recordWoNinoSuffix,
+        recordWithNinoSuffix
+      )).toFuture())
+      val result: Seq[ActiveNinoWithSuffixAggregationResult] = await(repository.findActiveWithNinoSuffix.toFuture)
+      result shouldBe Seq(ActiveNinoWithSuffixAggregationResult(
+        recordWithNinoSuffix.arn,
+        recordWithNinoSuffix.service,
+        recordWithNinoSuffix.nino
+      ))
+    }
+
+    "only retrieve records for a given nino if user is active" in {
+      val recordWoNinoSuffix = partialAuth.copy(nino = "AB123456")
+      val recordWithNinoSuffixActive = partialAuth.copy(nino = "BA654321A", active = true)
+      val recordWithNinoSuffixInactive = partialAuth.copy(nino = "BA654321B", active = false)
+      await(repository.collection.insertMany(Seq(
+        recordWoNinoSuffix,
+        recordWithNinoSuffixActive,
+        recordWithNinoSuffixInactive
+      )).toFuture())
+      val result: Seq[ActiveNinoWithSuffixAggregationResult] = await(repository.findActiveWithNinoSuffix.toFuture)
+      result shouldBe Seq(ActiveNinoWithSuffixAggregationResult(
+        recordWithNinoSuffixActive.arn,
+        recordWithNinoSuffixActive.service,
+        recordWithNinoSuffixActive.nino
+      ))
+    }
+
+    "fail to retrieve records when none are found for the given nino" in {
+      val recordWoNinoSuffix = partialAuth.copy(nino = "AB123456")
+      val recordWoNinoSuffix2 = partialAuth.copy(nino = "BA654321")
+      await(repository.collection.insertMany(Seq(
+        recordWoNinoSuffix,
+        recordWoNinoSuffix2
+      )).toFuture())
+      await(repository.findActiveWithNinoSuffix.toFuture) shouldBe Seq.empty
     }
   }
 

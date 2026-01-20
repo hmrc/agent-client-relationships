@@ -17,19 +17,21 @@
 package uk.gov.hmrc.agentclientrelationships.repository
 
 import org.apache.pekko.Done
+import org.mongodb.scala.Observable
 import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.Filters.and
 import org.mongodb.scala.model.Filters.equal
 import org.mongodb.scala.model.Filters.in
+import org.mongodb.scala.model.Updates._
 import org.mongodb.scala.model.IndexModel
 import org.mongodb.scala.model.IndexOptions
 import org.mongodb.scala.model.Indexes
-import org.mongodb.scala.model.Updates._
-import uk.gov.hmrc.agentclientrelationships.model.PartialAuthRelationship
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDIT
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDITSUPP
+import uk.gov.hmrc.agentclientrelationships.model.ActiveNinoWithSuffixAggregationResult
+import uk.gov.hmrc.agentclientrelationships.model.PartialAuthRelationship
 import uk.gov.hmrc.agentclientrelationships.util.CryptoUtil.encryptedString
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.crypto.Decrypter
@@ -77,7 +79,14 @@ extends PlayMongoRepository[PartialAuthRelationship](
         .unique(true)
         .name("activeRelationshipsIndex")
     ),
-    IndexModel(Indexes.ascending("nino"), IndexOptions().name("ninoIndex"))
+    IndexModel(Indexes.ascending("nino"), IndexOptions().name("ninoIndex")),
+    // TODO: remove this index once we have migrated all data to new nino format
+    IndexModel(
+      Indexes.ascending(
+        "active"
+      ),
+      IndexOptions().name("activeIndex")
+    )
   ),
   replaceIndexes = true
 )
@@ -175,6 +184,20 @@ with RequestAwareLogging {
       )
       .headOption()
   }
+
+  def findActiveWithNinoSuffix: Observable[ActiveNinoWithSuffixAggregationResult] = collection
+    .find(equal("active", true))
+    .map { record =>
+      (record, record.nino)
+    }
+    .filter { case (_, nino) => nino.length > 8 }
+    .map { case (record, decryptedNino) =>
+      ActiveNinoWithSuffixAggregationResult(
+        arn = record.arn,
+        service = record.service,
+        nino = decryptedNino
+      )
+    }
 
   def deauthorise(
     serviceId: String,
