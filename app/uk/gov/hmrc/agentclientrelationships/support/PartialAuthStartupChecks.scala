@@ -20,9 +20,6 @@ import org.apache.pekko.stream.Materializer
 import play.api.Logging
 import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
 
-import scala.concurrent.Future
-//import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
-
 import javax.inject.Inject
 import javax.inject.Singleton
 import scala.concurrent.ExecutionContext
@@ -36,12 +33,17 @@ class PartialAuthStartupChecks @Inject() (
 )
 extends Logging {
 
-  // partialAuthRepository.getDuplicateAuths()
-  val duplicateRecords = 0
-  logger.info(s"[PartialAuthStartupChecks] duplicate partial auth records: $duplicateRecords")
-
-  val records: Future[Long] = partialAuthRepository.countAllRecordsInPartialAuth()
-  records.map(x =>
-    logger.info(s"[PartialAuthStartupChecks] Number of records is: $x")
-  )
+  partialAuthRepository.getDuplicateAuths.map {
+    count =>
+      logger.warn(
+        s"[PartialAuthStartupChecks] duplicate partial auth records: $count"
+      )
+  }
+    .recover {
+      case ex =>
+        logger.warn(
+          "[PartialAuthStartupChecks] Failed to fetch duplicate partial auth records",
+          ex
+        )
+    }
 }

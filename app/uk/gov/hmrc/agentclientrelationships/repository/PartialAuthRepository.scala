@@ -227,4 +227,13 @@ with RequestAwareLogging {
       .toFuture()
   }
 
+  def getDuplicateAuths(): Future[Int] = collection
+    .find(equal("active", true))
+    .toFuture()
+    .map { records =>
+      records
+        .groupBy(r => (r.arn, r.service, r.nino.take(8)))
+        .count { case (_, rs) => rs.size > 1 }
+    }
+
 }
