@@ -20,6 +20,7 @@ import com.google.inject.AbstractModule
 import play.api.Configuration
 import play.api.Environment
 import uk.gov.hmrc.agentclientrelationships.support.EmailScheduler
+import uk.gov.hmrc.agentclientrelationships.support.PartialAuthRemoveNinoSuffix
 
 import java.time.Clock
 import java.time.ZoneId
@@ -35,5 +36,6 @@ extends AbstractModule {
     bind(classOf[Clock]).toInstance(Clock.system(ZoneId.systemDefault()))
     bind(classOf[EmailScheduler]).asEagerSingleton()
     bind(classOf[InternalAuthTokenInitialiser]).asEagerSingleton()
+    bind(classOf[PartialAuthRemoveNinoSuffix]).asEagerSingleton()
   }
 }

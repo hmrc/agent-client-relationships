@@ -146,6 +146,6 @@ class AppConfig @Inject() (
   val emailSchedulerExpiredCronExp: String = servicesConfig.getString("emailScheduler.expiredEmailCronExpression")
   val emailSchedulerLockTTL: Int = servicesConfig.getInt("emailScheduler.lockDurationInSeconds")
 
-  val removeNinoSuffix: Boolean = servicesConfig.getBoolean("features.remove-nino-suffix-enabled")
+  val removeNinoSuffixEnabled: Boolean = servicesConfig.getBoolean("features.remove-nino-suffix-enabled")
 
 }
