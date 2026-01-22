@@ -17,19 +17,21 @@
 package uk.gov.hmrc.agentclientrelationships.repository
 
 import org.apache.pekko.Done
+import org.mongodb.scala.Observable
 import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.Filters.and
 import org.mongodb.scala.model.Filters.equal
 import org.mongodb.scala.model.Filters.in
+import org.mongodb.scala.model.Updates._
 import org.mongodb.scala.model.IndexModel
 import org.mongodb.scala.model.IndexOptions
 import org.mongodb.scala.model.Indexes
-import org.mongodb.scala.model.Updates._
-import uk.gov.hmrc.agentclientrelationships.model.PartialAuthRelationship
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDIT
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDITSUPP
+import uk.gov.hmrc.agentclientrelationships.model.ActiveNinoWithSuffixAggregationResult
+import uk.gov.hmrc.agentclientrelationships.model.PartialAuthRelationship
 import uk.gov.hmrc.agentclientrelationships.util.CryptoUtil.encryptedString
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.crypto.Decrypter
@@ -174,6 +176,40 @@ with RequestAwareLogging {
         )
       )
       .headOption()
+  }
+
+  def findWithNinoSuffix: Observable[ActiveNinoWithSuffixAggregationResult] = collection
+    .find()
+    .map { record =>
+      (record, record.nino)
+    }
+    .filter { case (_, nino) => nino.length > 8 }
+    .map { case (record, decryptedNino) =>
+      ActiveNinoWithSuffixAggregationResult(
+        arn = record.arn,
+        service = record.service,
+        nino = decryptedNino
+      )
+    }
+
+  def removeNinoSuffix(
+    arn: String,
+    service: String,
+    nino: String
+  ): Future[Long] = {
+    val ninoWithoutSuffix = nino.take(8)
+
+    collection
+      .updateOne(
+        and(
+          equal("arn", arn),
+          equal("service", service),
+          equal("nino", encryptedString(nino))
+        ),
+        set("nino", encryptedString(ninoWithoutSuffix))
+      )
+      .toFuture()
+      .map(_.getModifiedCount)
   }
 
   def deauthorise(
