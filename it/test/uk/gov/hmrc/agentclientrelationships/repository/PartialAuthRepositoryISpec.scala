@@ -18,6 +18,7 @@ package uk.gov.hmrc.agentclientrelationships.repository
 
 import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.Indexes
+import org.mongodb.scala.model.Filters.{and, equal => mongoEqual}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
@@ -322,6 +323,41 @@ with RepositoryCleanupSupport {
 
       result shouldBe true
     }
+  }
+
+  "removeNinoSuffix should remove suffix from nino" in {
+    val ninoWithSuffix = "CD579189X"
+    val ninoWithoutSuffix = "CD579189"
+    val arn = "XARN1234567"
+    val service = "HMRC-MTD-IT"
+    await(
+      repository.collection.insertOne(
+        partialAuth.copy(nino = ninoWithSuffix)
+      ).toFuture()
+    )
+
+    await(repository.collection.countDocuments().toFuture()) shouldBe 1
+
+    await(
+      repository.removeNinoSuffix(
+        arn = arn,
+        service = service,
+        nino = ninoWithSuffix
+      )
+    )
+
+    val updated = await(
+      repository.collection
+        .find(
+          and(
+            mongoEqual("arn", arn),
+            mongoEqual("service", service)
+          )
+        )
+        .head()
+    )
+
+    updated.nino shouldBe ninoWithoutSuffix
   }
 
 }

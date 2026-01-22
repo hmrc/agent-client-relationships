@@ -47,6 +47,20 @@ extends Logging {
         .throttle(10, 1.second)
         .runForeach { aggregationResult =>
           logger.info(s"update record: ${aggregationResult.nino}")
+
+          partialAuthRepository
+            .removeNinoSuffix(
+              arn = aggregationResult.arn,
+              service = aggregationResult.service,
+              nino = aggregationResult.nino
+            )
+            .recover {
+              case ex =>
+                logger.error(
+                  s"Failed to remove NINO suffix for arn=${aggregationResult.arn}, service=${aggregationResult.service}",
+                  ex
+                )
+            }
         }
     }
     ()

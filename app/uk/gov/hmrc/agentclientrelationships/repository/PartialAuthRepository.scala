@@ -199,6 +199,26 @@ with RequestAwareLogging {
       )
     }
 
+  def removeNinoSuffix(
+    arn: String,
+    service: String,
+    nino: String
+  ): Future[Unit] = {
+    val ninoWithoutSuffix = nino.take(8)
+
+    collection
+      .updateOne(
+        and(
+          equal("arn", arn),
+          equal("service", service),
+          equal("nino", encryptedString(nino))
+        ),
+        set("nino", encryptedString(ninoWithoutSuffix))
+      )
+      .toFuture()
+      .map(_ => ())
+  }
+
   def deauthorise(
     serviceId: String,
     nino: NinoWithoutSuffix,
