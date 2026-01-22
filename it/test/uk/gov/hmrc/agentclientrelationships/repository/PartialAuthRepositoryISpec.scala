@@ -326,8 +326,8 @@ with RepositoryCleanupSupport {
   }
 
   "removeNinoSuffix should remove suffix from nino" in {
-    val ninoWithSuffix = "CD579189X"
-    val ninoWithoutSuffix = "CD579189"
+    val ninoWithSuffix = "SX579189D"
+    val ninoWithoutSuffix = "SX579189"
     val arn = "XARN1234567"
     val service = "HMRC-MTD-IT"
     await(
@@ -358,6 +358,62 @@ with RepositoryCleanupSupport {
     )
 
     updated.nino shouldBe ninoWithoutSuffix
+  }
+
+  "removeNinoSuffix should not create extra documents" in {
+    val ninoWithSuffix = "SX579189D"
+    val arn = "XARN1234567"
+    val service = "HMRC-MTD-IT"
+
+    await(
+      repository.collection.insertOne(
+        partialAuth.copy(nino = ninoWithSuffix)
+      ).toFuture()
+    )
+
+    await(
+      repository.removeNinoSuffix(
+        arn = arn,
+        service = service,
+        nino = ninoWithSuffix
+      )
+    )
+
+    await(repository.collection.countDocuments().toFuture()) shouldBe 1
+  }
+
+  "removeNinoSuffix should be idempotent when no suffix exists" in {
+    val ninoWithoutSuffix = "SX579189"
+    val arn = "XARN1234567"
+    val service = "HMRC-MTD-IT"
+
+    await(
+      repository.collection.insertOne(
+        partialAuth.copy(nino = ninoWithoutSuffix)
+      ).toFuture()
+    )
+
+    await(
+      repository.removeNinoSuffix(
+        arn = arn,
+        service = service,
+        nino = ninoWithoutSuffix
+      )
+    )
+
+    val result = await(
+      repository.collection
+        .find(
+          and(
+            mongoEqual("arn", arn),
+            mongoEqual("service", service)
+          )
+        )
+        .head()
+    )
+
+    result.nino shouldBe ninoWithoutSuffix
+    await(repository.collection.countDocuments().toFuture()) shouldBe 1
   }
 
 }
