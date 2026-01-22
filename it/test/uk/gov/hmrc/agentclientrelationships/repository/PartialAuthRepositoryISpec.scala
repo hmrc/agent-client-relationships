@@ -234,23 +234,6 @@ with RepositoryCleanupSupport {
       ))
     }
 
-    "only retrieve records for a given nino if user is active" in {
-      val recordWoNinoSuffix = partialAuth.copy(nino = "AB123456")
-      val recordWithNinoSuffixActive = partialAuth.copy(nino = "BA654321A", active = true)
-      val recordWithNinoSuffixInactive = partialAuth.copy(nino = "BA654321B", active = false)
-      await(repository.collection.insertMany(Seq(
-        recordWoNinoSuffix,
-        recordWithNinoSuffixActive,
-        recordWithNinoSuffixInactive
-      )).toFuture())
-      val result: Seq[ActiveNinoWithSuffixAggregationResult] = await(repository.findActiveWithNinoSuffix.toFuture)
-      result shouldBe Seq(ActiveNinoWithSuffixAggregationResult(
-        recordWithNinoSuffixActive.arn,
-        recordWithNinoSuffixActive.service,
-        recordWithNinoSuffixActive.nino
-      ))
-    }
-
     "fail to retrieve records when none are found for the given nino" in {
       val recordWoNinoSuffix = partialAuth.copy(nino = "AB123456")
       val recordWoNinoSuffix2 = partialAuth.copy(nino = "BA654321")
@@ -325,14 +308,49 @@ with RepositoryCleanupSupport {
     }
   }
 
-  "removeNinoSuffix should remove suffix from nino" in {
+  "removeNinoSuffix should remove suffix from nino for active record" in {
     val ninoWithSuffix = "SX579189D"
     val ninoWithoutSuffix = "SX579189"
     val arn = "XARN1234567"
     val service = "HMRC-MTD-IT"
     await(
       repository.collection.insertOne(
-        partialAuth.copy(nino = ninoWithSuffix)
+        partialAuth.copy(nino = ninoWithSuffix, active = true)
+      ).toFuture()
+    )
+
+    await(repository.collection.countDocuments().toFuture()) shouldBe 1
+
+    await(
+      repository.removeNinoSuffix(
+        arn = arn,
+        service = service,
+        nino = ninoWithSuffix
+      )
+    )
+
+    val updated = await(
+      repository.collection
+        .find(
+          and(
+            mongoEqual("arn", arn),
+            mongoEqual("service", service)
+          )
+        )
+        .head()
+    )
+
+    updated.nino shouldBe ninoWithoutSuffix
+  }
+
+  "removeNinoSuffix should remove suffix from nino for inactive record" in {
+    val ninoWithSuffix = "SX579189D"
+    val ninoWithoutSuffix = "SX579189"
+    val arn = "XARN1234567"
+    val service = "HMRC-MTD-IT"
+    await(
+      repository.collection.insertOne(
+        partialAuth.copy(nino = ninoWithSuffix, active = false)
       ).toFuture()
     )
 
