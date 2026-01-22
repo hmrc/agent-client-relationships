@@ -416,4 +416,60 @@ with RepositoryCleanupSupport {
     await(repository.collection.countDocuments().toFuture()) shouldBe 1
   }
 
+  "removeNinoSuffix should only update matching arn and service" in {
+    val ninoWithSuffix = "SX579189D"
+    val ninoWithoutSuffix = "SX579189"
+    val service = "HMRC-MTD-IT"
+    val arn = "XARN1234567"
+    val otherArn = "OTHERARN"
+
+    await(
+      repository.collection.insertOne(
+        partialAuth.copy(nino = ninoWithSuffix)
+      ).toFuture()
+    )
+
+    await(
+      repository.collection.insertOne(
+        partialAuth.copy(
+          arn = otherArn,
+          nino = ninoWithSuffix
+        )
+      ).toFuture()
+    )
+
+    await(
+      repository.removeNinoSuffix(
+        arn = arn,
+        service = service,
+        nino = ninoWithSuffix
+      )
+    )
+
+    val updated = await(
+      repository.collection
+        .find(
+          and(
+            mongoEqual("arn", arn),
+            mongoEqual("service", service)
+          )
+        )
+        .head()
+    )
+
+    val untouched = await(
+      repository.collection
+        .find(
+          and(
+            mongoEqual("arn", otherArn),
+            mongoEqual("service", service)
+          )
+        )
+        .head()
+    )
+
+    updated.nino shouldBe ninoWithoutSuffix
+    untouched.nino shouldBe ninoWithSuffix
+  }
+
 }
