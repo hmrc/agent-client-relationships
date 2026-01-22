@@ -34,7 +34,7 @@ import uk.gov.hmrc.agentclientrelationships.support.RepositoryCleanupSupport
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 
 import java.time.Instant
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 class PartialAuthRepositoryISpec
 extends AnyWordSpec
@@ -488,6 +488,35 @@ with RepositoryCleanupSupport {
 
     updated.nino shouldBe ninoWithoutSuffix
     untouched.nino shouldBe ninoWithSuffix
+  }
+
+  "removeNinoSuffix should return number of records updated" in {
+    val service = "HMRC-MTD-IT"
+    val ninoWithSuffix = "SX579189D"
+
+    val auths = Seq(
+      partialAuth.copy(arn = "XARN1", nino = ninoWithSuffix),
+      partialAuth.copy(arn = "XARN2", nino = ninoWithSuffix),
+      partialAuth.copy(arn = "XARN3", nino = ninoWithSuffix)
+    )
+
+    await(repository.collection.insertMany(auths).toFuture())
+    await(repository.collection.countDocuments().toFuture()) shouldBe 3
+
+    val updatedCounts =
+      await(
+        Future.sequence(
+          auths.map { a =>
+            repository.removeNinoSuffix(
+              arn = a.arn,
+              service = service,
+              nino = ninoWithSuffix
+            )
+          }
+        )
+      )
+
+    updatedCounts.sum shouldBe 3
   }
 
 }
