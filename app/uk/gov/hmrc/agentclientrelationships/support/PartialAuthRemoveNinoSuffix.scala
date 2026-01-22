@@ -40,33 +40,40 @@ class PartialAuthRemoveNinoSuffix @Inject() (
 extends Logging {
 
   if (appConfig.removeNinoSuffixEnabled) {
-    mongoLockService.partialAuthLock("PartialAuthRemoveNinoSuffix") {
-      logger.info("[PartialAuthRemoveNinoSuffix] Remove nino suffix job is running")
-      Source
-        .fromPublisher(partialAuthRepository.findActiveWithNinoSuffix)
-        .throttle(10, 1.second)
-        .runForeach { aggregationResult =>
-          logger.info(s"update record: ${aggregationResult.nino}")
 
+    mongoLockService.partialAuthLock("PartialAuthRemoveNinoSuffix") {
+
+      logger.info("[PartialAuthRemoveNinoSuffix] Remove nino suffix job is running")
+
+      Source
+        .fromPublisher(partialAuthRepository.findWithNinoSuffix)
+        .throttle(10, 1.second)
+        .mapAsync(1) { r =>
           partialAuthRepository
             .removeNinoSuffix(
-              arn = aggregationResult.arn,
-              service = aggregationResult.service,
-              nino = aggregationResult.nino
+              arn = r.arn,
+              service = r.service,
+              nino = r.nino
             )
             .recover {
               case ex =>
                 logger.error(
-                  s"Failed to remove NINO suffix for arn=${aggregationResult.arn}, service=${aggregationResult.service}",
+                  s"Failed to remove NINO suffix for arn=${r.arn}, service=${r.service}",
                   ex
                 )
+                0L
             }
         }
+        .runFold(0L)(_ + _)
+        .map { totalUpdated =>
+          logger.info(
+            s"[PartialAuthRemoveNinoSuffix] Job completed. Total records updated: $totalUpdated"
+          )
+          ()
+        }
     }
-    ()
   }
   else {
     logger.info("[PartialAuthRemoveNinoSuffix] removeNinoSuffixEnabled is disabled")
   }
-
 }

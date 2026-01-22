@@ -79,14 +79,7 @@ extends PlayMongoRepository[PartialAuthRelationship](
         .unique(true)
         .name("activeRelationshipsIndex")
     ),
-    IndexModel(Indexes.ascending("nino"), IndexOptions().name("ninoIndex")),
-    // TODO: remove this index once we have migrated all data to new nino format
-    IndexModel(
-      Indexes.ascending(
-        "active"
-      ),
-      IndexOptions().name("activeIndex")
-    )
+    IndexModel(Indexes.ascending("nino"), IndexOptions().name("ninoIndex"))
   ),
   replaceIndexes = true
 )
@@ -185,8 +178,8 @@ with RequestAwareLogging {
       .headOption()
   }
 
-  def findActiveWithNinoSuffix: Observable[ActiveNinoWithSuffixAggregationResult] = collection
-    .find(equal("active", true))
+  def findWithNinoSuffix: Observable[ActiveNinoWithSuffixAggregationResult] = collection
+    .find()
     .map { record =>
       (record, record.nino)
     }
@@ -203,7 +196,7 @@ with RequestAwareLogging {
     arn: String,
     service: String,
     nino: String
-  ): Future[Unit] = {
+  ): Future[Long] = {
     val ninoWithoutSuffix = nino.take(8)
 
     collection
@@ -216,7 +209,7 @@ with RequestAwareLogging {
         set("nino", encryptedString(ninoWithoutSuffix))
       )
       .toFuture()
-      .map(_ => ())
+      .map(_.getModifiedCount)
   }
 
   def deauthorise(

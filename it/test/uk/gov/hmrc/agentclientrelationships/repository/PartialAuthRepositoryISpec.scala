@@ -226,7 +226,7 @@ with RepositoryCleanupSupport {
         recordWoNinoSuffix,
         recordWithNinoSuffix
       )).toFuture())
-      val result: Seq[ActiveNinoWithSuffixAggregationResult] = await(repository.findActiveWithNinoSuffix.toFuture)
+      val result: Seq[ActiveNinoWithSuffixAggregationResult] = await(repository.findWithNinoSuffix.toFuture)
       result shouldBe Seq(ActiveNinoWithSuffixAggregationResult(
         recordWithNinoSuffix.arn,
         recordWithNinoSuffix.service,
@@ -241,7 +241,7 @@ with RepositoryCleanupSupport {
         recordWoNinoSuffix,
         recordWoNinoSuffix2
       )).toFuture())
-      await(repository.findActiveWithNinoSuffix.toFuture) shouldBe Seq.empty
+      await(repository.findWithNinoSuffix.toFuture) shouldBe Seq.empty
     }
   }
 
