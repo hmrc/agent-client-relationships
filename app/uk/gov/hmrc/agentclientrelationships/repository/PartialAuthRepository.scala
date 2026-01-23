@@ -192,6 +192,18 @@ with RequestAwareLogging {
       )
     }
 
+  def countNinoSuffixPresence(): Future[(Long, Long)] = collection
+    .find()
+    .toFuture()
+    .map { records =>
+      val (withSuffix, withoutSuffix) = records.partition(_.nino.length > 8)
+
+      (
+        withSuffix.size.toLong,
+        withoutSuffix.size.toLong
+      )
+    }
+
   def removeNinoSuffix(
     arn: String,
     service: String,
