@@ -237,7 +237,7 @@ with RepositoryCleanupSupport {
       intercept[RuntimeException](await(repository.updateStatus("ABC", Accepted)))
     }
 
-    "de-authorise all old invitations for a client (including alt itsa)" in {
+    "de-authorise all old invitations for a client (including alt itsa) when called with a NINO for ITSA" in {
       val invitation = pendingInvitation(
         service = MtdIt,
         clientId = MtdItId("1234567890"),
@@ -272,7 +272,35 @@ with RepositoryCleanupSupport {
       repository.findOneById(newInvitation.invitationId).futureValue.get.status shouldBe Accepted
     }
 
-    "de-authorise all invitations for an agent (including alt itsa)" in {
+    "de-authorise all old invitations for a client when called with an MTDITID for ITSA" in {
+      val invitation = pendingInvitation(
+        service = MtdIt,
+        clientId = MtdItId("1234567890"),
+        suppliedClientId = Some(NinoWithoutSuffix("AB213308"))
+      )
+      val newInvitation = pendingInvitation(
+        service = MtdIt,
+        clientId = MtdItId("1234567890"),
+        suppliedClientId = Some(NinoWithoutSuffix("AB213308A"))
+      )
+      repository.collection.insertOne(invitation.copy(status = Accepted)).toFuture().futureValue
+      repository.collection.insertOne(newInvitation.copy(status = Accepted)).toFuture().futureValue
+
+      repository.deauthAcceptedInvitations(
+        invitation.service,
+        None,
+        invitation.clientId,
+        Some(newInvitation.invitationId),
+        "TEST",
+        Instant.now()
+      ).futureValue
+
+      repository.findOneById(invitation.invitationId).futureValue.get.status shouldBe DeAuthorised
+      repository.findOneById(invitation.invitationId).futureValue.get.relationshipEndedBy shouldBe Some("TEST")
+      repository.findOneById(newInvitation.invitationId).futureValue.get.status shouldBe Accepted
+    }
+
+    "de-authorise all invitations for an agent (including alt itsa) when called with NINO for ITSA" in {
       val invitation = pendingInvitation(
         service = MtdIt,
         clientId = MtdItId("1234567890"),
@@ -305,6 +333,35 @@ with RepositoryCleanupSupport {
       repository.findOneById(invitation.invitationId).futureValue.get.relationshipEndedBy shouldBe Some("TEST")
       repository.findOneById(invitationAlt.invitationId).futureValue.get.status shouldBe DeAuthorised
       repository.findOneById(invitationAlt.invitationId).futureValue.get.relationshipEndedBy shouldBe Some("TEST")
+      repository.findOneById(otherInvitation.invitationId).futureValue.get.status shouldBe Accepted
+    }
+
+    "de-authorise all invitations for an agent (including alt itsa) when called with MTDITID for ITSA" in {
+      val invitation = pendingInvitation(
+        service = MtdIt,
+        clientId = MtdItId("1234567890"),
+        suppliedClientId = Some(NinoWithoutSuffix("AB213308A"))
+      )
+      val otherInvitation = pendingInvitation(
+        arn = "XARN9999999",
+        service = MtdIt,
+        clientId = MtdItId("1234567890"),
+        suppliedClientId = Some(NinoWithoutSuffix("AB213308A"))
+      )
+      repository.collection.insertOne(invitation.copy(status = Accepted)).toFuture().futureValue
+      repository.collection.insertOne(otherInvitation.copy(status = Accepted)).toFuture().futureValue
+
+      repository.deauthAcceptedInvitations(
+        invitation.service,
+        Some(invitation.arn),
+        invitation.clientId,
+        None,
+        "TEST",
+        Instant.now()
+      ).futureValue
+
+      repository.findOneById(invitation.invitationId).futureValue.get.status shouldBe DeAuthorised
+      repository.findOneById(invitation.invitationId).futureValue.get.relationshipEndedBy shouldBe Some("TEST")
       repository.findOneById(otherInvitation.invitationId).futureValue.get.status shouldBe Accepted
     }
 

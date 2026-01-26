@@ -305,7 +305,10 @@ with RequestAwareLogging {
               Codecs.toBson[InvitationStatus](PartialAuth)
             )),
             Some(equal(serviceKey, service)),
-            Some(in(suppliedClientIdKey, expandNinoSuffixes(clientId).map(encryptedString): _*)),
+            Some(or(
+              in(suppliedClientIdKey, expandNinoSuffixes(clientId).map(encryptedString): _*),
+              in(clientIdKey, expandNinoSuffixes(clientId).map(encryptedString): _*) // Some deauth requests target the MTDITID for ITSA
+            )),
             optArn.map(a => equal(arnKey, a)),
             invitationIdToIgnore
               .map(id => notEqual(invitationIdKey, id))
