@@ -67,7 +67,7 @@ with Eventually {
       auditData.set("service", "mtd-it")
       auditData.set("clientId", "XX1234")
       auditData.set("clientIdType", "ni")
-      auditData.set("nino", NinoWithoutSuffix("KS969148").value)
+      auditData.set("nino", NinoWithoutSuffix("KS969148D").value)
       auditData.set("cesaRelationship", true)
       auditData.set("etmpRelationshipCreated", true)
       auditData.set("enrolmentDelegated", true)
@@ -114,8 +114,7 @@ with Eventually {
       auditData.set("credId", "0000001234567890")
       auditData.set("agentCode", AgentCode("ES1234567890").value)
       auditData.set("saAgentRef", "12313")
-      auditData.set("nino", NinoWithoutSuffix("KS969148").value)
-      println(NinoWithoutSuffix("KS969148").value)
+      auditData.set("nino", NinoWithoutSuffix("KS969148D").value)
       auditData.set("cesaRelationship", true)
 
       await(service.sendCheckCesaAndPartialAuthAuditEvent()(request, auditData))

@@ -30,7 +30,6 @@ import uk.gov.hmrc.http.HeaderNames
 import uk.gov.hmrc.http.HttpResponse
 import uk.gov.hmrc.http.StringContextOps
 import uk.gov.hmrc.http.client.HttpClientV2
-import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import java.net.URL
 import javax.inject.Inject
@@ -44,7 +43,6 @@ class DesConnector @Inject() (
   randomUuidGenerator: CorrelationIdGenerator,
   appConfig: AppConfig
 )(implicit
-  val metrics: Metrics,
   val ec: ExecutionContext
 )
 extends RequestAwareLogging {

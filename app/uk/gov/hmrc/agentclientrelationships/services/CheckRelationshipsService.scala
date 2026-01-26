@@ -23,7 +23,6 @@ import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey => LocalEnrolmen
 import uk.gov.hmrc.agentclientrelationships.model.Invitation
 import uk.gov.hmrc.agentclientrelationships.model.UserId
 import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
-import uk.gov.hmrc.agentclientrelationships.support.Monitoring
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.EnrolmentKey.enrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCCBCORG
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDIT
@@ -33,7 +32,6 @@ import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Enrolment
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
 import play.api.mvc.RequestHeader
-import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -48,11 +46,9 @@ class CheckRelationshipsService @Inject() (
   hipConnector: HipConnector,
   groupSearch: UsersGroupsSearchConnector,
   partialAuthRepository: PartialAuthRepository,
-  agentFiRelationshipConnector: AgentFiRelationshipConnector,
-  val metrics: Metrics
+  agentFiRelationshipConnector: AgentFiRelationshipConnector
 )(implicit executionContext: ExecutionContext)
-extends Monitoring
-with RequestAwareLogging {
+extends RequestAwareLogging {
 
   def checkForRelationship(
     arn: Arn,

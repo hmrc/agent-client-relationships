@@ -35,7 +35,6 @@ import uk.gov.hmrc.agentclientrelationships.model.identifiers._
 import uk.gov.hmrc.domain.AgentCode
 import uk.gov.hmrc.http._
 import uk.gov.hmrc.http.client.HttpClientV2
-import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import scala.concurrent.ExecutionContext
 
@@ -73,7 +72,6 @@ with MockitoSugar {
   val connector =
     new EnrolmentStoreProxyConnector(
       httpClient,
-      app.injector.instanceOf[Metrics],
       appConfig
     )(ec)
 

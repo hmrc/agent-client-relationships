@@ -34,8 +34,7 @@ import uk.gov.hmrc.http.HttpResponse
 import uk.gov.hmrc.http.StringContextOps
 import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.http.client.HttpClientV2
-import uk.gov.hmrc.play.bootstrap.metrics.Metrics
-import uk.gov.hmrc.http.HttpReads.Implicits.readRaw
+import uk.gov.hmrc.http.HttpReads.Implicits._
 
 import java.net.URL
 import java.time.LocalDateTime
@@ -47,8 +46,7 @@ import scala.concurrent.Future
 @Singleton
 class AgentFiRelationshipConnector @Inject() (
   appConfig: AppConfig,
-  httpClient: HttpClientV2,
-  val metrics: Metrics
+  httpClient: HttpClientV2
 )(implicit val ec: ExecutionContext) {
 
   private def afiRelationshipUrl(
@@ -115,8 +113,7 @@ class AgentFiRelationshipConnector @Inject() (
     clientId: String
   )(implicit
     rh: RequestHeader
-  ): Future[Boolean] // TODO: Verify the boolean is really needed. It seems that NotFound is transformed into false, which is then transformed into NotFound ...
-  = httpClient
+  ): Future[Boolean] = httpClient
     .delete(
       afiRelationshipUrl(
         arn,

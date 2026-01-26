@@ -16,22 +16,16 @@
 
 package uk.gov.hmrc.agentclientrelationships.controllers
 
-import cats.data.EitherT
-import play.api.Logger
-import play.api.libs.json.JsValue
 import play.api.mvc.Action
 import play.api.mvc.ControllerComponents
-import play.api.mvc.Result
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.CleanUpInvitationStatusRequest
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
-import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse
-import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.InvalidClientId
-import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.InvitationNotFound
-import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.UnsupportedService
-import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.UpdateStatusFailed
-import uk.gov.hmrc.agentclientrelationships.services.CleanUpInvitationStatusService
+import uk.gov.hmrc.agentclientrelationships.services.InvitationService
+import uk.gov.hmrc.agentclientrelationships.services.ValidationService
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
@@ -42,79 +36,40 @@ import scala.concurrent.Future
 
 @Singleton
 class CleanUpInvitationStatusController @Inject() (
-  setRelationshipEndedService: CleanUpInvitationStatusService,
+  validationService: ValidationService,
+  invitationService: InvitationService,
   val appConfig: AppConfig,
   val authConnector: AuthConnector,
   cc: ControllerComponents
 )(implicit val executionContext: ExecutionContext)
 extends BackendController(cc)
-with AuthActions {
+with AuthActions
+with RequestAwareLogging {
 
   val supportedServices: Seq[Service] = appConfig.supportedServicesWithoutPir
   val apiSupportedServices: Seq[Service] = appConfig.apiSupportedServices
 
-  def deauthoriseInvitation: Action[JsValue] =
-    Action.async(parse.json) { implicit request =>
+  def deauthoriseInvitation: Action[CleanUpInvitationStatusRequest] =
+    Action.async(parse.json[CleanUpInvitationStatusRequest]) { implicit request =>
       authorised() {
-        request.body
-          .validate[CleanUpInvitationStatusRequest]
-          .fold(
-            errs => Future.successful(BadRequest(s"Invalid payload: $errs")),
-            payload => {
-              val responseT =
-                for {
-                  service <- EitherT.fromEither[Future](setRelationshipEndedService.validateService(payload.service))
-                  clientId <- EitherT.fromEither[Future](
-                    setRelationshipEndedService.validateClientId(service, payload.clientId)
-                  )
-                  result <- EitherT(
-                    setRelationshipEndedService.deauthoriseInvitation(
-                      arn = payload.arn,
-                      clientId = clientId.value,
-                      service = service.id,
-                      relationshipEndedBy = "HMRC"
-                    )
-                  )
-                } yield result
+        val payload = request.body
 
-              responseT.value
-                .map(
-                  _.fold(
-                    failureResponse =>
-                      invitationErrorHandler(
-                        invitationFailureResponse = failureResponse,
-                        service = payload.service,
-                        clientId = payload.clientId
-                      ),
-                    _ => NoContent
-                  )
-                )
+        validationService.validateForEnrolmentKeyEither(
+          payload.service,
+          payload.clientId
+        ).flatMap {
+          case Right(enrolment) =>
+            invitationService.deauthoriseInvitation(
+              arn = Arn(payload.arn),
+              enrolmentKey = enrolment,
+              endedBy = "HMRC"
+            ).map {
+              case true => NoContent
+              case false => NotFound
             }
-          )
+          case Left(_) => Future.successful(BadRequest)
+        }
       }
-    }
-
-  private def invitationErrorHandler(
-    invitationFailureResponse: InvitationFailureResponse,
-    service: String,
-    clientId: String
-  ): Result =
-    invitationFailureResponse match {
-      case UnsupportedService =>
-        val msg = s"""Unsupported service "$service""""
-        Logger(getClass).warn(msg)
-        UnsupportedService.getResult(msg)
-
-      case InvalidClientId =>
-        val msg = s"""Invalid clientId "$clientId", for service type "$service""""
-        Logger(getClass).warn(msg)
-        InvalidClientId.getResult(msg)
-
-      case InvitationNotFound => InvitationNotFound.getResult("")
-
-      case updateStatusFailed @ UpdateStatusFailed(_) => updateStatusFailed.getResult("")
-
-      case _ => BadRequest
     }
 
 }

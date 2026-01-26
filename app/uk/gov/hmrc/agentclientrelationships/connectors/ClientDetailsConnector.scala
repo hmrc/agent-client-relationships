@@ -37,7 +37,6 @@ import uk.gov.hmrc.http.HeaderNames
 import uk.gov.hmrc.http.HttpResponse
 import uk.gov.hmrc.http.StringContextOps
 import uk.gov.hmrc.http.client.HttpClientV2
-import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
@@ -50,8 +49,7 @@ import scala.concurrent.Future
 @Singleton
 class ClientDetailsConnector @Inject() (
   appConfig: AppConfig,
-  httpClient: HttpClientV2,
-  val metrics: Metrics
+  httpClient: HttpClientV2
 )(implicit val ec: ExecutionContext)
 extends RequestAwareLogging {
 

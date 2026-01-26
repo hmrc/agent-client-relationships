@@ -57,68 +57,64 @@ with AuthActions {
 
   private val strideRoles = Seq(appConfig.oldAuthStrideRole, appConfig.newAuthStrideRole)
 
-  def createInvitation(arn: Arn): Action[JsValue] =
-    Action.async(parse.json) { implicit request =>
+  def createInvitation(arn: Arn): Action[CreateInvitationRequest] =
+    Action.async(parse.json[CreateInvitationRequest]) { implicit request =>
       authorised() {
-        request.body
-          .validate[CreateInvitationRequest]
-          .fold(
-            errs => Future.successful(BadRequest(s"Invalid payload: $errs")),
-            createInvitationRequest =>
-              invitationService
-                .createInvitation(arn, createInvitationRequest)
-                .map { response =>
-                  response.fold(
-                    {
-                      case UnsupportedService =>
-                        val msg = s"""Unsupported service "${createInvitationRequest.service}""""
-                        Logger(getClass).warn(msg)
-                        UnsupportedService.getResult(msg)
+        val createInvitationRequest = request.body
 
-                      case InvalidClientId =>
-                        val msg = s"""Invalid clientId "${createInvitationRequest.clientId}", for service type "${createInvitationRequest.service}""""
-                        Logger(getClass).warn(msg)
-                        InvalidClientId.getResult(msg)
+        invitationService
+          .createInvitation(arn, createInvitationRequest)
+          .map { response =>
+            response.fold(
+              {
+                case UnsupportedService =>
+                  val msg = s"""Unsupported service "${createInvitationRequest.service}""""
+                  Logger(getClass).warn(msg)
+                  UnsupportedService.getResult(msg)
 
-                      case UnsupportedClientIdType =>
-                        val msg =
-                          s"""Unsupported clientIdType "${createInvitationRequest.suppliedClientIdType}", for service type "${createInvitationRequest.service}"""".stripMargin
-                        Logger(getClass).warn(msg)
-                        UnsupportedClientIdType.getResult(msg)
+                case InvalidClientId =>
+                  val msg = s"""Invalid clientId "${createInvitationRequest.clientId}", for service type "${createInvitationRequest.service}""""
+                  Logger(getClass).warn(msg)
+                  InvalidClientId.getResult(msg)
 
-                      case UnsupportedClientType =>
-                        val msg = s"""Unsupported clientType "${createInvitationRequest.clientType}""""
-                        Logger(getClass).warn(msg)
-                        UnsupportedClientType.getResult(msg)
+                case UnsupportedClientIdType =>
+                  val msg =
+                    s"""Unsupported clientIdType "${createInvitationRequest.suppliedClientIdType}", for service type "${createInvitationRequest.service}"""".stripMargin
+                  Logger(getClass).warn(msg)
+                  UnsupportedClientIdType.getResult(msg)
 
-                      case ClientRegistrationNotFound =>
-                        val msg =
-                          s"""The Client's MTDfB registration or SAUTR (if alt-itsa is enabled) was not found.
-                             | for clientId "${createInvitationRequest.clientId}",
-                             | for clientIdType "${createInvitationRequest.suppliedClientIdType}",
-                             | for service type "${createInvitationRequest.service}"""".stripMargin
-                        Logger(getClass).warn(msg)
-                        ClientRegistrationNotFound.getResult(msg)
+                case UnsupportedClientType =>
+                  val msg = s"""Unsupported clientType "${createInvitationRequest.clientType}""""
+                  Logger(getClass).warn(msg)
+                  UnsupportedClientType.getResult(msg)
 
-                      case DuplicateInvitationError =>
-                        val msg =
-                          s"""An authorisation request for this service has already been created
-                             | and is awaiting the client’s response.
-                             | for clientId "${createInvitationRequest.clientId}",
-                             | for clientIdType "${createInvitationRequest.suppliedClientIdType}",
-                             | for service type "${createInvitationRequest.service}"""".stripMargin
-                        Logger(getClass).warn(msg)
-                        DuplicateInvitationError.getResult(msg)
+                case ClientRegistrationNotFound =>
+                  val msg =
+                    s"""The Client's MTDfB registration or SAUTR (if alt-itsa is enabled) was not found.
+                       | for clientId "${createInvitationRequest.clientId}",
+                       | for clientIdType "${createInvitationRequest.suppliedClientIdType}",
+                       | for service type "${createInvitationRequest.service}"""".stripMargin
+                  Logger(getClass).warn(msg)
+                  ClientRegistrationNotFound.getResult(msg)
 
-                      case _ => BadRequest
-                    },
-                    invitation => {
-                      auditService.sendCreateInvitationAuditEvent(invitation)
-                      Created(Json.toJson(CreateInvitationResponse(invitation.invitationId)))
-                    }
-                  )
-                }
-          )
+                case DuplicateInvitationError =>
+                  val msg =
+                    s"""An authorisation request for this service has already been created
+                       | and is awaiting the client’s response.
+                       | for clientId "${createInvitationRequest.clientId}",
+                       | for clientIdType "${createInvitationRequest.suppliedClientIdType}",
+                       | for service type "${createInvitationRequest.service}"""".stripMargin
+                  Logger(getClass).warn(msg)
+                  DuplicateInvitationError.getResult(msg)
+
+                case _ => BadRequest
+              },
+              invitation => {
+                auditService.sendCreateInvitationAuditEvent(invitation)
+                Created(Json.toJson(CreateInvitationResponse(invitation.invitationId)))
+              }
+            )
+          }
       }
     }
 
@@ -128,19 +124,11 @@ with AuthActions {
       .flatMap {
         case Some(invitation) if invitation.status == Pending =>
           for {
-            enrolment <- validationService
-              .validateForEnrolmentKey(
-                invitation.service,
-                ClientIdType.forId(invitation.clientIdType).enrolmentId,
-                invitation.clientId
-              )
-              .map(either =>
-                either.getOrElse(
-                  throw new RuntimeException(
-                    s"Could not parse invitation details into enrolment reason: ${either.left}"
-                  )
-                )
-              )
+            enrolment <- validationService.validateForEnrolmentKey(
+              invitation.service,
+              invitation.clientId,
+              Some(ClientIdType.forId(invitation.clientIdType).enrolmentId)
+            )
             result <-
               authorisedUser(
                 None,
@@ -187,11 +175,9 @@ with AuthActions {
 
   def cancelInvitation(invitationId: String): Action[AnyContent] = Action.async { implicit request =>
     withAuthorisedAsAgent { authArn =>
-      invitationService.cancelInvitation(authArn, invitationId).map { response =>
-        response match {
-          case Left(response) => response.getResult
-          case Right(_) => NoContent
-        }
+      invitationService.cancelInvitation(authArn, invitationId).map {
+        case Left(response) => response.getResult
+        case Right(_) => NoContent
       }
     }
   }

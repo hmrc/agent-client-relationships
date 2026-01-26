@@ -31,7 +31,6 @@ import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsNot
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ErrorRetrievingClientDetails
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa.ItsaBusinessDetails
 import uk.gov.hmrc.agentclientrelationships.model.stride.ClientRelationship
-import uk.gov.hmrc.agentclientrelationships.services.AgentCacheProvider
 import uk.gov.hmrc.agentclientrelationships.util.RequestSupport._
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDITSUPP
 import uk.gov.hmrc.agentclientrelationships.model.identifiers._
@@ -40,7 +39,6 @@ import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.HttpResponse
 import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.http.client.HttpClientV2
-import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import java.net.URL
 import java.time.Instant
@@ -55,11 +53,9 @@ import scala.util.Try
 @Singleton
 class HipConnector @Inject() (
   httpClient: HttpClientV2,
-  agentCacheProvider: AgentCacheProvider,
   headers: HipHeaders,
   appConfig: AppConfig
 )(implicit
-  val metrics: Metrics,
   val ec: ExecutionContext
 )
 extends RequestAwareLogging {
@@ -212,8 +208,7 @@ extends RequestAwareLogging {
             None
           case _ =>
             val msg = s"Error in HIP API#5266 'GetBusinessDetailsByMtdId ${errorResponse.getMessage()}"
-            logger.error(message = msg, ex = throw new RuntimeException(msg))
-            None
+            throw new RuntimeException(msg)
         }
     }
   }
@@ -237,8 +232,7 @@ extends RequestAwareLogging {
             None
           case _ =>
             val msg = s"Error in HIP API#5266 'GetBusinessDetailsByNino ${errorResponse.getMessage()}"
-            logger.error(message = msg, ex = throw new RuntimeException(msg))
-            None
+            throw new RuntimeException(msg)
         }
     }
   }

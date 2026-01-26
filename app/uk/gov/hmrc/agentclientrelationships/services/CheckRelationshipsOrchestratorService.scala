@@ -28,11 +28,9 @@ import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 import uk.gov.hmrc.agentclientrelationships.services.CheckRelationshipResult._
-import uk.gov.hmrc.agentclientrelationships.support.Monitoring
 import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.http.UpstreamErrorResponse
-import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -42,7 +40,6 @@ import scala.util.control.NonFatal
 
 @Singleton
 class CheckRelationshipsOrchestratorService @Inject() (
-  val metrics: Metrics,
   checkService: CheckRelationshipsService,
   checkOldAndCopyService: CheckAndCopyRelationshipsService,
   validationService: ValidationService,
@@ -51,8 +48,7 @@ class CheckRelationshipsOrchestratorService @Inject() (
   agentFiRelationshipConnector: AgentFiRelationshipConnector,
   agentAssuranceService: AgentAssuranceService
 )(implicit executionContext: ExecutionContext)
-extends Monitoring
-with RequestAwareLogging {
+extends RequestAwareLogging {
 
   def checkForRelationship(
     arn: Arn,
@@ -89,8 +85,8 @@ with RequestAwareLogging {
       case (svc, idType, id) =>
         withValidEnrolment(
           service,
-          clientIdType,
-          clientId
+          clientId,
+          clientIdType
         ) { enrolmentKey =>
           checkWithTaxIdentifier(
             arn,
@@ -103,15 +99,15 @@ with RequestAwareLogging {
 
   private def withValidEnrolment(
     service: String,
-    clientIdType: String,
-    clientId: String
+    clientId: String,
+    clientIdType: String
   )(
     proceed: EnrolmentKey => Future[CheckRelationshipResult]
   )(implicit request: RequestHeader): Future[CheckRelationshipResult] = validationService
-    .validateForEnrolmentKey(
+    .validateForEnrolmentKeyEither(
       service,
-      clientIdType,
-      clientId
+      clientId,
+      Some(clientIdType)
     )
     .flatMap {
       case Right(enrolmentKey) => proceed(enrolmentKey)

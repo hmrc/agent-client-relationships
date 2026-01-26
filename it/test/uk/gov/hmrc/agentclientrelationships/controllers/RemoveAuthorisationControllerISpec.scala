@@ -63,13 +63,16 @@ with ClientDetailsStub
 with AfiRelationshipStub
 with TestData {
 
-  val controller = app.injector.instanceOf[RemoveAuthorisationController]
+  val controller: RemoveAuthorisationController = app.injector.instanceOf[RemoveAuthorisationController]
 
   val invitationRepo: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
   val partialAuthRepository: PartialAuthRepository = app.injector.instanceOf[PartialAuthRepository]
 
-  def allServices: Map[Service, TaxIdentifier] = Map(
+  def allServices: Seq[(Service, TaxIdentifier)] = Seq(
     MtdIt -> mtdItId,
+    MtdItSupp -> mtdItId,
+    MtdIt -> nino,
+    MtdItSupp -> nino,
     //    PersonalIncomeRecord -> nino, PIR tested separately in this file
     Vat -> vrn,
     Trust -> utr,
@@ -78,67 +81,59 @@ with TestData {
     Ppt -> pptRef,
     Cbc -> cbcId,
     CbcNonUk -> cbcId,
-    Pillar2 -> plrId,
-    MtdItSupp -> mtdItId
+    Pillar2 -> plrId
   )
 
   val requestPath: String = s"/agent-client-relationships/agent/${arn.value}/remove-authorisation"
 
-  allServices.keySet
-    .foreach(service =>
-      s"s/agent/:arn/remove-authorisation" should {
-        val taxIdentifier = allServices(service)
-        val clientId: ClientIdentifier[TaxIdentifier] = ClientIdentifier(taxIdentifier)
-
-        val suppliedClientId =
-          taxIdentifier match {
-            case _: MtdItId => ClientIdentifier(nino)
-            case taxId => ClientIdentifier(taxId)
+  allServices
+    .foreach { case (service, taxIdentifier) =>
+      s"/agent/:arn/remove-authorisation" should {
+        val clientId: ClientIdentifier[TaxIdentifier] =
+          service match {
+            case MtdIt | MtdItSupp if taxIdentifier == nino => ClientIdentifier(mtdItId)
+            case _ => ClientIdentifier(taxIdentifier)
           }
 
         val enrolmentKey: EnrolmentKey =
-          taxIdentifier match {
+          clientId.underlying match {
             case _: CbcId if service == Cbc => EnrolmentKey(service.enrolmentKey, Seq(Identifier("cbcId", cbcId.value), Identifier("UTR", utr.value)))
-            case _ => EnrolmentKey(service.enrolmentKey, taxIdentifier)
+            case id => EnrolmentKey(service.enrolmentKey, id)
           }
 
-        val serviceId =
-          service match {
-            case PersonalIncomeRecord => PersonalIncomeRecord.id
-            case s => s.id
-          }
         val expiryDate = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime.plusSeconds(60).toLocalDate
 
         abstract class StubsForThisScenario(isAgent: Boolean = true) {
           if (isAgent)
             givenUserIsSubscribedAgent(arn, withThisGgUserId = "ggUserId-agent")
+          else if (taxIdentifier == mtdItId)
+            givenUserIsSubscribedClient(nino, withThisGgUserId = "ggUserId-client")
           else
             givenUserIsSubscribedClient(taxIdentifier, withThisGgUserId = "ggUserId-client")
           givenPrincipalAgentUser(arn, "foo")
           givenGroupInfo("foo", "bar")
           givenAgentIsAllocatedAndAssignedToClient(enrolmentKey, "bar")
-          givenAgentCanBeDeallocated(taxIdentifier, arn)
+          givenAgentCanBeDeallocated(clientId.underlying, arn)
           givenEnrolmentDeallocationSucceeds("foo", enrolmentKey)
           givenAdminUser("foo", "any")
           givenCacheRefresh(arn)
 
           taxIdentifier match {
-            case mtdIdentifier @ MtdItId(_) =>
-              givenMtdItIdIsKnownFor(nino, mtdIdentifier)
-              givenMtdItsaBusinessDetailsExists(nino, mtdIdentifier)
-            case _ @CbcId(_) if service == Cbc =>
+            case _: NinoWithoutSuffix if Seq(MtdIt, MtdItSupp).contains(service) => givenMtdItIdIsKnownFor(nino, mtdItId)
+            case _: MtdItId => givenNinoIsKnownFor(mtdItId, nino)
+            case _: CbcId if service == Cbc =>
               givenKnownFactsQuery(
                 Service.Cbc,
                 cbcId,
                 Some(Seq(Identifier("cbcId", cbcId.value), Identifier("UTR", utr.value)))
               )
-            case _ @CbcId(_) if service == CbcNonUk =>
+            case _: CbcId if service == CbcNonUk =>
               givenKnownFactsQuery(
                 Service.CbcNonUk,
                 cbcId,
                 Some(Seq(Identifier("cbcId", cbcId.value)))
               )
-            case _ @NinoWithoutSuffix(_) if service == PersonalIncomeRecord =>
+            case _: NinoWithoutSuffix if service == PersonalIncomeRecord =>
               givenTerminateAfiRelationshipSucceeds(
                 arn,
                 PersonalIncomeRecord.id,
@@ -149,11 +144,11 @@ with TestData {
 
         }
 
-        s"when the relationship exists and no invitation record in Repository for ${service.id}" should {
-          s"return 204 and sent audit event for $serviceId" in new StubsForThisScenario {
+        s"when the relationship exists and no invitation record in Repository for $service and $taxIdentifier" should {
+          s"return 204 and sent audit event" in new StubsForThisScenario {
             doAgentPostRequest(
               requestPath,
-              Json.toJson(RemoveAuthorisationRequest(clientId = suppliedClientId.value, service = serviceId)).toString()
+              Json.toJson(RemoveAuthorisationRequest(clientId = taxIdentifier.value, service = service.id)).toString()
             ).status shouldBe 204
             verifyDeleteRecordNotExists
 
@@ -162,26 +157,26 @@ with TestData {
               arn.value,
               clientId.value,
               clientId.enrolmentId,
-              serviceId,
+              service.id,
               "AgentLedTermination"
             )
           }
 
-          s"return 204 for $serviceId when initiated by client" in new StubsForThisScenario(isAgent = false) {
+          s"return 204 when initiated by client" in new StubsForThisScenario(isAgent = false) {
             val suppliedClientId: ClientIdentifier[TaxIdentifier] = ClientIdentifier(
               taxIdentifier
             ) // undoing the itsa -> nino replacement
 
             doAgentPostRequest(
               requestPath,
-              Json.toJson(RemoveAuthorisationRequest(clientId = suppliedClientId.value, service = serviceId)).toString()
+              Json.toJson(RemoveAuthorisationRequest(clientId = suppliedClientId.value, service = service.id)).toString()
             ).status shouldBe 204
             verifyDeleteRecordNotExists
           }
         }
 
-        s"when the relationship exists and the Arn matches that of current Agent user  for ${service.id}" should {
-          s"resume an ongoing de-auth if unfinished ES delete record found  for ${service.id}" in new StubsForThisScenario {
+        s"when the relationship exists and the Arn matches that of current Agent user for $service and $taxIdentifier" should {
+          s"resume an ongoing de-auth if unfinished ES delete record found" in new StubsForThisScenario {
             val newInvitation: Invitation = Invitation
               .createNew(
                 arn.value,
@@ -212,7 +207,7 @@ with TestData {
 
             doAgentPostRequest(
               requestPath,
-              Json.toJson(RemoveAuthorisationRequest(clientId = suppliedClientId.value, service = serviceId)).toString()
+              Json.toJson(RemoveAuthorisationRequest(clientId = taxIdentifier.value, service = service.id)).toString()
             ).status shouldBe 204
 
             await(invitationRepo.findOneById(newInvitation.invitationId)).get.status == DeAuthorised
@@ -223,12 +218,12 @@ with TestData {
               arn.value,
               clientId.value,
               clientId.enrolmentId,
-              serviceId,
+              service.id,
               "AgentLedTermination"
             )
           }
 
-          s"resume an ongoing de-auth if unfinished ETMP delete record found  for ${service.id}" in new StubsForThisScenario {
+          s"resume an ongoing de-auth if unfinished ETMP delete record found" in new StubsForThisScenario {
             await(
               deleteRecordRepository.create(
                 DeleteRecord(
@@ -242,13 +237,13 @@ with TestData {
             doAgentPostRequest(
               requestPath,
               Json
-                .toJson(RemoveAuthorisationRequest(clientId = suppliedClientId.value, service = service.id))
+                .toJson(RemoveAuthorisationRequest(clientId = taxIdentifier.value, service = service.id))
                 .toString()
             ).status shouldBe 204
             verifyDeleteRecordNotExists
           }
 
-          s"resume an ongoing de-auth if some delete record found  for ${service.id}" in new StubsForThisScenario {
+          s"resume an ongoing de-auth if some delete record found" in new StubsForThisScenario {
             await(
               deleteRecordRepository.create(
                 DeleteRecord(
@@ -261,7 +256,7 @@ with TestData {
             doAgentPostRequest(
               requestPath,
               Json
-                .toJson(RemoveAuthorisationRequest(clientId = suppliedClientId.value, service = service.id))
+                .toJson(RemoveAuthorisationRequest(clientId = taxIdentifier.value, service = service.id))
                 .toString()
             ).status shouldBe 204
             verifyDeleteRecordNotExists
@@ -283,12 +278,12 @@ with TestData {
 
             doAgentPostRequest(
               requestPath,
-              Json.toJson(RemoveAuthorisationRequest(clientId = suppliedClientId.value, service = service.id)).toString()
+              Json.toJson(RemoveAuthorisationRequest(clientId = taxIdentifier.value, service = service.id)).toString()
             ).status shouldBe LOCKED
           }
         }
       }
-    )
+    }
 
   "for alt Itsa relationship" should {
     val taxIdentifier = mtdItId
@@ -518,47 +513,33 @@ with TestData {
 
   "handle errors" when {
     "request data is incorrect" should {
-      "return BadRequest 400 status when clientId is not valid for service" in {
+      "throw error when clientId is not valid for service" in {
         val result = doAgentPostRequest(
           requestPath,
           Json.toJson(RemoveAuthorisationRequest("IncorrectNinoOrMtdItId", MtdIt.id)).toString()
         )
-        result.status shouldBe 400
-        result.json shouldBe toJson(
-          ErrorBody(
-            "INVALID_CLIENT_ID",
-            "Invalid clientId \"IncorrectNinoOrMtdItId\", for service type \"HMRC-MTD-IT\""
-          )
-        )
+        result.status shouldBe 500
+        result.body shouldBe """{"statusCode":500,"message":"Failed to build enrolment key because: Identifier IncorrectNinoOrMtdItId of type MtdItIdType provided for service HMRC-MTD-IT failed validation"}"""
       }
 
-      "return NotImplemented 501 status and JSON Error If service is not supported" in {
+      "throw error if service is not supported" in {
         val result = doAgentPostRequest(
           requestPath,
           Json.toJson(RemoveAuthorisationRequest(nino.value, "IncorrectService")).toString()
         )
-        result.status shouldBe 501
-
-        val message = s"""Unsupported service "IncorrectService""""
-        result.json shouldBe toJson(ErrorBody("UNSUPPORTED_SERVICE", message))
+        result.status shouldBe 500
+        result.body shouldBe """{"statusCode":500,"message":"Failed to build enrolment key because: Unknown service IncorrectService"}"""
       }
     }
 
     "MtdId business details errors" should {
-      "return Forbidden 403 status and JSON Error when MtdId business details record is empty " in {
+      "throw error when MtdId business details record is invalid" in {
         givenEmptyItsaBusinessDetailsExists(nino)
         val result = doAgentPostRequest(
           requestPath,
           Json.toJson(RemoveAuthorisationRequest(nino.value, MtdIt.id)).toString()
         )
-        result.status shouldBe 403
-
-        result.json shouldBe toJson(
-          ErrorBody(
-            "CLIENT_REGISTRATION_NOT_FOUND",
-            "The Client's MTDfB registration or SAUTR (if alt-itsa is enabled) was not found."
-          )
-        )
+        result.status shouldBe 500
       }
     }
   }

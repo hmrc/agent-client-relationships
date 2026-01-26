@@ -32,7 +32,6 @@ import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 import uk.gov.hmrc.agentclientrelationships.support.WireMockSupport
 import uk.gov.hmrc.domain.SaAgentReference
 import uk.gov.hmrc.http.client.HttpClientV2
-import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import scala.concurrent.ExecutionContext
 
@@ -47,7 +46,6 @@ with DataStreamStub {
   override implicit lazy val app: Application = appBuilder.build()
 
   val httpClient: HttpClientV2 = app.injector.instanceOf[HttpClientV2]
-  val metrics: Metrics = app.injector.instanceOf[Metrics]
   implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
 
   protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder().configure(
@@ -75,7 +73,7 @@ with DataStreamStub {
       httpClient,
       app.injector.instanceOf[CorrelationIdGenerator],
       appConfig
-    )(metrics, ec)
+    )(ec)
 
   val mtdItId: MtdItId = MtdItId("ABCDEF123456789")
   val agentARN: Arn = Arn("ABCDE123456")

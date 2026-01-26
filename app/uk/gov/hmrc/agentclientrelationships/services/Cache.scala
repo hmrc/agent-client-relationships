@@ -16,10 +16,8 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
-import com.codahale.metrics.MetricRegistry
 import play.api.libs.json.Reads
 import play.api.libs.json.Writes
-import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -38,16 +36,6 @@ import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.util.Success
-
-trait KenshooCacheMetrics {
-
-  val kenshooRegistry: MetricRegistry
-
-  def record(name: String): Unit = {
-    kenshooRegistry.getMeters.getOrDefault(name, kenshooRegistry.meter(name)).mark()
-  }
-
-}
 
 trait Cache[T] {
   def apply(key: String)(body: => Future[T])(implicit request: RequestHeader): Future[T]
@@ -81,16 +69,12 @@ class MongoCache[T] @Inject() (
   collectionName: String,
   ttlConfigKey: String
 )(implicit
-  metrics: Metrics,
   reads: Reads[T],
   writes: Writes[T],
   executionContext: ExecutionContext
 )
-extends KenshooCacheMetrics
-with RequestAwareLogging
+extends RequestAwareLogging
 with Cache[T] {
-
-  val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 
   private lazy val cacheRepository: MongoCacheRepository[String] = cacheRepositoryFactory(collectionName, ttlConfigKey)
 
@@ -101,13 +85,10 @@ with Cache[T] {
       cacheRepository
         .get(cacheId)(dataKey)
         .flatMap {
-          case Some(cachedValue) =>
-            record(s"Count-$collectionName-from-cache")
-            Future.successful(cachedValue)
+          case Some(cachedValue) => Future.successful(cachedValue)
           case None =>
             body.andThen { case Success(newValue) =>
               logger.info(s"Missing $collectionName cache hit, storing new value.")
-              record(s"Count-$collectionName-from-source")
               cacheRepository.put(cacheId)(dataKey, newValue).map(_ => newValue)
             }
         }
@@ -121,7 +102,6 @@ class AgentCacheProvider @Inject() (
   configuration: Configuration,
   cacheRepositoryFactory: CacheRepositoryFactory
 )(implicit
-  metrics: Metrics,
   executionContext: ExecutionContext
 ) {
 

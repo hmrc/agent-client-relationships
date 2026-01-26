@@ -21,7 +21,6 @@ import play.api.libs.json.Json
 import play.api.mvc._
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax._
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 import uk.gov.hmrc.agentclientrelationships.services.AgentTerminationService
@@ -69,7 +68,7 @@ with RequestAwareLogging {
         )
         .map {
           case CheckRelationshipFound => Ok
-          case CheckRelationshipNotFound(message) => NotFound(toJson(message))
+          case CheckRelationshipNotFound(message) => NotFound(Json.obj("code" -> message))
           case CheckRelationshipInvalidRequest => BadRequest
         }
     }

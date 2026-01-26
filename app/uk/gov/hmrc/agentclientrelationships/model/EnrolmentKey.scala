@@ -62,6 +62,8 @@ case class EnrolmentKey(
     ClientIdType.supportedTypes.find(_.enrolmentId == identifier.key).get.createUnderlying(identifier.value)
   }
 
+  def serviceType: Service = Service.forId(service)
+
 }
 
 object EnrolmentKey {

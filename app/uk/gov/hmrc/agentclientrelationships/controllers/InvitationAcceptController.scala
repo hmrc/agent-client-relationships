@@ -42,9 +42,9 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 @Singleton
-class AuthorisationAcceptController @Inject() (
+class InvitationAcceptController @Inject() (
   invitationService: InvitationService,
-  authorisationAcceptService: AuthorisationAcceptService,
+  authorisationAcceptService: InvitationAcceptService,
   validationService: ValidationService,
   friendlyNameService: FriendlyNameService,
   auditService: AuditService,
@@ -69,19 +69,11 @@ with RequestAwareLogging {
           implicit val auditData: AuditData = prepareAuditData(invitation)
 
           for {
-            enrolment <- validationService
-              .validateForEnrolmentKey(
-                invitation.service,
-                ClientIdType.forId(invitation.clientIdType).enrolmentId,
-                invitation.clientId
-              )
-              .map(either =>
-                either.getOrElse(
-                  throw new RuntimeException(
-                    s"Could not parse invitation details into enrolment reason: ${either.left}"
-                  )
-                )
-              )
+            enrolment <- validationService.validateForEnrolmentKey(
+              invitation.service,
+              invitation.clientId,
+              Some(ClientIdType.forId(invitation.clientIdType).enrolmentId)
+            )
             result <-
               authorisedUser(
                 None,

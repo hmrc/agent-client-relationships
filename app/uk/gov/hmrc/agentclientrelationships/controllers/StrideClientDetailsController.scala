@@ -56,10 +56,10 @@ with AuthActions {
     clientId: String
   ): Action[AnyContent] = Action.async { implicit request =>
     validationService
-      .validateForEnrolmentKey(
+      .validateForEnrolmentKeyEither(
         service,
-        clientIdType,
-        clientId
+        clientId,
+        Some(clientIdType)
       )
       .flatMap {
         case Left(error) => Future.successful(BadRequest(error))

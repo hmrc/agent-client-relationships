@@ -57,7 +57,7 @@ with ScalaFutures {
   def verifySideEffectsOccur(assertion: Unit => Any*): Seq[Assertion] =
     eventually(timeout(Span(5, Seconds)), interval(Span(50, Millis))) {
       assertion.map { func =>
-        noException should be thrownBy func
+        noException should be thrownBy func() // Do not remove ()
       }
     }
 

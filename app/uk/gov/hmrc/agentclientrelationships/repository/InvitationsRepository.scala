@@ -287,51 +287,42 @@ with RequestAwareLogging {
       .map(_.getOrElse(throw new RuntimeException(s"Could not find an invitation with invitationId '$invitationId'")))
   }
 
-  def deauthAcceptedInvitation(
+  def deauthAcceptedInvitations(
     service: String,
+    optArn: Option[String],
     clientId: String,
-    arn: String,
+    invitationIdToIgnore: Option[String],
     relationshipEndedBy: String,
-    timestamp: Option[Instant] = None
+    timestamp: Instant = Instant.now()
   ): Future[Boolean] = Mdc.preservingMdc {
     collection
-      .updateOne(
-        filter = and(
-          in(
-            statusKey,
-            Codecs.toBson[InvitationStatus](Accepted),
-            Codecs.toBson[InvitationStatus](PartialAuth)
-          ),
-          equal(serviceKey, service),
-          in(clientIdKey, expandNinoSuffixes(clientId).map(encryptedString): _*),
-          equal(arnKey, arn)
+      .updateMany(
+        and(
+          Seq(
+            Some(in(
+              statusKey,
+              Codecs.toBson[InvitationStatus](Accepted),
+              Codecs.toBson[InvitationStatus](PartialAuth)
+            )),
+            Some(equal(serviceKey, service)),
+            Some(or(
+              in(suppliedClientIdKey, expandNinoSuffixes(clientId).map(encryptedString): _*),
+              in(clientIdKey, expandNinoSuffixes(clientId).map(encryptedString): _*) // Some deauth requests target the MTDITID for ITSA
+            )),
+            optArn.map(a => equal(arnKey, a)),
+            invitationIdToIgnore
+              .map(id => notEqual(invitationIdKey, id))
+          ).flatten: _*
         ),
-        update = combine(
+        combine(
           set(statusKey, Codecs.toBson[InvitationStatus](DeAuthorised)),
-          set(lastUpdatedKey, timestamp.getOrElse(Instant.now())),
+          set(lastUpdatedKey, timestamp),
           set(relationshipEndedByKey, relationshipEndedBy)
-        )
+        ),
+        UpdateOptions()
       )
       .toFuture()
-      .map(_.getModifiedCount == 1L)
-  }
-
-  def deauthInvitation(
-    invitationId: String,
-    relationshipEndedBy: String,
-    timestamp: Option[Instant] = None
-  ): Future[Option[Invitation]] = Mdc.preservingMdc {
-    collection
-      .findOneAndUpdate(
-        equal(invitationIdKey, invitationId),
-        combine(
-          set("status", Codecs.toBson[InvitationStatus](DeAuthorised)),
-          set("lastUpdated", timestamp.getOrElse(Instant.now())),
-          set("relationshipEndedBy", relationshipEndedBy)
-        ),
-        FindOneAndUpdateOptions().returnDocument(ReturnDocument.AFTER)
-      )
-      .toFutureOption()
+      .map(_.getModifiedCount > 0)
   }
 
   def updatePartialAuthToAcceptedStatus(
@@ -401,7 +392,7 @@ with RequestAwareLogging {
         )
         .getOrElse(Filters.exists(statusKey)),
       clientName
-        .map(name => equal(clientNameKey, encryptedString(URLDecoder.decode(name))))
+        .map(name => equal(clientNameKey, encryptedString(URLDecoder.decode(name, "UTF-8"))))
         .getOrElse(Filters.exists(clientNameKey))
     )
   )
