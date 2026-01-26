@@ -54,13 +54,4 @@ extends MongoLockService {
       result
     }
 
-  override def partialAuthLock[T](jobName: String)(body: => Future[T])(implicit
-    ec: ExecutionContext,
-    appConfig: AppConfig
-  ): Future[Option[T]] = body
-    .map(Some.apply)
-    .map { result =>
-      result
-    }
-
 }

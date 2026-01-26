@@ -18,7 +18,6 @@ package uk.gov.hmrc.agentclientrelationships.repository
 
 import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.Indexes
-import org.mongodb.scala.model.Filters.{and, equal => mongoEqual}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
@@ -26,7 +25,6 @@ import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.Helpers.await
 import play.api.test.Helpers.defaultAwaitTimeout
-import uk.gov.hmrc.agentclientrelationships.model.ActiveNinoWithSuffixAggregationResult
 import uk.gov.hmrc.agentclientrelationships.model.PartialAuthRelationship
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
@@ -34,7 +32,7 @@ import uk.gov.hmrc.agentclientrelationships.support.RepositoryCleanupSupport
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 
 import java.time.Instant
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 class PartialAuthRepositoryISpec
 extends AnyWordSpec
@@ -217,34 +215,6 @@ with RepositoryCleanupSupport {
     }
   }
 
-  ".findActiveWithNinoSuffix" should {
-
-    "retrieves records for a given nino" in {
-      val recordWoNinoSuffix = partialAuth.copy(nino = "AB123456")
-      val recordWithNinoSuffix = partialAuth.copy(nino = "BA654321A")
-      await(repository.collection.insertMany(Seq(
-        recordWoNinoSuffix,
-        recordWithNinoSuffix
-      )).toFuture())
-      val result: Seq[ActiveNinoWithSuffixAggregationResult] = await(repository.findWithNinoSuffix.toFuture)
-      result shouldBe Seq(ActiveNinoWithSuffixAggregationResult(
-        recordWithNinoSuffix.arn,
-        recordWithNinoSuffix.service,
-        recordWithNinoSuffix.nino
-      ))
-    }
-
-    "fail to retrieve records when none are found for the given nino" in {
-      val recordWoNinoSuffix = partialAuth.copy(nino = "AB123456")
-      val recordWoNinoSuffix2 = partialAuth.copy(nino = "BA654321")
-      await(repository.collection.insertMany(Seq(
-        recordWoNinoSuffix,
-        recordWoNinoSuffix2
-      )).toFuture())
-      await(repository.findWithNinoSuffix.toFuture) shouldBe Seq.empty
-    }
-  }
-
   "deauthorise" should {
     "deauthorise PartialAuth invitation success" in {
       await(
@@ -307,216 +277,4 @@ with RepositoryCleanupSupport {
       result shouldBe true
     }
   }
-
-  "removeNinoSuffix should remove suffix from nino for active record" in {
-    val ninoWithSuffix = "SX579189D"
-    val ninoWithoutSuffix = "SX579189"
-    val arn = "XARN1234567"
-    val service = "HMRC-MTD-IT"
-    await(
-      repository.collection.insertOne(
-        partialAuth.copy(nino = ninoWithSuffix, active = true)
-      ).toFuture()
-    )
-
-    await(repository.collection.countDocuments().toFuture()) shouldBe 1
-
-    await(
-      repository.removeNinoSuffix(
-        arn = arn,
-        service = service,
-        nino = ninoWithSuffix
-      )
-    )
-
-    val updated = await(
-      repository.collection
-        .find(
-          and(
-            mongoEqual("arn", arn),
-            mongoEqual("service", service)
-          )
-        )
-        .head()
-    )
-
-    updated.nino shouldBe ninoWithoutSuffix
-  }
-
-  "removeNinoSuffix should remove suffix from nino for inactive record" in {
-    val ninoWithSuffix = "SX579189D"
-    val ninoWithoutSuffix = "SX579189"
-    val arn = "XARN1234567"
-    val service = "HMRC-MTD-IT"
-    await(
-      repository.collection.insertOne(
-        partialAuth.copy(nino = ninoWithSuffix, active = false)
-      ).toFuture()
-    )
-
-    await(repository.collection.countDocuments().toFuture()) shouldBe 1
-
-    await(
-      repository.removeNinoSuffix(
-        arn = arn,
-        service = service,
-        nino = ninoWithSuffix
-      )
-    )
-
-    val updated = await(
-      repository.collection
-        .find(
-          and(
-            mongoEqual("arn", arn),
-            mongoEqual("service", service)
-          )
-        )
-        .head()
-    )
-
-    updated.nino shouldBe ninoWithoutSuffix
-  }
-
-  "removeNinoSuffix should not create extra documents" in {
-    val ninoWithSuffix = "SX579189D"
-    val arn = "XARN1234567"
-    val service = "HMRC-MTD-IT"
-
-    await(
-      repository.collection.insertOne(
-        partialAuth.copy(nino = ninoWithSuffix)
-      ).toFuture()
-    )
-
-    await(
-      repository.removeNinoSuffix(
-        arn = arn,
-        service = service,
-        nino = ninoWithSuffix
-      )
-    )
-
-    await(repository.collection.countDocuments().toFuture()) shouldBe 1
-  }
-
-  "removeNinoSuffix should be idempotent when no suffix exists" in {
-    val ninoWithoutSuffix = "SX579189"
-    val arn = "XARN1234567"
-    val service = "HMRC-MTD-IT"
-
-    await(
-      repository.collection.insertOne(
-        partialAuth.copy(nino = ninoWithoutSuffix)
-      ).toFuture()
-    )
-
-    await(
-      repository.removeNinoSuffix(
-        arn = arn,
-        service = service,
-        nino = ninoWithoutSuffix
-      )
-    )
-
-    val result = await(
-      repository.collection
-        .find(
-          and(
-            mongoEqual("arn", arn),
-            mongoEqual("service", service)
-          )
-        )
-        .head()
-    )
-
-    result.nino shouldBe ninoWithoutSuffix
-    await(repository.collection.countDocuments().toFuture()) shouldBe 1
-  }
-
-  "removeNinoSuffix should only update matching arn and service" in {
-    val ninoWithSuffix = "SX579189D"
-    val ninoWithoutSuffix = "SX579189"
-    val service = "HMRC-MTD-IT"
-    val arn = "XARN1234567"
-    val otherArn = "OTHERARN"
-
-    await(
-      repository.collection.insertOne(
-        partialAuth.copy(nino = ninoWithSuffix)
-      ).toFuture()
-    )
-
-    await(
-      repository.collection.insertOne(
-        partialAuth.copy(
-          arn = otherArn,
-          nino = ninoWithSuffix
-        )
-      ).toFuture()
-    )
-
-    await(
-      repository.removeNinoSuffix(
-        arn = arn,
-        service = service,
-        nino = ninoWithSuffix
-      )
-    )
-
-    val updated = await(
-      repository.collection
-        .find(
-          and(
-            mongoEqual("arn", arn),
-            mongoEqual("service", service)
-          )
-        )
-        .head()
-    )
-
-    val untouched = await(
-      repository.collection
-        .find(
-          and(
-            mongoEqual("arn", otherArn),
-            mongoEqual("service", service)
-          )
-        )
-        .head()
-    )
-
-    updated.nino shouldBe ninoWithoutSuffix
-    untouched.nino shouldBe ninoWithSuffix
-  }
-
-  "removeNinoSuffix should return number of records updated" in {
-    val service = "HMRC-MTD-IT"
-    val ninoWithSuffix = "SX579189D"
-
-    val auths = Seq(
-      partialAuth.copy(arn = "XARN1", nino = ninoWithSuffix),
-      partialAuth.copy(arn = "XARN2", nino = ninoWithSuffix),
-      partialAuth.copy(arn = "XARN3", nino = ninoWithSuffix)
-    )
-
-    await(repository.collection.insertMany(auths).toFuture())
-    await(repository.collection.countDocuments().toFuture()) shouldBe 3
-
-    val updatedCounts =
-      await(
-        Future.sequence(
-          auths.map { a =>
-            repository.removeNinoSuffix(
-              arn = a.arn,
-              service = service,
-              nino = ninoWithSuffix
-            )
-          }
-        )
-      )
-
-    updatedCounts.sum shouldBe 3
-  }
-
 }
