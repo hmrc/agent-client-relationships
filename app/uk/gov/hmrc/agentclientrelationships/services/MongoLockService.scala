@@ -43,11 +43,6 @@ trait MongoLockService {
     appConfig: AppConfig
   ): Future[Option[T]]
 
-  def partialAuthLock[T](jobName: String)(body: => Future[T])(implicit
-    ec: ExecutionContext,
-    appConfig: AppConfig
-  ): Future[Option[T]]
-
 }
 
 @Singleton
