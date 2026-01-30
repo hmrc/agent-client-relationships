@@ -18,7 +18,7 @@ package uk.gov.hmrc.agentclientrelationships.connectors
 
 import javax.inject.Inject
 import javax.inject.Singleton
-import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
+import uk.gov.hmrc.agentclientrelationships.util.{ConsumesAPI, RequestAwareLogging}
 import play.api.http.Status
 import play.api.libs.json._
 import play.api.mvc.RequestHeader
@@ -72,6 +72,7 @@ class UsersGroupsSearchConnector @Inject() (
 extends HttpErrorFunctions
 with RequestAwareLogging {
 
+  @ConsumesAPI(apiId = "UGS01", service = "users-groups-search")
   def getGroupUsers(groupId: String)(implicit rh: RequestHeader): Future[Seq[UserDetails]] = httpClient
     .get(url"${appConfig.userGroupsSearchUrl}/users-groups-search/groups/$groupId/users")
     .execute[HttpResponse]
@@ -98,6 +99,7 @@ with RequestAwareLogging {
     groupId
   ).map(_.find(_.credentialRole.exists(role => role == "Admin" | role == "User")))
 
+  @ConsumesAPI(apiId = "UGS02", service = "users-groups-search")
   def getGroupInfo(groupId: String)(implicit rh: RequestHeader): Future[Option[GroupInfo]] = httpClient
     .get(url"${appConfig.userGroupsSearchUrl}/users-groups-search/groups/$groupId")
     .execute[Option[GroupInfo]]

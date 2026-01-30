@@ -147,6 +147,7 @@
       "name": "agent-assurance",
       "description": "Provides current agent details including agency name",
       "method": "getAgentRecord",
+      "apiId": "AA27",
       "note": "Note: Uses getAgentRecord (not getNonSuspendedAgentRecord) - returns details even if suspended"
     }
   ],
@@ -331,4 +332,3 @@
     "analysisVersion": "1.0"
   }
 }
-

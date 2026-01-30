@@ -61,18 +61,21 @@
   "externalDependencies": [
     {
       "name": "EACD (Enrolment Store Proxy)",
+      "apiId": "ES3",
       "description": "Retrieves principal group ID and deallocates enrolment from agent's group",
       "method": "getPrincipalGroupIdFor, deallocateEnrolmentFromAgent",
       "note": "Standard services only - not called for PIR or alt-ITSA"
     },
     {
       "name": "HIP/IF (ETMP)",
+      "apiId": "ETMP",
       "description": "Deletes agent-client relationship in tax platform. Also converts NINO to MTDITID for alt-ITSA",
       "method": "deleteAgentRelationship, getMtdIdFor",
       "note": "Standard services call deleteAgentRelationship. Alt-ITSA calls getMtdIdFor for enrolment key replacement"
     },
     {
       "name": "Agent FI Relationship",
+      "apiId": "AFR01",
       "description": "Handles relationship deletion for Personal Income Record service",
       "method": "deleteRelationship",
       "note": "PIR service only"
@@ -296,4 +299,3 @@
     "analysisVersion": "1.0"
   }
 }
-

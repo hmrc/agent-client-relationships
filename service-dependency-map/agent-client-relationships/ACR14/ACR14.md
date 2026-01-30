@@ -41,6 +41,7 @@ Returns AgentDetailsDesResponse with agency details:
 ```
 
 **If agent is suspended**:
+
 ```json
 {
   "agencyDetails": {
@@ -55,6 +56,7 @@ Returns AgentDetailsDesResponse with agency details:
 ```
 
 **Fields**:
+
 - `agencyDetails.agencyName`: Agent's trading name
 - `agencyDetails.agencyEmail`: Agent's contact email
 - `suspensionDetails`: Optional - present only if agent is suspended
@@ -80,8 +82,7 @@ See ACR14.mmd for complete sequence diagram.
 ### External Services
 
 - **agent-assurance**: Provides agent record
-  - Method: `getAgentRecord(arn)`
-  - Endpoint: `/agent-assurance/agent-record/:arn`
+  - API ID: **AA27** (Get agent record by ARN)
   - Returns details **even if agent suspended**
 
 ## Business Logic
@@ -105,6 +106,7 @@ agentAssuranceService.getAgentRecord(arn).map(agent => Ok(Json.toJson(agent)))
 ### Suspension Status
 
 Uses `getAgentRecord` (not `getNonSuspendedAgentRecord`):
+
 - Returns details **even if agent is suspended**
 - `suspensionDetails` field indicates suspension status
 
@@ -117,6 +119,7 @@ Uses `getAgentRecord` (not `getNonSuspendedAgentRecord`):
 **Authenticated As**: TARN0000001
 
 **Response**:
+
 ```json
 {
   "agencyDetails": {
@@ -132,6 +135,7 @@ Uses `getAgentRecord` (not `getNonSuspendedAgentRecord`):
 ### 2. Agent Checks Suspension Status
 
 **Response**:
+
 ```json
 {
   "agencyDetails": {
@@ -154,6 +158,7 @@ Uses `getAgentRecord` (not `getNonSuspendedAgentRecord`):
 **Authenticated As**: TARN0000001 (different agent)
 
 **Response**:
+
 ```json
 {
   "agencyDetails": {

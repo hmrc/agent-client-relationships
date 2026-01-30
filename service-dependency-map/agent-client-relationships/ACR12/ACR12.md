@@ -60,6 +60,7 @@ Returns ValidateInvitationResponse with invitation details:
 ```
 
 **Fields**:
+
 - `invitationId`: Unique invitation ID
 - `service`: Service identifier
 - `agencyName`: Inviting agent's agency name
@@ -107,6 +108,7 @@ Else:
 ### Invitation Selection
 
 When multiple invitations found:
+
 1. **Priority 1**: Return Pending invitation (if exists)
 2. **Priority 2**: Return most recently created invitation (sorted by created timestamp descending)
 
@@ -116,7 +118,7 @@ Different logic per service:
 
 | Service | Check Method |
 |---------|--------------|
-| MTD-IT, MTD-IT-SUPP | findMainAgentForNino - checks EACD, partial_auth, mappings |
+| MTD-IT, MTD-IT-SUPP | findMainAgentForNino - checks EACD, partial-auth, mappings |
 | PIR | agent-fi-relationship findIrvActiveRelationshipForClient |
 | CBC-ORG | Uses provided enrolment to check EACD delegations |
 | Others | Builds enrolment key from invitation, checks EACD delegations |
@@ -141,6 +143,7 @@ Different logic per service:
 ### 1. Client with Pending Invitation, No Existing Agent
 
 **Request**:
+
 ```json
 {
   "uid": "abc12345",
@@ -149,6 +152,7 @@ Different logic per service:
 ```
 
 **Response**:
+
 ```json
 {
   "invitationId": "ABBBBBBBBBBBB",
@@ -166,6 +170,7 @@ Different logic per service:
 ### 2. Client Already Has Different Agent
 
 **Response**:
+
 ```json
 {
   "invitationId": "CCCCCCCCCCCCC",
@@ -186,6 +191,7 @@ Different logic per service:
 ### 3. Same Agent (Re-invitation)
 
 **Response**:
+
 ```json
 {
   "existingMainAgent": {
@@ -200,6 +206,7 @@ Different logic per service:
 ### 4. Expired Invitation
 
 **Response**:
+
 ```json
 {
   "status": "Expired",

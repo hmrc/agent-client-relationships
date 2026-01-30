@@ -18,6 +18,7 @@ sequenceDiagram
 
     AGIC->>AAS: getNonSuspendedAgentRecord(arn)
     AAS->>AA: GET /agent-assurance/agent/{arn}
+    Note over AA: API ID: AA27
 
     alt Agent Found and Not Suspended
         AA-->>AAS: Agent record

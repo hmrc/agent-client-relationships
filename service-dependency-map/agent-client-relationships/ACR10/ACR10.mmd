@@ -28,7 +28,7 @@ sequenceDiagram
 
         alt Normalized name matches
             ILS->>+AAS: getNonSuspendedAgentRecord(record.arn)
-            Note over AAS: GET /agent-assurance/agent-record/:arn<br/>Returns None if suspended
+            Note over AAS: API ID: AA27<br/>Returns None if suspended
             AAS-->>-ILS: Option[AgentDetailsDesResponse]
 
             alt Agent suspended

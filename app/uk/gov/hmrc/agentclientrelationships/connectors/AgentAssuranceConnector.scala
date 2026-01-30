@@ -21,6 +21,7 @@ import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentDetailsDesResponse
 import uk.gov.hmrc.agentclientrelationships.util.RequestSupport.hc
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
+import uk.gov.hmrc.agentclientrelationships.util.ConsumesAPI
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http._
 import uk.gov.hmrc.http.client.HttpClientV2
@@ -41,6 +42,7 @@ class AgentAssuranceConnector @Inject() (
   // agent-assurance uses internal auth to support unauthenticated frontend client journey start requests
   private def aaHeaders: (String, String) = HeaderNames.authorisation -> appConfig.internalAuthToken
 
+  @ConsumesAPI(apiId = "AA27", service = "agent-assurance")
   def getAgentRecordWithChecks(arn: Arn)(implicit rh: RequestHeader): Future[AgentDetailsDesResponse] = httpClient
     .get(url"${appConfig.agentAssuranceBaseUrl}/agent-assurance/agent-record-with-checks/arn/${arn.value}")
     .setHeader(aaHeaders)

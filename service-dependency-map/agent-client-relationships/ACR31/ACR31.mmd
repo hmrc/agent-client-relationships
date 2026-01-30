@@ -43,6 +43,7 @@ sequenceDiagram
         alt MTD-IT or MTD-IT-SUPP with NINO
             ACIC->>IFOrHIP: getMtdIdFor(nino)
             activate IFOrHIP
+            Note over IFOrHIP: API ID: ETMP
             IFOrHIP-->>ACIC: MtdItId or None
             deactivate IFOrHIP
         end
@@ -61,6 +62,7 @@ sequenceDiagram
         activate AAS
         AAS->>AM: GET /agent-maintainer/agent/{arn}
         activate AM
+        Note over AM: API ID: ETMP03
         AM-->>AAS: AgentRecord
         deactivate AM
         AAS-->>ACIC: AgentRecord or None
@@ -70,6 +72,7 @@ sequenceDiagram
         activate CDS
         CDS->>DES: Service-specific endpoint
         activate DES
+        Note over DES: API ID: DES
         DES-->>CDS: Client details
         deactivate DES
         CDS-->>ACIC: ClientDetailsResponse or Error

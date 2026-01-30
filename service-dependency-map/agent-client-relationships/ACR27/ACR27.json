@@ -91,42 +91,49 @@
   "externalDependencies": [
     {
       "name": "HIP (ETMP)",
+      "apiId": "ETMP",
       "description": "Retrieves active relationships for all services except IRV",
       "method": "GET /registration/relationship",
       "note": "Called for each non-NINO client, and for ITSA relationships for NINO. Returns MTD-IT, MTD-IT-SUPP, VAT, Trust, TrustNT, CGT, PPT, CBC, PLR relationships"
     },
     {
       "name": "IF (Integration Framework)",
+      "apiId": "ETMP",
       "description": "Converts NINO to MtdItId for ITSA relationship queries",
       "method": "getMtdIdFor",
       "note": "Only called for NINO clients to enable HIP ITSA relationship queries"
     },
     {
       "name": "Agent-Fi-Relationship",
+      "apiId": "AFR01",
       "description": "Retrieves IRV (Personal Income Record) relationships for NINO",
       "method": "GET /relationships/active?service=PERSONAL-INCOME-RECORD",
       "note": "Only called for NINO clients. IRV relationships not stored in HIP"
     },
     {
       "name": "Citizen Details (DES)",
+      "apiId": "CD02",
       "description": "Retrieves client names for NINO",
       "method": "getCitizenDetails",
       "note": "Returns individual's name"
     },
     {
       "name": "Designatory Details (DES)",
+      "apiId": "DES",
       "description": "Retrieves additional client details for NINO",
       "method": "getDesignatoryDetails",
       "note": "Supplementary details for individuals"
     },
     {
       "name": "DES",
+      "apiId": "DES",
       "description": "Retrieves client names for VRN, UTR, URN, CGT, PPT, CBC, PLR",
       "method": "getVrnDisplayDetails, getTrustDetails, getCgtSubscriptionDetails, getPptSubscriptionDetails, getCbcSubscriptionDetails, getPillar2SubscriptionDetails",
       "note": "Different endpoints per client type"
     },
     {
       "name": "Agent Maintainer",
+      "apiId": "ETMP03",
       "description": "Retrieves agent name for each ARN",
       "method": "getAgentRecord",
       "note": "Called once per unique ARN found across all relationships"

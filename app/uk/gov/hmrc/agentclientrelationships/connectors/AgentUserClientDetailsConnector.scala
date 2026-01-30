@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.connectors
 
-import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
+import uk.gov.hmrc.agentclientrelationships.util.{ConsumesAPI, RequestAwareLogging}
 import play.api.http.Status.NOT_FOUND
 import play.api.http.Status.NO_CONTENT
 import play.api.mvc.RequestHeader
@@ -43,6 +43,7 @@ extends RequestAwareLogging {
   val baseUrl = appConfig.agentUserClientDetailsUrl
 
   // update the cache in Granular Permissions (returns 404 if no cache currently in use)
+  @ConsumesAPI(apiId = "AUCD18", service = "agent-user-client-details")
   def cacheRefresh(arn: Arn)(implicit requestHeader: RequestHeader): Future[Unit] = {
     val url = url"$baseUrl/agent-user-client-details/arn/${arn.value}/cache-refresh"
     httpClient

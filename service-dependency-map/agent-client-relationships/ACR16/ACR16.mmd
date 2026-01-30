@@ -46,7 +46,7 @@ sequenceDiagram
 
             alt Service is PIR
                 AAS->>+AFRC: createRelationship(arn, service, clientId, acceptedDate)
-                Note over AFRC: agent-fi-relationship<br/>handles own deauthorisations
+                Note over AFRC: API ID: AFR01<br/>agent-fi-relationship<br/>handles own deauthorisations
                 AFRC-->>-AAS: Done
             else Service is MTD-IT/MTD-IT-SUPP with Alt-ITSA
                 AAS->>+PAuth: deauth existing partial auth
@@ -58,12 +58,14 @@ sequenceDiagram
                 AAS->>AAS: deauth partial auth for nino
                 AAS->>+CRS: createRelationship(arn, enrolmentKey, oldRefs, failIfAllocate=true)
                 CRS->>+ESP: allocateEnrolmentToAgent(groupId, enrolmentKey, agentCode)
+                Note over ESP: API ID: ES3
                 ESP-->>-CRS: Allocation result
                 CRS->>CRS: Create relationship in ETMP via HIP
                 CRS-->>-AAS: Done or CreateRelationshipLocked
             else Other services
                 AAS->>+CRS: createRelationship(arn, enrolmentKey, oldRefs, failIfAllocate=true)
                 CRS->>+ESP: allocateEnrolmentToAgent(groupId, enrolmentKey, agentCode)
+                Note over ESP: API ID: ES3
                 ESP-->>-CRS: Allocation result
                 CRS->>CRS: Create relationship in ETMP via HIP
                 CRS-->>-AAS: Done or CreateRelationshipLocked
@@ -77,7 +79,7 @@ sequenceDiagram
             AAS->>AAS: deauthAcceptedInvitations (async)<br/>Deauth other accepted invitations for this client
 
             AAS->>+ES: sendAcceptedEmail(invitation)
-            Note over ES: Send acceptance email to agent (async)
+            Note over ES: API ID: ES<br/>Send acceptance email to agent (async)
             ES-->>-AAS: Unit
 
             AAS-->>-AAC: Invitation

@@ -28,6 +28,7 @@ sequenceDiagram
     alt Invitation Found
         ARIC->>+ILS: createLink(arn)
         ILS->>+AAS: getAgentRecord(arn)
+        Note over AAS: API ID: AA27
         AAS-->>-ILS: AgentDetailsDesResponse
         Note over ILS: Normalize agency name
 

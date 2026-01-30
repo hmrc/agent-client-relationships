@@ -128,6 +128,7 @@
       "name": "agent-assurance",
       "description": "Checks agent suspension status and provides agent details",
       "method": "getNonSuspendedAgentRecord",
+      "apiId": "AA27",
       "returns": "None if agent suspended, Some(AgentDetailsDesResponse) otherwise"
     }
   ],
@@ -277,4 +278,3 @@
     "analysisVersion": "1.0"
   }
 }
-

@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.connectors
 
-import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
+import uk.gov.hmrc.agentclientrelationships.util.{ConsumesAPI, RequestAwareLogging}
 import play.api.libs.json._
 import play.api.mvc.RequestHeader
 import play.api.http.Status
@@ -56,6 +56,7 @@ class MappingConnector @Inject() (
 )
 extends RequestAwareLogging {
 
+  @ConsumesAPI(apiId = "AM09", service = "agent-mapping")
   def getSaAgentReferencesFor(arn: Arn)(implicit rh: RequestHeader): Future[Seq[SaAgentReference]] = httpClient
     .get(url"${appConfig.agentMappingUrl}/agent-mapping/mappings/sa/${arn.value}")
     .execute[HttpResponse]

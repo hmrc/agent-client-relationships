@@ -68,11 +68,13 @@
   "externalDependencies": [
     {
       "name": "agent-assurance",
+      "apiId": "AA27",
       "description": "Provides agent details (agency name, email)",
       "note": "Uses getAgentRecord - returns details even if agent suspended"
     },
     {
       "name": "IF/HIP",
+      "apiId": "ETMP",
       "description": "Converts NINO to MTD IT ID",
       "services": "Only for MTD-IT and MTD-IT-SUPP with NINO",
       "note": "If MTD IT ID not found, uses NINO (for alt-itsa)"
@@ -288,4 +290,3 @@
     "analysisVersion": "1.0"
   }
 }
-

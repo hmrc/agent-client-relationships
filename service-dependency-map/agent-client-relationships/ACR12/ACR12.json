@@ -86,15 +86,18 @@
   "externalDependencies": [
     {
       "name": "agent-assurance",
-      "description": "Checks agent suspension and provides agent details for existing relationships"
+      "description": "Checks agent suspension and provides agent details for existing relationships",
+      "apiId": "AA27"
     },
     {
       "name": "Enrolment Store Proxy (EACD)",
-      "description": "Queries for existing agent delegations via enrolment keys"
+      "description": "Queries for existing agent delegations via enrolment keys",
+      "apiId": "ES3"
     },
     {
       "name": "agent-fi-relationship",
-      "description": "Checks for existing PIR (Personal Income Record) relationships"
+      "description": "Checks for existing PIR (Personal Income Record) relationships",
+      "apiId": "AFR01"
     }
   ],
   "databaseCollections": [
@@ -161,7 +164,7 @@
     },
     "existingMainAgentCheck": {
       "description": "Checks if client already has an existing main agent for the service",
-      "MTD-IT_MTD-IT-SUPP": "Uses findMainAgentForNino - checks EACD, partial_auth, mappings",
+      "MTD-IT_MTD-IT-SUPP": "Uses findMainAgentForNino - checks EACD, partial-auth, mappings",
       "PIR": "Queries agent-fi-relationship for active IRV relationship",
       "CBC-ORG": "Uses provided enrolment to check EACD delegations",
       "other_services": "Builds enrolment key from invitation and checks EACD delegations"
@@ -303,4 +306,3 @@
     "analysisVersion": "1.0"
   }
 }
-

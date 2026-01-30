@@ -22,7 +22,7 @@ import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.helpers.CorrelationIdGenerator
 import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
-import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
+import uk.gov.hmrc.agentclientrelationships.util.{ConsumesAPI, RequestAwareLogging}
 import uk.gov.hmrc.agentclientrelationships.util.RequestSupport._
 import uk.gov.hmrc.domain.SaAgentReference
 import uk.gov.hmrc.http.HttpReads.Implicits._
@@ -53,6 +53,7 @@ extends RequestAwareLogging {
   private val Environment = "Environment"
   private val CorrelationId = "CorrelationId"
 
+  @ConsumesAPI(apiId = "DES08", service = "des")
   def getClientSaAgentSaReferences(nino: NinoWithoutSuffix)(implicit request: RequestHeader): Future[Seq[SaAgentReference]] = {
     val url = url"${appConfig.desUrl}/registration/relationship/nino/${nino.anySuffixValue}" // TODO review CESA api behaviour around suffixless NINOs
 

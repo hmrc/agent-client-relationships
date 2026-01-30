@@ -12,5 +12,6 @@ sequenceDiagram
     StrideGetPartialAuthsController->>PartialAuthDB: Get partial-auth records for NINO
     PartialAuthDB-->>StrideGetPartialAuthsController: Partial-auth records
     StrideGetPartialAuthsController->>CitizenDetails: GET /nino/:nino
+    Note over CitizenDetails: API ID: CD02
     CitizenDetails-->>StrideGetPartialAuthsController: Client name
     StrideGetPartialAuthsController-->>StrideUser: 200 OK - Partial auth records with client name

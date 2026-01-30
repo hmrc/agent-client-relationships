@@ -58,7 +58,7 @@ See ACR16.mmd for complete sequence diagram showing service-specific flows.
 ### 2. MTD-IT Alt-ITSA (Alternative ITSA / IR-SA Partial Auth)
 
 - **Flow**: Deauth existing partial auth → Create new partial auth record
-- **Storage**: MongoDB partial_auth collection
+- **Storage**: MongoDB partial-auth collection
 - **Status**: **PartialAuth** (not Accepted)
 - **Note**: Does NOT create relationship in EACD/ETMP
 
@@ -114,7 +114,7 @@ See ACR16.mmd for complete sequence diagram showing service-specific flows.
 
 **Status**: PartialAuth (not Accepted)
 
-**Storage**: MongoDB partial_auth collection
+**Storage**: MongoDB partial-auth collection
 
 **Deauth**: Existing partial auth deactivated before creating new one
 
@@ -146,7 +146,7 @@ See ACR16.mmd for complete sequence diagram showing service-specific flows.
 ### Database Collections
 
 - **invitations**: UPDATE status to Accepted or PartialAuth
-- **partial_auth**: CREATE for Alt-ITSA, DELETE for deauth
+- **partial-auth**: CREATE for Alt-ITSA, DELETE for deauth
 
 ## Important Notes
 

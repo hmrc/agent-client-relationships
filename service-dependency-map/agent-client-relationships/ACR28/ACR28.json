@@ -77,30 +77,35 @@
   "externalDependencies": [
     {
       "name": "Agent Maintainer",
+      "apiId": "ETMP03",
       "description": "Retrieves agent records (name and suspension status) for ARNs in invitations and relationships",
       "method": "GET /agent-maintainer/agent/{arn}",
       "note": "Called for each invitation ARN and for active relationship ARN"
     },
     {
       "name": "HIP (ETMP)",
+      "apiId": "ETMP",
       "description": "Retrieves active relationships for most services",
       "method": "GET /registration/relationship",
       "note": "Not called for IRV service. For MTD-IT, only called if no PartialAuth main agent found"
     },
     {
       "name": "IF (Integration Framework)",
+      "apiId": "ETMP",
       "description": "Converts NINO to MtdItId for ITSA relationship queries",
       "method": "getMtdIdFor",
       "note": "Only called for MTD-IT service when querying HIP"
     },
     {
       "name": "Agent-Fi-Relationship",
+      "apiId": "AFR01",
       "description": "Retrieves IRV (Personal Income Record) relationships for NINO",
       "method": "GET /relationships/active?service=PERSONAL-INCOME-RECORD",
       "note": "Only called for PERSONAL-INCOME-RECORD service"
     },
     {
       "name": "DES (Citizen Details, Designatory Details, Subscription Details)",
+      "apiId": "DES",
       "description": "Retrieves client name based on identifier type",
       "method": "getCitizenDetails, getDesignatoryDetails, getVrnDisplayDetails, getTrustDetails, getCgtSubscriptionDetails, getPptSubscriptionDetails, getCbcSubscriptionDetails, getPillar2SubscriptionDetails",
       "note": "Only called if no pending invitations with client name exist. Different endpoint per identifier type"
@@ -465,4 +470,3 @@
     "analysisVersion": "1.0"
   }
 }
-

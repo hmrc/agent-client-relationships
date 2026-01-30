@@ -163,6 +163,7 @@
   "externalDependencies": [
     {
       "name": "EmailService",
+      "apiId": "ES",
       "description": "Sends rejection notification email to agent",
       "note": "Email sent asynchronously after status update"
     }
@@ -334,4 +335,3 @@
     "analysisVersion": "1.0"
   }
 }
-

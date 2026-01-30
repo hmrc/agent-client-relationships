@@ -31,7 +31,7 @@ sequenceDiagram
             ARI-->>Client: 403 Forbidden<br/>(NoPermissionToPerformOperation)
         else User authorized
             ARI->>+AAS: getAgentRecord(arn)
-            Note over AAS: GET /agent-assurance/agent-record/:arn<br/>Returns agent details (even if suspended)
+            Note over AAS: API ID: AA27<br/>Returns agent details (even if suspended)
             AAS-->>-ARI: AgentDetailsDesResponse
 
             ARI->>ARI: Build AuthorisationRequestInfoForClient:<br/>- agentName (from agent details)<br/>- service (from invitation)<br/>- status (from invitation)

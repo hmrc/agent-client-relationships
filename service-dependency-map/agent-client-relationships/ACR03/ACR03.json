@@ -1,7 +1,7 @@
 {
   "apiId": "ACR03",
   "apiTitle": "Terminate Agent - Clean Up Internal Records",
-  "description": "Administrative endpoint that deletes internal tracking records for a terminated agent from MongoDB. This endpoint removes records from the delete_record and relationship_copy_record collections. It does NOT delete actual relationships from EACD or terminate active agent-client relationships - it only cleans up internal housekeeping data. This is typically called as part of an agent termination workflow managed by other services.",
+  "description": "Administrative endpoint that deletes internal tracking records for a terminated agent from MongoDB. This endpoint removes records from the invitations, partial-auth, and agent-reference collections. It does NOT delete actual relationships from EACD or terminate active agent-client relationships - it only cleans up internal housekeeping data. This is typically called as part of an agent termination workflow managed by other services.",
   "method": "DELETE",
   "path": "/agent/{arn}/terminate",
   "pathParameters": {
@@ -22,19 +22,25 @@
       "name": "AgentTerminationService",
       "alias": "ATS",
       "method": "terminateAgent",
-      "description": "Orchestrates deletion from both MongoDB collections in parallel"
+      "description": "Orchestrates deletion from three MongoDB collections in parallel"
     },
     {
-      "name": "DeleteRecordRepository",
-      "alias": "DRR",
+      "name": "InvitationsRepository",
+      "alias": "IR",
       "method": "terminateAgent",
-      "description": "Deletes all delete_record documents for the ARN"
+      "description": "Deletes all invitations documents for the ARN"
     },
     {
-      "name": "RelationshipCopyRecordRepository",
-      "alias": "RCRR",
+      "name": "PartialAuthRepository",
+      "alias": "PAR",
       "method": "terminateAgent",
-      "description": "Deletes all relationship_copy_record documents for the ARN"
+      "description": "Deletes all partial-auth documents for the ARN"
+    },
+    {
+      "name": "AgentReferenceRepository",
+      "alias": "ARR",
+      "method": "terminateAgent",
+      "description": "Deletes all agent-reference documents for the ARN"
     }
   ],
   "interactions": [
@@ -58,66 +64,90 @@
       "step": 3,
       "actor": "AgentTerminationService (ATS)",
       "action": "calls repository (parallel)",
-      "target": "DeleteRecordRepository (DRR)",
+      "target": "InvitationsRepository (IR)",
       "method": "terminateAgent",
-      "description": "Deletes all delete_record documents for the ARN (executed in parallel with step 4)"
+      "description": "Deletes all invitations documents for the ARN (executed in parallel with steps 4 and 5)"
     },
     {
       "step": 4,
       "actor": "AgentTerminationService (ATS)",
       "action": "calls repository (parallel)",
-      "target": "RelationshipCopyRecordRepository (RCRR)",
+      "target": "PartialAuthRepository (PAR)",
       "method": "terminateAgent",
-      "description": "Deletes all relationship_copy_record documents for the ARN (executed in parallel with step 3)"
+      "description": "Deletes all partial-auth documents for the ARN (executed in parallel with steps 3 and 5)"
     },
     {
       "step": 5,
-      "actor": "DeleteRecordRepository (DRR)",
-      "action": "deletes from database",
-      "target": "MongoDB (delete_record collection)",
-      "method": "deleteMany",
-      "filter": "{\"arn\": \"{arn}\"}",
-      "description": "Removes all delete records associated with the agent"
+      "actor": "AgentTerminationService (ATS)",
+      "action": "calls repository (parallel)",
+      "target": "AgentReferenceRepository (ARR)",
+      "method": "terminateAgent",
+      "description": "Deletes all agent-reference documents for the ARN (executed in parallel with steps 3 and 4)"
     },
     {
       "step": 6,
-      "actor": "RelationshipCopyRecordRepository (RCRR)",
+      "actor": "InvitationsRepository (IR)",
       "action": "deletes from database",
-      "target": "MongoDB (relationship_copy_record collection)",
+      "target": "MongoDB (invitations collection)",
       "method": "deleteMany",
       "filter": "{\"arn\": \"{arn}\"}",
-      "description": "Removes all relationship copy records associated with the agent"
+      "description": "Removes all invitation records associated with the agent"
     },
     {
       "step": 7,
-      "actor": "DeleteRecordRepository (DRR)",
-      "action": "returns result",
-      "target": "AgentTerminationService (ATS)",
-      "description": "Returns Either[String, Int] with deleted count or error message"
+      "actor": "PartialAuthRepository (PAR)",
+      "action": "deletes from database",
+      "target": "MongoDB (partial-auth collection)",
+      "method": "deleteMany",
+      "filter": "{\"arn\": \"{arn}\"}",
+      "description": "Removes all partial authorization records associated with the agent"
     },
     {
       "step": 8,
-      "actor": "RelationshipCopyRecordRepository (RCRR)",
+      "actor": "AgentReferenceRepository (ARR)",
+      "action": "deletes from database",
+      "target": "MongoDB (agent-reference collection)",
+      "method": "deleteMany",
+      "filter": "{\"arn\": \"{arn}\"}",
+      "description": "Removes all agent reference records (invitation link UIDs) associated with the agent"
+    },
+    {
+      "step": 9,
+      "actor": "InvitationsRepository (IR)",
       "action": "returns result",
       "target": "AgentTerminationService (ATS)",
       "description": "Returns Either[String, Int] with deleted count or error message"
     },
     {
-      "step": 9,
+      "step": 10,
+      "actor": "PartialAuthRepository (PAR)",
+      "action": "returns result",
+      "target": "AgentTerminationService (ATS)",
+      "description": "Returns Either[String, Int] with deleted count or error message"
+    },
+    {
+      "step": 11,
+      "actor": "AgentReferenceRepository (ARR)",
+      "action": "returns result",
+      "target": "AgentTerminationService (ATS)",
+      "description": "Returns Either[String, Int] with deleted count or error message"
+    },
+    {
+      "step": 12,
       "actor": "AgentTerminationService (ATS)",
       "action": "builds response",
       "target": "AgentTerminationService (ATS)",
       "description": "Constructs TerminationResponse with DeletionCount for each collection"
     },
     {
-      "step": 10,
+      "step": 13,
       "actor": "AgentTerminationService (ATS)",
       "action": "returns result",
       "target": "RelationshipsController (RC)",
       "description": "Returns EitherT[Future, String, TerminationResponse]"
     },
     {
-      "step": 11,
+      "step": 14,
       "actor": "RelationshipsController (RC)",
       "action": "returns response",
       "target": "Caller",
@@ -127,14 +157,19 @@
   "externalDependencies": [],
   "databaseCollections": [
     {
-      "name": "delete_record",
+      "name": "invitations",
       "operation": "DELETE",
-      "description": "Stores pending relationship deletion records - all documents for the ARN are deleted"
+      "description": "Stores invitation records - all documents for the ARN are deleted"
     },
     {
-      "name": "relationship_copy_record",
+      "name": "partial-auth",
       "operation": "DELETE",
-      "description": "Tracks copied legacy relationships from CESA to EACD - all documents for the ARN are deleted"
+      "description": "Stores partial authorization records - all documents for the ARN are deleted"
+    },
+    {
+      "name": "agent-reference",
+      "operation": "DELETE",
+      "description": "Stores agent invitation link UIDs - all documents for the ARN are deleted"
     }
   ],
   "responseModel": {
@@ -204,4 +239,3 @@
     "analysisVersion": "1.0"
   }
 }
-

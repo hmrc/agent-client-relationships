@@ -42,6 +42,7 @@ sequenceDiagram
         activate AFIRC
 
         AFIRC->>AF: GET /relationships/active<br/>service=PERSONAL-INCOME-RECORD
+        Note over AF: API ID: AFR01
         activate AF
 
         alt IRV relationships found
@@ -70,6 +71,7 @@ sequenceDiagram
         loop For each relationship
             SCDS->>AM: getAgentRecord(arn)
             activate AM
+            Note over AM: API ID: ETMP03
             AM-->>SCDS: AgentRecord with agentName
             deactivate AM
             Note over SCDS: Build ClientRelationshipWithAgentName
@@ -79,6 +81,7 @@ sequenceDiagram
         activate CDS
 
         CDS->>DES: getCitizenDetails(nino)
+        Note over DES: API ID: CD02
         activate DES
 
         alt Client found

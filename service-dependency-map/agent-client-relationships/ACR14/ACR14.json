@@ -61,8 +61,8 @@
       "name": "agent-assurance",
       "description": "Provides agent record including agency details and suspension status",
       "method": "getAgentRecord",
-      "endpoint": "/agent-assurance/agent-record/:arn",
-      "note": "Uses getAgentRecord (not getNonSuspendedAgentRecord) - returns details even if agent suspended"
+      "note": "Uses getAgentRecord (not getNonSuspendedAgentRecord) - returns details even if agent suspended",
+      "apiId": "AA27"
     }
   ],
   "databaseCollections": [],
@@ -103,7 +103,7 @@
   "businessLogic": {
     "passthrough": {
       "description": "Simple passthrough endpoint - no business logic",
-      "flow": "Authenticate agent → Query agent-assurance → Return response"
+      "flow": "Authenticate agent \u2192 Query agent-assurance \u2192 Return response"
     },
     "arnParameter": {
       "description": "ARN is passed as path parameter",
@@ -181,16 +181,16 @@
     }
   ],
   "importantNotes": [
-    "✅ Simple passthrough endpoint - no complex logic",
-    "✅ Agent authentication required (withAuthorisedAsAgent)",
-    "✅ Returns details even if agent suspended",
-    "✅ Uses getAgentRecord (not getNonSuspendedAgentRecord)",
-    "⚠️ No validation that ARN matches authenticated agent",
-    "⚠️ Any authenticated agent can query any other agent's details",
-    "✅ Includes suspension details if agent is suspended",
-    "✅ Returns agency name and email",
-    "⚠️ No explicit error handling for ARN not found",
-    "⚠️ No caching - queries agent-assurance on every call"
+    "\u2705 Simple passthrough endpoint - no complex logic",
+    "\u2705 Agent authentication required (withAuthorisedAsAgent)",
+    "\u2705 Returns details even if agent suspended",
+    "\u2705 Uses getAgentRecord (not getNonSuspendedAgentRecord)",
+    "\u26a0\ufe0f No validation that ARN matches authenticated agent",
+    "\u26a0\ufe0f Any authenticated agent can query any other agent's details",
+    "\u2705 Includes suspension details if agent is suspended",
+    "\u2705 Returns agency name and email",
+    "\u26a0\ufe0f No explicit error handling for ARN not found",
+    "\u26a0\ufe0f No caching - queries agent-assurance on every call"
   ],
   "securityConsiderations": {
     "anyAgentCanQuery": {
@@ -216,4 +216,3 @@
     "analysisVersion": "1.0"
   }
 }
-

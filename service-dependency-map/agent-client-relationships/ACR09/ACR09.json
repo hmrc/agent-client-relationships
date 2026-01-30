@@ -69,10 +69,11 @@
     {
       "name": "citizen-details",
       "description": "Provides citizen personal details for PIR service",
-      "endpoint": "/citizen-details/{nino}"
+      "apiId": "CD02"
     },
     {
       "name": "IF/HIP",
+      "apiId": "ETMP",
       "description": "Provides subscription/registration details for all tax services except PIR",
       "endpoints": [
         "/registration/business-details/{identifier} (ITSA)",
@@ -92,7 +93,7 @@
       "description": "Queries for pending invitations from this agent to this client for this service"
     },
     {
-      "name": "partial_auth",
+      "name": "partial-auth",
       "operation": "READ",
       "description": "Queries for active partial authorizations (MTD-IT/MTD-IT-SUPP only)"
     }
@@ -188,8 +189,8 @@
       "logic": "When service is HMRC-MTD-IT, also check HMRC-MTD-IT-SUPP for pending invitations and existing relationships"
     },
     "partialAuthFallback": {
-      "description": "For MTD-IT/MTD-IT-SUPP, if no relationship found via ACR01, check partial_auth collection",
-      "logic": "if (relationship not found AND service in [HMRC-MTD-IT, HMRC-MTD-IT-SUPP]) then check partial_auth.findActive(service, nino, arn)"
+      "description": "For MTD-IT/MTD-IT-SUPP, if no relationship found via ACR01, check partial-auth collection",
+      "logic": "if (relationship not found AND service in [HMRC-MTD-IT, HMRC-MTD-IT-SUPP]) then check partial-auth.findActive(service, nino, arn)"
     },
     "knownFactExtraction": {
       "PostalCode": "Extracted from address, spaces removed",
@@ -279,4 +280,3 @@
     "analysisVersion": "1.0"
   }
 }
-

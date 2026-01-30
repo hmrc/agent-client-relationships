@@ -6,8 +6,9 @@ sequenceDiagram
     participant Caller as Internal Service/Admin
     participant RC as RelationshipsController
     participant ATS as AgentTerminationService
-    participant DRR as DeleteRecordRepository
-    participant RCRR as RelationshipCopyRecordRepository
+    participant IR as InvitationsRepository
+    participant PAR as PartialAuthRepository
+    participant ARR as AgentReferenceRepository
     participant Mongo as MongoDB
 
     Caller->>+RC: DELETE /agent/:arn/terminate
@@ -16,16 +17,21 @@ sequenceDiagram
     alt Valid Basic Auth
         RC->>+ATS: terminateAgent(arn)
 
-        par Delete from delete-record collection
-            ATS->>+DRR: terminateAgent(arn)
-            DRR->>+Mongo: deleteMany({"arn": arn})<br/>Collection: delete_record
-            Mongo-->>-DRR: DeleteResult with count
-            DRR-->>-ATS: Right(deletedCount)
-        and Delete from relationship-copy-record collection
-            ATS->>+RCRR: terminateAgent(arn)
-            RCRR->>+Mongo: deleteMany({"arn": arn})<br/>Collection: relationship_copy_record
-            Mongo-->>-RCRR: DeleteResult with count
-            RCRR-->>-ATS: Right(deletedCount)
+        par Delete from invitations collection
+            ATS->>+IR: terminateAgent(arn)
+            IR->>+Mongo: deleteMany({"arn": arn})<br/>Collection: invitations
+            Mongo-->>-IR: DeleteResult with count
+            IR-->>-ATS: Right(deletedCount)
+        and Delete from partial-auth collection
+            ATS->>+PAR: terminateAgent(arn)
+            PAR->>+Mongo: deleteMany({"arn": arn})<br/>Collection: partial-auth
+            Mongo-->>-PAR: DeleteResult with count
+            PAR-->>-ATS: Right(deletedCount)
+        and Delete from agent-reference collection
+            ATS->>+ARR: terminateAgent(arn)
+            ARR->>+Mongo: deleteMany({"arn": arn})<br/>Collection: agent-reference
+            Mongo-->>-ARR: DeleteResult with count
+            ARR-->>-ATS: Right(deletedCount)
         end
 
         ATS->>ATS: Build TerminationResponse with deletion counts
@@ -37,8 +43,8 @@ sequenceDiagram
     end
 
     alt MongoDB Error
-        Mongo-->>DRR: MongoWriteException
-        DRR-->>ATS: Left(errorMessage)
+        Mongo-->>IR: MongoWriteException
+        IR-->>ATS: Left(errorMessage)
         ATS-->>RC: EitherT.Left(error)
         RC-->>Caller: 500 Internal Server Error
     end

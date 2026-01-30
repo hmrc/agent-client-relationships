@@ -36,15 +36,18 @@ sequenceDiagram
             par Get ITSA relationships
                 SCDS->>+FRS: getAllActiveItsaRelationshipForClient(nino, activeOnly=true)
                 FRS->>+IFOrHIP: getMtdIdFor(nino)
+                Note over IFOrHIP: API ID: ETMP
                 IFOrHIP-->>-FRS: MtdItId
                 FRS->>+IFOrHIP: getAllRelationships(mtdItId, activeOnly=true)
                 IFOrHIP->>+HIP: GET /registration/relationship
+                Note over HIP: API ID: ETMP
                 HIP-->>-IFOrHIP: ITSA + ITSA-SUPP relationships
                 IFOrHIP-->>-FRS: ClientRelationships
                 FRS-->>-SCDS: ITSA relationships (filtered active)
             and Get IRV relationships
                 SCDS->>+AFIRC: findIrvActiveRelationshipForClient(nino)
                 AFIRC->>+AF: GET /relationships/active<br/>service=PERSONAL-INCOME-RECORD
+                Note over AF: API ID: AFR01
                 AF-->>-AFIRC: Active IRV relationships
                 AFIRC-->>-SCDS: IRV ClientRelationships
             and Get PartialAuth relationships
@@ -58,6 +61,7 @@ sequenceDiagram
             SCDS->>+FRS: getAllRelationshipsForClient(taxIdentifier, activeOnly=true)
             FRS->>+IFOrHIP: getAllRelationships(taxIdentifier, activeOnly=true)
             IFOrHIP->>+HIP: GET /registration/relationship
+            Note over HIP: API ID: ETMP
             HIP-->>-IFOrHIP: Relationships for service
             IFOrHIP-->>-FRS: ClientRelationships
             FRS-->>-SCDS: Active relationships (filtered)
@@ -67,6 +71,7 @@ sequenceDiagram
 
         loop For each relationship
             SCDS->>+AM: getAgentRecord(arn)
+            Note over AM: API ID: ETMP03
             AM-->>-SCDS: AgentRecord with agentName
         end
 
@@ -74,32 +79,40 @@ sequenceDiagram
 
         alt NINO
             CDS->>+CRS: getCitizenDetails(nino)
+            Note over CRS: API ID: CD02
             CRS-->>-CDS: Citizen name
             CDS->>+DRS: getDesignatoryDetails(nino)
+            Note over DRS: API ID: DES
             DRS-->>-CDS: Designatory details
             CDS-->>SCDS: ClientDetailsResponse(name)
         else VRN
             CDS->>CRS: getVrnDisplayDetails(vrn)
+            Note over CRS: API ID: DES
             CRS-->>CDS: Business/org name
             CDS-->>SCDS: ClientDetailsResponse(name)
         else UTR/URN (Trusts)
             CDS->>CRS: getTrustDetails(utr/urn)
+            Note over CRS: API ID: DES
             CRS-->>CDS: Trust name
             CDS-->>SCDS: ClientDetailsResponse(name)
         else CGT
             CDS->>CRS: getCgtSubscriptionDetails(cgtRef)
+            Note over CRS: API ID: DES
             CRS-->>CDS: CGT subscriber name
             CDS-->>SCDS: ClientDetailsResponse(name)
         else PPT
             CDS->>CRS: getPptSubscriptionDetails(pptRef)
+            Note over CRS: API ID: DES
             CRS-->>CDS: PPT subscriber name
             CDS-->>SCDS: ClientDetailsResponse(name)
         else CBC
             CDS->>CRS: getCbcSubscriptionDetails(cbcId)
+            Note over CRS: API ID: DES
             CRS-->>CDS: CBC subscriber name
             CDS-->>SCDS: ClientDetailsResponse(name)
         else PLR
             CDS->>CRS: getPillar2SubscriptionDetails(plrId)
+            Note over CRS: API ID: DES
             CRS-->>CDS: Pillar2 subscriber name
             CDS-->>SCDS: ClientDetailsResponse(name)
         end

@@ -30,7 +30,7 @@ import uk.gov.hmrc.agentclientrelationships.model.clientDetails.pillar2.Pillar2R
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ppt.PptSubscriptionDetails
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.vat.VatCustomerDetails
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
-import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
+import uk.gov.hmrc.agentclientrelationships.util.{ConsumesAPI, RequestAwareLogging}
 import uk.gov.hmrc.agentclientrelationships.util.RequestSupport.hc
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.HeaderNames
@@ -67,6 +67,7 @@ extends RequestAwareLogging {
     HeaderNames.authorisation -> s"Bearer $authToken"
   )
 
+  @ConsumesAPI(apiId = "CD01", service = "citizen-details")
   def getItsaDesignatoryDetails(
     nino: NinoWithoutSuffix
   )(implicit rh: RequestHeader): Future[Either[ClientDetailsFailureResponse, ItsaDesignatoryDetails]] = {
@@ -86,6 +87,7 @@ extends RequestAwareLogging {
       }
   }
 
+  @ConsumesAPI(apiId = "CD03", service = "citizen-details")
   def getItsaCitizenDetails(
     nino: NinoWithoutSuffix
   )(implicit rh: RequestHeader): Future[Either[ClientDetailsFailureResponse, CitizenDetails]] = httpClient
@@ -102,6 +104,7 @@ extends RequestAwareLogging {
 
     }
 
+  @ConsumesAPI(apiId = "DES09", service = "des")
   def getVatCustomerInfo(
     vrn: String
   )(implicit rh: RequestHeader): Future[Either[ClientDetailsFailureResponse, VatCustomerDetails]] = {
@@ -123,6 +126,7 @@ extends RequestAwareLogging {
   }
 
   // API#1495 Agent Trust Known Facts
+  @ConsumesAPI(apiId = "IF05", service = "if")
   def getTrustName(
     trustTaxIdentifier: String
   )(implicit rh: RequestHeader): Future[Either[ClientDetailsFailureResponse, String]] = {
@@ -149,6 +153,7 @@ extends RequestAwareLogging {
 
   }
 
+  @ConsumesAPI(apiId = "DES05", service = "des")
   def getCgtSubscriptionDetails(
     cgtRef: String
   )(implicit rh: RequestHeader): Future[Either[ClientDetailsFailureResponse, CgtSubscriptionDetails]] = httpClient
@@ -167,6 +172,7 @@ extends RequestAwareLogging {
     }
 
   // API#1712 Get PPT Subscription Display
+  @ConsumesAPI(apiId = "IF03", service = "if")
   def getPptSubscriptionDetails(
     pptRef: String
   )(implicit rh: RequestHeader): Future[Either[ClientDetailsFailureResponse, PptSubscriptionDetails]] = httpClient
@@ -185,6 +191,7 @@ extends RequestAwareLogging {
     }
 
   // DCT 50d
+  @ConsumesAPI(apiId = "IF06", service = "if")
   def getCbcSubscriptionDetails(
     cbcId: String
   )(implicit rh: RequestHeader): Future[Either[ClientDetailsFailureResponse, SimpleCbcSubscription]] = {
@@ -225,6 +232,7 @@ extends RequestAwareLogging {
 
   }
 
+  @ConsumesAPI(apiId = "IF04", service = "if")
   def getPillar2SubscriptionDetails(
     plrId: String
   )(implicit rh: RequestHeader): Future[Either[ClientDetailsFailureResponse, Pillar2Record]] = {

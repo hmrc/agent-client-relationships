@@ -44,14 +44,14 @@ sequenceDiagram
         end
 
         IS->>+AAS: getAgentRecord(arn)
-        Note over AAS: GET /agent-assurance/agent-record/:arn<br/>Returns details even if suspended
+        Note over AAS: API ID: AA27<br/>GET /agent-assurance/agent-record/:arn<br/>Returns details even if suspended
         AAS-->>-IS: AgentDetailsDesResponse
 
         IS->>IS: getClientId(suppliedClientId, service)
 
         alt Service is MTD-IT or MTD-IT-SUPP with NINO
             IS->>+HIP: getMtdIdFor(nino)
-            Note over HIP: Convert NINO to MTD IT ID
+            Note over HIP: API ID: ETMP<br/>Convert NINO to MTD IT ID
             HIP-->>-IS: Optional[MtdItId]
             alt MTD IT ID found
                 IS->>IS: Use MtdItId as clientId

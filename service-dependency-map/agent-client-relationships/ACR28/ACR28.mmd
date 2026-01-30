@@ -50,6 +50,7 @@ sequenceDiagram
         loop For each invitation
             SCDS->>+AAS: getNonSuspendedAgentRecord(arn)
             AAS->>+AM: GET /agent-maintainer/agent/{arn}
+            Note over AM: API ID: ETMP03
             AM-->>-AAS: AgentRecord
 
             alt Agent not suspended
@@ -71,9 +72,11 @@ sequenceDiagram
                 PAuthRepo-->>SCDS: None
                 SCDS->>+FRS: getItsaRelationshipForClient(nino, service)
                 FRS->>+IFOrHIP: getMtdIdFor(nino)
+                Note over IFOrHIP: API ID: ETMP
                 IFOrHIP-->>-FRS: MtdItId
                 FRS->>+IFOrHIP: getActiveClientRelationships(mtdItId, service)
                 IFOrHIP->>+HIP: GET /registration/relationship
+                Note over HIP: API ID: ETMP
                 HIP-->>-IFOrHIP: Active relationship
                 IFOrHIP-->>-FRS: ActiveRelationship
                 FRS-->>-SCDS: Some(ActiveRelationship)
@@ -81,6 +84,7 @@ sequenceDiagram
         else IRV service (PERSONAL-INCOME-RECORD)
             SCDS->>+AFIRC: findIrvActiveRelationshipForClient(nino)
             AFIRC->>+AF: GET /relationships/active<br/>service=PERSONAL-INCOME-RECORD
+            Note over AF: API ID: AFR01
             AF-->>-AFIRC: IRV relationships
             AFIRC-->>-SCDS: ClientRelationships
             Note over SCDS: Take first relationship if exists
@@ -88,6 +92,7 @@ sequenceDiagram
             SCDS->>+FRS: getActiveRelationshipsForClient(taxIdentifier, service)
             FRS->>+IFOrHIP: getActiveClientRelationships(taxIdentifier, service)
             IFOrHIP->>+HIP: GET /registration/relationship
+            Note over HIP: API ID: ETMP
             HIP-->>-IFOrHIP: Active relationship
             IFOrHIP-->>-FRS: ActiveRelationship
             FRS-->>-SCDS: Some(ActiveRelationship)
@@ -96,6 +101,7 @@ sequenceDiagram
         alt Active relationship found
             SCDS->>+AAS: getAgentRecord(arn)
             AAS->>+AM: GET /agent-maintainer/agent/{arn}
+            Note over AM: API ID: ETMP03
             AM-->>-AAS: AgentRecord with agentName
             AAS-->>-SCDS: ActiveMainAgent(agentName, arn, service)
         else No relationship
@@ -112,24 +118,31 @@ sequenceDiagram
 
         alt NINO
             CDS->>+DES: getCitizenDetails(nino)
+            Note over DES: API ID: DES
             DES-->>-CDS: Citizen name
         else VRN
             CDS->>+DES: getVrnDisplayDetails(vrn)
+            Note over DES: API ID: DES
             DES-->>-CDS: Business name
         else UTR/URN
             CDS->>+DES: getTrustDetails(utr/urn)
+            Note over DES: API ID: DES
             DES-->>-CDS: Trust name
         else CGT
             CDS->>+DES: getCgtSubscriptionDetails(cgtRef)
+            Note over DES: API ID: DES
             DES-->>-CDS: CGT subscriber name
         else PPT
             CDS->>+DES: getPptSubscriptionDetails(pptRef)
+            Note over DES: API ID: DES
             DES-->>-CDS: PPT subscriber name
         else CBC
             CDS->>+DES: getCbcSubscriptionDetails(cbcId)
+            Note over DES: API ID: DES
             DES-->>-CDS: CBC subscriber name
         else PLR
             CDS->>+DES: getPillar2SubscriptionDetails(plrId)
+            Note over DES: API ID: DES
             DES-->>-CDS: Pillar2 subscriber name
         end
 

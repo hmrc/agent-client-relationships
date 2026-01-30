@@ -42,7 +42,7 @@ sequenceDiagram
             IR-->>-IS: Invitation
 
             IS->>+ES: sendRejectedEmail(invitation)
-            Note over ES: Send email to agent<br/>notifying rejection
+            Note over ES: API ID: ES<br/>Send email to agent<br/>notifying rejection
             ES-->>-IS: Unit
 
             IS-->>-IC: Invitation

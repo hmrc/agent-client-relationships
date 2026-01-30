@@ -17,7 +17,7 @@
 package uk.gov.hmrc.agentclientrelationships.connectors
 
 import org.apache.pekko.Done
-import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
+import uk.gov.hmrc.agentclientrelationships.util.{ConsumesAPI, RequestAwareLogging}
 import play.api.http.Status
 import play.api.libs.json.Format
 import play.api.libs.json.JsObject
@@ -85,6 +85,7 @@ extends RequestAwareLogging {
 
   // ES1 - principal
   // TODO: Replace String with a dedicated type for GroupId to improve readability and make the method's purpose clearer
+  @ConsumesAPI(apiId = "ES1", service = "enrolment-store-proxy")
   def getPrincipalGroupIdFor(arn: Arn)(implicit request: RequestHeader): Future[String] = {
     val enrolmentKey = EnrolmentKey(s"HMRC-AS-AGENT~AgentReferenceNumber~${arn.value}")
     httpClient
@@ -114,6 +115,7 @@ extends RequestAwareLogging {
   }
 
   // ES1 - delegated
+  @ConsumesAPI(apiId = "ES1", service = "enrolment-store-proxy")
   def getDelegatedGroupIdsFor(enrolmentKey: EnrolmentKey)(implicit request: RequestHeader): Future[Set[String]] = httpClient
     .get(url"$espBaseUrl/enrolment-store-proxy/enrolment-store/enrolments/$enrolmentKey/groups?type=delegated")
     .execute[HttpResponse]
@@ -168,6 +170,7 @@ extends RequestAwareLogging {
   }
 
   // ES3 - Query Enrolments allocated to a Group
+  @ConsumesAPI(apiId = "ES3", service = "enrolment-store-proxy")
   def getAgentReferenceNumberFor(groupId: String)(implicit request: RequestHeader): Future[Option[Arn]] = httpClient
     .get(
       url"$espBaseUrl/enrolment-store-proxy/enrolment-store/groups/$groupId/enrolments?type=principal"
@@ -218,6 +221,7 @@ extends RequestAwareLogging {
   }
 
   // ES9
+  @ConsumesAPI(apiId = "ES9", service = "enrolment-store-proxy")
   def deallocateEnrolmentFromAgent(
     groupId: String,
     enrolmentKey: EnrolmentKey
@@ -240,6 +244,7 @@ extends RequestAwareLogging {
   }
 
   // ES19 - Update an enrolment's friendly name
+  @ConsumesAPI(apiId = "ES19", service = "enrolment-store-proxy")
   def updateEnrolmentFriendlyName(
     groupId: String,
     enrolmentKey: String,
@@ -263,6 +268,7 @@ extends RequestAwareLogging {
     }
 
   // ES20 - query known facts by verifiers or identifiers
+  @ConsumesAPI(apiId = "ES20", service = "enrolment-store-proxy")
   def queryKnownFacts(
     service: Service,
     knownFacts: Seq[Identifier]

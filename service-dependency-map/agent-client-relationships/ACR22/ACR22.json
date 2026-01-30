@@ -49,18 +49,21 @@
   "externalDependencies": [
     {
       "name": "HIP/IF",
+      "apiId": "ETMP",
       "description": "Converts NINO to MTDITID. Creates agent relationship in ETMP",
       "method": "getMtdIdFor, createAgentRelationship",
       "note": "getMtdIdFor called at start. createAgentRelationship called during relationship creation"
     },
     {
       "name": "DES (CESA)",
+      "apiId": "DES",
       "description": "Retrieves legacy SA agent references for copy-across flow",
       "method": "getClientSaAgentSaReferences",
       "note": "Only called if no partial auth found and not MTD-IT-SUPP service"
     },
     {
       "name": "EACD (Enrolment Store Proxy)",
+      "apiId": "ES3",
       "description": "Gets agent's principal group ID and allocates MTD-IT enrolment to agent",
       "method": "getPrincipalGroupIdFor, allocateEnrolmentToAgent",
       "note": "Called during relationship creation in both flows"
@@ -258,4 +261,3 @@
     "analysisVersion": "1.0"
   }
 }
-

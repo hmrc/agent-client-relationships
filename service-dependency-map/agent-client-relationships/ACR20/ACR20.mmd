@@ -33,6 +33,7 @@ sequenceDiagram
         alt ITSA Service with NINO
             RAC->>+RAS: replaceEnrolmentKeyForItsa(suppliedClientId, enrolmentKey, service)
             RAS->>+HIP: getMtdIdFor(nino)
+            Note over HIP: API ID: ETMP
             HIP-->>-RAS: Option[MtdItId]
             Note over RAS: Replace enrolment key<br/>with MTDITID if found
             RAS-->>-RAC: Either[Error, EnrolmentKey]
@@ -45,6 +46,7 @@ sequenceDiagram
         alt Service is PIR (Personal Income Record)
             RAC->>+AFRC: deleteRelationship(arn, service, clientId)
             AFRC->>+AgentFI: DELETE /relationships/agent/{arn}/service/{service}/client/{clientId}
+            Note over AgentFI: API ID: AFR01
             AgentFI-->>-AFRC: Boolean
             AFRC-->>-RAC: Boolean
 
@@ -103,6 +105,7 @@ sequenceDiagram
                 Note over DRS: Acquire recovery lock
 
                 DRS->>+EACD: getPrincipalGroupIdFor(arn)
+                Note over EACD: API ID: ES3
                 EACD-->>-DRS: groupId
 
                 DRS->>+DRR: create(DeleteRecord)
@@ -116,6 +119,7 @@ sequenceDiagram
                     DRR-->>-DRS: Unit
 
                     DRS->>+EACD: deallocateEnrolmentFromAgent(groupId, enrolmentKey)
+                    Note over EACD: API ID: ES3
                     EACD-->>-DRS: Boolean
 
                     DRS->>+DRR: updateEsSyncStatus(arn, enrolmentKey, Success)
@@ -128,6 +132,7 @@ sequenceDiagram
                     DRR-->>-DRS: Unit
 
                     DRS->>+HIP: deleteAgentRelationship(enrolmentKey, arn)
+                    Note over HIP: API ID: ETMP
                     HIP-->>-DRS: Option[String]
 
                     DRS->>+DRR: updateEtmpSyncStatus(arn, enrolmentKey, Success)

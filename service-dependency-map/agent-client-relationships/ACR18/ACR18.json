@@ -44,6 +44,7 @@
   "externalDependencies": [
     {
       "name": "Agent Assurance (via AgentAssuranceService)",
+      "apiId": "AA27",
       "description": "Retrieves agent record to get current agency name",
       "method": "getAgentRecord",
       "note": "Used to normalize agency name for link generation"

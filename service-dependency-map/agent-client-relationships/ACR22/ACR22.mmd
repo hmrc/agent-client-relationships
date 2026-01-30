@@ -23,6 +23,7 @@ sequenceDiagram
     AA-->>-IPSC: Authenticated as arn
 
     IPSC->>+HIP: getMtdIdFor(nino)
+    Note over HIP: API ID: ETMP
     HIP-->>-IPSC: Option[MtdItId]
 
     alt MTDITID Not Found
@@ -41,15 +42,18 @@ sequenceDiagram
             CACRS->>+CRS: createRelationship(arn, enrolmentKey, Set.empty, failIfAllocateAgentInESFails=true)
 
             CRS->>+EACD: getPrincipalGroupIdFor(arn)
+            Note over EACD: API ID: ES3
             EACD-->>-CRS: groupId
 
             CRS->>+Mongo: Create relationship-copy-record
             Mongo-->>-CRS: Created
 
             CRS->>+EACD: allocateEnrolmentToAgent(groupId, enrolmentKey, arn)
+            Note over EACD: API ID: ES3
             EACD-->>-CRS: Boolean
 
             CRS->>+HIP: createAgentRelationship(arn, mtdItId, service)
+            Note over HIP: API ID: ETMP
             HIP-->>-CRS: Option[String]
 
             CRS->>+Mongo: Delete relationship-copy-record
@@ -83,21 +87,25 @@ sequenceDiagram
             Note over CACRS: Check eligibility for copy across
 
             CACRS->>+DES: getClientSaAgentSaReferences(nino)
+            Note over DES: API ID: DES
             DES-->>-CACRS: Set[SaAgentReference]
 
             alt Legacy SA Relationships Exist
                 CACRS->>+CRS: createRelationship(arn, enrolmentKey, references, failIfAllocateAgentInESFails=true)
 
                 CRS->>+EACD: getPrincipalGroupIdFor(arn)
+                Note over EACD: API ID: ES3
                 EACD-->>-CRS: groupId
 
                 CRS->>+Mongo: Create relationship-copy-record
                 Mongo-->>-CRS: Created
 
                 CRS->>+EACD: allocateEnrolmentToAgent(groupId, enrolmentKey, arn)
+                Note over EACD: API ID: ES3
                 EACD-->>-CRS: Boolean
 
                 CRS->>+HIP: createAgentRelationship(arn, mtdItId, HMRC-MTD-IT)
+                Note over HIP: API ID: ETMP
                 HIP-->>-CRS: Option[String]
 
                 CRS->>+Mongo: Delete relationship-copy-record

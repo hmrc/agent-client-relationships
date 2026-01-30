@@ -16,6 +16,7 @@ sequenceDiagram
 
     ACRC->>AAS: getNonSuspendedAgentRecord(arn)
     AAS->>AA: GET /agent-assurance/agent/{arn}
+    Note over AA: API ID: AA27
 
     alt Agent Not Suspended
         AA-->>AAS: Agent record
@@ -23,6 +24,7 @@ sequenceDiagram
 
         ACRC->>CDS: findClientDetails(service, clientId)
         CDS->>DESIF: Get client details<br/>(service-specific endpoint)
+        Note over DESIF: API ID: DES
 
         alt Client Registered
             DESIF-->>CDS: Client details

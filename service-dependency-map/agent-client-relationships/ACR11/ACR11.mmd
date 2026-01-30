@@ -16,7 +16,7 @@ sequenceDiagram
     ILC->>+ILS: createLink(arn)
 
     ILS->>+AAS: getAgentRecord(arn)
-    Note over AAS: GET /agent-assurance/agent-record/:arn<br/>Returns agent details
+    Note over AAS: API ID: AA27<br/>Returns agent details
     AAS-->>-ILS: AgentDetailsDesResponse
 
     ILS->>ILS: normaliseAgentName(agencyName)<br/>lowercase, spaces→hyphens, remove special chars

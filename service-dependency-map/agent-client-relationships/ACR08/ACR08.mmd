@@ -30,13 +30,16 @@ sequenceDiagram
         loop For each service in identifiers map
             alt Service is PIR (NINO)
                 CTADS->>+AFRC: findIrvActiveRelationshipForClient(nino)
+                Note over AFRC: API ID: AFR01
                 AFRC-->>-CTADS: Seq[ClientRelationship]
                 CTADS->>+AFRC: findIrvInactiveRelationshipForClient(nino)
+                Note over AFRC: API ID: AFR01
                 AFRC-->>-CTADS: Seq[ClientRelationship]
             else Other services
                 CTADS->>+FRS: getAllRelationshipsForClient(taxId, activeOnly=false)
                 FRS->>+HIP: getAllRelationships(taxId, activeOnly=false)
                 HIP->>+ETMP: GET /etmp/RESTAdapter/rosm/agent-relationship<br/>?idType={type}&refNumber={id}&active-only=false
+                Note over ETMP: API ID: ETMP03
                 ETMP-->>-HIP: relationshipDisplayResponse array
                 HIP-->>-FRS: Seq[ClientRelationship]
                 FRS-->>-CTADS: Seq[ClientRelationship]
@@ -56,6 +59,7 @@ sequenceDiagram
         loop For each unique ARN in active relationships
             CTADS->>+ILS: findAgentDetailsByArn(arn)
             ILS->>+AAS: getAgentRecordWithChecks(arn)
+            Note over AAS: API ID: AA27
             AAS-->>-ILS: Option[AgentDetails]
             ILS-->>-CTADS: AgentDetailsDesResponse
 
@@ -65,6 +69,7 @@ sequenceDiagram
         loop For each unique ARN in invitations
             CTADS->>+ILS: findAgentDetailsByArn(arn)
             ILS->>+AAS: getAgentRecordWithChecks(arn)
+            Note over AAS: API ID: AA27
             AAS-->>-ILS: Option[AgentDetails]
             ILS-->>-CTADS: AgentDetailsDesResponse
 
@@ -76,6 +81,7 @@ sequenceDiagram
         loop For each unique ARN in events
             CTADS->>+ILS: findAgentDetailsByArn(arn)
             ILS->>+AAS: getAgentRecordWithChecks(arn)
+            Note over AAS: API ID: AA27
             AAS-->>-ILS: Option[AgentDetails]
             ILS-->>-CTADS: AgentDetailsDesResponse
 

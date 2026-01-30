@@ -4,9 +4,11 @@
 
 ⚠️ **Important**: This endpoint does **NOT** terminate actual agent-client relationships in EACD. It is an administrative endpoint that only deletes internal housekeeping records from MongoDB.
 
-This endpoint removes internal tracking records for a terminated agent from two MongoDB collections:
-1. **delete_record** - Stores pending relationship deletion records
-2. **relationship_copy_record** - Tracks which legacy CESA relationships have been copied to EACD
+This endpoint removes internal tracking records for a terminated agent from three MongoDB collections:
+
+1. **invitations** - Stores pending and historical invitation records
+2. **partial-auth** - Tracks partial authorization records for IR-SA
+3. **agent-reference** - Stores agent reference mapping data
 
 This is typically called as part of an agent termination workflow managed by other services, after the actual relationships have been terminated through other means.
 
@@ -41,13 +43,18 @@ Returns a JSON object with deletion counts from each collection:
   "counts": [
     {
       "service": "agent-client-relationships",
-      "store": "delete-record",
+      "store": "invitations",
       "count": 5
     },
     {
       "service": "agent-client-relationships",
-      "store": "relationship-copy-record",
-      "count": 12
+      "store": "partial-auth",
+      "count": 8
+    },
+    {
+      "service": "agent-client-relationships",
+      "store": "agent-reference",
+      "count": 3
     }
   ]
 }
@@ -71,9 +78,10 @@ This endpoint uses **HTTP Basic Authentication**, NOT agent authentication or St
 ### Service Layer Components
 
 1. **RelationshipsController (RC)**: Validates Basic Auth and returns response
-2. **AgentTerminationService (ATS)**: Orchestrates parallel deletion from both collections
-3. **DeleteRecordRepository (DRR)**: Handles delete_record collection operations
-4. **RelationshipCopyRecordRepository (RCRR)**: Handles relationship_copy_record collection operations
+2. **AgentTerminationService (ATS)**: Orchestrates parallel deletion from all three collections
+3. **InvitationsRepository (IR)**: Handles invitations collection operations
+4. **PartialAuthRepository (PAR)**: Handles partial-auth collection operations
+5. **AgentReferenceRepository (ARR)**: Handles agent-reference collection operations
 
 ## Interaction Flow
 
@@ -82,8 +90,9 @@ sequenceDiagram
     participant Caller as Internal Service/Admin
     participant RC as RelationshipsController
     participant ATS as AgentTerminationService
-    participant DRR as DeleteRecordRepository
-    participant RCRR as RelationshipCopyRecordRepository
+    participant IR as InvitationsRepository
+    participant PAR as PartialAuthRepository
+    participant ARR as AgentReferenceRepository
     participant Mongo as MongoDB
 
     Caller->>+RC: DELETE /agent/:arn/terminate
@@ -92,16 +101,21 @@ sequenceDiagram
     alt Valid Basic Auth
         RC->>+ATS: terminateAgent(arn)
         
-        par Delete from delete-record collection
-            ATS->>+DRR: terminateAgent(arn)
-            DRR->>+Mongo: deleteMany({"arn": arn})<br/>Collection: delete_record
-            Mongo-->>-DRR: DeleteResult with count
-            DRR-->>-ATS: Right(deletedCount)
-        and Delete from relationship-copy-record collection
-            ATS->>+RCRR: terminateAgent(arn)
-            RCRR->>+Mongo: deleteMany({"arn": arn})<br/>Collection: relationship_copy_record
-            Mongo-->>-RCRR: DeleteResult with count
-            RCRR-->>-ATS: Right(deletedCount)
+        par Delete from invitations collection
+            ATS->>+IR: terminateAgent(arn)
+            IR->>+Mongo: deleteMany({"arn": arn})<br/>Collection: invitations
+            Mongo-->>-IR: DeleteResult with count
+            IR-->>-ATS: Right(deletedCount)
+        and Delete from partial-auth collection
+            ATS->>+PAR: terminateAgent(arn)
+            PAR->>+Mongo: deleteMany({"arn": arn})<br/>Collection: partial-auth
+            Mongo-->>-PAR: DeleteResult with count
+            PAR-->>-ATS: Right(deletedCount)
+        and Delete from agent-reference collection
+            ATS->>+ARR: terminateAgent(arn)
+            ARR->>+Mongo: deleteMany({"arn": arn})<br/>Collection: agent-reference
+            Mongo-->>-ARR: DeleteResult with count
+            ARR-->>-ATS: Right(deletedCount)
         end
         
         ATS->>ATS: Build TerminationResponse with deletion counts
@@ -113,8 +127,8 @@ sequenceDiagram
     end
     
     alt MongoDB Error
-        Mongo-->>DRR: MongoWriteException
-        DRR-->>ATS: Left(errorMessage)
+        Mongo-->>IR: MongoWriteException
+        IR-->>ATS: Left(errorMessage)
         ATS-->>RC: EitherT.Left(error)
         RC-->>Caller: 500 Internal Server Error
     end
@@ -129,15 +143,17 @@ None - This endpoint does not call any external services
 ### Internal Services
 
 - **AgentTerminationService**: Orchestrates the deletion process
-- **DeleteRecordRepository**: MongoDB repository for delete_record collection
-- **RelationshipCopyRecordRepository**: MongoDB repository for relationship_copy_record collection
+- **InvitationsRepository**: MongoDB repository for invitations collection
+- **PartialAuthRepository**: MongoDB repository for partial-auth collection
+- **AgentReferenceRepository**: MongoDB repository for agent-reference collection
 
 ### Database Collections
 
 | Collection | Operation | Description |
 |------------|-----------|-------------|
-| delete_record | DELETE | Stores pending relationship deletion records - all documents for the ARN are deleted |
-| relationship_copy_record | DELETE | Tracks copied legacy relationships from CESA to EACD - all documents for the ARN are deleted |
+| invitations | DELETE | Stores pending and historical invitation records - all documents for the ARN are deleted |
+| partial-auth | DELETE | Tracks partial authorization records for IR-SA - all documents for the ARN are deleted |
+| agent-reference | DELETE | Stores agent reference mapping data - all documents for the ARN are deleted |
 
 ## Response Model
 
@@ -152,22 +168,28 @@ None - This endpoint does not call any external services
 | Field | Type | Description |
 |-------|------|-------------|
 | service | String | Always "agent-client-relationships" |
-| store | String | Collection name ("delete-record" or "relationship-copy-record") |
+| store | String | Collection name ("invitations", "partial-auth", or "agent-reference") |
 | count | Int | Number of documents deleted from the collection |
 
 ## MongoDB Operations
 
-### delete_record Collection
+### invitations Collection
 
 **Operation**: `deleteMany({"arn": "{arn}"})`
 
-Removes all pending deletion tracking records for the agent. These records are used by the `CheckRelationshipsOrchestratorService` to track relationships that are in the process of being deleted.
+Removes all invitation records (pending, accepted, rejected, expired, cancelled) for the agent. These records track invitation requests between agents and clients.
 
-### relationship_copy_record Collection
+### partial-auth Collection
 
 **Operation**: `deleteMany({"arn": "{arn}"})`
 
-Removes all legacy relationship copy tracking records. These records track which legacy CESA relationships have been copied to EACD to avoid duplicate copying.
+Removes all partial authorization records for IR-SA relationships. These records track partial authorization grants for Self Assessment.
+
+### agent-reference Collection
+
+**Operation**: `deleteMany({"arn": "{arn}"})`
+
+Removes all agent reference mapping records. These records store mappings between agent identifiers and internal references.
 
 ## Error Handling
 
@@ -190,19 +212,21 @@ Removes all legacy relationship copy tracking records. These records track which
 
 ## Parallel Execution
 
-The service executes both repository deletions in **parallel** using Cats `EitherT` for efficient processing:
+The service executes all three repository deletions in **parallel** using Cats `EitherT` for efficient processing:
 
 ```scala
-val drr = deleteRecordRepository.terminateAgent(arn)
-val rcrr = relationshipCopyRecordRepository.terminateAgent(arn)
+val ir = invitationsRepository.terminateAgent(arn)
+val par = partialAuthRepository.terminateAgent(arn)
+val arr = agentReferenceRepository.terminateAgent(arn)
 for {
-  drrResult <- EitherT(drr)
-  rcrrResult <- EitherT(rcrr)
+  irResult <- EitherT(ir)
+  parResult <- EitherT(par)
+  arrResult <- EitherT(arr)
   // ... build response
 } yield result
 ```
 
-Both deletions start simultaneously, and the service waits for both to complete before building the response.
+All three deletions start simultaneously, and the service waits for all to complete before building the response.
 
 ## Important Notes
 
@@ -219,7 +243,7 @@ Both deletions start simultaneously, and the service waits for both to complete 
 ❌ Does **NOT** terminate actual agent-client relationships in EACD  
 ❌ Does **NOT** call EACD to de-allocate enrolments  
 ❌ Does **NOT** call any external services  
-❌ Does **NOT** modify the invitations collection  
+❌ Does **NOT** modify other MongoDB collections  
 ❌ Does **NOT** use agent or Stride authentication  
 
 ## Use Cases
@@ -232,7 +256,7 @@ This endpoint is intended for:
 
 ## Performance Considerations
 
-- **Parallel Execution**: Both repository operations execute simultaneously for better performance
+- **Parallel Execution**: All three repository operations execute simultaneously for better performance
 - **Bulk Deletion**: Uses MongoDB's `deleteMany` for efficient bulk operations
 - **No External Calls**: No network latency from external service calls
 - **Functional Error Handling**: EitherT monad provides clean error propagation without exceptions
@@ -244,12 +268,13 @@ This endpoint is intended for:
 | This terminates active agent-client relationships | This only deletes internal tracking records |
 | This calls EACD to de-allocate enrolments | This does not call any external services |
 | This uses agent authentication | This uses HTTP Basic Authentication |
-| This updates the invitations collection | This only touches delete_record and relationship_copy_record |
+| This only touches invitations, partial-auth, and agent-reference collections |
 | This can be called from agent UIs | This is for service-to-service administrative calls only |
 
 ## Related Documentation
 
 For actual relationship termination that affects EACD, see other endpoints that:
+
 - Call `DeleteRelationshipsService` to remove relationships from EACD
 - Update the invitations collection with ended dates
 - De-allocate enrolments via EACD

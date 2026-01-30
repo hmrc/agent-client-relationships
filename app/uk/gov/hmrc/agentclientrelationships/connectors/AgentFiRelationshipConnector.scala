@@ -30,6 +30,7 @@ import uk.gov.hmrc.agentclientrelationships.model.RelationshipFailureResponse
 import uk.gov.hmrc.agentclientrelationships.model.stride.ClientRelationship
 import uk.gov.hmrc.agentclientrelationships.util.RequestSupport._
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
+import uk.gov.hmrc.agentclientrelationships.util.ConsumesAPI
 import uk.gov.hmrc.http.HttpResponse
 import uk.gov.hmrc.http.StringContextOps
 import uk.gov.hmrc.http.UpstreamErrorResponse
@@ -55,6 +56,7 @@ class AgentFiRelationshipConnector @Inject() (
     clientId: String
   ): URL = url"${appConfig.agentFiRelationshipBaseUrl}/agent-fi-relationship/relationships/agent/${arn.value}/service/$service/client/$clientId"
 
+  @ConsumesAPI(apiId = "AFR01", service = "agent-fi-relationship")
   def getRelationship(
     arn: Arn,
     service: String,
@@ -73,6 +75,7 @@ class AgentFiRelationshipConnector @Inject() (
       .map(_.flatMap(_.headOption))
   }
 
+  @ConsumesAPI(apiId = "AFR07", service = "agent-fi-relationship")
   def getInactiveRelationships(implicit rh: RequestHeader): Future[Seq[InactiveRelationship]] = {
     implicit val reads: Reads[InactiveRelationship] = InactiveRelationship.irvReads
     httpClient
@@ -81,6 +84,7 @@ class AgentFiRelationshipConnector @Inject() (
       .map(_.fold(Seq[InactiveRelationship]())(identity))
   }
 
+  @ConsumesAPI(apiId = "AFR02", service = "agent-fi-relationship")
   def createRelationship(
     arn: Arn,
     service: String,
@@ -107,6 +111,7 @@ class AgentFiRelationshipConnector @Inject() (
 
   }
 
+  @ConsumesAPI(apiId = "AFR03", service = "agent-fi-relationship")
   def deleteRelationship(
     arn: Arn,
     service: String,
@@ -130,6 +135,7 @@ class AgentFiRelationshipConnector @Inject() (
       }
     }
 
+  @ConsumesAPI(apiId = "AFR06", service = "agent-fi-relationship")
   def findIrvActiveRelationshipForClient(clientId: String)(implicit rh: RequestHeader): Future[Either[RelationshipFailureResponse, Seq[ClientRelationship]]] = {
     implicit val reads: Reads[ClientRelationship] = ClientRelationship.irvReads(IsActive = true)
     httpClient
@@ -151,6 +157,7 @@ class AgentFiRelationshipConnector @Inject() (
       }
   }
 
+  @ConsumesAPI(apiId = "AFR07", service = "agent-fi-relationship")
   def findIrvInactiveRelationshipForClient(implicit
     rh: RequestHeader
   ): Future[Either[RelationshipFailureResponse, Seq[ClientRelationship]]] = {

@@ -30,6 +30,7 @@ sequenceDiagram
     IS->>+AAS: Filter suspended agents
     loop For each unique ARN
         AAS->>+AA: GET /agent-record/{arn}
+        Note over AA: API ID: AA27
         AA-->>-AAS: Agent record
     end
     AAS-->>-IS: Suspended ARNs list
@@ -43,6 +44,7 @@ sequenceDiagram
 
         CSC->>+AFRC: findIrvActiveRelationshipForClient(nino)
         AFRC->>+AFI: GET /agent-fi-relationship/relationships/active<br/>?service=PERSONAL-INCOME-RECORD&clientId={nino}
+        Note over AFI: API ID: AFR01
         AFI-->>-AFRC: IRV relationships
         AFRC-->>-CSC: Boolean (has IRV relationship)
     end
@@ -57,7 +59,9 @@ sequenceDiagram
             CSC->>+FRS: getActiveRelationshipsForClient(identifiers)
             loop For each supported service
                 FRS->>+HIP: GET /agent-client-relationships/client/relationships/active<br/>?clientIdType={type}&clientId={id}&service={service}
+                Note over HIP: API ID: ETMP
                 HIP->>+ETMP: Query active relationships
+                Note over ETMP: API ID: ETMP
                 ETMP-->>-HIP: Relationships
                 HIP-->>-FRS: Active relationships
             end

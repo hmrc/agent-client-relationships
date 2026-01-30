@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.connectors
 
-import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
+import uk.gov.hmrc.agentclientrelationships.util.{ConsumesAPI, RequestAwareLogging}
 import play.api.http.Status
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
@@ -41,6 +41,7 @@ class AgentPermissionsConnector @Inject() (
 )(implicit val ec: ExecutionContext)
 extends RequestAwareLogging {
 
+  @ConsumesAPI(apiId = "AP06", service = "agent-permissions")
   def isClientUnassigned(
     arn: Arn,
     enrolmentKey: EnrolmentKey

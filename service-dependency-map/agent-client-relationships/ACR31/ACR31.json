@@ -88,24 +88,28 @@
   "externalDependencies": [
     {
       "name": "IF (Integration Framework)",
+      "apiId": "ETMP",
       "description": "Converts NINO to MtdItId for MTD-IT/MTD-IT-SUPP services",
       "method": "getMtdIdFor",
       "note": "Only called for MTD-IT and MTD-IT-SUPP with NINO. If no MtdItId found, uses NINO as clientId"
     },
     {
       "name": "Agent Maintainer",
+      "apiId": "ETMP03",
       "description": "Retrieves agent record including suspension status and agency details",
       "method": "GET /agent-maintainer/agent/{arn}",
       "note": "Called via AgentAssuranceService. Returns 403 if agent suspended"
     },
     {
       "name": "DES (Multiple endpoints)",
+      "apiId": "DES",
       "description": "Retrieves client details based on service type",
       "method": "getCitizenDetails, getVrnDisplayDetails, getTrustDetails, getCgtSubscriptionDetails, getPptSubscriptionDetails, getCbcSubscriptionDetails, getPillar2SubscriptionDetails",
       "note": "Different endpoint per service. Returns client name and status. VAT returns insolvency status"
     },
     {
       "name": "HIP (ETMP)",
+      "apiId": "ETMP",
       "description": "Checks for existing active relationship via CheckRelationshipsOrchestratorService",
       "method": "GET /registration/relationship",
       "note": "Returns ALREADY_AUTHORISED if relationship already exists"
@@ -429,4 +433,3 @@
     "analysisVersion": "1.0"
   }
 }
-

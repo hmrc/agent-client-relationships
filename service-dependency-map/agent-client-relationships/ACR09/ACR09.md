@@ -3,6 +3,7 @@
 ## Overview
 
 Retrieves comprehensive client details for the authenticated agent, enriched with invitation and relationship status. This endpoint is used during agent invitation and relationship management flows to:
+
 - Verify client existence and display their name
 - Show known facts (postcode, date of birth, etc.) for client verification
 - Check if agent has already sent an invitation to this client
@@ -50,6 +51,7 @@ Returns ClientDetailsResponse with client information and status flags:
 ```
 
 **Field Descriptions**:
+
 - `name`: Client name (individual or organization)
 - `status`: Optional client status
 - `isOverseas`: Whether client is overseas (varies by service)
@@ -89,6 +91,7 @@ See ACR09.mmd for complete sequence diagram showing parallel checks and service 
 ### Service Refinement (CBC)
 
 For CBC-ORG service, if client is overseas:
+
 ```
 service = "HMRC-CBC-NONUKORG"
 ```
@@ -98,6 +101,7 @@ This happens before invitation and relationship checks.
 ### Multi-Agent Services (MTD-IT)
 
 When service is HMRC-MTD-IT, the endpoint checks **both**:
+
 1. **HMRC-MTD-IT** (main service)
 2. **HMRC-MTD-IT-SUPP** (supporting service)
 
@@ -107,7 +111,8 @@ When service is HMRC-MTD-IT, the endpoint checks **both**:
 ### Partial Auth Fallback (MTD-IT/MTD-IT-SUPP only)
 
 If ACR01 relationship check returns NotFound for MTD-IT or MTD-IT-SUPP:
-1. Query `partial_auth` MongoDB collection
+
+1. Query `partial-auth` MongoDB collection
 2. Check for active partial authorization record
 3. If found, treat as existing relationship
 
@@ -136,11 +141,11 @@ After retrieving client details, three checks run **in parallel**:
 
 3. **Check existing relationship (main service)**
    - Calls `CheckRelationshipsOrchestratorService` (full ACR01 flow)
-   - If not found AND service is MTD-IT/MTD-IT-SUPP: check partial_auth
+   - If not found AND service is MTD-IT/MTD-IT-SUPP: check partial-auth
 
 4. **Check existing relationship (supporting service if applicable)**
    - Only for MTD-IT (checks MTD-IT-SUPP as well)
-   - Calls ACR01 + partial_auth fallback
+   - Calls ACR01 + partial-auth fallback
 
 ## Dependencies
 
@@ -159,7 +164,7 @@ After retrieving client details, three checks run **in parallel**:
 ### Database Collections
 
 - **invitations**: Queries for pending invitations from this agent to this client
-- **partial_auth**: Queries for active partial authorizations (MTD-IT/MTD-IT-SUPP only)
+- **partial-auth**: Queries for active partial authorizations (MTD-IT/MTD-IT-SUPP only)
 
 ## Error Handling
 
@@ -180,6 +185,7 @@ After retrieving client details, three checks run **in parallel**:
 **Scenario**: Agent enters client NINO to invite for MTD-IT
 
 **Response**:
+
 ```json
 {
   "name": "Jane Doe",
@@ -198,6 +204,7 @@ After retrieving client details, three checks run **in parallel**:
 **Scenario**: Agent enters client VRN to invite for VAT
 
 **Response**:
+
 ```json
 {
   "name": "ABC Ltd",
@@ -216,6 +223,7 @@ After retrieving client details, three checks run **in parallel**:
 **Scenario**: Agent wants to confirm client identity before inviting
 
 **Response**:
+
 ```json
 {
   "name": "John Smith",
@@ -234,6 +242,7 @@ After retrieving client details, three checks run **in parallel**:
 **Scenario**: Agent enters NINO for MTD-IT, but relationship exists for MTD-IT-SUPP
 
 **Response**:
+
 ```json
 {
   "name": "Jane Doe",

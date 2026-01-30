@@ -28,14 +28,44 @@
     "FriendlyNameService - updates client friendly names"
   ],
   "externalDependencies": [
-    "EACD (Enrolment Store Proxy) - allocateEnrolmentToAgent creates delegation",
-    "ETMP via HIP - creates tax service relationships",
-    "agent-fi-relationship - creates PIR relationships",
-    "EmailService - sends acceptance confirmation"
+    {
+      "name": "EACD",
+      "apiId": "ES3",
+      "description": "Enrolment Store Proxy - allocateEnrolmentToAgent creates delegation"
+    },
+    {
+      "name": "ETMP",
+      "apiId": "ETMP",
+      "description": "via HIP - creates tax service relationships"
+    },
+    {
+      "name": "agent-fi-relationship",
+      "apiId": "AFR01",
+      "description": "creates PIR relationships"
+    },
+    {
+      "name": "EmailService",
+      "apiId": "ES",
+      "description": "sends acceptance confirmation"
+    }
   ],
   "databaseCollections": [
-    "invitations - UPDATE status to Accepted or PartialAuth",
-    "partial_auth - CREATE for Alt-ITSA, DELETE for deauth"
+    {
+      "name": "invitations",
+      "operations": [
+        "READ",
+        "UPDATE"
+      ],
+      "description": "UPDATE status to Accepted or PartialAuth"
+    },
+    {
+      "name": "partial-auth",
+      "operations": [
+        "CREATE",
+        "DELETE"
+      ],
+      "description": "CREATE for Alt-ITSA, DELETE for deauth"
+    }
   ],
   "serviceSpecificFlows": {
     "PIR": {
@@ -119,4 +149,3 @@
     "analysisVersion": "1.0"
   }
 }
-

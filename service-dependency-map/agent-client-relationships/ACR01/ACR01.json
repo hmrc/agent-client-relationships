@@ -108,7 +108,7 @@
       "actor": "CheckRelationshipsService (CRS)",
       "action": "calls external API",
       "target": "EACD (enrolment-store-proxy)",
-      "endpoint": "/enrolment-store-proxy/enrolment-store/groups",
+      "apiId": "ES3",
       "method": "GET",
       "description": "Gets agent's principal group ID"
     },
@@ -117,7 +117,7 @@
       "actor": "CheckRelationshipsService (CRS)",
       "action": "calls external API",
       "target": "EACD (enrolment-store-proxy)",
-      "endpoint": "/enrolment-store-proxy/enrolment-store/enrolments/:enrolmentKey/groups",
+      "apiId": "ES1",
       "method": "GET",
       "description": "Gets client's delegated group IDs to check if agent's group has access"
     },
@@ -126,7 +126,7 @@
       "actor": "CheckRelationshipsService (CRS)",
       "action": "calls external API",
       "target": "users-groups-search (UGS)",
-      "endpoint": "/users-groups-search/groups/:groupId/users",
+      "apiId": "UGS01",
       "method": "GET",
       "description": "If userId provided, gets users in group to verify user membership",
       "conditional": "only if userId parameter provided"
@@ -144,7 +144,7 @@
       "actor": "CheckRelationshipsService (CRS)",
       "action": "calls external API",
       "target": "agent-permissions (AP)",
-      "endpoint": "/agent-permissions/arn/:arn/client/:enrolmentKey/groups",
+      "apiId": "AP06",
       "method": "GET",
       "description": "If user belongs to group, checks if client is unassigned from access groups (returns 404 if unassigned, 200 if assigned)",
       "conditional": "only if userId parameter provided and user belongs to group"
@@ -154,7 +154,7 @@
       "actor": "CheckRelationshipsService (CRS)",
       "action": "calls external API",
       "target": "EACD (enrolment-store-proxy)",
-      "endpoint": "/enrolment-store-proxy/enrolment-store/users/:userId/enrolments",
+      "apiId": "ES2",
       "method": "GET",
       "description": "If user belongs to group, gets user's assigned enrolments for granular permissions",
       "conditional": "only if userId parameter provided and user belongs to group"
@@ -181,7 +181,7 @@
       "actor": "CheckAndCopyRelationshipsService (CACRS)",
       "action": "calls external API",
       "target": "IF/HIP",
-      "endpoint": "/individuals/details/nino/:nino",
+      "apiId": "ETMP06",
       "method": "GET",
       "description": "For MTD-IT with NINO, gets MtdItId",
       "conditional": "MTD-IT service with NINO"
@@ -191,7 +191,7 @@
       "actor": "CheckAndCopyRelationshipsService (CACRS)",
       "action": "calls external API",
       "target": "DES",
-      "endpoint": "/sa/agents/nino/:nino",
+      "apiId": "DES08",
       "method": "GET",
       "description": "Gets client's SA agent references from CESA",
       "conditional": "MTD-IT or IR-SA services"
@@ -201,7 +201,7 @@
       "actor": "CheckAndCopyRelationshipsService (CACRS)",
       "action": "calls external API",
       "target": "agent-mapping (AM)",
-      "endpoint": "/agent-mapping/mappings/sa/:arn",
+      "apiId": "AM09",
       "method": "GET",
       "description": "Gets agent's SA references to match against client's",
       "conditional": "MTD-IT or IR-SA services"
@@ -211,7 +211,7 @@
       "actor": "OrchestratorService (OS)",
       "action": "calls external API",
       "target": "agent-fi-relationship (AFI)",
-      "endpoint": "/agent-fi-relationship/relationships/agent/:arn/service/:service/client/:clientId",
+      "apiId": "AFR01",
       "method": "GET",
       "description": "For PIR service, delegates to agent-fi-relationship microservice",
       "conditional": "PERSONAL-INCOME-RECORD service only"
@@ -219,9 +219,10 @@
     {
       "step": 18,
       "actor": "OrchestratorService (OS)",
-      "action": "calls service",
-      "target": "AgentAssuranceService (AA)",
-      "method": "getNonSuspendedAgentRecord",
+      "action": "calls external API",
+      "target": "agent-assurance (AA)",
+      "apiId": "AA27",
+      "method": "GET",
       "description": "For IR-SA, checks agent suspension status",
       "conditional": "IR-SA service only"
     }
@@ -229,6 +230,7 @@
   "externalDependencies": [
     {
       "name": "EACD",
+      "apiId": "ES3",
       "fullName": "Enterprise Authorisation Context Data",
       "serviceName": "enrolment-store-proxy",
       "description": "EACD (Enterprise Authorisation Context Data) - provides enrolment and group management services"
@@ -236,36 +238,43 @@
     {
       "name": "users-groups-search",
       "alias": "UGS",
+      "apiId": "UGS",
       "description": "Gets group users for user membership validation"
     },
     {
       "name": "agent-permissions",
       "alias": "AP",
+      "apiId": "AP",
       "description": "Checks client assignment to access groups for granular permissions"
     },
     {
       "name": "if-or-hip",
       "alias": "HIP",
+      "apiId": "ETMP",
       "description": "HMRC Integration Platform"
     },
     {
       "name": "des",
       "alias": "DES",
+      "apiId": "DES",
       "description": "Data Exchange Service / ETMP"
     },
     {
       "name": "agent-mapping",
       "alias": "AM",
+      "apiId": "AM",
       "description": "Maps ARN to legacy SA agent references"
     },
     {
       "name": "agent-fi-relationship",
       "alias": "AFI",
+      "apiId": "AFR01",
       "description": "Handles Personal Income Record relationships"
     },
     {
       "name": "agent-assurance",
       "alias": "AA",
+      "apiId": "AA27",
       "description": "Agent suspension and assurance checks"
     }
   ],

@@ -17,7 +17,7 @@
 package uk.gov.hmrc.agentclientrelationships.connectors
 
 import cats.data.EitherT
-import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
+import uk.gov.hmrc.agentclientrelationships.util.{ConsumesAPI, RequestAwareLogging}
 import play.api.http.Status
 import play.api.libs.json._
 import play.api.mvc.RequestHeader
@@ -63,6 +63,7 @@ extends RequestAwareLogging {
   private val baseUrl = appConfig.hipPlatformBaseUrl
 
   // HIP API #EPID1521 Create/Update Agent Relationship
+  @ConsumesAPI(apiId = "ETMP01", service = "etmp")
   def createAgentRelationship(
     enrolmentKey: EnrolmentKey,
     arn: Arn
@@ -90,6 +91,7 @@ extends RequestAwareLogging {
   }
 
   // HIP API #EPID1521 Create/Update Agent Relationship
+  @ConsumesAPI(apiId = "ETMP02", service = "etmp")
   def deleteAgentRelationship(
     enrolmentKey: EnrolmentKey,
     arn: Arn
@@ -118,6 +120,7 @@ extends RequestAwareLogging {
   }
 
   // HIP API #EPID1521 Create/Update Agent Relationship
+  @ConsumesAPI(apiId = "ETMP03", service = "etmp")
   def getActiveClientRelationships(
     taxIdentifier: TaxIdentifier,
     service: Service
@@ -151,6 +154,7 @@ extends RequestAwareLogging {
   }
 
   // HIP API #EPID1521 Create/Update Agent Relationship //url and error handling is different to getActiveClientRelationships
+  @ConsumesAPI(apiId = "ETMP04", service = "etmp")
   def getAllRelationships(
     taxIdentifier: TaxIdentifier,
     activeOnly: Boolean
@@ -190,6 +194,7 @@ extends RequestAwareLogging {
   }
 
   // API#5266 https://admin.tax.service.gov.uk/integration-hub/apis/details/e54e8843-c146-4551-a499-c93ecac4c6fd#Endpoints
+  @ConsumesAPI(apiId = "ETMP05", service = "etmp")
   def getNinoFor(mtdId: MtdItId)(implicit request: RequestHeader): Future[Option[NinoWithoutSuffix]] = {
     val encodedMtdId = UriEncoding.encodePathSegment(mtdId.value, "UTF-8")
     val url = new URL(s"$baseUrl/etmp/RESTAdapter/itsa/taxpayer/business-details?mtdReference=$encodedMtdId")
@@ -214,6 +219,7 @@ extends RequestAwareLogging {
   }
 
   // API#5266 https://admin.tax.service.gov.uk/integration-hub/apis/details/e54e8843-c146-4551-a499-c93ecac4c6fd#Endpoints
+  @ConsumesAPI(apiId = "ETMP06", service = "etmp")
   def getMtdIdFor(nino: NinoWithoutSuffix)(implicit request: RequestHeader): Future[Option[MtdItId]] = {
     val encodedNino = UriEncoding.encodePathSegment(nino.value, "UTF-8")
     val url = new URL(s"$baseUrl/etmp/RESTAdapter/itsa/taxpayer/business-details?nino=$encodedNino")
@@ -238,6 +244,7 @@ extends RequestAwareLogging {
   }
 
   // API#5266 https://admin.tax.service.gov.uk/integration-hub/apis/details/e54e8843-c146-4551-a499-c93ecac4c6fd#Endpoints
+  @ConsumesAPI(apiId = "ETMP07", service = "etmp")
   def getItsaBusinessDetails(nino: NinoWithoutSuffix)(implicit
     request: RequestHeader
   ): Future[Either[ClientDetailsFailureResponse, ItsaBusinessDetails]] = {

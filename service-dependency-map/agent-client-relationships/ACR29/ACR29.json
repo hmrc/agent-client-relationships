@@ -57,18 +57,21 @@
   "externalDependencies": [
     {
       "name": "Agent-Fi-Relationship",
+      "apiId": "AFR01",
       "description": "Retrieves active IRV (Personal Income Record) relationships for the NINO",
       "method": "GET /relationships/active?service=PERSONAL-INCOME-RECORD",
       "note": "IRV relationships are managed by agent-fi-relationship, not HIP/ETMP"
     },
     {
       "name": "DES (Citizen Details)",
+      "apiId": "CD02",
       "description": "Retrieves client name for the NINO",
       "method": "getCitizenDetails",
       "note": "Returns individual's name"
     },
     {
       "name": "Agent Maintainer",
+      "apiId": "ETMP03",
       "description": "Retrieves agent name for each ARN in the relationships",
       "method": "GET /agent-maintainer/agent/{arn}",
       "note": "Called once per unique ARN found in IRV relationships"
@@ -335,4 +338,3 @@
     "analysisVersion": "1.0"
   }
 }
-

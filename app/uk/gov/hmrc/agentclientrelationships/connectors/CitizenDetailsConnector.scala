@@ -20,7 +20,7 @@ import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.CitizenDetails
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
-import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
+import uk.gov.hmrc.agentclientrelationships.util.{ConsumesAPI, RequestAwareLogging}
 import uk.gov.hmrc.agentclientrelationships.util.RequestSupport.hc
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.StringContextOps
@@ -38,6 +38,7 @@ class CitizenDetailsConnector @Inject() (
 )(implicit val ec: ExecutionContext)
 extends RequestAwareLogging {
 
+  @ConsumesAPI(apiId = "CD03", service = "citizen-details")
   def getCitizenDetails(
     nino: NinoWithoutSuffix
   )(implicit rh: RequestHeader): Future[CitizenDetails] = httpClient

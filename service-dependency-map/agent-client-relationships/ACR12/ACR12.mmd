@@ -29,6 +29,7 @@ sequenceDiagram
         ILC-->>Client: 404 Not Found
     else UID found
         ILS->>+AAS: getNonSuspendedAgentRecord(arn)
+        Note over AAS: API ID: AA27
         AAS-->>-ILS: Option[AgentDetailsDesResponse]
 
         alt Agent suspended
@@ -55,33 +56,41 @@ sequenceDiagram
 
                 alt MTD-IT or MTD-IT-SUPP with NINO
                     CRS->>CRS: findMainAgentForNino(invitation)
-                    Note over CRS: Checks EACD, partial_auth, and mappings
+                    Note over CRS: Checks EACD, partial-auth, and mappings
                 else PIR service
                     CRS->>+AFRC: findIrvActiveRelationshipForClient(clientId)
+                    Note over AFRC: API ID: AFR01
                     AFRC-->>-CRS: Seq[ClientRelationship]
                     alt Relationship found
                         CRS->>+AMS: getAgentRecord(arn)
+                        Note over AMS: API ID: AA27
                         AMS-->>-CRS: AgentDetails
                         CRS-->>ILC: Some(ExistingMainAgent)
                     end
                 else CBC-ORG with enrolment
                     CRS->>+ESP: getDelegatedGroupIdsFor(enrolmentKey)
+                    Note over ESP: API ID: ES3
                     ESP-->>-CRS: Group IDs
                     CRS->>+ESP: getPrincipalGroupIdFor(groupId)
+                    Note over ESP: API ID: ES3
                     ESP-->>-CRS: ARN
                     alt ARN found
                         CRS->>+AMS: getAgentRecord(arn)
+                        Note over AMS: API ID: AA27
                         AMS-->>-CRS: AgentDetails
                         CRS-->>ILC: Some(ExistingMainAgent)
                     end
                 else Other services
                     CRS->>CRS: Build enrolment key from invitation
                     CRS->>+ESP: getDelegatedGroupIdsFor(enrolmentKey)
+                    Note over ESP: API ID: ES3
                     ESP-->>-CRS: Group IDs
                     CRS->>+ESP: getPrincipalGroupIdFor(groupId)
+                    Note over ESP: API ID: ES3
                     ESP-->>-CRS: ARN
                     alt ARN found
                         CRS->>+AMS: getAgentRecord(arn)
+                        Note over AMS: API ID: AA27
                         AMS-->>-CRS: AgentDetails
                         CRS-->>-ILC: Some(ExistingMainAgent)
                     end

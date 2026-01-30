@@ -39,6 +39,7 @@
     {
       "name": "Agent Assurance (agent-assurance)",
       "alias": "AA",
+      "apiId": "AA27",
       "description": "Provides agent details including agency name",
       "method": "GET /agent-assurance/agent/{arn}",
       "note": "Must not be suspended"

@@ -58,24 +58,28 @@
   "externalDependencies": [
     {
       "name": "Agent Assurance (API 2007)",
+      "apiId": "AA27",
       "description": "Checks agent suspension status for filtering invitations",
       "method": "GET /agent-record/{arn}",
       "note": "Called for each unique ARN in invitations to filter suspended agents"
     },
     {
       "name": "Agent FI Relationship",
+      "apiId": "AFR01",
       "description": "Checks for active IRV (Personal Income Record) relationships",
       "method": "GET /agent-fi-relationship/relationships/active",
       "note": "Only called if client has a NINO"
     },
     {
       "name": "IF/HIP",
+      "apiId": "ETMP",
       "description": "Queries ETMP for active relationships across all supported services",
       "method": "GET /agent-client-relationships/client/relationships/active",
       "note": "Called per service unless short-circuit conditions are met (cached or has partial auth/IRV)"
     },
     {
       "name": "ETMP",
+      "apiId": "ETMP",
       "description": "Enterprise Tax Management Platform - source of truth for active relationships",
       "method": "Via HIP",
       "note": "Accessed through HIP connector"
@@ -263,4 +267,3 @@
     "analysisVersion": "1.0"
   }
 }
-

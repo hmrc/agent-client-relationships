@@ -1,43 +1,71 @@
 
+# ACR01 - Check if a relationship exists between an agent and a client for a specific service
 GET           /agent/:arn/service/:service/client/:clientIdType/:clientId    @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.checkForRelationship(arn: Arn, service: String, clientIdType: String, clientId: String, userId: Option[String] ?= None)
 
+# ACR03 - Delete internal tracking records from MongoDB for a terminated agent
 DELETE        /agent/:arn/terminate                                          @uk.gov.hmrc.agentclientrelationships.controllers.RelationshipsController.terminateAgent(arn: Arn)
 
+# ACR08 - Retrieve comprehensive tax agent data (active/inactive relationships, invitations, timeline)
 GET           /client/authorisations-relationships                           @uk.gov.hmrc.agentclientrelationships.controllers.ClientTaxAgentsDataController.findClientTaxAgentsData
 
+# ACR09 - Retrieve client details from external APIs enriched with invitation and relationship status
 GET           /client/:service/details/:clientId                             @uk.gov.hmrc.agentclientrelationships.controllers.ClientDetailsController.findClientDetails(service: String, clientId: String)
 
+# ACR10 - Validate agent invitation link (public endpoint, no auth required)
 GET           /agent/agent-reference/uid/:uid/:normalizedAgentName           @uk.gov.hmrc.agentclientrelationships.controllers.InvitationLinkController.validateLink(uid: String, normalizedAgentName: String)
+# ACR11 - Create or get agent invitation link (idempotent)
 GET           /agent/agent-link                                              @uk.gov.hmrc.agentclientrelationships.controllers.InvitationLinkController.createLink
+# ACR12 - Validate invitation for authenticated client
 POST          /client/validate-invitation                                    @uk.gov.hmrc.agentclientrelationships.controllers.InvitationLinkController.validateInvitationForClient
+# ACR13 - Get invitation info for agent OR client
 GET           /client/authorisation-request-info/:invitationId               @uk.gov.hmrc.agentclientrelationships.controllers.InvitationInfoController.getForClient(invitationId: String)
+# ACR14 - Retrieve agent details from agent-assurance
 GET           /agent/:arn/details                                            @uk.gov.hmrc.agentclientrelationships.controllers.AgentDetailsController.getAgentDetails(arn: Arn)
 
+# ACR15 - Client or Stride user rejects pending invitation
 PUT           /client/authorisation-response/reject/:invitationId            @uk.gov.hmrc.agentclientrelationships.controllers.InvitationController.rejectInvitation(invitationId: String)
+# ACR16 - Client or Stride accepts invitation and creates relationship in EACD/ETMP
 PUT           /authorisation-response/accept/:invitationId                   @uk.gov.hmrc.agentclientrelationships.controllers.InvitationAcceptController.accept(invitationId: String)
 
+# ACR17 - Agent creates invitation (Pending status)
 POST          /agent/:arn/authorisation-request                              @uk.gov.hmrc.agentclientrelationships.controllers.InvitationController.createInvitation(arn: Arn)
+# ACR18 - Get invitation details with shareable link for agent
 GET           /agent/:arn/authorisation-request-info/:invitationId           @uk.gov.hmrc.agentclientrelationships.controllers.InvitationInfoController.get(arn: Arn, invitationId: String)
+# ACR19 - Get paginated and filtered list of invitations for agent
 GET           /agent/:arn/authorisation-requests                             @uk.gov.hmrc.agentclientrelationships.controllers.InvitationInfoController.trackRequests(arn: Arn, statusFilter: Option[String], clientName: Option[String], pageNumber: Int, pageSize: Int)
+# ACR20 - Remove existing authorisation between agent and client
 POST          /agent/:arn/remove-authorisation                               @uk.gov.hmrc.agentclientrelationships.controllers.RemoveAuthorisationController.removeAuthorisation(arn: Arn)
+# ACR21 - Agent cancels pending invitation
 PUT           /agent/cancel-invitation/:invitationId                         @uk.gov.hmrc.agentclientrelationships.controllers.InvitationController.cancelInvitation(invitationId: String)
 
+# ACR22 - Create ITSA relationship for client after MTD signup
 POST          /itsa-post-signup/create-relationship/:nino                    @uk.gov.hmrc.agentclientrelationships.controllers.ItsaPostSignupController.itsaPostSignupCreateRelationship(nino: NinoWithoutSuffix)
 
+# ACR23 - Update trust invitation by replacing URN with UTR
 POST          /invitations/trusts-enrolment-orchestrator/:urn/update         @uk.gov.hmrc.agentclientrelationships.controllers.InvitationController.replaceUrnWithUtr(urn: String)
 
+# ACR24 - Return client relationship status summary (pending invitations, history, existing relationships)
 GET           /customer-status                                               @uk.gov.hmrc.agentclientrelationships.controllers.CustomerStatusController.customerStatus
 
+# ACR25 - Deauthorise accepted/partial-auth invitations when relationships are terminated externally
 PUT           /cleanup-invitation-status                                     @uk.gov.hmrc.agentclientrelationships.controllers.CleanUpInvitationStatusController.deauthoriseInvitation
 
 # stride endpoints
+# ACR27 - Bulk endpoint to retrieve ALL active agent-client relationships for multiple clients
 POST          /stride/active-relationships                                   @uk.gov.hmrc.agentclientrelationships.controllers.StrideClientDetailsController.getActiveRelationships
+# ACR28 - Stride endpoint to retrieve comprehensive client details with invitations and relationships
 GET           /stride/client-details/service/:service/client/:clientIdType/:clientId       @uk.gov.hmrc.agentclientrelationships.controllers.StrideClientDetailsController.get(service: String, clientIdType: String, clientId: String)
+# ACR29 - Stride endpoint to retrieve active IRV relationships for a client NINO
 GET           /stride/irv-relationships/:nino                                @uk.gov.hmrc.agentclientrelationships.controllers.StrideClientDetailsController.getIrvRelationships(nino: String)
+# ACR30 - Retrieve partial authorizations via STRIDE for the specified NINO
 GET           /stride/partial-auths/nino/:nino                               @uk.gov.hmrc.agentclientrelationships.controllers.StrideGetPartialAuthsController.getPartialAuths(nino: String)
 
 # API endpoints
+# ACR31 - External OAuth2 API endpoint for third-party platforms to create agent authorization invitations
 POST          /api/:arn/invitation                                           @uk.gov.hmrc.agentclientrelationships.controllers.ApiCreateInvitationController.createInvitation(arn: Arn)
+# ACR32 - Retrieve a specific invitation via API for the agent
 GET           /api/:arn/invitation/:invitationId                             @uk.gov.hmrc.agentclientrelationships.controllers.ApiGetInvitationController.getInvitation(arn: Arn, invitationId: String)
+# ACR33 - Retrieve all invitations via API for the agent
 GET           /api/:arn/invitations                                          @uk.gov.hmrc.agentclientrelationships.controllers.ApiGetInvitationsController.getInvitations(arn: Arn)
+# ACR34 - External OAuth2 API endpoint to check if an active agent-client relationship exists
 POST          /api/:arn/relationship                                         @uk.gov.hmrc.agentclientrelationships.controllers.ApiCheckRelationshipController.checkRelationship(arn: Arn)

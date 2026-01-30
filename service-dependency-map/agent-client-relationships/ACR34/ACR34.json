@@ -57,18 +57,21 @@
     {
       "name": "Agent Assurance (agent-assurance)",
       "alias": "AA",
+      "apiId": "AA27",
       "description": "Verifies agent is not suspended",
       "method": "GET /agent-assurance/agent/{arn}",
       "note": "Must not be suspended"
     },
     {
       "name": "DES/IF (via ClientDetailsService)",
+      "apiId": "DES",
       "description": "Retrieves client registration details for known fact verification",
       "method": "Various endpoints per service (getVrnDisplayDetails, getCitizenDetails, etc.)",
       "note": "Service-specific client detail endpoints"
     },
     {
       "name": "Multiple services via CROS",
+      "apiId": "ACR01",
       "description": "Full ACR01 relationship check including EACD, UGS, Agent Permissions, DES, Agent Mapping, Agent FI Relationship",
       "method": "See ACR01 documentation",
       "note": "Uses complete CheckRelationshipsOrchestratorService.checkForRelationship flow"

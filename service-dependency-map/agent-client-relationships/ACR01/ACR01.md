@@ -179,7 +179,7 @@ sequenceDiagram
 
 ### External Services
 
-- **EACD (Enterprise Authorisation Context Data)** - enrolment-store-proxy: 
+- **EACD (Enterprise Authorisation Context Data)** - enrolment-store-proxy:
   - Gets agent's principal group ID
   - Gets client's delegated group IDs
   - Gets user's assigned enrolments (for granular permissions)
@@ -262,9 +262,9 @@ When the `userId` query parameter is provided, the endpoint performs **user-leve
 
 ### Downstream Calls for User-Level Check
 
-- **users-groups-search**: `GET /users-groups-search/groups/{groupId}/users` - Get all users in agent's group
-- **agent-permissions**: `GET /agent-permissions/arn/{arn}/client/{enrolmentKey}/groups` - Check if client is in access groups
-- **enrolment-store-proxy**: `GET /enrolment-store-proxy/enrolment-store/users/{userId}/enrolments?service={service}` - Get user's assigned enrolments
+- **users-groups-search**: UGS01 (Get group users) - Get all users in agent's group
+- **agent-permissions**: AP06 (Check client assignment) - Check if client is in access groups
+- **enrolment-store-proxy**: ES2 (Get user enrolments) - Get user's assigned enrolments
 
 ### Use Cases
 
@@ -321,4 +321,3 @@ For IR-SA service, suspended agents:
 **Last Updated:** 2025-11-20  
 **Git Commit SHA:** `b2138b4e3958677748c1820c3d715d4fbb9d3b2c`  
 **Analysis Version:** 1.0
-

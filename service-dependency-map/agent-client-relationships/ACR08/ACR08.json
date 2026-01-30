@@ -57,6 +57,7 @@
     },
     {
       "name": "agent-assurance",
+      "apiId": "AA27",
       "alias": "AAS",
       "method": "getAgentRecordWithChecks",
       "description": "Checks agent suspension status and retrieves agent details"
@@ -65,29 +66,26 @@
   "interactions": "See detailed interaction steps in full documentation - over 25 steps involving parallel queries and data enrichment",
   "externalDependencies": [
     {
-      "name": "IF/HIP",
-      "alias": "HIP",
-      "description": "HMRC Integration Platform - queries ETMP for client relationships"
-    },
-    {
       "name": "ETMP",
-      "description": "Enterprise Tax Management Platform - stores agent-client relationship records"
+      "apiId": "ETMP03",
+      "description": "Get active relationships (via HIP - queries ETMP for relationships per service)"
     },
     {
       "name": "agent-fi-relationship",
+      "apiId": "AFR01",
       "alias": "AFRC",
-      "description": "Handles PIR (Personal Income Record) relationship data"
+      "description": "Get relationship for NINO (PIR relationships)"
     }
   ],
   "databaseCollections": [
     {
       "name": "invitations",
-      "operation": "READ",
+      "operation": "READ_MANY",
       "description": "Stores invitation records (Pending, Expired, Rejected, Cancelled, Accepted)"
     },
     {
-      "name": "partial_auth",
-      "operation": "READ",
+      "name": "partial-auth",
+      "operation": "READ_MANY",
       "description": "Stores IR-SA partial authorization records"
     }
   ],
@@ -318,4 +316,3 @@
     "analysisVersion": "1.0"
   }
 }
-

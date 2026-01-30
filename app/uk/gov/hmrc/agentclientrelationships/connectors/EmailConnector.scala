@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.connectors
 
-import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
+import uk.gov.hmrc.agentclientrelationships.util.{ConsumesAPI, RequestAwareLogging}
 import play.api.libs.json.Json
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
@@ -43,6 +43,7 @@ with RequestAwareLogging {
 
   private val baseUrl: String = appConfig.emailBaseUrl
 
+  @ConsumesAPI(apiId = "EMAIL01", service = "email")
   def sendEmail(emailInformation: EmailInformation)(implicit request: RequestHeader): Future[Boolean] = httpClient
     .post(url"$baseUrl/hmrc/email")
     .withBody(Json.toJson(emailInformation))

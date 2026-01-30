@@ -1,4 +1,5 @@
 service: agent-client-relationships
+prefix: ACR
 repository: https://github.com/hmrc/agent-client-relationships
 capabilities: []
 audience:
@@ -7,8 +8,18 @@ interaction: synchronous
 criticality: high
 lifecycle: active
 dependencies:
-  consumes: []
-  produces: []
+  consumes:
+    - enrolment-store-proxy
+    - users-groups-search
+    - agent-permissions
+    - ETMP
+    - DES
+    - agent-mapping
+    - agent-fi-relationship
+    - agent-assurance
+    - citizen-details
+    - email
+    - MongoDB
 tags: []
 apis:
   - id: ACR01
@@ -18,66 +29,27 @@ apis:
     audience: internal
     interaction: synchronous
     consumes:
-      - EACD  # enrolment-store-proxy - gets principal group ID, delegated group IDs, user enrolments
-      - users-groups-search  # UGS - gets group users for user-level permission checks
-      - agent-permissions  # AP - checks if client is assigned to access groups
-      - IF/HIP  # HIP - converts NINO to MtdItId for MTD-IT services
-      - DES  # Gets SA agent references from CESA for legacy relationship checks
-      - agent-mapping  # AM - maps ARN to legacy SA agent references
-      - agent-fi-relationship  # AFI - handles PIR (Personal Income Record) relationship checks
-      - agent-assurance  # AA - checks agent suspension status for IR-SA
-  - id: ACR02
-    method: GET
-    path: /agent/relationships/inactive
-    description: Retrieves a list of inactive (terminated) relationships for the authenticated agent from ETMP via HIP.
-    audience: internal
-    interaction: synchronous
-    consumes:
-      - IF/HIP  # Queries ETMP via REST Adapter for inactive agent relationships (last 30 days)
-      - ETMP  # Enterprise Tax Management Platform - stores historical relationship records
+      - ES3 # Check enrolment allocation (gets principal group ID)
+      - ES1 # Query known facts (gets delegated group IDs)
+      - UGS01 # Get user by group ID (for user-level permission checks)
+      - ES2 # Query enrolments by group ID (gets user's assigned enrolments)
+      - AP06 # Check access group contains client
+      - ETMP06 # Get ITSA Business Details (converts NINO to MtdItId for MTD-IT)
+      - DES08 # Get SA Agent Client Authorisation Flags (legacy CESA relationships)
+      - AM09 # Find mappings for multiple keys (maps ARN to legacy SA references)
+      - AFR01 # Get relationship for NINO (PIR relationship checks)
+      - AA27 # Get agent record by ARN (checks agent suspension status for IR-SA)
+
   - id: ACR03
     method: DELETE
     path: /agent/{arn}/terminate
     description: Administrative endpoint that deletes internal tracking records from MongoDB for a terminated agent. Does NOT terminate actual relationships in EACD.
     audience: internal
     interaction: synchronous
-    consumes: []  # Only queries internal MongoDB - no external services called
-  - id: ACR04
-    method: GET
-    path: /agent/{arn}/client/{nino}/legacy-mapped-relationship
-    description: Checks if a client has a legacy SA relationship in CESA and whether it has been mapped to the agent's ARN. Returns 204 if mapped, 200 if exists but not mapped, 404 if no legacy relationship.
-    audience: internal
-    interaction: synchronous
     consumes:
-      - DES  # Queries /registration/relationship/nino/:nino for client's SA agent references in CESA
-      - agent-mapping  # Queries /agent-mapping/mappings/:arn for agent's mapped SA references
-  - id: ACR05
-    method: GET
-    path: /client/relationships/active
-    description: Retrieves all active agent relationships for the authenticated client across all their enrolled services (excluding PIR). Returns map of service IDs to agent ARNs.
-    audience: internal
-    interaction: synchronous
-    consumes:
-      - IF/HIP  # Queries ETMP via REST Adapter for active agent relationships per service
-      - ETMP  # Enterprise Tax Management Platform - stores agent-client relationship records
-  - id: ACR06
-    method: GET
-    path: /client/relationships/inactive
-    description: Retrieves all inactive (terminated) agent relationships for the authenticated client across all their enrolled services (excluding PIR). Returns flat array of InactiveRelationship objects.
-    audience: internal
-    interaction: synchronous
-    consumes:
-      - IF/HIP  # Queries ETMP via REST Adapter for inactive agent relationships per service
-      - ETMP  # Enterprise Tax Management Platform - stores historical agent-client relationship records
-  - id: ACR07
-    method: GET
-    path: /client/relationships/service/{service}
-    description: Retrieves the active agent relationship for a specific service for the authenticated client. Client must be enrolled for the specific service. Returns single ActiveRelationship or 404.
-    audience: internal
-    interaction: synchronous
-    consumes:
-      - IF/HIP  # Queries ETMP via REST Adapter for active agent relationship for the specific service
-      - ETMP  # Enterprise Tax Management Platform - stores agent-client relationship records
+      - MongoDB.invitations.DELETE
+      - MongoDB.partial-auth.DELETE
+      - MongoDB.agent-reference.DELETE
   - id: ACR08
     method: GET
     path: /client/authorisations-relationships
@@ -85,11 +57,10 @@ apis:
     audience: internal
     interaction: synchronous
     consumes:
-      - IF/HIP  # Queries ETMP for relationships per service
-      - ETMP  # Stores agent-client relationship records
-      - agent-fi-relationship  # PIR (Personal Income Record) relationships
-      - MongoDB  # invitations collection (pending/expired/rejected/cancelled)
-      - MongoDB  # partial_auth collection (IR-SA partial authorizations)
+      - ETMP03 # Get active relationships (via HIP - queries ETMP for relationships per service)
+      - AFR01 # Get relationship for NINO (PIR relationships)
+      - MongoDB.invitations.READ_MANY
+      - MongoDB.partial-auth.READ_MANY
   - id: ACR09
     method: GET
     path: /client/{service}/details/{clientId}
@@ -97,10 +68,11 @@ apis:
     audience: internal
     interaction: synchronous
     consumes:
-      - citizen-details  # PIR (Personal Income Record) client details
-      - IF/HIP  # All other tax service client subscription/registration details
-      - MongoDB  # invitations collection (pending invitation checks)
-      - MongoDB  # partial_auth collection (MTD-IT/MTD-IT-SUPP partial auth fallback)
+      - CD02 # Get citizen details by NINO (for PIR service)
+      - ETMP05 # Get NINO for MTD IT ID (for MTD-IT services)
+      - MongoDB.invitations.READ
+      - MongoDB.partial-auth.READ
+      # Uses ACR01 flow for relationship checks
   - id: ACR10
     method: GET
     path: /agent/agent-reference/uid/{uid}/{normalizedAgentName}
@@ -108,8 +80,8 @@ apis:
     audience: internal
     interaction: synchronous
     consumes:
-      - agent-assurance  # Checks agent suspension status and retrieves agent details
-      - MongoDB  # agent-reference collection (UID lookup, encrypted normalized names array)
+      - AA27 # Get agent record by ARN (checks agent suspension status and retrieves agent details)
+      - MongoDB.agent-reference.READ
   - id: ACR11
     method: GET
     path: /agent/agent-link
@@ -117,8 +89,10 @@ apis:
     audience: internal
     interaction: synchronous
     consumes:
-      - agent-assurance  # Retrieves current agent details including agency name (uses getAgentRecord, not getNonSuspendedAgentRecord)
-      - MongoDB  # agent-reference collection (find by ARN, create/update with $addToSet for name array)
+      - AA27 # Get agent record by ARN (retrieves agent details including agency name)
+      - MongoDB.agent-reference.READ
+      - MongoDB.agent-reference.WRITE
+      - MongoDB.agent-reference.UPDATE
   - id: ACR12
     method: POST
     path: /client/validate-invitation
@@ -126,10 +100,11 @@ apis:
     audience: internal
     interaction: synchronous
     consumes:
-      - agent-assurance  # Agent suspension check and existing agent details
-      - EACD  # Enrolment Store Proxy - checks for existing agent delegations
-      - agent-fi-relationship  # PIR relationship checks
-      - MongoDB  # agent-reference (UID lookup), invitations (matching invitation queries)
+      - AA27 # Get agent record by ARN (agent suspension check and agent details)
+      - ES1 # Query known facts (checks for existing agent delegations)
+      - AFR01 # Get relationship for NINO (PIR relationship checks)
+      - MongoDB.agent-reference.READ
+      - MongoDB.invitations.READ
   - id: ACR13
     method: GET
     path: /client/authorisation-request-info/{invitationId}
@@ -137,8 +112,8 @@ apis:
     audience: internal
     interaction: synchronous
     consumes:
-      - agent-assurance  # Retrieves agent details including agency name (uses getAgentRecord, not getNonSuspendedAgentRecord)
-      - MongoDB  # invitations collection (lookup by invitationId)
+      - AA27 # Get agent record by ARN (retrieves agent details including agency name)
+      - MongoDB.invitations.READ
   - id: ACR14
     method: GET
     path: /agent/{arn}/details
@@ -146,7 +121,7 @@ apis:
     audience: internal
     interaction: synchronous
     consumes:
-      - agent-assurance  # getAgentRecord (not getNonSuspendedAgentRecord) - returns details even if suspended
+      - AA27 # Get agent record by ARN
   - id: ACR15
     method: PUT
     path: /client/authorisation-response/reject/{invitationId}
@@ -154,8 +129,9 @@ apis:
     audience: internal
     interaction: synchronous
     consumes:
-      - MongoDB  # invitations collection (lookup and update status to Rejected)
-      - EmailService  # Sends rejection notification to agent
+      - MongoDB.invitations.READ
+      - MongoDB.invitations.UPDATE
+      - EMAIL01 # Send email (rejection notification to agent)
   - id: ACR16
     method: PUT
     path: /authorisation-response/accept/{invitationId}
@@ -163,11 +139,13 @@ apis:
     audience: internal
     interaction: synchronous
     consumes:
-      - EACD  # Enrolment Store Proxy - allocateEnrolmentToAgent creates delegation
-      - ETMP  # via HIP - creates tax service relationships
-      - agent-fi-relationship  # Creates PIR relationships
-      - MongoDB  # invitations (update status), partial_auth (create/delete for Alt-ITSA)
-      - EmailService  # Sends acceptance confirmation
+      - ES4 # Allocate enrolment to agent (creates delegation)
+      - ETMP01 # Create agent relationship (creates tax service relationships via HIP)
+      - AFR02 # Create relationship (creates PIR relationships)
+      - EMAIL01 # Send email (acceptance confirmation)
+      - MongoDB.invitations.UPDATE
+      - MongoDB.partial-auth.WRITE
+      - MongoDB.partial-auth.DELETE
   - id: ACR17
     method: POST
     path: /agent/{arn}/authorisation-request
@@ -175,9 +153,9 @@ apis:
     audience: internal
     interaction: synchronous
     consumes:
-      - agent-assurance  # Retrieves agent details (agency name, email)
-      - IF/HIP  # Converts NINO to MTD IT ID (MTD-IT/MTD-IT-SUPP only)
-      - MongoDB  # invitations collection (INSERT with Pending status, unique index prevents duplicates)
+      - AA27 # Get agent record by ARN (retrieves agent details: agency name, email)
+      - ETMP05 # Get NINO for MTD IT ID (converts NINO to MTD IT ID for MTD-IT/MTD-IT-SUPP)
+      - MongoDB.invitations.WRITE
   - id: ACR18
     method: GET
     path: /agent/{arn}/authorisation-request-info/{invitationId}
@@ -185,8 +163,11 @@ apis:
     audience: internal
     interaction: synchronous
     consumes:
-      - agent-assurance  # Retrieves agent details including agency name (uses getAgentRecord, not getNonSuspendedAgentRecord)
-      - MongoDB  # invitations collection (lookup by arn and invitationId), agent-reference collection (find/create/update with normalized names array)
+      - AA27 # Get agent record by ARN (retrieves agent details including agency name)
+      - MongoDB.invitations.READ
+      - MongoDB.agent-reference.READ
+      - MongoDB.agent-reference.WRITE
+      - MongoDB.agent-reference.UPDATE
   - id: ACR19
     method: GET
     path: /agent/{arn}/authorisation-requests
@@ -194,7 +175,7 @@ apis:
     audience: internal
     interaction: synchronous
     consumes:
-      - MongoDB  # invitations collection (aggregation pipeline with facets - filter by ARN, sort by created desc, return paginated results + metadata)
+      - MongoDB.invitations.READ_MANY
   - id: ACR20
     method: POST
     path: /agent/{arn}/remove-authorisation
@@ -202,10 +183,17 @@ apis:
     audience: internal
     interaction: synchronous
     consumes:
-      - agent-fi-relationship  # PIR service only - delegates deletion
-      - EACD  # Standard services - getPrincipalGroupIdFor, deallocateEnrolmentFromAgent
-      - IF/HIP  # Standard services - deleteAgentRelationship. Alt-ITSA - getMtdIdFor (NINO to MTDITID conversion)
-      - MongoDB  # invitations (UPDATE to Deauthorised for all flows), partial-auth (UPDATE expiryDate for alt-ITSA), delete-record (INSERT/READ/UPDATE/DELETE for standard services recovery mechanism)
+      - AFR03 # Delete relationship (PIR service only)
+      - ES3 # Check enrolment allocation (gets principal group ID)
+      - ES5 # Deallocate enrolment from agent (standard services)
+      - ETMP02 # Delete agent relationship (standard services via HIP)
+      - ETMP05 # Get NINO for MTD IT ID (Alt-ITSA - NINO to MTDITID conversion)
+      - MongoDB.invitations.UPDATE
+      - MongoDB.partial-auth.UPDATE
+      - MongoDB.delete-record.READ
+      - MongoDB.delete-record.WRITE
+      - MongoDB.delete-record.UPDATE
+      - MongoDB.delete-record.DELETE
   - id: ACR21
     method: PUT
     path: /agent/cancel-invitation/{invitationId}
@@ -213,7 +201,8 @@ apis:
     audience: internal
     interaction: synchronous
     consumes:
-      - MongoDB  # invitations collection (READ by invitationId, validate status=Pending and arn match, UPDATE status to Cancelled and lastUpdated timestamp)
+      - MongoDB.invitations.READ
+      - MongoDB.invitations.UPDATE
   - id: ACR22
     method: POST
     path: /itsa-post-signup/create-relationship/{nino}
@@ -221,10 +210,16 @@ apis:
     audience: internal
     interaction: synchronous
     consumes:
-      - HIP/IF  # getMtdIdFor (NINO to MTDITID conversion), createAgentRelationship (ETMP relationship creation)
-      - DES  # getClientSaAgentSaReferences (legacy SA copy flow only - retrieves SA agent references)
-      - EACD  # getPrincipalGroupIdFor, allocateEnrolmentToAgent (both flows - enrolment allocation)
-      - MongoDB  # partial-auth (READ/DELETE for partial auth flow), invitations (UPDATE PartialAuth to Accepted), relationship-copy-record (INSERT/DELETE for recovery tracking)
+      - ETMP05 # Get NINO for MTD IT ID (NINO to MTDITID conversion)
+      - ETMP01 # Create agent relationship (ETMP relationship creation via HIP)
+      - DES08 # Get SA Agent Client Authorisation Flags (legacy SA copy flow - retrieves SA agent references)
+      - ES3 # Check enrolment allocation (gets principal group ID)
+      - ES4 # Allocate enrolment to agent (both flows - enrolment allocation)
+      - MongoDB.partial-auth.READ
+      - MongoDB.partial-auth.DELETE
+      - MongoDB.invitations.UPDATE
+      - MongoDB.relationship-copy-record.WRITE
+      - MongoDB.relationship-copy-record.DELETE
   - id: ACR23
     method: POST
     path: /invitations/trusts-enrolment-orchestrator/{urn}/update
@@ -232,7 +227,7 @@ apis:
     audience: internal
     interaction: synchronous
     consumes:
-      - MongoDB  # invitations collection (UPDATE by service=HMRC-TERSNT-ORG, clientId=URN to service=HMRC-TERS-ORG, clientId=UTR)
+      - MongoDB.invitations.UPDATE
   - id: ACR24
     method: GET
     path: /customer-status
@@ -240,11 +235,13 @@ apis:
     audience: internal
     interaction: synchronous
     consumes:
-      - Agent Assurance (API 2007)  # GET /agent-record/{arn} - checks agent suspension status for filtering invitations
-      - Agent FI Relationship  # GET /agent-fi-relationship/relationships/active - checks for IRV relationships
-      - HIP/IF  # GET /agent-client-relationships/client/relationships/active - queries ETMP for active relationships (cached, 15 min TTL)
-      - ETMP  # Via HIP - source of truth for active relationships
-      - MongoDB  # invitations (READ by service/clientId, filter suspended agents), partial-auth (READ by NINO), customer-status-cache (READ/WRITE, 15 min TTL)
+      - AA27 # Get agent record by ARN (checks agent suspension status for filtering invitations)
+      - AFR01 # Get relationship for NINO (checks for IRV relationships)
+      - ETMP03 # Get active relationships (via HIP - queries ETMP, cached 15 min)
+      - MongoDB.invitations.READ
+      - MongoDB.partial-auth.READ
+      - MongoDB.customer-status-cache.READ
+      - MongoDB.customer-status-cache.WRITE
   - id: ACR25
     method: PUT
     path: /cleanup-invitation-status
@@ -252,17 +249,7 @@ apis:
     audience: internal
     interaction: synchronous
     consumes:
-      - MongoDB  # invitations collection (UPDATE status from Accepted/PartialAuth to DeAuthorised by arn, service, clientId)
-  - id: ACR26
-    method: GET
-    path: /relationships/service/{service}/client/{clientIdType}/{clientId}
-    description: Allows a Stride user (HMRC internal staff) to retrieve active agent-client relationships for a specific client. Validates service and client identifier, queries HIP (ETMP) for active relationships. Special handling for ITSA services (requires NINO-to-MtdItId conversion via IF) and CBC services (queries EACD to determine CBC-ORG vs CBC-NONUK-ORG). Only returns relationships with dateTo = 9999-12-31. Requires Stride authentication with maintain_agent_relationships or maintain_agent_manually_assure role.
-    audience: internal
-    interaction: synchronous
-    consumes:
-      - EACD (for CBC service validation only)
-      - IF (for ITSA NINO-to-MtdItId conversion)
-      - HIP
+      - MongoDB.invitations.UPDATE
   - id: ACR27
     method: POST
     path: /stride/active-relationships
@@ -270,14 +257,13 @@ apis:
     audience: internal
     interaction: synchronous
     consumes:
-      - HIP
-      - IF (for NINO-to-MtdItId conversion)
-      - agent-fi-relationship (for IRV relationships)
-      - citizen-details (DES - for client names)
-      - designatory-details (DES - for NINO client details)
-      - agent-maintainer (for agent names)
-    database:
-      - partial-auth (for PartialAuth relationships)
+      - ETMP03 # Get active relationships (via HIP)
+      - ETMP05 # Get NINO for MTD IT ID (NINO-to-MtdItId conversion)
+      - AFR01 # Get relationship for NINO (IRV relationships)
+      - CD02 # Get citizen details by NINO (client names)
+      - MongoDB.partial-auth.READ
+      # DES: designatory-details (NINO client details)
+      # agent-maintainer: for agent names
   - id: ACR28
     method: GET
     path: /stride/client-details/service/{service}/client/{clientIdType}/{clientId}
@@ -285,16 +271,14 @@ apis:
     audience: internal
     interaction: synchronous
     consumes:
-      - agent-maintainer (for agent names and suspension status)
-      - HIP (for relationships - not called for IRV or if PartialAuth main agent found for MTD-IT)
-      - IF (for NINO-to-MtdItId conversion for MTD-IT)
-      - agent-fi-relationship (for IRV relationships)
-      - citizen-details (DES - for client names)
-      - designatory-details (DES - for NINO details)
-      - DES subscription endpoints (for client names per type)
-    database:
-      - invitations (for pending invitations)
-      - partial-auth (for MTD-IT main agent check)
+      # agent-maintainer: for agent names and suspension status
+      - ETMP03 # Get active relationships (via HIP - not called for IRV or if PartialAuth exists for MTD-IT)
+      - ETMP05 # Get NINO for MTD IT ID (NINO-to-MtdItId conversion for MTD-IT)
+      - AFR01 # Get relationship for NINO (IRV relationships)
+      - CD02 # Get citizen details by NINO (client names)
+      - MongoDB.invitations.READ
+      - MongoDB.partial-auth.READ
+      # DES: designatory-details, subscription endpoints (client names)
   - id: ACR29
     method: GET
     path: /stride/irv-relationships/{nino}
@@ -302,9 +286,9 @@ apis:
     audience: internal
     interaction: synchronous
     consumes:
-      - agent-fi-relationship (for IRV relationships - AFR03)
-      - citizen-details (DES - for client name)
-      - agent-maintainer (for agent names)
+      - AFR01 # Get relationship for NINO (IRV relationships)
+      - CD02 # Get citizen details by NINO (client name)
+      # agent-maintainer: for agent names
   - id: ACR30
     method: GET
     path: /stride/partial-auths/nino/{nino}
@@ -312,7 +296,8 @@ apis:
     audience: internal
     interaction: synchronous
     consumes:
-      - citizen-details
+      - CD02 # Get citizen details by NINO
+      - MongoDB.partial-auth.READ
   - id: ACR31
     method: POST
     path: /api/{arn}/invitation
@@ -320,27 +305,32 @@ apis:
     audience: external-authenticated
     interaction: synchronous
     consumes:
-      - IF (for NINO-to-MtdItId conversion - MTD-IT/MTD-IT-SUPP only)
-      - agent-maintainer (for agent record and suspension check)
-      - DES (multiple endpoints for client details - getCitizenDetails, getVrnDisplayDetails, getTrustDetails, etc.)
-      - HIP (via CheckRelationshipsOrchestratorService for existing relationship check)
-    database:
-      - invitations (check for duplicates, create new invitation)
-      - partial-auth (check for existing PartialAuth - ITSA only)
+      - ETMP05 # Get NINO for MTD IT ID (NINO-to-MtdItId conversion for MTD-IT/MTD-IT-SUPP)
+      # agent-maintainer: for agent record and suspension check
+      - CD02 # Get citizen details by NINO
+      - MongoDB.invitations.READ
+      - MongoDB.invitations.WRITE
+      - MongoDB.partial-auth.READ
+      # DES: multiple endpoints for client details (getVrnDisplayDetails, getTrustDetails, etc.)
+      # Uses ACR01 CheckRelationshipsOrchestratorService for existing relationship check
   - id: ACR32
     method: GET
     path: /api/{arn}/invitation/{invitationId}
     description: Retrieves a specific invitation via API for the agent.
     audience: external-authenticated
     interaction: synchronous
-    consumes: []
+    consumes:
+      - MongoDB.invitations.READ
+      - MongoDB.agent-reference.READ
   - id: ACR33
     method: GET
     path: /api/{arn}/invitations
     description: Retrieves all invitations via API for the agent.
     audience: external-authenticated
     interaction: synchronous
-    consumes: []
+    consumes:
+      - MongoDB.invitations.READ_MANY
+      - MongoDB.agent-reference.READ
   - id: ACR34
     method: POST
     path: /api/{arn}/relationship
@@ -348,12 +338,7 @@ apis:
     audience: external-authenticated
     interaction: synchronous
     consumes:
-      - agent-assurance (for agent suspension check)
-      - DES/IF (for client registration details via ClientDetailsService - service-specific endpoints)
-      - EACD (via CheckRelationshipsOrchestratorService - same as ACR01)
-      - UGS (via CheckRelationshipsOrchestratorService - same as ACR01)
-      - agent-permissions (via CheckRelationshipsOrchestratorService - same as ACR01)
-      - IF/HIP (via CheckRelationshipsOrchestratorService - NINO to MtdItId conversion for MTD-IT)
-      - DES (via CheckRelationshipsOrchestratorService - SA agent references for legacy checks)
-      - agent-mapping (via CheckRelationshipsOrchestratorService - ARN to SA reference mapping)
-      - agent-fi-relationship (via CheckRelationshipsOrchestratorService - PIR relationship checks)
+      - AA27 # Get agent record by ARN (agent suspension check)
+      - CD02 # Get citizen details by NINO
+      # DES/IF: client registration details via ClientDetailsService
+      # Uses ACR01 CheckRelationshipsOrchestratorService flow (ES3, ES1, UGS01, ES2, AP06, ETMP06, DES08, AM09, AFR01)
