@@ -40,7 +40,7 @@ trait MockDeleteRelationshipsService {
     arn: Arn,
     enrolment: EnrolmentKey,
     affinityGroup: Option[AffinityGroup]
-  )(response: Future[Boolean] = Future.successful(true)): OngoingStubbing[Future[Boolean]] = when(
+  )(response: Future[Option[Boolean]] = Future.successful(Some(true))): OngoingStubbing[Future[Option[Boolean]]] = when(
     mockDeleteRelationshipsService.deleteRelationship(
       eqs(arn),
       eqs(enrolment),

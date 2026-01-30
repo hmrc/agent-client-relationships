@@ -18,7 +18,6 @@ package uk.gov.hmrc.agentclientrelationships.connectors
 
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.when
-import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 import org.scalatestplus.mockito.MockitoSugar
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
@@ -36,14 +35,13 @@ with MockitoSugar {
   val appConfig: AppConfig = mock[AppConfig]
   val httpClient: HttpClientV2 = mock[HttpClientV2]
   val correlationIdGenerator: CorrelationIdGenerator = mock[CorrelationIdGenerator]
-  val metrics: Metrics = mock[Metrics]
 
   val underTest =
     new DesConnector(
       httpClient,
       correlationIdGenerator,
       appConfig
-    )(metrics, ec)
+    )(ec)
 
   "desHeaders" should {
     "contain correct headers" in {

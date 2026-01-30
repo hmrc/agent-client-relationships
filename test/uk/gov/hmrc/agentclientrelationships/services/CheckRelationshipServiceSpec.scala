@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
-import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 import org.mockito.ArgumentMatchers.any
 import org.mockito.ArgumentMatchers.{eq => equ}
 import org.mockito.Mockito._
@@ -62,7 +61,6 @@ with ResettingMockitoSugar {
   val groupId = "testGroupId"
   val agentCode: AgentCode = AgentCode("ABC1234")
 
-  val metrics = mock[Metrics]
   private val mockPartialAuthRepo = mock[PartialAuthRepository]
   private val mockAgentAssuranceService = mock[AgentAssuranceService]
   private val mockHipConnector = mock[HipConnector]
@@ -96,8 +94,7 @@ with ResettingMockitoSugar {
             mockHipConnector,
             gs,
             mockPartialAuthRepo,
-            mockAgentFiConnector,
-            metrics
+            mockAgentFiConnector
           )
         crs
           .checkForRelationship(
@@ -133,8 +130,7 @@ with ResettingMockitoSugar {
             mockHipConnector,
             gs,
             mockPartialAuthRepo,
-            mockAgentFiConnector,
-            metrics
+            mockAgentFiConnector
           )
         crs
           .checkForRelationship(
@@ -170,8 +166,7 @@ with ResettingMockitoSugar {
             mockHipConnector,
             gs,
             mockPartialAuthRepo,
-            mockAgentFiConnector,
-            metrics
+            mockAgentFiConnector
           )
         crs
           .checkForRelationship(
@@ -203,8 +198,7 @@ with ResettingMockitoSugar {
             mockHipConnector,
             gs,
             mockPartialAuthRepo,
-            mockAgentFiConnector,
-            metrics
+            mockAgentFiConnector
           )
         relationshipsService
           .checkForRelationship(
@@ -240,8 +234,7 @@ with ResettingMockitoSugar {
             mockHipConnector,
             gs,
             mockPartialAuthRepo,
-            mockAgentFiConnector,
-            metrics
+            mockAgentFiConnector
           )
         crs
           .checkForRelationship(
@@ -276,8 +269,7 @@ with ResettingMockitoSugar {
             mockHipConnector,
             gs,
             mockPartialAuthRepo,
-            mockAgentFiConnector,
-            metrics
+            mockAgentFiConnector
           )
         crs
           .checkForRelationship(
@@ -309,8 +301,7 @@ with ResettingMockitoSugar {
             mockHipConnector,
             gs,
             mockPartialAuthRepo,
-            mockAgentFiConnector,
-            metrics
+            mockAgentFiConnector
           )
         relationshipsService
           .checkForRelationship(

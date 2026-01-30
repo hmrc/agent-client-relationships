@@ -31,7 +31,6 @@ import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.domain.AgentCode
 import uk.gov.hmrc.domain.SaAgentReference
 import uk.gov.hmrc.http.client.HttpClientV2
-import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import scala.concurrent.ExecutionContext
 
@@ -43,7 +42,6 @@ with MappingStubs
 with DataStreamStub {
 
   override implicit lazy val app: Application = appBuilder.build()
-  val metrics: Metrics = app.injector.instanceOf[Metrics]
   val httpClient: HttpClientV2 = app.injector.instanceOf[HttpClientV2]
   implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
 
@@ -64,7 +62,7 @@ with DataStreamStub {
 
   private implicit val request: RequestHeader = FakeRequest()
   implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
-  val mappingConnector = new MappingConnector(httpClient, appConfig)(metrics, ec)
+  val mappingConnector = new MappingConnector(httpClient, appConfig)(ec)
 
   "MappingConnector" should {
 

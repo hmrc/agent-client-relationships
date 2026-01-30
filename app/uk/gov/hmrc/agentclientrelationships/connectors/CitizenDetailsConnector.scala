@@ -25,7 +25,6 @@ import uk.gov.hmrc.agentclientrelationships.util.RequestSupport.hc
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.StringContextOps
 import uk.gov.hmrc.http.client.HttpClientV2
-import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -35,15 +34,14 @@ import scala.concurrent.Future
 @Singleton
 class CitizenDetailsConnector @Inject() (
   appConfig: AppConfig,
-  httpClient: HttpClientV2,
-  val metrics: Metrics
+  httpClient: HttpClientV2
 )(implicit val ec: ExecutionContext)
 extends RequestAwareLogging {
 
   def getCitizenDetails(
     nino: NinoWithoutSuffix
   )(implicit rh: RequestHeader): Future[CitizenDetails] = httpClient
-    .get(url"${appConfig.citizenDetailsBaseUrl}/citizen-details/nino-no-suffix/${nino.suffixlessValue}")
+    .get(url"${appConfig.citizenDetailsBaseUrl}/citizen-details/nino-no-suffix/${nino.value}")
     .execute[CitizenDetails]
 
 }

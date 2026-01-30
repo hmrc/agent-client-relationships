@@ -49,7 +49,6 @@ import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 import uk.gov.hmrc.auth.core.retrieve.Credentials
 import uk.gov.hmrc.domain._
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
-import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import java.time.Instant
 import java.time.LocalDateTime
@@ -95,13 +94,12 @@ extends UnitSpec {
           credentials = Some(Credentials("GG-00001", "GovernmentGateway")),
           affinityGroup = None
         )
-        await(
-          underTest.deleteRelationship(
-            arn,
-            mtdItEnrolmentKey,
-            None
-          )
-        ) shouldBe true
+
+        underTest.deleteRelationship(
+          arn,
+          mtdItEnrolmentKey,
+          None
+        ).futureValue shouldBe Some(true)
 
         verifyESDeAllocateHasBeenPerformed
         verifyETMPDeAuthorisationHasBeenPerformed
@@ -212,13 +210,11 @@ extends UnitSpec {
           affinityGroup = None
         )
 
-        await(
-          underTest.deleteRelationship(
-            arn,
-            mtdItEnrolmentKey,
-            None
-          )
-        ) shouldBe true
+        underTest.deleteRelationship(
+          arn,
+          mtdItEnrolmentKey,
+          None
+        ).futureValue shouldBe Some(true)
 
         await(repo.findBy(arn, mtdItEnrolmentKey)) shouldBe None
       }
@@ -238,18 +234,16 @@ extends UnitSpec {
           affinityGroup = None
         )
 
-        await(
-          underTest.deleteRelationship(
-            arn,
-            mtdItEnrolmentKey,
-            None
-          )
-        ) shouldBe true
+        underTest.deleteRelationship(
+          arn,
+          mtdItEnrolmentKey,
+          None
+        ).futureValue shouldBe Some(true)
 
         await(repo.findBy(arn, mtdItEnrolmentKey)) shouldBe None
       }
 
-    "delete relationship and keep no deleteRecord but return RelationshipNotFound if ETMP and ES records dont exist" in
+    "delete relationship and keep no deleteRecord but return false if ETMP and ES records dont exist" in
       new TestFixture {
         givenAgentExists
         givenRelationshipBetweenAgentAndClientDoesNotExist
@@ -263,15 +257,11 @@ extends UnitSpec {
           affinityGroup = None
         )
 
-        intercept[RelationshipNotFound](
-          await(
-            underTest.deleteRelationship(
-              arn,
-              mtdItEnrolmentKey,
-              None
-            )
-          )
-        )
+        underTest.deleteRelationship(
+          arn,
+          mtdItEnrolmentKey,
+          None
+        ).futureValue shouldBe Some(false)
 
         await(repo.findBy(arn, mtdItEnrolmentKey)) shouldBe None
       }
@@ -353,10 +343,9 @@ extends UnitSpec {
           syncToETMPStatus = Some(Success),
           syncToESStatus = Some(Success)
         )
-        await(repo.create(deleteRecord))
+        repo.create(deleteRecord).futureValue
 
-        val result: Boolean = await(underTest.resumeRelationshipRemoval(deleteRecord))
-        result shouldBe true
+        underTest.resumeRelationshipRemoval(deleteRecord).futureValue shouldBe Some(true)
 
         verifyESDeAllocateHasNOTBeenPerformed
         verifyETMPDeAuthorisationHasNOTBeenPerformed
@@ -374,8 +363,7 @@ extends UnitSpec {
         givenETMPDeAuthSucceeds
         givenSetRelationshipEndedSucceeds
 
-        val result: Boolean = await(underTest.resumeRelationshipRemoval(deleteRecord))
-        result shouldBe true
+        underTest.resumeRelationshipRemoval(deleteRecord).futureValue shouldBe Some(true)
 
         verifyESDeAllocateHasNOTBeenPerformed
         verifyETMPDeAuthorisationHasBeenPerformed
@@ -394,8 +382,7 @@ extends UnitSpec {
         await(repo.create(deleteRecord))
         givenETMPDeAuthSucceeds
 
-        val result: Boolean = await(underTest.resumeRelationshipRemoval(deleteRecord))
-        result shouldBe true
+        underTest.resumeRelationshipRemoval(deleteRecord).futureValue shouldBe Some(true)
 
         verifyESDeAllocateHasNOTBeenPerformed
         verifyETMPDeAuthorisationHasNOTBeenPerformed
@@ -418,8 +405,7 @@ extends UnitSpec {
         givenSetRelationshipEndedSucceeds
         givenAucdCacheRefresh
 
-        val result: Boolean = await(underTest.resumeRelationshipRemoval(deleteRecord))
-        result shouldBe true
+        underTest.resumeRelationshipRemoval(deleteRecord).futureValue shouldBe Some(true)
 
         verifyESDeAllocateHasBeenPerformed
         verifyETMPDeAuthorisationHasNOTBeenPerformed
@@ -440,8 +426,7 @@ extends UnitSpec {
         givenRelationshipBetweenAgentAndClientExists
         givenESDeAllocationSucceeds
 
-        val result: Boolean = await(underTest.resumeRelationshipRemoval(deleteRecord))
-        result shouldBe true
+        underTest.resumeRelationshipRemoval(deleteRecord).futureValue shouldBe Some(true)
 
         verifyESDeAllocateHasNOTBeenPerformed
         verifyETMPDeAuthorisationHasNOTBeenPerformed
@@ -465,8 +450,7 @@ extends UnitSpec {
         givenSetRelationshipEndedSucceeds
         givenAucdCacheRefresh
 
-        val result: Boolean = await(underTest.resumeRelationshipRemoval(deleteRecord))
-        result shouldBe true
+        underTest.resumeRelationshipRemoval(deleteRecord).futureValue shouldBe Some(true)
 
         verifyESDeAllocateHasBeenPerformed
         verifyETMPDeAuthorisationHasBeenPerformed
@@ -694,7 +678,6 @@ extends UnitSpec {
     val es: EnrolmentStoreProxyConnector = mock[EnrolmentStoreProxyConnector]
     val auditService: AuditService = mock[AuditService]
     val checkService: CheckRelationshipsService = mock[CheckRelationshipsService]
-    val metrics: Metrics = mock[Metrics]
     val hipConnector: HipConnector = mock[HipConnector]
     val aucdConnector: AgentUserClientDetailsConnector = mock[AgentUserClientDetailsConnector]
     val invitationService: InvitationService = mock[InvitationService]
@@ -725,7 +708,6 @@ extends UnitSpec {
         lockService,
         checkService,
         auditService,
-        metrics,
         invitationService,
         appConfig
       )(ec)

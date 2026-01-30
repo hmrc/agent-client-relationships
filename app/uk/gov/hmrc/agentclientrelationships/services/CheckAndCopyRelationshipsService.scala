@@ -24,7 +24,6 @@ import uk.gov.hmrc.agentclientrelationships.audit.AuditService
 import uk.gov.hmrc.agentclientrelationships.auth.CurrentUser
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors._
-import uk.gov.hmrc.agentclientrelationships.controllers.fluentSyntax.returnValue
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDIT
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDITSUPP
@@ -34,12 +33,10 @@ import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.SaRef
 import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _, _}
-import uk.gov.hmrc.agentclientrelationships.support.Monitoring
 import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.auth.core.AffinityGroup.Agent
 import uk.gov.hmrc.domain.SaAgentReference
-import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -96,29 +93,20 @@ extends CheckAndCopyResult {
   override val grantAccess = false
 }
 
-case object VrnNotFoundInEtmp
-extends CheckAndCopyResult {
-  override val grantAccess = true
-}
-
 @Singleton
 class CheckAndCopyRelationshipsService @Inject() (
-  es: EnrolmentStoreProxyConnector,
   hipConnector: HipConnector,
   des: DesConnector,
   mapping: MappingConnector,
-  ugs: UsersGroupsSearchConnector,
   relationshipCopyRepository: RelationshipCopyRecordRepository,
   createRelationshipsService: CreateRelationshipsService,
   partialAuthRepo: PartialAuthRepository,
   invitationsRepository: InvitationsRepository,
   itsaDeauthAndCleanupService: ItsaDeauthAndCleanupService,
   val auditService: AuditService,
-  val metrics: Metrics,
   val appConfig: AppConfig
 )(implicit ec: ExecutionContext)
-extends Monitoring
-with RequestAwareLogging {
+extends RequestAwareLogging {
 
   private val copyMtdItRelationshipFlag = appConfig.copyMtdItRelationshipFlag
 
@@ -135,7 +123,7 @@ with RequestAwareLogging {
         body
       }
       else {
-        returnValue(CopyRelationshipNotEnabled)
+        Future.successful(CopyRelationshipNotEnabled)
       }
 
     enrolmentKey.oneTaxIdentifier() match {
@@ -197,10 +185,8 @@ with RequestAwareLogging {
                             ni.value
                           )
                         )
-                      _ = mark("Count-CopyRelationship-ITSA-FoundAndCopied")
                     } yield FoundAndCopied
                   case None =>
-                    mark("Count-CopyRelationship-ITSA-FoundButLockedCouldNotCopy")
                     logger.warn(s"FoundButLockedCouldNotCopy- unable to copy relationship for ITSA")
                     Future.successful(FoundButLockedCouldNotCopy)
                 }.recover { case NonFatal(ex) =>
@@ -208,7 +194,6 @@ with RequestAwareLogging {
                     s"Failed to copy CESA relationship for ${arn.value}, ${mtdItId.value} (${mtdItId.getClass.getName})",
                     ex
                   )
-                  mark("Count-CopyRelationship-ITSA-FoundAndFailedToCopy")
                   FoundAndFailedToCopy
                 }
               else
@@ -421,7 +406,7 @@ with RequestAwareLogging {
 
     if (referenceIdSet.isEmpty) {
       // logger.warn(s"The references (${referenceIdSet.getClass.getName}) in cesa/es are empty.")
-      returnValue(Set.empty)
+      Future.successful(Set.empty)
     }
     else
       mappingServiceCall.map { mappingServiceIds =>

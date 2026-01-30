@@ -10,15 +10,15 @@ GET           /client/:service/details/:clientId                             @uk
 GET           /agent/agent-reference/uid/:uid/:normalizedAgentName           @uk.gov.hmrc.agentclientrelationships.controllers.InvitationLinkController.validateLink(uid: String, normalizedAgentName: String)
 GET           /agent/agent-link                                              @uk.gov.hmrc.agentclientrelationships.controllers.InvitationLinkController.createLink
 POST          /client/validate-invitation                                    @uk.gov.hmrc.agentclientrelationships.controllers.InvitationLinkController.validateInvitationForClient
-GET           /client/authorisation-request-info/:invitationId               @uk.gov.hmrc.agentclientrelationships.controllers.AuthorisationRequestInfoController.getForClient(invitationId: String)
+GET           /client/authorisation-request-info/:invitationId               @uk.gov.hmrc.agentclientrelationships.controllers.InvitationInfoController.getForClient(invitationId: String)
 GET           /agent/:arn/details                                            @uk.gov.hmrc.agentclientrelationships.controllers.AgentDetailsController.getAgentDetails(arn: Arn)
 
 PUT           /client/authorisation-response/reject/:invitationId            @uk.gov.hmrc.agentclientrelationships.controllers.InvitationController.rejectInvitation(invitationId: String)
-PUT           /authorisation-response/accept/:invitationId                   @uk.gov.hmrc.agentclientrelationships.controllers.AuthorisationAcceptController.accept(invitationId: String)
+PUT           /authorisation-response/accept/:invitationId                   @uk.gov.hmrc.agentclientrelationships.controllers.InvitationAcceptController.accept(invitationId: String)
 
 POST          /agent/:arn/authorisation-request                              @uk.gov.hmrc.agentclientrelationships.controllers.InvitationController.createInvitation(arn: Arn)
-GET           /agent/:arn/authorisation-request-info/:invitationId           @uk.gov.hmrc.agentclientrelationships.controllers.AuthorisationRequestInfoController.get(arn: Arn, invitationId: String)
-GET           /agent/:arn/authorisation-requests                             @uk.gov.hmrc.agentclientrelationships.controllers.AuthorisationRequestInfoController.trackRequests(arn: Arn, statusFilter: Option[String], clientName: Option[String], pageNumber: Int, pageSize: Int)
+GET           /agent/:arn/authorisation-request-info/:invitationId           @uk.gov.hmrc.agentclientrelationships.controllers.InvitationInfoController.get(arn: Arn, invitationId: String)
+GET           /agent/:arn/authorisation-requests                             @uk.gov.hmrc.agentclientrelationships.controllers.InvitationInfoController.trackRequests(arn: Arn, statusFilter: Option[String], clientName: Option[String], pageNumber: Int, pageSize: Int)
 POST          /agent/:arn/remove-authorisation                               @uk.gov.hmrc.agentclientrelationships.controllers.RemoveAuthorisationController.removeAuthorisation(arn: Arn)
 PUT           /agent/cancel-invitation/:invitationId                         @uk.gov.hmrc.agentclientrelationships.controllers.InvitationController.cancelInvitation(invitationId: String)
 

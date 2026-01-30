@@ -23,10 +23,7 @@ import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys.howRelationshipTermi
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.audit.AuditService
 import uk.gov.hmrc.agentclientrelationships.auth.CurrentUser
-import uk.gov.hmrc.agentclientrelationships.model.Accepted
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
-import uk.gov.hmrc.agentclientrelationships.model.Invitation
-import uk.gov.hmrc.agentclientrelationships.model.PartialAuth
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
@@ -110,64 +107,17 @@ class ItsaDeauthAndCleanupService @Inject() (
             }
           // Clean up accepted invitations
           _ <- Future.successful(
-            if (altItsa)
-              deauthAcceptedInvitations(
-                serviceToCheck.id,
-                Some(arn),
-                nino,
-                isAltItsa = true,
-                timestamp
-              )
-            else
-              Future.unit
-          )
-          _ <- Future.successful(
-            optMtdItId.fold(Future.unit) { mtdItId =>
-              if (itsa)
-                deauthAcceptedInvitations(
-                  serviceToCheck.id,
-                  Some(arn),
-                  mtdItId,
-                  isAltItsa = false,
-                  timestamp
-                )
-              else
-                Future.unit
-            }
+            invitationsRepository.deauthAcceptedInvitations(
+              service = serviceToCheck.id,
+              optArn = Some(arn),
+              clientId = nino,
+              invitationIdToIgnore = None,
+              relationshipEndedBy = endedByClient,
+              timestamp = timestamp
+            )
           )
         } yield altItsa || itsa
       case _ => Future.successful(false)
     }
-
-  private def deauthAcceptedInvitations(
-    service: String,
-    optArn: Option[String],
-    clientId: String,
-    isAltItsa: Boolean,
-    timestamp: Instant
-  ) = {
-    val acceptedStatus =
-      if (isAltItsa)
-        PartialAuth
-      else
-        Accepted
-    invitationsRepository
-      .findAllBy(
-        arn = optArn,
-        services = Seq(service),
-        clientIds = Seq(clientId),
-        status = Some(acceptedStatus)
-      )
-      .fallbackTo(Future.successful(Nil))
-      .map { acceptedInvitations: Seq[Invitation] =>
-        acceptedInvitations.foreach(acceptedInvitation =>
-          invitationsRepository.deauthInvitation(
-            acceptedInvitation.invitationId,
-            endedByClient,
-            Some(timestamp)
-          )
-        )
-      }
-  }
 
 }

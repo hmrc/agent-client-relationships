@@ -77,4 +77,18 @@ extends MongoLockService {
     }
   }
 
+  def partialAuthLock[T](jobName: String)(body: => Future[T])(implicit
+    ec: ExecutionContext,
+    appConfig: AppConfig
+  ): Future[Option[T]] = {
+    val lockService = LockService(
+      lockRepository,
+      lockId = s"partial-auth-lock-$jobName",
+      ttl = appConfig.emailSchedulerLockTTL.seconds
+    )
+    Mdc.preservingMdc {
+      lockService.withLock(body)
+    }
+  }
+
 }

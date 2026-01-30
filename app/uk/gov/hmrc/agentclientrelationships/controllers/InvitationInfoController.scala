@@ -39,7 +39,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 @Singleton
-class AuthorisationRequestInfoController @Inject() (
+class InvitationInfoController @Inject() (
   invitationService: InvitationService,
   invitationLinkService: InvitationLinkService,
   agentAssuranceService: AgentAssuranceService,
@@ -100,7 +100,7 @@ with AuthActions {
         case Some(invitation) =>
           authorisedUser(
             arn = Some(Arn(invitation.arn)),
-            clientId = ClientIdentifier(invitation.clientId, invitation.clientIdType).underlying,
+            clientId = ClientIdentifier(invitation.suppliedClientId, invitation.suppliedClientIdType).underlying,
             Seq.empty
           ) { _ =>
             val arn = Arn(invitation.arn)

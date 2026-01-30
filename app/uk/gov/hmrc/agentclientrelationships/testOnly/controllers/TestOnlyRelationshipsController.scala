@@ -25,7 +25,7 @@ import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoType
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service._
-import uk.gov.hmrc.agentclientrelationships.services.AuthorisationAcceptService
+import uk.gov.hmrc.agentclientrelationships.services.InvitationAcceptService
 import uk.gov.hmrc.agentclientrelationships.services.CheckAndCopyRelationshipsService
 import uk.gov.hmrc.agentclientrelationships.services.CreateRelationshipLocked
 import uk.gov.hmrc.agentclientrelationships.services.ValidationService
@@ -41,7 +41,7 @@ class TestOnlyRelationshipsController @Inject() (
   checkOldAndCopyService: CheckAndCopyRelationshipsService,
   controllerComponents: ControllerComponents,
   validationService: ValidationService,
-  authorisationAcceptService: AuthorisationAcceptService
+  authorisationAcceptService: InvitationAcceptService
 )(implicit ec: ExecutionContext)
 extends BackendController(controllerComponents) {
 
@@ -61,10 +61,10 @@ extends BackendController(controllerComponents) {
     clientIdType: String,
     clientId: String
   ): Action[AnyContent] = Action.async { implicit request =>
-    validationService.validateForEnrolmentKey(
+    validationService.validateForEnrolmentKeyEither(
       service,
-      clientIdType,
-      clientId
+      clientId,
+      Some(clientIdType)
     ).flatMap {
       case Right(enrolmentKey) =>
         implicit val auditData: AuditData = new AuditData()

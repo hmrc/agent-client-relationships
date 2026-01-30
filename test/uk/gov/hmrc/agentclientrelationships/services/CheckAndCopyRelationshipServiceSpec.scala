@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
-import com.codahale.metrics.MetricRegistry
 import org.apache.pekko.Done
 import org.apache.pekko.actor.ActorSystem
 import org.mockito.ArgumentCaptor
@@ -42,7 +41,6 @@ import uk.gov.hmrc.agentclientrelationships.model.RegistrationRelationshipRespon
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.SaRef
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
 import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _, _}
-import uk.gov.hmrc.agentclientrelationships.support.Monitoring
 import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDIT
@@ -58,7 +56,6 @@ import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.domain.SaAgentReference
 import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
-import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import java.time.Instant
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -109,10 +106,7 @@ with ResettingMockitoSugar {
   val des = resettingMock[DesConnector]
   val hipConnector = resettingMock[HipConnector]
   val mapping = resettingMock[MappingConnector]
-  val ugs = resettingMock[UsersGroupsSearchConnector]
   val auditService = resettingMock[AuditService]
-  val metrics = resettingMock[Metrics]
-  val monitoring = resettingMock[Monitoring]
   val deleteRecordRepository = resettingMock[DeleteRecordRepository]
   val agentUserService = resettingMock[AgentUserService]
   val servicesConfig = resettingMock[ServicesConfig]
@@ -150,11 +144,9 @@ with ResettingMockitoSugar {
 
   val relationshipsService =
     new CheckAndCopyRelationshipsService(
-      es,
       hipConnector,
       des,
       mapping,
-      ugs,
       relationshipCopyRepository,
       new CreateRelationshipsService(
         es,
@@ -164,14 +156,12 @@ with ResettingMockitoSugar {
         auditService,
         deleteRecordRepository,
         agentUserService,
-        aucdConnector,
-        metrics
+        aucdConnector
       ),
       partialAuthRepository,
       invitationsRepository,
       itsaDeauthAndCleanupService,
       auditService,
-      metrics,
       appConfig
     )
 
@@ -187,7 +177,6 @@ with ResettingMockitoSugar {
         cesaRelationshipExists()
         adminUserExistsForArn()
         relationshipWillBeCreated(mtdItEnrolmentKey)
-        metricsStub()
         sendCreateRelationshipAuditEvent()()
         deleteSameAgentOtherItsaService()
 
@@ -213,7 +202,6 @@ with ResettingMockitoSugar {
           partialAuthDoesNotExist()
           cesaRelationshipExists()
           relationshipWillBeCreated(mtdItEnrolmentKey)
-          metricsStub()
 
           val maybeCheck: Option[CheckAndCopyResult] = await(
             lockService.recoveryLock(arn, mtdItEnrolmentKey) {
@@ -271,7 +259,6 @@ with ResettingMockitoSugar {
           previousRelationshipWillBeRemoved(mtdItEnrolmentKey)
           cesaRelationshipExists()
           relationshipWillBeCreated(mtdItEnrolmentKey)
-          metricsStub()
 
           val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(request, auditData)
 
@@ -296,7 +283,6 @@ with ResettingMockitoSugar {
           partialAuthDoesNotExist()
           cesaRelationshipExists()
           relationshipWillBeCreated(mtdItEnrolmentKey)
-          metricsStub()
 
           val maybeCheck = await(
             lockService.recoveryLock(arn, mtdItEnrolmentKey) {
@@ -345,7 +331,6 @@ with ResettingMockitoSugar {
           partialAuthDoesNotExist()
           cesaRelationshipExists()
           relationshipWillBeCreated(mtdItEnrolmentKey)
-          metricsStub()
           sendCreateRelationshipAuditEvent()()
           deleteSameAgentOtherItsaService()
 
@@ -463,7 +448,6 @@ with ResettingMockitoSugar {
         ninoExists()
         partialAuthDoesNotExist()
         cesaRelationshipExists()
-        metricsStub()
 
         val check = await(
           lockService.recoveryLock(arn, mtdItEnrolmentKey) {
@@ -489,7 +473,6 @@ with ResettingMockitoSugar {
       relationshipWillBeCreated(mtdItEnrolmentKey)
       partialAuthDeleted(HMRCMTDIT)
       partialAuthStatusUpdatedToAccepted(HMRCMTDIT)
-      metricsStub()
       sendCreateRelationshipAuditEvent()()
       deleteSameAgentOtherItsaService()
 
@@ -506,7 +489,6 @@ with ResettingMockitoSugar {
       relationshipWillBeCreated(mtdItSuppEnrolmentKey)
       partialAuthDeleted(HMRCMTDITSUPP)
       partialAuthStatusUpdatedToAccepted(HMRCMTDITSUPP)
-      metricsStub()
       sendCreateRelationshipAuditEvent()()
       deleteSameAgentOtherItsaService()
 
@@ -542,11 +524,9 @@ with ResettingMockitoSugar {
 
       val relationshipsService =
         new CheckAndCopyRelationshipsService(
-          es,
           hipConnector,
           des,
           mapping,
-          ugs,
           relationshipCopyRepository,
           new CreateRelationshipsService(
             es,
@@ -556,14 +536,12 @@ with ResettingMockitoSugar {
             auditService,
             deleteRecordRepository,
             agentUserService,
-            aucdConnector,
-            metrics
+            aucdConnector
           ),
           partialAuthRepository,
           invitationsRepository,
           itsaDeauthAndCleanupService,
           auditService,
-          metrics,
           appConfig
         )
 
@@ -591,11 +569,9 @@ with ResettingMockitoSugar {
 
       val relationshipsService =
         new CheckAndCopyRelationshipsService(
-          es,
           hipConnector,
           des,
           mapping,
-          ugs,
           relationshipCopyRepository,
           new CreateRelationshipsService(
             es,
@@ -605,14 +581,12 @@ with ResettingMockitoSugar {
             auditService,
             deleteRecordRepository,
             agentUserService,
-            aucdConnector,
-            metrics
+            aucdConnector
           ),
           partialAuthRepository,
           invitationsRepository,
           itsaDeauthAndCleanupService,
           auditService,
-          metrics,
           appConfig
         )
 
@@ -738,10 +712,6 @@ with ResettingMockitoSugar {
     ).thenReturn(Future.successful(Done))
     when(aucdConnector.cacheRefresh(eqs(arn))(any[RequestHeader]())).thenReturn(Future successful ())
   }
-
-  private def metricsStub(): OngoingStubbing[MetricRegistry] = when(metrics.defaultRegistry).thenReturn(
-    new MetricRegistry
-  )
 
   private def sendCreateRelationshipAuditEvent()(): OngoingStubbing[Future[Unit]] = when(
     auditService.sendCreateRelationshipAuditEvent()(any[RequestHeader](), any[AuditData])

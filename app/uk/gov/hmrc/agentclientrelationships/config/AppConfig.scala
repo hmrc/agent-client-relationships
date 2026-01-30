@@ -101,7 +101,7 @@ class AppConfig @Inject() (
 
   val emailBaseUrl: String = servicesConfig.baseUrl("email")
 
-  val oldAuthStrideRole = URLDecoder.decode(servicesConfig.getString("old.auth.stride.role"), "utf-8")
+  val oldAuthStrideRole = URLDecoder.decode(servicesConfig.getString("old.auth.stride.role"), "UTF-8")
 
   val newAuthStrideRole = servicesConfig.getString("new.auth.stride.role")
 

@@ -90,7 +90,7 @@ with Eventually {
         sentEvent.detail("service") shouldBe "mtd-it"
         sentEvent.detail("clientId") shouldBe "XX1234"
         sentEvent.detail("clientIdType") shouldBe "ni"
-        sentEvent.detail("nino") shouldBe "KS969148D"
+        sentEvent.detail("nino") shouldBe "KS969148"
         sentEvent.detail("cesaRelationship") shouldBe "true"
         sentEvent.detail("etmpRelationshipCreated") shouldBe "true"
         sentEvent.detail("enrolmentDelegated") shouldBe "true"
@@ -115,7 +115,6 @@ with Eventually {
       auditData.set("agentCode", AgentCode("ES1234567890").value)
       auditData.set("saAgentRef", "12313")
       auditData.set("nino", NinoWithoutSuffix("KS969148D").value)
-      println(NinoWithoutSuffix("KS969148").value)
       auditData.set("cesaRelationship", true)
 
       await(service.sendCheckCesaAndPartialAuthAuditEvent()(request, auditData))
@@ -132,7 +131,7 @@ with Eventually {
         sentEvent.detail("agentCode") shouldBe "ES1234567890"
         sentEvent.detail("saAgentRef") shouldBe "12313"
         sentEvent.detail("credId") shouldBe "0000001234567890"
-        sentEvent.detail("nino") shouldBe "KS969148D"
+        sentEvent.detail("nino") shouldBe "KS969148"
         sentEvent.detail("cesaRelationship") shouldBe "true"
 
         sentEvent.tags.contains("Authorization") shouldBe false

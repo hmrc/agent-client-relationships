@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.agentclientrelationships.repository
 
-import org.mongodb.scala.MongoWriteException
 import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.Indexes
 import org.scalatest.matchers.should.Matchers
@@ -96,7 +95,7 @@ with RepositoryCleanupSupport {
             Instant.parse("2020-01-01T00:00:00.000Z"),
             Arn("XARN1234567"),
             "HMRC-MTD-IT",
-            NinoWithoutSuffix("SX579189D")
+            NinoWithoutSuffix("SX579189")
           )
       )
       await(repository.collection.countDocuments().toFuture()) shouldBe 1
@@ -109,7 +108,7 @@ with RepositoryCleanupSupport {
             Instant.parse("2020-01-01T00:00:00.000Z"),
             Arn("XARN1234567"),
             "HMRC-MTD-VAT",
-            NinoWithoutSuffix("SX579189D")
+            NinoWithoutSuffix("SX579189")
           )
       )
     }

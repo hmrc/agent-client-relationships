@@ -49,7 +49,7 @@ trait ClientDetailsStub {
   )
 
   def givenItsaCitizenDetailsExists(nino: NinoWithoutSuffix): StubMapping = stubFor(
-    get(urlEqualTo(s"/citizen-details/nino-no-suffix/${nino.suffixlessValue}"))
+    get(urlEqualTo(s"/citizen-details/nino-no-suffix/${nino.value}"))
       .willReturn(
         aResponse()
           .withBody(s"""
@@ -73,7 +73,7 @@ trait ClientDetailsStub {
     nino: NinoWithoutSuffix,
     status: Int
   ): StubMapping = stubFor(
-    get(urlEqualTo(s"/citizen-details/nino-no-suffix/${nino.suffixlessValue}"))
+    get(urlEqualTo(s"/citizen-details/nino-no-suffix/${nino.value}"))
       .willReturn(aResponse().withStatus(status))
   )
 

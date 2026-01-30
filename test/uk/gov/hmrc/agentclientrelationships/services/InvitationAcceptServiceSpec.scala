@@ -37,6 +37,7 @@ import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Vrn
+import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository.endedByClient
 import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 import uk.gov.hmrc.auth.core.retrieve.Credentials
@@ -46,7 +47,7 @@ import java.time.LocalDate
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
-class AuthorisationAcceptServiceSpec
+class InvitationAcceptServiceSpec
 extends UnitSpec
 with ResettingMockitoSugar
 with MockCreateRelationshipsService
@@ -60,7 +61,7 @@ with MockAuditService {
   def also: AfterWord = afterWord("also")
 
   object TestService
-  extends AuthorisationAcceptService(
+  extends InvitationAcceptService(
     createRelationshipsService = mockCreateRelationshipsService,
     emailService = mockEmailService,
     itsaDeauthAndCleanupService = mockItsaDeauthAndCleanupService,
@@ -229,39 +230,33 @@ with MockAuditService {
     s"called with a general case invitation" should {
       "create a relationship" should
         also {
-          "update the invitation's status, check for and deauth previously accepted invitations and send a confirmation email" in {
+          "update the invitation's status, deauth previously accepted invitations and send a confirmation email" in {
             mockCreateRelationship(testArn, vatEnrolment)(Future.successful(Some(Done)))
             mockUpdateStatus(vatInvitation.invitationId, Accepted)(
               Future.successful(vatInvitation.copy(status = Accepted))
             )
-            mockFindAllBy(
+            mockDeauthAcceptedInvitations(
+              vatEnrolment.service,
               None,
-              Seq(vatEnrolment.service),
-              Seq(vatInvitation.clientId),
-              Some(Accepted)
-            )(Future.successful(Seq(vatInvitation.copy(status = Accepted), oltVatInvitation)))
-            mockDeauthInvitation(oltVatInvitation.invitationId, "Client")(
-              Future.successful(Some(oltVatInvitation.copy(status = DeAuthorised)))
+              vatInvitation.suppliedClientId,
+              Some(vatInvitation.invitationId),
+              endedByClient
+            )(
+              Future.successful(true)
             )
             mockSendAcceptedEmail(vatInvitation)()
 
             TestService.acceptInvitation(vatInvitation, vatEnrolment).futureValue shouldBe vatInvitation.copy(status = Accepted)
 
-            println(TestService.acceptInvitation(vatInvitation, vatEnrolment).futureValue)
-            println(vatInvitation.copy(status = Accepted))
-
             // Verifying non blocking side effects actually happen
             verifySideEffectsOccur { _ =>
-              verify(mockInvitationsRepository, times(1)).findAllBy(
+              verify(mockInvitationsRepository, times(1)).deauthAcceptedInvitations(
+                any[String],
                 any[Option[String]],
-                any[Seq[String]],
-                any[Seq[String]],
-                any[Option[InvitationStatus]]
-              )
-              verify(mockInvitationsRepository, times(1)).deauthInvitation(
                 any[String],
+                any[Option[String]],
                 any[String],
-                any[Option[Instant]]
+                any[Instant]
               )
               verify(mockEmailService, times(1)).sendAcceptedEmail(any[Invitation])(any[RequestHeader])
             }
@@ -272,7 +267,7 @@ with MockAuditService {
     "called with a PERSONAL-INCOME-RECORD invitation" should {
       "create a relationship via agent fi relationship" should
         also {
-          "update the invitation's status, check for and deauth previously accepted invitations and send a confirmation email" in {
+          "update the invitation's status, deauth previously accepted invitations and send a confirmation email" in {
             mockCreateFiRelationship(
               testArn,
               pirInvitation.service,
@@ -281,14 +276,14 @@ with MockAuditService {
             mockUpdateStatus(pirInvitation.invitationId, Accepted)(
               Future.successful(pirInvitation.copy(status = Accepted))
             )
-            mockFindAllBy(
+            mockDeauthAcceptedInvitations(
+              pirEnrolment.service,
               None,
-              Seq(pirEnrolment.service),
-              Seq(pirInvitation.clientId),
-              Some(Accepted)
-            )(Future.successful(Seq(pirInvitation.copy(status = Accepted), oldPirInvitation)))
-            mockDeauthInvitation(oldPirInvitation.invitationId, "Client")(
-              Future.successful(Some(oldPirInvitation.copy(status = DeAuthorised)))
+              pirInvitation.suppliedClientId,
+              Some(pirInvitation.invitationId),
+              endedByClient
+            )(
+              Future.successful(true)
             )
             mockSendAcceptedEmail(pirInvitation)()
 
@@ -296,16 +291,13 @@ with MockAuditService {
 
             // Verifying non blocking side effects actually happen
             verifySideEffectsOccur { _ =>
-              verify(mockInvitationsRepository, times(1)).findAllBy(
+              verify(mockInvitationsRepository, times(1)).deauthAcceptedInvitations(
+                any[String],
                 any[Option[String]],
-                any[Seq[String]],
-                any[Seq[String]],
-                any[Option[InvitationStatus]]
-              )
-              verify(mockInvitationsRepository, times(1)).deauthInvitation(
                 any[String],
+                any[Option[String]],
                 any[String],
-                any[Option[Instant]]
+                any[Instant]
               )
               verify(mockEmailService, times(1)).sendAcceptedEmail(any[Invitation])(any[RequestHeader])
             }
@@ -318,7 +310,7 @@ with MockAuditService {
         also {
           "check for and deauth an existing partial auth and create a relationship" should
             also {
-              "update the invitation's status, check for and deauth previously accepted invitations and send a confirmation email" in {
+              "update the invitation's status, deauth previously accepted invitations and send a confirmation email" in {
                 mockDeleteSameAgentRelationship(
                   MtdIt.id,
                   testArn.value,
@@ -335,23 +327,14 @@ with MockAuditService {
                 mockUpdateStatus(itsaInvitation.invitationId, Accepted)(
                   Future.successful(itsaInvitation.copy(status = Accepted))
                 )
-                mockFindAllBy(
+                mockDeauthAcceptedInvitations(
+                  itsaEnrolment.service,
                   None,
-                  Seq(itsaEnrolment.service),
-                  Seq(itsaInvitation.clientId),
-                  Some(Accepted)
-                )(Future.successful(Seq(itsaInvitation.copy(status = Accepted), oldItsaInvitation)))
-                mockDeauthInvitation(oldItsaInvitation.invitationId, "Client")(
-                  Future.successful(Some(oldItsaInvitation.copy(status = DeAuthorised)))
-                )
-                mockFindAllBy(
-                  None,
-                  Seq(itsaEnrolment.service),
-                  Seq(itsaInvitation.suppliedClientId),
-                  Some(PartialAuth)
-                )(Future.successful(Seq(oldAltItsaInvitation)))
-                mockDeauthInvitation(oldAltItsaInvitation.invitationId, "Client")(
-                  Future.successful(Some(oldAltItsaInvitation.copy(status = DeAuthorised)))
+                  itsaInvitation.suppliedClientId,
+                  Some(itsaInvitation.invitationId),
+                  endedByClient
+                )(
+                  Future.successful(true)
                 )
                 mockSendAcceptedEmail(itsaInvitation)()
 
@@ -359,16 +342,13 @@ with MockAuditService {
 
                 // Verifying non blocking side effects actually happen
                 verifySideEffectsOccur { _ =>
-                  verify(mockInvitationsRepository, times(2)).findAllBy(
+                  verify(mockInvitationsRepository, times(1)).deauthAcceptedInvitations(
+                    any[String],
                     any[Option[String]],
-                    any[Seq[String]],
-                    any[Seq[String]],
-                    any[Option[InvitationStatus]]
-                  )
-                  verify(mockInvitationsRepository, times(2)).deauthInvitation(
                     any[String],
+                    any[Option[String]],
                     any[String],
-                    any[Option[Instant]]
+                    any[Instant]
                   )
                   verify(mockEmailService, times(1)).sendAcceptedEmail(any[Invitation])(any[RequestHeader])
                 }
@@ -433,14 +413,14 @@ with MockAuditService {
                 mockUpdateStatus(altItsaInvitation.invitationId, PartialAuth)(
                   Future.successful(altItsaInvitation.copy(status = PartialAuth))
                 )
-                mockFindAllBy(
+                mockDeauthAcceptedInvitations(
+                  altItsaInvitation.service,
                   None,
-                  Seq(altItsaInvitation.service),
-                  Seq(altItsaInvitation.clientId),
-                  Some(PartialAuth)
-                )(Future.successful(Seq(altItsaInvitation.copy(status = PartialAuth), oldAltItsaInvitation)))
-                mockDeauthInvitation(oldAltItsaInvitation.invitationId, "Client")(
-                  Future.successful(Some(oldAltItsaInvitation.copy(status = DeAuthorised)))
+                  altItsaInvitation.suppliedClientId,
+                  Some(altItsaInvitation.invitationId),
+                  endedByClient
+                )(
+                  Future.successful(true)
                 )
                 mockSendAcceptedEmail(altItsaInvitation)()
 
@@ -449,16 +429,13 @@ with MockAuditService {
 
                 // Verifying non blocking side effects actually happen
                 verifySideEffectsOccur { _ =>
-                  verify(mockInvitationsRepository, times(1)).findAllBy(
+                  verify(mockInvitationsRepository, times(1)).deauthAcceptedInvitations(
+                    any[String],
                     any[Option[String]],
-                    any[Seq[String]],
-                    any[Seq[String]],
-                    any[Option[InvitationStatus]]
-                  )
-                  verify(mockInvitationsRepository, times(1)).deauthInvitation(
                     any[String],
+                    any[Option[String]],
                     any[String],
-                    any[Option[Instant]]
+                    any[Instant]
                   )
                   verify(mockEmailService, times(1)).sendAcceptedEmail(any[Invitation])(any[RequestHeader])
                 }

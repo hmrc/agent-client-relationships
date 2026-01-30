@@ -27,7 +27,6 @@ import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.HttpResponse
 import uk.gov.hmrc.http.StringContextOps
-import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -37,7 +36,6 @@ import scala.concurrent.Future
 @Singleton
 class AgentUserClientDetailsConnector @Inject() (
   httpClient: HttpClientV2,
-  val metrics: Metrics,
   appConfig: AppConfig
 )(implicit val ec: ExecutionContext)
 extends RequestAwareLogging {

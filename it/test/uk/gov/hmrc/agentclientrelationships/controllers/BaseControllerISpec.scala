@@ -161,7 +161,7 @@ with IntegrationPatience {
   val testVatRegDate = "2020-01-01"
   val vatEnrolmentKey: LocalEnrolmentKey = LocalEnrolmentKey(Service.Vat, vrn)
   val vrnUriEncoded: String = UriEncoding.encodePathSegment(vrn.value, "UTF-8")
-  val nino = NinoWithoutSuffix("AB123456C")
+  val nino = NinoWithoutSuffix("AB123456")
   val mtdItIdType = "MTDITID"
   val mtdVatIdType = "VRN"
   val oldAgentCode = "oldAgentCode"
