@@ -16,3 +16,5 @@ DELETE        /test-only/db/agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:mtdIt
 GET           /test-only/invitation/:invitationId                                          @uk.gov.hmrc.agentclientrelationships.testOnly.controllers.TestOnlyInvitationsController.getInvitation(invitationId: String)
 
 PUT           /test-only/agent/:arn/service/:service/client/:clientIdType/:clientId        @uk.gov.hmrc.agentclientrelationships.testOnly.controllers.TestOnlyRelationshipsController.createRelationship(arn: Arn, service: String, clientIdType: String, clientId: String)
+
+PUT          /test-only/journey-setup                                                      @uk.gov.hmrc.agentclientrelationships.testOnly.controllers.TestOnlyJourneySetupController.createData
