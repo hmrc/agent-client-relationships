@@ -51,51 +51,60 @@ with MockPartialAuthRepository {
 
   private val arn: Arn = Arn("AARN0000002")
   private val nino: NinoWithoutSuffix = NinoWithoutSuffix("AB123456C")
-  private val clientId: ClientIdentifier.ClientId =
-    ClientIdentifier(nino.value, NinoType.id)
+  private val clientId: ClientIdentifier.ClientId = ClientIdentifier(nino.value, NinoType.id)
 
-  implicit private val request: FakeRequest[?] = FakeRequest()
+  private implicit val request: FakeRequest[?] = FakeRequest()
 
   "deauthPartialAuth" should {
     "return PartialAuthDeauthorised when a record is updated" in {
-      mockDeauthorisePartialAuth(MtdIt.id, nino, arn)(Future.successful(true))
+      mockDeauthorisePartialAuth(
+        MtdIt.id,
+        nino,
+        arn
+      )(Future.successful(true))
 
-      val resultF =
-        service.deauthPartialAuth(
-          arn = arn,
-          clientId = clientId,
-          service = MtdIt
-        )
+      val resultF = service.deauthPartialAuth(
+        arn = arn,
+        clientId = clientId,
+        service = MtdIt
+      )
 
       await(resultF) shouldBe service.PartialAuthDeauthorised
     }
 
     "return PartialAuthNotFound when no record is updated" in {
-      mockDeauthorisePartialAuth(MtdIt.id, nino, arn)(Future.successful(false))
+      mockDeauthorisePartialAuth(
+        MtdIt.id,
+        nino,
+        arn
+      )(Future.successful(false))
 
-      val resultF =
-        service.deauthPartialAuth(
-          arn = arn,
-          clientId = clientId,
-          service = MtdIt
-        )
+      val resultF = service.deauthPartialAuth(
+        arn = arn,
+        clientId = clientId,
+        service = MtdIt
+      )
 
       await(resultF) shouldBe service.PartialAuthNotFound
     }
 
     "fail the Future when the repository fails" in {
       val failure = new RuntimeException("mongo failed")
-      mockDeauthorisePartialAuth(MtdIt.id, nino, arn)(Future.failed(failure))
+      mockDeauthorisePartialAuth(
+        MtdIt.id,
+        nino,
+        arn
+      )(Future.failed(failure))
 
-      val resultF =
-        service.deauthPartialAuth(
-          arn = arn,
-          clientId = clientId,
-          service = MtdIt
-        )
+      val resultF = service.deauthPartialAuth(
+        arn = arn,
+        clientId = clientId,
+        service = MtdIt
+      )
 
       val thrown = intercept[RuntimeException](await(resultF))
       thrown shouldBe failure
     }
   }
+
 }

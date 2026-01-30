@@ -12,7 +12,8 @@ object CodeCoverageSettings {
     "GraphiteStartUp",
     "ErrorHandler",
     ".*.Reverse[^.]*",
-    "uk.gov.hmrc.agentassurance.controllers.testOnly",
+    "uk.gov.hmrc.agentclientrelationships.testOnly.controllers.*",
+    "uk.gov.hmrc.agentclientrelationships.testOnly.models.*",
     "testOnly.*",
     "testOnlyDoNotUseInAppConf.*"
   )
