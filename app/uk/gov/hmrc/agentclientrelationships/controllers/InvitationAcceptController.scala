@@ -16,23 +16,25 @@
 
 package uk.gov.hmrc.agentclientrelationships.controllers
 
+import play.api.Logger
 import play.api.mvc.Action
 import play.api.mvc.AnyContent
 import play.api.mvc.ControllerComponents
-import play.api.Logger
-import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys._
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.audit.AuditService
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.NoPendingInvitation
-import uk.gov.hmrc.agentclientrelationships.model.Invitation
-import uk.gov.hmrc.agentclientrelationships.model.Pending
-import uk.gov.hmrc.agentclientrelationships.services._
+import uk.gov.hmrc.agentclientrelationships.model
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.ClientIdType
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.ClientIdentifier
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
+import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.NoPendingInvitation
+import uk.gov.hmrc.agentclientrelationships.model.Invitation
+import uk.gov.hmrc.agentclientrelationships.model.PartialAuth
+import uk.gov.hmrc.agentclientrelationships.model.Pending
+import uk.gov.hmrc.agentclientrelationships.services._
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
@@ -80,20 +82,24 @@ with RequestAwareLogging {
                 ClientIdentifier(invitation.suppliedClientId, invitation.suppliedClientIdType).underlying,
                 strideRoles
               ) { implicit currentUser =>
-                authorisationAcceptService
-                  .acceptInvitation(invitation, enrolment)
-                  .map { _ =>
-                    auditService.sendRespondToInvitationAuditEvent(
-                      invitation,
-                      accepted = true,
-                      isStride = currentUser.isStride
-                    )
-                    NoContent
-                  }
-                  .recoverWith {
-                    case CreateRelationshipLocked => Future.successful(Locked)
-                    case err => throw err
-                  }
+                if (invitation.status == model.Accepted || invitation.status == PartialAuth)
+                  Future(NoContent)
+                else {
+                  authorisationAcceptService
+                    .acceptInvitation(invitation, enrolment)
+                    .map { _ =>
+                      auditService.sendRespondToInvitationAuditEvent(
+                        invitation,
+                        accepted = true,
+                        isStride = currentUser.isStride
+                      )
+                      NoContent
+                    }
+                    .recoverWith {
+                      case CreateRelationshipLocked => Future.successful(Locked)
+                      case err => throw err
+                    }
+                }
               }
             _ <-
               if (result == NoContent)
