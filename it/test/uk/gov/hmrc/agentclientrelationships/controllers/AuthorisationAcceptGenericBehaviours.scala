@@ -23,6 +23,7 @@ import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentclientrelationships.model.Accepted
 import uk.gov.hmrc.agentclientrelationships.model.EmailInformation
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
+import uk.gov.hmrc.agentclientrelationships.model.Expired
 import uk.gov.hmrc.agentclientrelationships.model.Invitation
 import uk.gov.hmrc.agentclientrelationships.model.Pending
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCCBCORG
@@ -288,10 +289,14 @@ trait AuthorisationAcceptGenericBehaviours {
         verifyAuditRequestNotSent(AgentClientRelationshipEvent.RespondToInvitation)
       }
 
-      "return 404 when Invitation already Accepted " in {
+      "return 204 when Invitation already Accepted " in {
 
         // OAuth
         givenUserIsSubscribedClient(suppliedClientId)
+
+        // Validation EnrolmentKey
+        if (serviceId == HMRCCBCORG)
+          givenCbcUkExistsInES(cbcId, utr.value)
 
         val pendingInvitation =
           invitationRepo.create(
@@ -313,11 +318,62 @@ trait AuthorisationAcceptGenericBehaviours {
           ).futureValue
 
         val result = doAgentPutRequest(getRequestPath(acceptedInvitation.invitationId))
-        result.status shouldBe 404
+        result.status shouldBe 204
 
         val invitations: Seq[Invitation] = invitationRepo.findAllForAgent(arn.value).futureValue
         invitations.size shouldBe 1
         invitations.head.status shouldBe acceptedInvitation.status
+
+        // createRelationshipRecord createEtmpRecord called
+        verifyAgentCanBeAllocatedCalled(
+          clientId,
+          arn,
+          0
+        )
+
+        // Create relationship -createEsRecord called
+        verifyServiceEnrolmentAllocationSucceedsCalled(
+          enrolmentKey,
+          "bar",
+          0
+        )
+
+      }
+
+      "return 500 when Invitation is in an unexcepted status" in {
+
+        // OAuth
+        givenUserIsSubscribedClient(suppliedClientId)
+
+        // Validation EnrolmentKey
+        if (serviceId == HMRCCBCORG)
+          givenCbcUkExistsInES(cbcId, utr.value)
+
+        val pendingInvitation =
+          invitationRepo.create(
+            arn = arn.value,
+            service = Service.forId(serviceId),
+            clientId = clientId,
+            suppliedClientId = suppliedClientId,
+            clientName = "Erling Haal",
+            agencyName = "testAgentName",
+            agencyEmail = "agent@email.com",
+            expiryDate = LocalDate.now(),
+            clientType = Some("personal")
+          ).futureValue
+
+        val expiredInvitation =
+          invitationRepo.updateStatus(
+            invitationId = pendingInvitation.invitationId,
+            status = Expired
+          ).futureValue
+
+        val result = doAgentPutRequest(getRequestPath(expiredInvitation.invitationId))
+        result.status shouldBe 500
+
+        val invitations: Seq[Invitation] = invitationRepo.findAllForAgent(arn.value).futureValue
+        invitations.size shouldBe 1
+        invitations.head.status shouldBe expiredInvitation.status
 
         // createRelationshipRecord createEtmpRecord called
         verifyAgentCanBeAllocatedCalled(

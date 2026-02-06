@@ -17,35 +17,24 @@
 package uk.gov.hmrc.agentclientrelationships.controllers
 
 import play.api.http.Status.UNPROCESSABLE_ENTITY
-import play.api.i18n.Lang
-import play.api.i18n.Langs
-import play.api.i18n.MessagesApi
+import play.api.i18n.{Lang, Langs, MessagesApi}
 import play.api.libs.json.Json
 import play.api.libs.json.Json.toJson
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.audit.AuditService
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.connectors.AgentFiRelationshipConnector
-import uk.gov.hmrc.agentclientrelationships.connectors.EnrolmentStoreProxyConnector
-import uk.gov.hmrc.agentclientrelationships.model.invitation.CreateInvitationRequest
-import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.{ErrorBody => IFRErrorBody}
-import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiFailureResponse.{ErrorBody => AFRErrorBody}
-import uk.gov.hmrc.agentclientrelationships.model.Accepted
-import uk.gov.hmrc.agentclientrelationships.model.Cancelled
-import uk.gov.hmrc.agentclientrelationships.model.EmailInformation
-import uk.gov.hmrc.agentclientrelationships.model.Invitation
-import uk.gov.hmrc.agentclientrelationships.model.Pending
-import uk.gov.hmrc.agentclientrelationships.model.Rejected
-import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
-import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
-import uk.gov.hmrc.agentclientrelationships.services.DeleteRelationshipsService
-import uk.gov.hmrc.agentclientrelationships.services.InvitationService
-import uk.gov.hmrc.agentclientrelationships.services.ValidationService
-import uk.gov.hmrc.agentclientrelationships.stubs._
-import uk.gov.hmrc.agentclientrelationships.support.TestData
+import uk.gov.hmrc.agentclientrelationships.connectors.{AgentFiRelationshipConnector, EnrolmentStoreProxyConnector}
+import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service._
 import uk.gov.hmrc.agentclientrelationships.model.identifiers._
+import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiFailureResponse.{ErrorBody => AFRErrorBody}
+import uk.gov.hmrc.agentclientrelationships.model.invitation.CreateInvitationRequest
+import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.{ErrorBody => IFRErrorBody}
+import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
+import uk.gov.hmrc.agentclientrelationships.services.{DeleteRelationshipsService, InvitationService, ValidationService}
+import uk.gov.hmrc.agentclientrelationships.stubs._
+import uk.gov.hmrc.agentclientrelationships.support.TestData
 import uk.gov.hmrc.auth.core.AuthConnector
 
 import java.time.LocalDate
@@ -486,6 +475,85 @@ with TestData {
             accepted = false,
             isStride = false
           )
+        }
+      )
+
+    s"return NoFound status when no Pending Invitation " in {
+
+      val result = doAgentPutRequest(s"/agent-client-relationships/client/authorisation-response/reject/123456")
+      result.status shouldBe 404
+
+      val invitations: Seq[Invitation] = invitationRepo.findAllForAgent(arn.value).futureValue
+
+      invitations.size shouldBe 0
+
+    }
+
+  }
+
+  "return 500 when Invitation is in an unexcepted status" should {
+
+    allServices.keySet
+      .foreach(taxService =>
+        s"return 201 status and valid JSON when invitation is created for $taxService" in {
+          val inputData: CreateInvitationRequest = allServices(taxService)
+          val emailInfo = EmailInformation(
+            to = Seq("agent@email.com"),
+            templateId = "client_rejected_authorisation_request",
+            parameters = Map(
+              "agencyName" -> "testAgentName",
+              "clientName" -> "Erling Haal",
+              "expiryDate" -> LocalDate.now().format(dateFormatter),
+              "service" -> messagesApi(s"service.$taxService")
+            )
+          )
+
+          val clientId =
+            if (taxService == HMRCMTDIT || taxService == HMRCMTDITSUPP)
+              mtdItId.value
+            else
+              inputData.clientId
+          val clientIdType =
+            if (taxService == HMRCMTDIT || taxService == HMRCMTDITSUPP)
+              MtdItIdType.id
+            else
+              inputData.suppliedClientIdType
+
+          val clientIdentifier = ClientIdentifier(clientId, clientIdType)
+
+          givenUserIsSubscribedClient(clientIdentifier.underlying)
+          if (taxService == HMRCCBCORG)
+            givenCbcUkExistsInES(cbcId, utr.value)
+          givenEmailSent(emailInfo)
+
+          val pendingInvitation = await(
+            invitationRepo.create(
+              arn.value,
+              Service.forId(taxService),
+              clientIdentifier,
+              clientIdentifier,
+              "Erling Haal",
+              "testAgentName",
+              "agent@email.com",
+              LocalDate.now(),
+              Some("personal")
+            )
+          )
+
+          val expiredInvitation =
+            invitationRepo.updateStatus(
+              invitationId = pendingInvitation.invitationId,
+              status = Expired
+            ).futureValue
+
+          val requestPath = s"/agent-client-relationships/client/authorisation-response/reject/${expiredInvitation.invitationId}"
+          val result = doAgentPutRequest(requestPath)
+          result.status shouldBe 500
+
+          val invitations: Seq[Invitation] = invitationRepo.findAllForAgent(arn.value).futureValue
+
+          invitations.size shouldBe 1
+          invitations.head.status shouldBe Expired
         }
       )
 
