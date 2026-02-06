@@ -25,16 +25,17 @@ import play.api.mvc.ControllerComponents
 import uk.gov.hmrc.agentclientrelationships.audit.AuditService
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.model.Pending
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Trust
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.TrustNT
+import uk.gov.hmrc.agentclientrelationships.model.identifiers._
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse._
 import uk.gov.hmrc.agentclientrelationships.model.invitation._
 import uk.gov.hmrc.agentclientrelationships.services.InvitationService
 import uk.gov.hmrc.agentclientrelationships.services.ValidationService
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Trust
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.TrustNT
-import uk.gov.hmrc.agentclientrelationships.model.identifiers._
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
+import uk.gov.hmrc.agentclientrelationships.model.Rejected
+import uk.gov.hmrc.agentclientrelationships.model.Pending
 
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -122,7 +123,7 @@ with AuthActions {
     invitationService
       .findInvitation(invitationId)
       .flatMap {
-        case Some(invitation) if invitation.status == Pending =>
+        case Some(invitation) =>
           for {
             enrolment <- validationService.validateForEnrolmentKey(
               invitation.service,
@@ -135,16 +136,21 @@ with AuthActions {
                 ClientIdentifier(invitation.suppliedClientId, invitation.suppliedClientIdType).underlying,
                 strideRoles
               ) { currentUser =>
-                invitationService
-                  .rejectInvitation(invitationId)
-                  .map { _ =>
-                    auditService.sendRespondToInvitationAuditEvent(
-                      invitation,
-                      accepted = false,
-                      isStride = currentUser.isStride
-                    )
-                    NoContent
-                  }
+                invitation.status match {
+                  case Rejected | Pending =>
+
+                    invitationService
+                      .rejectInvitation(invitationId)
+                      .map { _ =>
+                        auditService.sendRespondToInvitationAuditEvent(
+                          invitation,
+                          accepted = false,
+                          isStride = currentUser.isStride
+                        )
+                        NoContent
+                      }
+                  case _ => Future.successful(InternalServerError(s"Invitation failed to reject. Invitation status is '${invitation.status}'"))
+                }
               }
           } yield result
 
