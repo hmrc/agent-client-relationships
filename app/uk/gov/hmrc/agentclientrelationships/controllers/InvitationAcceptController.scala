@@ -16,23 +16,25 @@
 
 package uk.gov.hmrc.agentclientrelationships.controllers
 
+import play.api.Logger
 import play.api.mvc.Action
 import play.api.mvc.AnyContent
 import play.api.mvc.ControllerComponents
-import play.api.Logger
-import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys._
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.audit.AuditService
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.NoPendingInvitation
-import uk.gov.hmrc.agentclientrelationships.model.Invitation
-import uk.gov.hmrc.agentclientrelationships.model.Pending
-import uk.gov.hmrc.agentclientrelationships.services._
+import uk.gov.hmrc.agentclientrelationships.model
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.ClientIdType
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.ClientIdentifier
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
+import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.NoPendingInvitation
+import uk.gov.hmrc.agentclientrelationships.model.Invitation
+import uk.gov.hmrc.agentclientrelationships.model.PartialAuth
+import uk.gov.hmrc.agentclientrelationships.model.Pending
+import uk.gov.hmrc.agentclientrelationships.services._
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
@@ -65,7 +67,7 @@ with RequestAwareLogging {
     invitationService
       .findInvitation(invitationId)
       .flatMap {
-        case Some(invitation) if invitation.status == Pending =>
+        case Some(invitation) =>
           implicit val auditData: AuditData = prepareAuditData(invitation)
 
           for {
@@ -80,29 +82,32 @@ with RequestAwareLogging {
                 ClientIdentifier(invitation.suppliedClientId, invitation.suppliedClientIdType).underlying,
                 strideRoles
               ) { implicit currentUser =>
-                authorisationAcceptService
-                  .acceptInvitation(invitation, enrolment)
-                  .map { _ =>
-                    auditService.sendRespondToInvitationAuditEvent(
-                      invitation,
-                      accepted = true,
-                      isStride = currentUser.isStride
-                    )
-                    NoContent
-                  }
-                  .recoverWith {
-                    case CreateRelationshipLocked => Future.successful(Locked)
-                    case err => throw err
-                  }
+                invitation.status match {
+
+                  case model.Accepted | PartialAuth => Future.successful(NoContent)
+                  case Pending =>
+                    authorisationAcceptService
+                      .acceptInvitation(invitation, enrolment)
+                      .map { _ =>
+                        auditService.sendRespondToInvitationAuditEvent(
+                          invitation,
+                          accepted = true,
+                          isStride = currentUser.isStride
+                        )
+                        friendlyNameService.updateFriendlyName(invitation, enrolment)
+                        NoContent
+                      }
+                      .recoverWith {
+                        case CreateRelationshipLocked => Future.successful(Locked)
+                        case err => throw err
+                      }
+                  case _ => Future.successful(InternalServerError(s"Invitation could not be accepted. Invitation status is '${invitation.status}'"))
+                }
               }
-            _ <-
-              if (result == NoContent)
-                friendlyNameService.updateFriendlyName(invitation, enrolment)
-              else
-                Future.unit
           } yield result
+
         case _ =>
-          val msg = s"Pending Invitation not found for invitationId '$invitationId'"
+          val msg = s"Invitation not found for invitationId '$invitationId'"
           Logger(getClass).warn(msg)
           Future.successful(NoPendingInvitation.getResult(msg))
       }
