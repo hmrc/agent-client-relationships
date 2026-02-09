@@ -125,11 +125,6 @@ with AuthActions {
       .flatMap {
         case Some(invitation) =>
           for {
-            enrolment <- validationService.validateForEnrolmentKey(
-              invitation.service,
-              invitation.clientId,
-              Some(ClientIdType.forId(invitation.clientIdType).enrolmentId)
-            )
             result <-
               authorisedUser(
                 None,
@@ -137,8 +132,9 @@ with AuthActions {
                 strideRoles
               ) { currentUser =>
                 invitation.status match {
-                  case Rejected | Pending =>
 
+                  case Rejected => Future.successful(NoContent)
+                  case Pending =>
                     invitationService
                       .rejectInvitation(invitationId)
                       .map { _ =>

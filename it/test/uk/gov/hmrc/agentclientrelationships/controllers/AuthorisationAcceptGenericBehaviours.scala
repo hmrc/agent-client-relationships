@@ -340,7 +340,7 @@ trait AuthorisationAcceptGenericBehaviours {
 
       }
 
-      "return 500 when Invitation is in an unexcepted status" in {
+      "return 500 when the invitation is in an unexpected state" in {
 
         // OAuth
         givenUserIsSubscribedClient(suppliedClientId)

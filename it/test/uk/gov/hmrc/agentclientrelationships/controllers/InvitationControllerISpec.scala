@@ -17,22 +17,28 @@
 package uk.gov.hmrc.agentclientrelationships.controllers
 
 import play.api.http.Status.UNPROCESSABLE_ENTITY
-import play.api.i18n.{Lang, Langs, MessagesApi}
+import play.api.i18n.Lang
+import play.api.i18n.Langs
+import play.api.i18n.MessagesApi
 import play.api.libs.json.Json
 import play.api.libs.json.Json.toJson
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.audit.AuditService
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.connectors.{AgentFiRelationshipConnector, EnrolmentStoreProxyConnector}
+import uk.gov.hmrc.agentclientrelationships.connectors.AgentFiRelationshipConnector
+import uk.gov.hmrc.agentclientrelationships.connectors.EnrolmentStoreProxyConnector
 import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service._
 import uk.gov.hmrc.agentclientrelationships.model.identifiers._
 import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiFailureResponse.{ErrorBody => AFRErrorBody}
 import uk.gov.hmrc.agentclientrelationships.model.invitation.CreateInvitationRequest
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.{ErrorBody => IFRErrorBody}
-import uk.gov.hmrc.agentclientrelationships.repository.{InvitationsRepository, PartialAuthRepository}
-import uk.gov.hmrc.agentclientrelationships.services.{DeleteRelationshipsService, InvitationService, ValidationService}
+import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
+import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
+import uk.gov.hmrc.agentclientrelationships.services.DeleteRelationshipsService
+import uk.gov.hmrc.agentclientrelationships.services.InvitationService
+import uk.gov.hmrc.agentclientrelationships.services.ValidationService
 import uk.gov.hmrc.agentclientrelationships.stubs._
 import uk.gov.hmrc.agentclientrelationships.support.TestData
 import uk.gov.hmrc.auth.core.AuthConnector
@@ -491,7 +497,7 @@ with TestData {
 
   }
 
-  "return 500 when Invitation is in an unexcepted status" should {
+  "return 500 when the invitation is in an unexpected state" should {
 
     allServices.keySet
       .foreach(taxService =>

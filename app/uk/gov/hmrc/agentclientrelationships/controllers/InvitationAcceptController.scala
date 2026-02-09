@@ -85,7 +85,6 @@ with RequestAwareLogging {
                 invitation.status match {
 
                   case model.Accepted | PartialAuth => Future.successful(NoContent)
-
                   case Pending =>
                     authorisationAcceptService
                       .acceptInvitation(invitation, enrolment)
