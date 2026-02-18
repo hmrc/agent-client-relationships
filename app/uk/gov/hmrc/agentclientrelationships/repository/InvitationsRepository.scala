@@ -220,7 +220,7 @@ with RequestAwareLogging {
                     suppliedClientIdKey
                   else
                     clientIdKey
-                Some(in(key, clientIds.flatMap(expandNinoSuffixes).map(encryptedString): _*))
+                Some(in(key, clientIds.map(getValidNinoWithoutSuffixOrClientId).map(encryptedString): _*))
               }
               else
                 None,
@@ -265,7 +265,7 @@ with RequestAwareLogging {
               suppliedClientIdKey
             else
               clientIdKey,
-            clientIds.map(_.replaceAll(" ", "")).flatMap(expandNinoSuffixes).map(encryptedString): _*
+            clientIds.map(_.replaceAll(" ", "")).map(getValidNinoWithoutSuffixOrClientId).map(encryptedString): _*
           )
         )
       )
@@ -306,8 +306,8 @@ with RequestAwareLogging {
             )),
             Some(equal(serviceKey, service)),
             Some(or(
-              in(suppliedClientIdKey, expandNinoSuffixes(clientId).map(encryptedString): _*),
-              in(clientIdKey, expandNinoSuffixes(clientId).map(encryptedString): _*) // Some deauth requests target the MTDITID for ITSA
+              equal(suppliedClientIdKey, encryptedString(getValidNinoWithoutSuffixOrClientId(clientId))),
+              equal(clientIdKey, encryptedString(getValidNinoWithoutSuffixOrClientId(clientId))) // Some deauth requests target the MTDITID for ITSA
             )),
             optArn.map(a => equal(arnKey, a)),
             invitationIdToIgnore
@@ -335,7 +335,7 @@ with RequestAwareLogging {
       .updateOne(
         and(
           equal(arnKey, arn.value),
-          in(clientIdKey, expandNinoSuffixes(nino.value).map(encryptedString): _*),
+          equal(clientIdKey, encryptedString(nino.value)),
           equal(serviceKey, service),
           equal(statusKey, Codecs.toBson[InvitationStatus](PartialAuth))
         ),
@@ -484,11 +484,10 @@ with RequestAwareLogging {
       .map(_.getModifiedCount == 1L)
   }
 
-//  TODO: Can we now make this return a String rather than Seq[String]
-  private def expandNinoSuffixes(clientId: String): Seq[String] = {
+  private def getValidNinoWithoutSuffixOrClientId(clientId: String): String = {
     clientId match {
-      case nino if NinoWithoutSuffix.isValid(nino) => Seq(NinoWithoutSuffix(nino).value)
-      case clientId => Seq(clientId)
+      case nino if NinoWithoutSuffix.isValid(nino) => NinoWithoutSuffix(nino).value
+      case clientId => clientId
     }
   }
 
