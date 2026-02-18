@@ -126,7 +126,7 @@ with RequestAwareLogging {
             HMRCMTDIT,
             HMRCMTDITSUPP
           ),
-          in("nino", nino.variations.map(encryptedString): _*),
+          equal("nino", nino.value.map(encryptedString)),
           equal("arn", arn.value),
           equal("active", true)
         )
@@ -136,7 +136,7 @@ with RequestAwareLogging {
 
   def findActiveForClient(nino: NinoWithoutSuffix): Future[Seq[PartialAuthRelationship]] = Mdc.preservingMdc {
     collection
-      .find(and(in("nino", nino.variations.map(encryptedString): _*), equal("active", true)))
+      .find(and(equal("nino", nino.value.map(encryptedString)), equal("active", true)))
       .toFuture()
   }
 
@@ -149,7 +149,7 @@ with RequestAwareLogging {
       .find(
         and(
           equal("service", serviceId),
-          in("nino", nino.variations.map(encryptedString): _*),
+          equal("nino", nino.value.map(encryptedString)),
           equal("arn", arn.value),
           equal("active", true)
         )
@@ -159,7 +159,7 @@ with RequestAwareLogging {
 
   def findAllForClient(nino: NinoWithoutSuffix): Future[Seq[PartialAuthRelationship]] = Mdc.preservingMdc {
     collection
-      .find(in("nino", nino.variations.map(encryptedString): _*))
+      .find(equal("nino", nino.value.map(encryptedString)))
       .toFuture()
   }
 
@@ -169,7 +169,7 @@ with RequestAwareLogging {
       .find(
         and(
           equal("service", HMRCMTDIT),
-          in("nino", NinoWithoutSuffix(nino).variations.map(encryptedString): _*),
+          equal("nino", NinoWithoutSuffix(nino).value.map(encryptedString)),
           equal("active", true)
         )
       )
@@ -186,7 +186,7 @@ with RequestAwareLogging {
       .updateOne(
         and(
           equal("service", serviceId),
-          in("nino", nino.variations.map(encryptedString): _*),
+          equal("nino", nino.value.map(encryptedString)),
           equal("arn", arn.value),
           equal("active", true)
         ),
@@ -206,7 +206,7 @@ with RequestAwareLogging {
       .deleteOne(
         and(
           equal("service", serviceId),
-          in("nino", nino.variations.map(encryptedString): _*),
+          equal("nino", nino.value.map(encryptedString)),
           equal("arn", arn.value),
           equal("active", true)
         )
