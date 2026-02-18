@@ -484,9 +484,10 @@ with RequestAwareLogging {
       .map(_.getModifiedCount == 1L)
   }
 
+//  TODO: Can we now make this return a String rather than Seq[String]
   private def expandNinoSuffixes(clientId: String): Seq[String] = {
     clientId match {
-      case nino if NinoWithoutSuffix.isValid(nino) => NinoWithoutSuffix(nino).variations
+      case nino if NinoWithoutSuffix.isValid(nino) => Seq(NinoWithoutSuffix(nino).value)
       case clientId => Seq(clientId)
     }
   }
