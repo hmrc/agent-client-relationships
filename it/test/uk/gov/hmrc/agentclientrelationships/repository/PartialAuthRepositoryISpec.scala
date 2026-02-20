@@ -113,7 +113,6 @@ with RepositoryCleanupSupport {
       )
     }
 
-//    TODO: FIX
     "throw an exception if duplicate active record is passed in" in {
       repository.create(
         Instant.parse("2020-01-01T00:00:00.000Z"),
@@ -148,7 +147,7 @@ with RepositoryCleanupSupport {
   }
 
   "partialAuthRepository.findActive" should {
-//    TODO: FIX
+
     "retrieve partial auth which matches service, nino and arn" in {
       val nonMatchingEvent1 = partialAuth.copy(arn = "ARN1234567")
       val nonMatchingEvent2 = partialAuth.copy(service = "HMRC-MTD-IT-SUPP", nino = "AB539803A")
@@ -205,7 +204,7 @@ with RepositoryCleanupSupport {
   }
 
   ".findByNino" should {
-// TODO: FIX
+
     "retrieves records for a given nino" in {
       await(repository.collection.insertOne(partialAuth).toFuture())
       await(repository.findAllForClient(NinoWithoutSuffix("SX579189"))) shouldBe Seq(partialAuth)
@@ -264,7 +263,7 @@ with RepositoryCleanupSupport {
   }
 
   "deleteActivePartialAuth" should {
-//    TODO: FIX
+
     "delete when active record exists" in {
       await(repository.collection.insertOne(partialAuth).toFuture())
 

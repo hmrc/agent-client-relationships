@@ -54,8 +54,6 @@ with SimpleName {
       case _ => false
     }
 
-//  def variations: Seq[String] = value +: Nino.validSuffixes.map(value + _)
-
 }
 
 object NinoWithoutSuffix
