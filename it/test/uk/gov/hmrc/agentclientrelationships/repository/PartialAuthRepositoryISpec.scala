@@ -52,7 +52,7 @@ with RepositoryCleanupSupport {
     Instant.parse("2020-02-02T00:00:00.000Z"),
     "XARN1234567",
     "HMRC-MTD-IT",
-    "SX579189D",
+    "SX579189",
     active = true,
     Instant.parse("2020-02-02T00:00:00.000Z")
   )
@@ -118,7 +118,7 @@ with RepositoryCleanupSupport {
         Instant.parse("2020-01-01T00:00:00.000Z"),
         Arn("XARN1234567"),
         "HMRC-MTD-IT",
-        NinoWithoutSuffix("SX579189D")
+        NinoWithoutSuffix("SX579189")
       ).futureValue
 
       intercept[RuntimeException](
@@ -127,7 +127,7 @@ with RepositoryCleanupSupport {
             Instant.parse("2020-01-01T00:00:00.000Z"),
             Arn("XARN1234567"),
             "HMRC-MTD-IT",
-            NinoWithoutSuffix("SX579189D")
+            NinoWithoutSuffix("SX579189")
           ))
       )
     }
@@ -140,7 +140,7 @@ with RepositoryCleanupSupport {
             Instant.parse("2020-01-01T00:00:00.000Z"),
             Arn("XARN1234567"),
             "HMRC-MTD-IT",
-            NinoWithoutSuffix("SX579189D")
+            NinoWithoutSuffix("SX579189")
           ))
       )
     }
@@ -160,7 +160,7 @@ with RepositoryCleanupSupport {
       await(
         repository.findActive(
           "HMRC-MTD-IT",
-          NinoWithoutSuffix("SX579189D"),
+          NinoWithoutSuffix("SX579189"),
           Arn("XARN1234567")
         )
       ) shouldBe Some(partialAuth)
@@ -172,7 +172,7 @@ with RepositoryCleanupSupport {
       await(
         repository.findActive(
           "HMRC-MTD-IT",
-          NinoWithoutSuffix("SX579189D"),
+          NinoWithoutSuffix("SX579189"),
           Arn("XARN1234567")
         )
       ) shouldBe None
@@ -184,7 +184,7 @@ with RepositoryCleanupSupport {
       await(
         repository.findActive(
           "HMRC-MTD-IT",
-          NinoWithoutSuffix("SX579189D"),
+          NinoWithoutSuffix("SX579189"),
           Arn("XARN1234567")
         )
       ) shouldBe None
@@ -196,7 +196,7 @@ with RepositoryCleanupSupport {
       await(
         repository.findActive(
           "HMRC-MTD-IT",
-          NinoWithoutSuffix("SX579189D"),
+          NinoWithoutSuffix("SX579189"),
           Arn("XARN1234567")
         )
       ) shouldBe None
@@ -207,7 +207,7 @@ with RepositoryCleanupSupport {
 
     "retrieves records for a given nino" in {
       await(repository.collection.insertOne(partialAuth).toFuture())
-      await(repository.findAllForClient(NinoWithoutSuffix("SX579189D"))) shouldBe Seq(partialAuth)
+      await(repository.findAllForClient(NinoWithoutSuffix("SX579189"))) shouldBe Seq(partialAuth)
     }
 
     "fail to retrieve records when none are found for the given nino" in {
@@ -223,7 +223,7 @@ with RepositoryCleanupSupport {
             Instant.parse("2020-01-01T00:00:00.000Z"),
             Arn("XARN1234567"),
             "HMRC-MTD-IT",
-            NinoWithoutSuffix("SX579189D")
+            NinoWithoutSuffix("SX579189")
           )
       )
       await(repository.collection.countDocuments().toFuture()) shouldBe 1
@@ -231,7 +231,7 @@ with RepositoryCleanupSupport {
         repository
           .deauthorise(
             "HMRC-MTD-IT",
-            NinoWithoutSuffix("SX579189D"),
+            NinoWithoutSuffix("SX579189"),
             Arn("XARN1234567"),
             Instant.parse("2020-01-01T00:00:00.000Z")
           )
@@ -239,7 +239,7 @@ with RepositoryCleanupSupport {
       val result = await(
         repository.findActive(
           "HMRC-MTD-IT",
-          NinoWithoutSuffix("SX579189D"),
+          NinoWithoutSuffix("SX579189"),
           Arn("XARN1234567")
         )
       )
@@ -253,7 +253,7 @@ with RepositoryCleanupSupport {
         repository
           .deauthorise(
             "HMRC-MTD-VAT",
-            NinoWithoutSuffix("SX579189D"),
+            NinoWithoutSuffix("SX579189"),
             Arn("XARN1234567"),
             Instant.parse("2020-01-01T00:00:00.000Z")
           )
@@ -263,13 +263,14 @@ with RepositoryCleanupSupport {
   }
 
   "deleteActivePartialAuth" should {
+
     "delete when active record exists" in {
       await(repository.collection.insertOne(partialAuth).toFuture())
 
       val result = await(
         repository.deleteActivePartialAuth(
           "HMRC-MTD-IT",
-          NinoWithoutSuffix("SX579189D"),
+          NinoWithoutSuffix("SX579189"),
           Arn("XARN1234567")
         )
       )
