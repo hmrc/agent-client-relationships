@@ -169,6 +169,7 @@ with RequestAwareLogging {
 
     collection.find(filterById).headOption().flatMap {
       case None => Future.successful(NotFound)
+      case Some(invitation) if invitation.status == Cancelled => Future.successful(AlreadyCancelled)
       case Some(invitation) if invitation.status != Pending => Future.successful(WrongInvitationStatus)
       case Some(invitation) if invitation.arn != arn => Future.successful(NoPermission)
       case Some(_) =>

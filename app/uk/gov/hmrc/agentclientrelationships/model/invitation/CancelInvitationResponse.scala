@@ -28,5 +28,7 @@ object CancelInvitationResponse {
   extends CancelInvitationResponse
   case object WrongInvitationStatus
   extends CancelInvitationResponse
+  case object AlreadyCancelled
+  extends CancelInvitationResponse
 
 }
