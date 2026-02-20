@@ -135,6 +135,11 @@ object ApiFailureResponse {
     def getResult: Result = UnprocessableEntity(toJson(ErrorBody("INVALID_INVITATION_STATUS")))
   }
 
+  case object AlreadyCancelledInvalidInvitationStatus
+  extends ApiFailureResponse {
+    def getResult: Result = Conflict(toJson(ErrorBody("INVALID_INVITATION_STATUS")))
+  }
+
   case object ApiInternalServerError
   extends ApiFailureResponse {
     def getResult: Result = InternalServerError(toJson(ErrorBody("INTERNAL_SERVER_ERROR")))

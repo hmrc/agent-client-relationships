@@ -29,6 +29,7 @@ import uk.gov.hmrc.agentclientrelationships.model.identifiers.ClientIdentifier.C
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdIt
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdItSupp
 import uk.gov.hmrc.agentclientrelationships.model.identifiers._
+import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiFailureResponse.AlreadyCancelledInvalidInvitationStatus
 import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiFailureResponse.InvalidInvitationStatus
 import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiFailureResponse.InvitationNotFound
 import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiFailureResponse.NoPermissionOnAgency
@@ -120,6 +121,7 @@ extends RequestAwareLogging {
     invitationId: String
   )(implicit ec: ExecutionContext): Future[Either[ApiFailureResponse, Unit]] = invitationsRepository.cancelByIdForAgent(arn.value, invitationId).map {
     case Success => Right(())
+    case AlreadyCancelled => Left(AlreadyCancelledInvalidInvitationStatus)
     case NotFound => Left(InvitationNotFound)
     case NoPermission => Left(NoPermissionOnAgency)
     case WrongInvitationStatus => Left(InvalidInvitationStatus)

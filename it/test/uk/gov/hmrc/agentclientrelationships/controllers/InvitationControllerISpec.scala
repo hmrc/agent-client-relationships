@@ -686,6 +686,52 @@ with TestData {
 
         }
 
+        s"return 409 status when invitation request is already cancelled for $taxService" in {
+          val inputData: CreateInvitationRequest = allServices(taxService)
+          val clientId =
+            if (taxService == HMRCMTDIT || taxService == HMRCMTDITSUPP)
+              mtdItId.value
+            else
+              inputData.clientId
+          val clientIdType =
+            if (taxService == HMRCMTDIT || taxService == HMRCMTDITSUPP)
+              MtdItIdType.id
+            else
+              inputData.suppliedClientIdType
+
+          val clientIdentifier = ClientIdentifier(clientId, clientIdType)
+
+          invitationRepo.create(
+            arn.value,
+            Service.forId(taxService),
+            clientIdentifier,
+            clientIdentifier,
+            "Erling Haal",
+            "testAgentName",
+            "agent@email.com",
+            LocalDate.now(),
+            Some("personal")
+          ).futureValue
+
+          val pendingInvitation = invitationRepo.findAllForAgent(arn.value).futureValue.head
+          val testUrl = s"/agent-client-relationships/agent/cancel-invitation/${pendingInvitation.invitationId}"
+          val fakeRequest = FakeRequest("PUT", testUrl)
+          givenAuthorisedAsValidAgent(fakeRequest, arn.value)
+
+          val result = doAgentPutRequest(testUrl)
+          result.status shouldBe 204
+          result.body shouldBe ""
+
+          val result1 = doAgentPutRequest(testUrl)
+          result1.status shouldBe 409
+          result1.json shouldBe Json.toJson(AFRErrorBody("INVALID_INVITATION_STATUS"))
+
+          val invitations: Seq[Invitation] = invitationRepo.findAllForAgent(arn.value).futureValue
+
+          invitations.size shouldBe 1
+          invitations.head.status shouldBe Cancelled
+        }
+
         s"return 422 when the auth ARN does not match the ARN in the found invitation for $taxService" in {
           val inputData: CreateInvitationRequest = allServices(taxService)
           val clientId =
