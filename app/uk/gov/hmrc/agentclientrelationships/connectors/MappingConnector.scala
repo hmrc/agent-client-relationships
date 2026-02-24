@@ -16,7 +16,8 @@
 
 package uk.gov.hmrc.agentclientrelationships.connectors
 
-import uk.gov.hmrc.agentclientrelationships.util.{ConsumesAPI, RequestAwareLogging}
+import uk.gov.hmrc.agentclientrelationships.util.ConsumesAPI
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import play.api.libs.json._
 import play.api.mvc.RequestHeader
 import play.api.http.Status

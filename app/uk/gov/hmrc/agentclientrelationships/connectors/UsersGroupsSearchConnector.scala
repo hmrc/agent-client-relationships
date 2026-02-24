@@ -18,7 +18,8 @@ package uk.gov.hmrc.agentclientrelationships.connectors
 
 import javax.inject.Inject
 import javax.inject.Singleton
-import uk.gov.hmrc.agentclientrelationships.util.{ConsumesAPI, RequestAwareLogging}
+import uk.gov.hmrc.agentclientrelationships.util.ConsumesAPI
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import play.api.http.Status
 import play.api.libs.json._
 import play.api.mvc.RequestHeader

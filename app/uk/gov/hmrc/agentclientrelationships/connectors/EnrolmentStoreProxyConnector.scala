@@ -17,7 +17,8 @@
 package uk.gov.hmrc.agentclientrelationships.connectors
 
 import org.apache.pekko.Done
-import uk.gov.hmrc.agentclientrelationships.util.{ConsumesAPI, RequestAwareLogging}
+import uk.gov.hmrc.agentclientrelationships.util.ConsumesAPI
+import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import play.api.http.Status
 import play.api.libs.json.Format
 import play.api.libs.json.JsObject

@@ -1,3 +1,19 @@
+/*
+ * Copyright 2026 HM Revenue & Customs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package uk.gov.hmrc.agentclientrelationships.util
 
 import scala.annotation.StaticAnnotation
@@ -124,81 +140,3 @@ class ConsumesAPI(
   val service: String
 )
 extends StaticAnnotation
-
-/** Companion object with helper methods for reflection-based parsing
-  */
-object ConsumesAPI {
-
-  /** Extract all @ConsumesAPI annotations from a connector instance
-    *
-    * @param connector
-    *   The connector instance to inspect
-    * @return
-    *   Sequence of (apiId, service) tuples
-    */
-  def extractAnnotations(connector: AnyRef): Seq[ApiCall] = {
-    import scala.reflect.runtime.universe._
-
-    try {
-      val mirror = runtimeMirror(connector.getClass.getClassLoader)
-      val instanceMirror = mirror.reflect(connector)
-      val symbolType = instanceMirror.symbol.typeSignature
-
-      symbolType.members.collect {
-        case method: MethodSymbol
-            if method.annotations.exists(_.tree.tpe.toString.contains("ConsumesAPI")) =>
-
-          val annotation =
-            method.annotations
-              .find(_.tree.tpe.toString.contains("ConsumesAPI"))
-              .get
-
-          // Parse annotation arguments
-          val args = annotation.tree.children.tail
-          val apiId = extractStringArg(args, "apiId")
-          val service = extractStringArg(args, "service")
-
-          ApiCall(
-            methodName = method.name.toString,
-            apiId = apiId,
-            service = service,
-            className = connector.getClass.getSimpleName
-          )
-      }.toSeq
-    }
-    catch {
-      case e: Exception =>
-        // If reflection fails, return empty list
-        Seq.empty
-    }
-  }
-
-  private def extractStringArg(
-    args: List[Any],
-    name: String
-  ): String = {
-    // Simplified extraction - in real implementation would parse tree properly
-    args.headOption.map(_.toString.replaceAll("\"", "")).getOrElse("")
-  }
-
-}
-
-/** Case class representing an API call discovered via annotation
-  *
-  * @param methodName
-  *   The connector method name
-  * @param apiId
-  *   The API identifier being called
-  * @param service
-  *   The target service name
-  * @param className
-  *   The connector class name
-  */
-case class ApiCall(
-  methodName: String,
-  apiId: String,
-  service: String,
-  className: String
-) {
-  override def toString: String = s"$className.$methodName -> $service:$apiId"
-}
