@@ -74,7 +74,7 @@ with MockValidationService {
     partialAuthRepository = mockPartialAuthRepository,
     agentFiRelationshipConnector = mockAgentFiRelationshipConnector,
     clientDetailsService = mockClientDetailsService,
-    agentAssuranceService = mockAgentAssuranceService,
+    agentRecordService = mockAgentRecordService,
     findRelationshipsService = mockFindRelationshipService,
     validationService = mockValidationService
   )

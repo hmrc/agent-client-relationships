@@ -46,7 +46,7 @@ class CheckRelationshipsOrchestratorService @Inject() (
   deleteService: DeleteRelationshipsService,
   hipConnector: HipConnector,
   agentFiRelationshipConnector: AgentFiRelationshipConnector,
-  agentAssuranceService: AgentAssuranceService
+  agentRecordService: AgentRecordService
 )(implicit executionContext: ExecutionContext)
 extends RequestAwareLogging {
 
@@ -204,7 +204,7 @@ extends RequestAwareLogging {
 
   private def withIrSaSuspensionCheck(arn: Arn)(
     proceed: => Future[CheckRelationshipResult]
-  )(implicit request: RequestHeader): Future[CheckRelationshipResult] = agentAssuranceService
+  )(implicit request: RequestHeader): Future[CheckRelationshipResult] = agentRecordService
     .getNonSuspendedAgentRecord(arn)
     .flatMap {
       case None =>

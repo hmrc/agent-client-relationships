@@ -62,7 +62,7 @@ with ResettingMockitoSugar {
   val agentCode: AgentCode = AgentCode("ABC1234")
 
   private val mockPartialAuthRepo = mock[PartialAuthRepository]
-  private val mockAgentAssuranceService = mock[AgentAssuranceService]
+  private val mockAgentRecordService = mock[AgentRecordService]
   private val mockHipConnector = mock[HipConnector]
   private val mockAgentFiConnector = mock[AgentFiRelationshipConnector]
 
@@ -90,7 +90,7 @@ with ResettingMockitoSugar {
           new CheckRelationshipsService(
             es,
             ap,
-            mockAgentAssuranceService,
+            mockAgentRecordService,
             mockHipConnector,
             gs,
             mockPartialAuthRepo,
@@ -126,7 +126,7 @@ with ResettingMockitoSugar {
           new CheckRelationshipsService(
             es,
             ap,
-            mockAgentAssuranceService,
+            mockAgentRecordService,
             mockHipConnector,
             gs,
             mockPartialAuthRepo,
@@ -162,7 +162,7 @@ with ResettingMockitoSugar {
           new CheckRelationshipsService(
             es,
             ap,
-            mockAgentAssuranceService,
+            mockAgentRecordService,
             mockHipConnector,
             gs,
             mockPartialAuthRepo,
@@ -194,7 +194,7 @@ with ResettingMockitoSugar {
           new CheckRelationshipsService(
             es,
             ap,
-            mockAgentAssuranceService,
+            mockAgentRecordService,
             mockHipConnector,
             gs,
             mockPartialAuthRepo,
@@ -230,7 +230,7 @@ with ResettingMockitoSugar {
           new CheckRelationshipsService(
             es,
             ap,
-            mockAgentAssuranceService,
+            mockAgentRecordService,
             mockHipConnector,
             gs,
             mockPartialAuthRepo,
@@ -265,7 +265,7 @@ with ResettingMockitoSugar {
           new CheckRelationshipsService(
             es,
             ap,
-            mockAgentAssuranceService,
+            mockAgentRecordService,
             mockHipConnector,
             gs,
             mockPartialAuthRepo,
@@ -297,7 +297,7 @@ with ResettingMockitoSugar {
           new CheckRelationshipsService(
             es,
             ap,
-            mockAgentAssuranceService,
+            mockAgentRecordService,
             mockHipConnector,
             gs,
             mockPartialAuthRepo,

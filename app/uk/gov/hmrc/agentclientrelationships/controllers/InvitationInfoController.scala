@@ -24,7 +24,7 @@ import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.invitation.AuthorisationRequestInfo
 import uk.gov.hmrc.agentclientrelationships.model.invitation.AuthorisationRequestInfoForClient
-import uk.gov.hmrc.agentclientrelationships.services.AgentAssuranceService
+import uk.gov.hmrc.agentclientrelationships.services.AgentRecordService
 import uk.gov.hmrc.agentclientrelationships.services.InvitationLinkService
 import uk.gov.hmrc.agentclientrelationships.services.InvitationService
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
@@ -42,7 +42,7 @@ import scala.concurrent.Future
 class InvitationInfoController @Inject() (
   invitationService: InvitationService,
   invitationLinkService: InvitationLinkService,
-  agentAssuranceService: AgentAssuranceService,
+  agentRecordService: AgentRecordService,
   val authConnector: AuthConnector,
   val appConfig: AppConfig,
   cc: ControllerComponents
@@ -105,7 +105,7 @@ with AuthActions {
           ) { _ =>
             val arn = Arn(invitation.arn)
             for {
-              agentDetails <- agentAssuranceService.getAgentRecord(arn)
+              agentDetails <- agentRecordService.getAgentRecordWithChecks(arn)
             } yield Ok(
               Json.toJson(
                 AuthorisationRequestInfoForClient(

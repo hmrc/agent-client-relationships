@@ -33,10 +33,10 @@ import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiFailureResponse.
 import uk.gov.hmrc.agentclientrelationships.repository.AgentReferenceRepository
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
 import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
-import uk.gov.hmrc.agentclientrelationships.services.AgentAssuranceService
+import uk.gov.hmrc.agentclientrelationships.services.AgentRecordService
+import uk.gov.hmrc.agentclientrelationships.services.ApiKnownFactsCheckService
 import uk.gov.hmrc.agentclientrelationships.services.CheckRelationshipsOrchestratorService
 import uk.gov.hmrc.agentclientrelationships.services.ClientDetailsService
-import uk.gov.hmrc.agentclientrelationships.services.ApiKnownFactsCheckService
 import uk.gov.hmrc.agentclientrelationships.stubs._
 import uk.gov.hmrc.agentclientrelationships.support.TestData
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service._
@@ -66,7 +66,7 @@ with CitizenDetailsStub {
   val clientDetailsService: ClientDetailsService = app.injector.instanceOf[ClientDetailsService]
   val knowFactsCheckService: ApiKnownFactsCheckService = app.injector.instanceOf[ApiKnownFactsCheckService]
   val checkRelationshipsService: CheckRelationshipsOrchestratorService = app.injector.instanceOf[CheckRelationshipsOrchestratorService]
-  val agentAssuranceService: AgentAssuranceService = app.injector.instanceOf[AgentAssuranceService]
+  val agentRecordService: AgentRecordService = app.injector.instanceOf[AgentRecordService]
   val invitationRepo: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
   val partialAuthRepository: PartialAuthRepository = app.injector.instanceOf[PartialAuthRepository]
   val agentReferenceRepo: AgentReferenceRepository = app.injector.instanceOf[AgentReferenceRepository]
@@ -83,7 +83,7 @@ with CitizenDetailsStub {
       clientDetailsService,
       knowFactsCheckService,
       checkRelationshipsService,
-      agentAssuranceService,
+      agentRecordService,
       invitationRepo,
       partialAuthRepository,
       auditService,

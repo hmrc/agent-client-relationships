@@ -59,7 +59,7 @@ class ApiCreateInvitationController @Inject() (
   clientDetailsService: ClientDetailsService,
   apiKnownFactsCheckService: ApiKnownFactsCheckService,
   checkRelationshipsService: CheckRelationshipsOrchestratorService,
-  agentAssuranceService: AgentAssuranceService,
+  agentRecordService: AgentRecordService,
   invitationsRepository: InvitationsRepository,
   partialAuthRepository: PartialAuthRepository,
   auditService: AuditService,
@@ -124,7 +124,7 @@ with AuthActions {
           suppliedClientId.value
         ))
 
-        agentRecord <- EitherT.fromOptionF(agentAssuranceService.getNonSuspendedAgentRecord(arn), ApiFailureResponse.AgentSuspended)
+        agentRecord <- EitherT.fromOptionF(agentRecordService.getNonSuspendedAgentRecord(arn), ApiFailureResponse.AgentSuspended)
 
         clientDetails <- EitherT(clientDetailsService.findClientDetails(service.id, suppliedClientId.value))
           .leftMap[ApiFailureResponse] {

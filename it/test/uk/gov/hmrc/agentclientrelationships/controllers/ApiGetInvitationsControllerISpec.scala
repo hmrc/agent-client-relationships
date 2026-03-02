@@ -31,7 +31,7 @@ import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentReferenceR
 import uk.gov.hmrc.agentclientrelationships.repository.AgentReferenceRepository
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
 import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
-import uk.gov.hmrc.agentclientrelationships.services.AgentAssuranceService
+import uk.gov.hmrc.agentclientrelationships.services.AgentRecordService
 import uk.gov.hmrc.agentclientrelationships.services.InvitationLinkService
 import uk.gov.hmrc.agentclientrelationships.stubs._
 import uk.gov.hmrc.agentclientrelationships.support.TestData
@@ -63,7 +63,7 @@ with TestData {
   implicit val lang: Lang = langs.availables.head
 
   val invitationLinkService: InvitationLinkService = app.injector.instanceOf[InvitationLinkService]
-  val agentAssuranceService: AgentAssuranceService = app.injector.instanceOf[AgentAssuranceService]
+  val agentRecordService: AgentRecordService = app.injector.instanceOf[AgentRecordService]
 
   val invitationRepo: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
   val partialAuthRepository: PartialAuthRepository = app.injector.instanceOf[PartialAuthRepository]
@@ -72,7 +72,7 @@ with TestData {
   val controller =
     new ApiGetInvitationsController(
       invitationLinkService,
-      agentAssuranceService,
+      agentRecordService,
       invitationRepo,
       appConfig,
       authConnector,

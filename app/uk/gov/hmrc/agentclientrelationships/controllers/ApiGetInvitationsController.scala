@@ -27,7 +27,7 @@ import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.Invitation
 import uk.gov.hmrc.agentclientrelationships.model.invitation._
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
-import uk.gov.hmrc.agentclientrelationships.services.AgentAssuranceService
+import uk.gov.hmrc.agentclientrelationships.services.AgentRecordService
 import uk.gov.hmrc.agentclientrelationships.services.InvitationLinkService
 import uk.gov.hmrc.agentclientrelationships.model.identifiers._
 import uk.gov.hmrc.auth.core.AuthConnector
@@ -41,7 +41,7 @@ import scala.concurrent.Future
 @Singleton
 class ApiGetInvitationsController @Inject() (
   invitationLinkService: InvitationLinkService,
-  agentAssuranceService: AgentAssuranceService,
+  agentRecordService: AgentRecordService,
   invitationsRepository: InvitationsRepository,
   val appConfig: AppConfig,
   val authConnector: AuthConnector,
@@ -70,7 +70,7 @@ with AuthActions {
     request: RequestHeader
   ): Future[Either[ApiFailureResponse, ApiBulkInvitationsResponse]] =
     (for {
-      agentRecord <- EitherT.fromOptionF(agentAssuranceService.getNonSuspendedAgentRecord(arn), ApiFailureResponse.AgentSuspended)
+      agentRecord <- EitherT.fromOptionF(agentRecordService.getNonSuspendedAgentRecord(arn), ApiFailureResponse.AgentSuspended)
       newNormaliseAgentName = invitationLinkService.normaliseAgentName(agentRecord.agencyDetails.agencyName)
       agentReferenceRecord <- EitherT.right[ApiFailureResponse](
         invitationLinkService.getAgentReferenceRecordByArn(arn = arn, newNormaliseAgentName = newNormaliseAgentName)

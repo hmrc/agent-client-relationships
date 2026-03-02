@@ -53,7 +53,7 @@ with MockEmailService {
   extends InvitationService(
     mockInvitationsRepository,
     mockHipConnector,
-    mockAgentAssuranceService,
+    mockAgentRecordService,
     mockEmailService,
     mockAppConfig
   )
