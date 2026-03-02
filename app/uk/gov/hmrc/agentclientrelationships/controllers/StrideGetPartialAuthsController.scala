@@ -28,7 +28,7 @@ import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 import uk.gov.hmrc.agentclientrelationships.model.stride.PartialAuthRelationships
 import uk.gov.hmrc.agentclientrelationships.model.stride.PartialAuthWithAgentName
-import uk.gov.hmrc.agentclientrelationships.services.AgentAssuranceService
+import uk.gov.hmrc.agentclientrelationships.services.AgentRecordService
 import uk.gov.hmrc.agentclientrelationships.services.CitizenDetailsService
 import uk.gov.hmrc.agentclientrelationships.services.StrideClientDetailsService
 import uk.gov.hmrc.auth.core.AuthConnector
@@ -45,7 +45,7 @@ class StrideGetPartialAuthsController @Inject() (
   val authConnector: AuthConnector,
   strideClientDetailsService: StrideClientDetailsService,
   citizenDetailsService: CitizenDetailsService,
-  agentAssuranceService: AgentAssuranceService,
+  agentRecordService: AgentRecordService,
   cc: ControllerComponents,
   appConfig: AppConfig
 )(implicit val executionContext: ExecutionContext)
@@ -62,7 +62,7 @@ with AuthActions {
         partialAuths <- Future.sequence(
           partialAuthsWithoutAgentName.map { partialAuth =>
             for {
-              agentDetails <- agentAssuranceService.getAgentRecord(Arn(partialAuth.arn))
+              agentDetails <- agentRecordService.getAgentRecordWithChecks(Arn(partialAuth.arn))
             } yield {
               if (agentDetails.suspensionDetails.exists(_.suspensionStatus)) {
                 None

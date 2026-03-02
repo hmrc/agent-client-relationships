@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 HM Revenue & Customs
+ * Copyright 2026 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,27 +17,38 @@
 package uk.gov.hmrc.agentclientrelationships.services
 
 import play.api.mvc.RequestHeader
+import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.AgentAssuranceConnector
-import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentDetailsDesResponse
+import uk.gov.hmrc.agentclientrelationships.connectors.AgentServicesAccountConnector
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.SuspensionDetails
+import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentDetailsDesResponse
 
+import javax.inject.Singleton
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
-class AgentAssuranceService @Inject() (
-  agentAssuranceConnector: AgentAssuranceConnector
-)(implicit ec: ExecutionContext) {
+@Singleton
+class AgentRecordService @Inject() (
+  agentAssuranceConnector: AgentAssuranceConnector,
+  agentServicesAccountConnector: AgentServicesAccountConnector
+)(implicit
+  appConfig: AppConfig,
+  ec: ExecutionContext
+) {
 
-  def getAgentRecord(arn: Arn)(implicit rh: RequestHeader): Future[AgentDetailsDesResponse] = agentAssuranceConnector
-    .getAgentRecordWithChecks(arn)
-
-  def getNonSuspendedAgentRecord(arn: Arn)(implicit rh: RequestHeader): Future[Option[AgentDetailsDesResponse]] = agentAssuranceConnector
-    .getAgentRecordWithChecks(arn)
+  def getNonSuspendedAgentRecord(arn: Arn)(implicit rh: RequestHeader): Future[Option[AgentDetailsDesResponse]] = getAgentRecordWithChecks(arn)
     .map {
       case AgentDetailsDesResponse(_, Some(SuspensionDetails(true, _))) => None
       case agentRecord => Some(agentRecord)
     }
+
+  def getAgentRecordWithChecks(arn: Arn)(implicit rh: RequestHeader): Future[AgentDetailsDesResponse] = {
+    if (appConfig.enableAgentRecordViaAsa)
+      agentServicesAccountConnector.getAgentRecordWithChecks(arn)
+    else
+      agentAssuranceConnector.getAgentRecordWithChecks(arn)
+  }
 
 }

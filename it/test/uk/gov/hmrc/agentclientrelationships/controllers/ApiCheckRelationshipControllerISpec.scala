@@ -44,7 +44,7 @@ with TestData {
     // ITSA is a special case because it converts nino from request to mtditid
     "return 204 when the relationship is found for ITSA" in {
       givenAuditConnector()
-      givenAgentRecordFound(arn, agentRecordResponse)
+      givenAgentRecord(arn, agentRecordResponse)
       givenMtdItsaBusinessDetailsExists(
         nino,
         mtdItId,
@@ -67,7 +67,7 @@ with TestData {
     }
     "return 204 when the relationship is found for VAT" in {
       givenAuditConnector()
-      givenAgentRecordFound(arn, agentRecordResponse)
+      givenAgentRecord(arn, agentRecordResponse)
       givenVatCustomerInfoExists(
         vrn.value,
         testVatRegDate
@@ -89,7 +89,7 @@ with TestData {
     }
     "return 422 with AGENT_SUSPENDED when agent is suspended" in {
       givenAuditConnector()
-      givenAgentRecordFound(arn, suspendedAgentRecordResponse)
+      givenAgentRecord(arn, suspendedAgentRecordResponse)
       givenUserAuthorised()
 
       val testData = ApiCheckRelationshipRequest(
@@ -103,7 +103,7 @@ with TestData {
     }
     "return 422 with CLIENT_REGISTRATION_NOT_FOUND when client details not found" in {
       givenAuditConnector()
-      givenAgentRecordFound(arn, agentRecordResponse)
+      givenAgentRecord(arn, agentRecordResponse)
       givenItsaBusinessDetailsError(nino, 404)
       givenUserAuthorised()
       givenCitizenDetailsError(nino, NOT_FOUND)
@@ -119,7 +119,7 @@ with TestData {
     }
     "return 422 with KNOWN_FACT_DOES_NOT_MATCH when known fact is not found" in {
       givenAuditConnector()
-      givenAgentRecordFound(arn, agentRecordResponse)
+      givenAgentRecord(arn, agentRecordResponse)
       givenMtdItsaBusinessDetailsExists(
         nino = nino,
         mtdId = mtdItId,
@@ -138,7 +138,7 @@ with TestData {
     }
     "return 422 with CLIENT_INSOLVENT when client is insolvent" in {
       givenAuditConnector()
-      givenAgentRecordFound(arn, agentRecordResponse)
+      givenAgentRecord(arn, agentRecordResponse)
       givenVatCustomerInfoExists(
         vrn.value,
         testVatRegDate,
@@ -157,7 +157,7 @@ with TestData {
     }
     "return 422 with RELATIONSHIP_NOT_FOUND when relationship is not found" in {
       givenAuditConnector()
-      givenAgentRecordFound(arn, agentRecordResponse)
+      givenAgentRecord(arn, agentRecordResponse)
       givenMtdItsaBusinessDetailsExists(
         nino,
         mtdItId,
@@ -186,7 +186,7 @@ with TestData {
     }
     "return 500 when relationship check fails unexpectedly" in {
       givenAuditConnector()
-      givenAgentRecordFound(arn, agentRecordResponse)
+      givenAgentRecord(arn, agentRecordResponse)
       givenMtdItsaBusinessDetailsExists(
         nino,
         mtdItId,

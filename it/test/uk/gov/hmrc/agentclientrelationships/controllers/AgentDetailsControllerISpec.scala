@@ -50,7 +50,7 @@ with TestData {
       givenAuditConnector()
       givenAuthorisedAsValidAgent(fakeRequest, arn.value)
 
-      givenAgentRecordFound(arn, agentRecordResponse)
+      givenAgentRecord(arn, agentRecordResponse)
       await(agentReferenceRepo.create(agentReferenceRecord))
 
       val result = doGetRequest(testUrl)

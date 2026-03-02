@@ -322,7 +322,7 @@ with TestData {
       )
 
       // TODO UID is created each time
-      givenAgentRecordFound(arn, testAgentRecord1)
+      givenAgentRecord(arn, testAgentRecord1)
       val result = doGetRequest(testEndpoint)
       result.status shouldBe 200
 
@@ -391,8 +391,8 @@ with TestData {
         activeOnly = false
       )
 
-      givenAgentRecordFound(arn, testAgentRecord1)
-      givenAgentRecordFound(arn2, testAgentRecord2)
+      givenAgentRecord(arn, testAgentRecord1)
+      givenAgentRecord(arn2, testAgentRecord2)
 
       val result = doGetRequest(testEndpoint)
       result.status shouldBe 200
@@ -465,8 +465,8 @@ with TestData {
         activeOnly = false
       )
 
-      givenAgentRecordFound(arn, testAgentRecord1)
-      givenAgentRecordFound(
+      givenAgentRecord(arn, testAgentRecord1)
+      givenAgentRecord(
         arn2,
         testAgentRecord2
           .copy(suspensionDetails = Some(SuspensionDetails(suspensionStatus = true, regimes = Some(Set("AGSV")))))
@@ -531,8 +531,8 @@ with TestData {
         activeOnly = false
       )
 
-      givenAgentRecordFound(arn, testAgentRecord1)
-      givenAgentRecordFound(arn2, testAgentRecord2)
+      givenAgentRecord(arn, testAgentRecord1)
+      givenAgentRecord(arn2, testAgentRecord2)
 
       val result = doGetRequest(testEndpoint)
       result.status shouldBe 200
@@ -589,9 +589,9 @@ with TestData {
         activeOnly = false
       )
 
-      givenAgentRecordFound(arn, testAgentRecord1)
-      givenAgentRecordFound(arn2, testAgentRecord2)
-      givenAgentRecordFound(arn3, testAgentRecord3)
+      givenAgentRecord(arn, testAgentRecord1)
+      givenAgentRecord(arn2, testAgentRecord2)
+      givenAgentRecord(arn3, testAgentRecord3)
 
       val result = doGetRequest(testEndpoint)
       result.status shouldBe 200
@@ -630,7 +630,7 @@ with TestData {
         )
         .futureValue
 
-      givenAgentRecordFound(arn, testAgentRecord1)
+      givenAgentRecord(arn, testAgentRecord1)
       val result = doGetRequest(testEndpoint)
       result.status shouldBe 200
 
@@ -688,7 +688,7 @@ with TestData {
         activeOnly = false
       )
 
-      givenAgentRecordFound(arn, testAgentRecord1)
+      givenAgentRecord(arn, testAgentRecord1)
 
       val result = doGetRequest(testEndpoint)
       result.status shouldBe 200
@@ -753,8 +753,8 @@ with TestData {
         activeOnly = false
       )
 
-      givenAgentRecordFound(arn, testAgentRecord1)
-      givenAgentRecordFound(arn2, testAgentRecord2)
+      givenAgentRecord(arn, testAgentRecord1)
+      givenAgentRecord(arn2, testAgentRecord2)
 
       val result = doGetRequest(testEndpoint)
       result.status shouldBe 200
@@ -826,8 +826,8 @@ with TestData {
         activeOnly = false
       )
 
-      givenAgentRecordFound(arn, testAgentRecord1)
-      givenAgentRecordFound(arn2, testAgentRecord2)
+      givenAgentRecord(arn, testAgentRecord1)
+      givenAgentRecord(arn2, testAgentRecord2)
 
       val result = doGetRequest(testEndpoint)
       result.status shouldBe 200
@@ -889,7 +889,7 @@ with TestData {
         activeOnly = false
       )
 
-      givenAgentRecordFound(arn, testAgentRecord1)
+      givenAgentRecord(arn, testAgentRecord1)
 
       val result = doGetRequest(testEndpoint)
       result.status shouldBe 200
@@ -953,7 +953,7 @@ with TestData {
         activeOnly = false
       )
 
-      givenAgentRecordFound(arn, testAgentRecord1)
+      givenAgentRecord(arn, testAgentRecord1)
 
       val result = doGetRequest(testEndpoint)
       result.status shouldBe 200
@@ -1017,7 +1017,7 @@ with TestData {
         activeOnly = false
       )
 
-      givenAgentRecordFound(arn, testAgentRecord1)
+      givenAgentRecord(arn, testAgentRecord1)
 
       val result = doGetRequest(testEndpoint)
       result.status shouldBe 400
@@ -1068,7 +1068,7 @@ with TestData {
         activeOnly = false
       )
 
-      givenAgentRecordFound(arn, testAgentRecord1)
+      givenAgentRecord(arn, testAgentRecord1)
 
       val result = doGetRequest(testEndpoint)
       result.status shouldBe 503
@@ -1119,7 +1119,7 @@ with TestData {
         activeOnly = false
       )
 
-      givenAgentDetailsErrorResponse(arn, 404)
+      givenAgentRecordErrorResponse(arn, 404)
 
       val result = doGetRequest(testEndpoint)
       result.status shouldBe 500
@@ -1170,7 +1170,7 @@ with TestData {
         activeOnly = false
       )
 
-      givenAgentDetailsErrorResponse(arn, 404)
+      givenAgentRecordErrorResponse(arn, 404)
 
       val result = doGetRequest(testEndpoint)
       result.status shouldBe 400
@@ -1221,7 +1221,7 @@ with TestData {
         activeOnly = false
       )
 
-      givenAgentRecordFound(arn, testAgentRecord1)
+      givenAgentRecord(arn, testAgentRecord1)
 
       val result = doGetRequest(testEndpoint)
       result.status should (be(400) or be(503))
@@ -1273,9 +1273,9 @@ with TestData {
         activeOnly = false
       )
 
-      givenAgentRecordFound(arn, testAgentRecord1)
-      givenAgentRecordFound(arn2, testAgentRecord2)
-      givenAgentRecordFound(arn3, testAgentRecord3)
+      givenAgentRecord(arn, testAgentRecord1)
+      givenAgentRecord(arn2, testAgentRecord2)
+      givenAgentRecord(arn3, testAgentRecord3)
 
       val result = doGetRequest(testEndpoint)
       result.status shouldBe 200
@@ -1365,8 +1365,8 @@ with TestData {
         activeOnly = false
       )
 
-      givenAgentRecordFound(arn, testAgentRecord1)
-      givenAgentRecordFound(arn2, testAgentRecord2)
+      givenAgentRecord(arn, testAgentRecord1)
+      givenAgentRecord(arn2, testAgentRecord2)
 
       givenNinoIsKnownFor(mtdItId, nino)
 
@@ -1427,8 +1427,8 @@ with TestData {
         )
         .futureValue
 
-      givenAgentRecordFound(arn2, testAgentRecord2)
-      givenAgentRecordFound(arn, testAgentRecord1)
+      givenAgentRecord(arn2, testAgentRecord2)
+      givenAgentRecord(arn, testAgentRecord1)
 
       givenMtdItIdIsUnKnownFor(nino)
 
@@ -1465,8 +1465,8 @@ with TestData {
         activeOnly = false
       )
 
-      givenAgentRecordFound(arn, testAgentRecord1)
-      givenAgentRecordFound(arn2, testAgentRecord2)
+      givenAgentRecord(arn, testAgentRecord1)
+      givenAgentRecord(arn2, testAgentRecord2)
 
       val result = doGetRequest(testEndpoint)
       result.status shouldBe 200

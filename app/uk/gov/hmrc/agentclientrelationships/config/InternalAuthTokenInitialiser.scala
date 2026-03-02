@@ -84,6 +84,11 @@ extends Logging {
                 "resourceType" -> "agent-assurance",
                 "resourceLocation" -> "agent-record-with-checks/arn",
                 "actions" -> Seq("WRITE")
+              ),
+              Json.obj(
+                "resourceType" -> "agent-services-account",
+                "resourceLocation" -> "agent-record-with-checks/arn",
+                "actions" -> Seq("WRITE")
               )
             )
         )

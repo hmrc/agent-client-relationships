@@ -46,6 +46,11 @@ with DataStreamStub {
             "resourceType" -> "agent-assurance",
             "resourceLocation" -> "agent-record-with-checks/arn",
             "actions" -> List("WRITE")
+          ),
+          Json.obj(
+            "resourceType" -> "agent-services-account",
+            "resourceLocation" -> "agent-record-with-checks/arn",
+            "actions" -> List("WRITE")
           )
         )
       )
@@ -82,6 +87,11 @@ with DataStreamStub {
         "permissions" -> Seq(
           Json.obj(
             "resourceType" -> "agent-assurance",
+            "resourceLocation" -> "agent-record-with-checks/arn",
+            "actions" -> List("WRITE")
+          ),
+          Json.obj(
+            "resourceType" -> "agent-services-account",
             "resourceLocation" -> "agent-record-with-checks/arn",
             "actions" -> List("WRITE")
           )

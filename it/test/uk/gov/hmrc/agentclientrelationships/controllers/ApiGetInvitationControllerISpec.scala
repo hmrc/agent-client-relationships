@@ -32,7 +32,7 @@ import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentReferenceR
 import uk.gov.hmrc.agentclientrelationships.repository.AgentReferenceRepository
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
 import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
-import uk.gov.hmrc.agentclientrelationships.services.AgentAssuranceService
+import uk.gov.hmrc.agentclientrelationships.services.AgentRecordService
 import uk.gov.hmrc.agentclientrelationships.services.InvitationLinkService
 import uk.gov.hmrc.agentclientrelationships.stubs._
 import uk.gov.hmrc.agentclientrelationships.support.TestData
@@ -56,7 +56,7 @@ with TestData {
     "hip.enabled" -> true
   )
   val invitationLinkService: InvitationLinkService = app.injector.instanceOf[InvitationLinkService]
-  val agentAssuranceService: AgentAssuranceService = app.injector.instanceOf[AgentAssuranceService]
+  val agentRecordService: AgentRecordService = app.injector.instanceOf[AgentRecordService]
   val invitationsRepository: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
 
   val invitationRepo: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
@@ -74,7 +74,7 @@ with TestData {
   val controller =
     new ApiGetInvitationController(
       invitationLinkService,
-      agentAssuranceService,
+      agentRecordService,
       invitationsRepository,
       appConfig,
       stubControllerComponents(),
@@ -167,7 +167,7 @@ with TestData {
 
         invitationRepo.collection.insertOne(invitation).toFuture().futureValue
         agentReferenceRepo.create(agentReferenceRecord).futureValue
-        givenAgentRecordFound(arn, testAgentRecord)
+        givenAgentRecord(arn, testAgentRecord)
         givenUserAuthorised()
 
         val requestPath = s"/agent-client-relationships/api/${invitation.arn}/invitation/${invitation.invitationId}"
@@ -194,7 +194,7 @@ with TestData {
 
         invitationRepo.collection.insertOne(invitation).toFuture().futureValue
         agentReferenceRepo.create(agentReferenceRecord).futureValue
-        givenAgentRecordFound(arn, testAgentRecord)
+        givenAgentRecord(arn, testAgentRecord)
         givenUserAuthorised()
 
         val requestPath = s"/agent-client-relationships/api/${invitation.arn}/invitation/${invitation.invitationId}"
@@ -220,7 +220,7 @@ with TestData {
         val invitation: Invitation = allServicesGetInvitation(taxService)
 
         invitationRepo.collection.insertOne(invitation).toFuture().futureValue
-        givenAgentRecordFound(arn, testAgentRecord)
+        givenAgentRecord(arn, testAgentRecord)
         givenUserAuthorised()
 
         val requestPath = s"/agent-client-relationships/api/${invitation.arn}/invitation/${invitation.invitationId}"
@@ -241,7 +241,7 @@ with TestData {
         val invitation: Invitation = allServicesGetInvitation(taxService)
 
         agentReferenceRepo.create(agentReferenceRecord).futureValue
-        givenAgentRecordFound(arn, testAgentRecord)
+        givenAgentRecord(arn, testAgentRecord)
         givenUserAuthorised()
 
         val expectedJson: JsValue = Json.toJson(
@@ -265,7 +265,7 @@ with TestData {
 
       invitationRepo.collection.insertOne(invitation).toFuture().futureValue
       agentReferenceRepo.create(agentReferenceRecord).futureValue
-      givenAgentRecordFound(arn, testAgentRecord)
+      givenAgentRecord(arn, testAgentRecord)
       givenUserAuthorised()
 
       val expectedJson: JsValue = Json.toJson(
@@ -288,7 +288,7 @@ with TestData {
 
       invitationRepo.collection.insertOne(invitation).toFuture().futureValue
       agentReferenceRepo.create(agentReferenceRecord).futureValue
-      givenAgentRecordFound(arn, testAgentRecord)
+      givenAgentRecord(arn, testAgentRecord)
       givenUserAuthorised()
 
       val expectedJson: JsValue = Json.toJson(
@@ -313,7 +313,7 @@ with TestData {
 
         agentReferenceRepo.create(agentReferenceRecord).futureValue
         invitationRepo.collection.insertOne(invitation).toFuture().futureValue
-        givenAgentRecordFound(
+        givenAgentRecord(
           arn,
           testAgentRecord.copy(suspensionDetails = Some(SuspensionDetails(suspensionStatus = true, regimes = None)))
         )
@@ -341,7 +341,7 @@ with TestData {
 
         agentReferenceRepo.create(agentReferenceRecord).futureValue
         invitationRepo.collection.insertOne(invitation).toFuture().futureValue
-        givenAgentDetailsErrorResponse(arn, 404)
+        givenAgentRecordErrorResponse(arn, 404)
         givenUserAuthorised()
 
         val requestPath = s"/agent-client-relationships/api/${invitation.arn}/invitation/${invitation.invitationId}"

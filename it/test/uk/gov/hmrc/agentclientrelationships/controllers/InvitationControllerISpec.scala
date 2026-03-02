@@ -184,7 +184,7 @@ with TestData {
             givenMtdItIdIsKnownFor(nino, mtdItId)
           }
 
-          givenAgentRecordFound(arn, testAgentRecord)
+          givenAgentRecord(arn, testAgentRecord)
           givenUserAuthorised()
 
           val requestPath = s"/agent-client-relationships/agent/${arn.value}/authorisation-request"
@@ -231,7 +231,7 @@ with TestData {
       givenAuditConnector()
       givenMtdItIdIsUnKnownFor(nino)
 
-      givenAgentRecordFound(arn, testAgentRecord)
+      givenAgentRecord(arn, testAgentRecord)
       givenUserAuthorised()
 
       val result = doAgentPostRequest(

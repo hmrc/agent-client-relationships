@@ -48,7 +48,7 @@ import scala.concurrent.Future
 @Singleton
 class StrideClientDetailsService @Inject() (
   invitationsRepository: InvitationsRepository,
-  agentAssuranceService: AgentAssuranceService,
+  agentRecordService: AgentRecordService,
   findRelationshipsService: FindRelationshipsService,
   agentFiRelationshipConnector: AgentFiRelationshipConnector,
   partialAuthRepository: PartialAuthRepository,
@@ -243,7 +243,7 @@ class StrideClientDetailsService @Inject() (
   ] =
     activeRelationships.map { ar =>
       for {
-        agentDetails <- agentAssuranceService.getAgentRecord(ar.arn).attemptT
+        agentDetails <- agentRecordService.getAgentRecordWithChecks(ar.arn).attemptT
           .leftMap(ex => RelationshipFailureResponse.ErrorRetrievingAgentDetails(ex.getMessage))
         service <- EitherT(
           validationService.validateAuthProfileToService(
@@ -288,7 +288,7 @@ class StrideClientDetailsService @Inject() (
       )
       nonSuspended <- Future.sequence(
         invitations.map(i =>
-          agentAssuranceService
+          agentRecordService
             .getNonSuspendedAgentRecord(Arn(i.arn))
             .map {
               case Some(agentRecord) => Some(InvitationWithAgentName.fromInvitationAndAgentRecord(i, agentRecord))
@@ -340,8 +340,8 @@ class StrideClientDetailsService @Inject() (
     mActiveRelationship: Option[ActiveMainAgentRelationship]
   )(implicit request: RequestHeader): Future[Option[ActiveMainAgent]] =
     mActiveRelationship.fold[Future[Option[ActiveMainAgent]]](Future.successful(None)) { activeRelationship =>
-      agentAssuranceService
-        .getAgentRecord(Arn(activeRelationship.arn))
+      agentRecordService
+        .getAgentRecordWithChecks(Arn(activeRelationship.arn))
         .map(ar =>
           Some(
             ActiveMainAgent(

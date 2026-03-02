@@ -128,7 +128,7 @@ with HipStub {
           nino
         )
         givenAfiRelationshipForClientNotFound(nino.value)
-        givenAgentRecordFound(arn, existingAgentRecordResponse)
+        givenAgentRecord(arn, existingAgentRecordResponse)
         await(invitationsRepo.collection.insertOne(pendingInvitation).toFuture())
         await(partialAuthRepo.collection.insertOne(partialAuthRelationship).toFuture())
         val expectedBody = Json.toJson(
@@ -153,7 +153,7 @@ with HipStub {
         )
         getActiveRelationshipsViaClient(mtdItId, arn)
         givenAfiRelationshipForClientNotFound(nino.value)
-        givenAgentRecordFound(arn, existingAgentRecordResponse)
+        givenAgentRecord(arn, existingAgentRecordResponse)
         await(invitationsRepo.collection.insertOne(pendingInvitation).toFuture())
         val expectedBody = Json.toJson(
           CustomerStatus(
@@ -177,7 +177,7 @@ with HipStub {
         )
         getActiveRelationshipFailsWith(mtdItId, NOT_FOUND)
         givenAfiRelationshipForClientNotFound(nino.value)
-        givenAgentRecordFound(arn, existingAgentRecordResponse)
+        givenAgentRecord(arn, existingAgentRecordResponse)
         await(invitationsRepo.collection.insertOne(pendingInvitation).toFuture())
         val expectedBody = Json.toJson(
           CustomerStatus(
@@ -201,7 +201,7 @@ with HipStub {
         )
         getActiveRelationshipFailsWith(mtdItId, NOT_FOUND)
         givenAfiRelationshipForClientNotFound(nino.value)
-        givenAgentRecordFound(arn, suspendedAgentRecordResponse)
+        givenAgentRecord(arn, suspendedAgentRecordResponse)
         await(invitationsRepo.collection.insertOne(pendingInvitation).toFuture())
         val expectedBody = Json.toJson(
           CustomerStatus(

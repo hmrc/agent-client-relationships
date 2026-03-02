@@ -65,7 +65,7 @@ with HipStub
 with DesStubsGet
 with MappingStubs
 with DataStreamStub
-with AgentAssuranceStubs
+with AgentServicesAccountStubs
 with AuthStub {
 
   override implicit lazy val app: Application = appBuilder.build()
@@ -82,13 +82,15 @@ with AuthStub {
       "microservice.services.agent-mapping.port" -> wireMockPort,
       "microservice.services.agent-client-authorisation.port" -> wireMockPort,
       "microservice.services.agent-assurance.port" -> wireMockPort,
+      "microservice.services.agent-services-account.port" -> wireMockPort,
       "internal-auth.token" -> "internalAuthToken",
       "auditing.consumer.baseUri.host" -> wireMockHost,
       "auditing.consumer.baseUri.port" -> wireMockPort,
       "features.recovery-enable" -> false,
       "agent.cache.expires" -> "1 millis",
       "agent.cache.enabled" -> true,
-      "mongodb.uri" -> mongoUri
+      "mongodb.uri" -> mongoUri,
+      "features.enable-agent-record-via-asa" -> true
     )
     .overrides(new AbstractModule {
       override def configure(): Unit = {
@@ -173,7 +175,7 @@ with AuthStub {
     val enrolmentKey: EnrolmentKey = EnrolmentKey("IR-SA", Seq(Identifier("NINO", nino.value)))
 
     "return 200 when relationship exists only in cesa and relationship copy is never attempted" in {
-      givenAgentRecordFound(arn, agentRecordResponse)
+      givenAgentRecord(arn, agentRecordResponse)
       givenArnIsKnownFor(arn, SaAgentReference("foo"))
       givenClientHasRelationshipWithAgentInCESA(nino, "foo")
       givenAuditConnector()
@@ -202,7 +204,7 @@ with AuthStub {
     }
 
     "return 200 when relationship does not exist in CESA but there is a PartialAuth for main agent type" in {
-      givenAgentRecordFound(arn, agentRecordResponse)
+      givenAgentRecord(arn, agentRecordResponse)
       givenClientHasNoActiveRelationshipWithAgentInCESA(nino)
       givenAuditConnector()
       givenUserAuthorised()
@@ -231,7 +233,7 @@ with AuthStub {
     }
 
     "return 200 when relationship does not exist in CESA but there is a PartialAuth for supporting agent type" in {
-      givenAgentRecordFound(arn, agentRecordResponse)
+      givenAgentRecord(arn, agentRecordResponse)
       givenClientHasNoActiveRelationshipWithAgentInCESA(nino)
       givenAuditConnector()
       givenUserAuthorised()
@@ -260,7 +262,7 @@ with AuthStub {
     }
 
     "return 404 when relationship does not exist in CESA and there is no PartialAuth" in {
-      givenAgentRecordFound(arn, agentRecordResponse)
+      givenAgentRecord(arn, agentRecordResponse)
       givenClientHasNoActiveRelationshipWithAgentInCESA(nino)
       givenAuditConnector()
       givenUserAuthorised()

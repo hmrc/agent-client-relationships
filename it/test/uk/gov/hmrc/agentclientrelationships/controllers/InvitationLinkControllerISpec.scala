@@ -82,7 +82,7 @@ with HipStub {
     "return 200 status and valid JSON when agent reference and details are found and agent is not suspended " in {
       givenAuditConnector()
 
-      givenAgentRecordFound(arn, agentRecordResponse)
+      givenAgentRecord(arn, agentRecordResponse)
       await(agentReferenceRepo.create(agentReferenceRecord))
 
       val result = doGetRequest(s"/agent-client-relationships/agent/agent-reference/uid/$uid/$normalizedAgentName")
@@ -92,7 +92,7 @@ with HipStub {
 
     "return 404 status when agent reference is not found" in {
       givenAuditConnector()
-      givenAgentRecordFound(arn, agentRecordResponse)
+      givenAgentRecord(arn, agentRecordResponse)
 
       val result = doGetRequest(s"/agent-client-relationships/agent/agent-reference/uid/$uid/$normalizedAgentName")
       result.status shouldBe 404
@@ -100,7 +100,7 @@ with HipStub {
 
     "return 404 status when normalisedAgentNames is not on agent reference list" in {
       givenAuditConnector()
-      givenAgentRecordFound(arn, agentRecordResponse)
+      givenAgentRecord(arn, agentRecordResponse)
       await(agentReferenceRepo.create(agentReferenceRecord.copy(normalisedAgentNames = Seq("DummyNotMatching"))))
 
       val result = doGetRequest(s"/agent-client-relationships/agent/agent-reference/uid/$uid/$normalizedAgentName")
@@ -109,7 +109,7 @@ with HipStub {
 
     "return 404 status when agent name is missing" in {
       givenAuditConnector()
-      givenAgentRecordFound(arn, agentRecordResponseWithNoAgentName)
+      givenAgentRecord(arn, agentRecordResponseWithNoAgentName)
 
       val result = doGetRequest(s"/agent-client-relationships/agent/agent-reference/uid/$uid/$normalizedAgentName")
       result.status shouldBe 404
@@ -117,7 +117,7 @@ with HipStub {
 
     "return 502 status agent details are not found" in {
       givenAuditConnector()
-      givenAgentDetailsErrorResponse(arn, 502)
+      givenAgentRecordErrorResponse(arn, 502)
       await(agentReferenceRepo.create(agentReferenceRecord))
 
       val result = doGetRequest(s"/agent-client-relationships/agent/agent-reference/uid/$uid/$normalizedAgentName")
@@ -126,7 +126,7 @@ with HipStub {
 
     "return 403 status when agent is suspended" in {
       givenAuditConnector()
-      givenAgentRecordFound(arn, suspendedAgentRecordResponse)
+      givenAgentRecord(arn, suspendedAgentRecordResponse)
       await(agentReferenceRepo.create(agentReferenceRecord))
 
       val result = doGetRequest(s"/agent-client-relationships/agent/agent-reference/uid/$uid/$normalizedAgentName")
@@ -146,7 +146,7 @@ with HipStub {
         .replaceAll("\\s+", "-")
         .replaceAll("[^A-Za-z0-9-]", "")
 
-      givenAgentRecordFound(arn, agentRecordResponse)
+      givenAgentRecord(arn, agentRecordResponse)
       await(agentReferenceRepo.create(agentReferenceRecord))
 
       val result = doGetRequest(s"/agent-client-relationships/agent/agent-link")
@@ -169,7 +169,7 @@ with HipStub {
         .replaceAll("\\s+", "-")
         .replaceAll("[^A-Za-z0-9-]", "")
 
-      givenAgentRecordFound(arn, agentRecordResponse)
+      givenAgentRecord(arn, agentRecordResponse)
 
       val result = doGetRequest(s"/agent-client-relationships/agent/agent-link")
       result.status shouldBe 200
@@ -187,7 +187,7 @@ with HipStub {
     "return 200 status and appropriate JSON body when a matching agent and invitation is found" in {
       givenAuditConnector()
       givenUserIsSubscribedClient(nino)
-      givenAgentRecordFound(arn, agentRecordResponse)
+      givenAgentRecord(arn, agentRecordResponse)
       givenDelegatedGroupIdsNotExistFor(mtdItEnrolmentKey)
       await(agentReferenceRepo.create(agentReferenceRecord))
       val pendingInvitation = await(
@@ -223,10 +223,10 @@ with HipStub {
     "return 200 status and appropriate JSON body when a matching agent and invitation plus existing main agent is found" in {
       givenAuditConnector()
       givenUserIsSubscribedClient(nino)
-      givenAgentRecordFound(arn, agentRecordResponse)
+      givenAgentRecord(arn, agentRecordResponse)
       givenDelegatedGroupIdsExistFor(mtdItEnrolmentKey, Set(testExistingAgentGroup))
       givenGetAgentReferenceNumberFor(testExistingAgentGroup, existingAgentArn.value)
-      givenAgentRecordFound(existingAgentArn, existingAgentRecordResponse)
+      givenAgentRecord(existingAgentArn, existingAgentRecordResponse)
       await(agentReferenceRepo.create(agentReferenceRecord))
       val expectedExistingMainAgent = ExistingMainAgent(agencyName = "ExistingAgent", sameAgent = false)
       val pendingInvitation = await(
@@ -262,10 +262,10 @@ with HipStub {
     "return 200 status and appropriate JSON body when a matching agent and invitation plus existing same main agent is found" in {
       givenAuditConnector()
       givenUserIsSubscribedClient(nino)
-      givenAgentRecordFound(existingAgentArn, existingAgentRecordResponse)
+      givenAgentRecord(existingAgentArn, existingAgentRecordResponse)
       givenDelegatedGroupIdsExistFor(mtdItEnrolmentKey, Set(testExistingAgentGroup))
       givenGetAgentReferenceNumberFor(testExistingAgentGroup, existingAgentArn.value)
-      givenAgentRecordFound(existingAgentArn, existingAgentRecordResponse)
+      givenAgentRecord(existingAgentArn, existingAgentRecordResponse)
       await(agentReferenceRepo.create(existingAgentReferenceRecord))
       val expectedExistingMainAgent = ExistingMainAgent(agencyName = "ExistingAgent", sameAgent = true)
       val pendingInvitation = await(
@@ -310,8 +310,8 @@ with HipStub {
         )
       )
       givenMtdItIdIsUnKnownFor(nino)
-      givenAgentRecordFound(arn, agentRecordResponse)
-      givenAgentRecordFound(existingAgentArn, existingAgentRecordResponse)
+      givenAgentRecord(arn, agentRecordResponse)
+      givenAgentRecord(existingAgentArn, existingAgentRecordResponse)
       await(agentReferenceRepo.create(agentReferenceRecord))
       val expectedExistingMainAgent = ExistingMainAgent(agencyName = "ExistingAgent", sameAgent = false)
       val pendingInvitation = await(
@@ -363,7 +363,7 @@ with HipStub {
         )
       )
       givenMtdItIdIsUnKnownFor(nino)
-      givenAgentRecordFound(existingAgentArn, existingAgentRecordResponse)
+      givenAgentRecord(existingAgentArn, existingAgentRecordResponse)
       await(agentReferenceRepo.create(existingAgentReferenceRecord))
       val expectedExistingMainAgent = ExistingMainAgent(agencyName = "ExistingAgent", sameAgent = true)
       val pendingInvitation = await(
@@ -399,7 +399,7 @@ with HipStub {
     "return 200 status and appropriate JSON body when a matching agent and invitation for ITSA supporting agent is found" in {
       givenAuditConnector()
       givenUserIsSubscribedClient(nino)
-      givenAgentRecordFound(arn, agentRecordResponse)
+      givenAgentRecord(arn, agentRecordResponse)
       givenDelegatedGroupIdsNotExistFor(mtdItEnrolmentKey)
       await(agentReferenceRepo.create(agentReferenceRecord))
       val pendingInvitation = await(
@@ -439,10 +439,10 @@ with HipStub {
         utr,
         cbcId
       )
-      givenAgentRecordFound(arn, agentRecordResponse)
+      givenAgentRecord(arn, agentRecordResponse)
       givenDelegatedGroupIdsExistFor(cbcUkEnrolmentKey, Set(testExistingAgentGroup))
       givenGetAgentReferenceNumberFor(testExistingAgentGroup, existingAgentArn.value)
-      givenAgentRecordFound(existingAgentArn, existingAgentRecordResponse)
+      givenAgentRecord(existingAgentArn, existingAgentRecordResponse)
       await(agentReferenceRepo.create(agentReferenceRecord))
       val pendingInvitation = await(
         invitationsRepo.create(
@@ -489,7 +489,7 @@ with HipStub {
       "the agent is suspended" in {
         givenAuditConnector()
         givenUserIsSubscribedClient(nino)
-        givenAgentRecordFound(arn, suspendedAgentRecordResponse)
+        givenAgentRecord(arn, suspendedAgentRecordResponse)
         givenDelegatedGroupIdsNotExistFor(mtdItEnrolmentKey)
         await(agentReferenceRepo.create(agentReferenceRecord))
         await(
@@ -515,7 +515,7 @@ with HipStub {
       "the provided service key does not exist in the client's enrolments" in {
         givenAuditConnector()
         givenUserIsSubscribedClient(nino)
-        givenAgentRecordFound(arn, agentRecordResponse)
+        givenAgentRecord(arn, agentRecordResponse)
         await(agentReferenceRepo.create(agentReferenceRecord))
         await(
           invitationsRepo.create(
@@ -543,7 +543,7 @@ with HipStub {
       "no invitations were found in the invitations collection for the given agent" in {
         givenAuditConnector()
         givenUserIsSubscribedClient(nino)
-        givenAgentRecordFound(arn, agentRecordResponse)
+        givenAgentRecord(arn, agentRecordResponse)
         await(agentReferenceRepo.create(agentReferenceRecord))
 
         val requestBody = Json.obj("uid" -> uid, "serviceKeys" -> itsaServiceKeys)
@@ -555,7 +555,7 @@ with HipStub {
       "the provided service key does not match with an existing invitation" in {
         givenAuditConnector()
         givenUserIsSubscribedClient(vrn)
-        givenAgentRecordFound(arn, agentRecordResponse)
+        givenAgentRecord(arn, agentRecordResponse)
         await(agentReferenceRepo.create(agentReferenceRecord))
         await(
           invitationsRepo.create(
@@ -580,7 +580,7 @@ with HipStub {
       "the agent reference record could not be obtained for the given agent" in {
         givenAuditConnector()
         givenUserIsSubscribedClient(nino)
-        givenAgentDetailsErrorResponse(arn, NOT_FOUND)
+        givenAgentRecordErrorResponse(arn, NOT_FOUND)
         await(
           invitationsRepo.create(
             arn.value,

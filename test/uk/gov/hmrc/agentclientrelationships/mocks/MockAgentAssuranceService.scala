@@ -22,31 +22,31 @@ import org.mockito.Mockito.when
 import org.mockito.stubbing.OngoingStubbing
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentDetailsDesResponse
-import uk.gov.hmrc.agentclientrelationships.services.AgentAssuranceService
 import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
+import uk.gov.hmrc.agentclientrelationships.services.AgentRecordService
 
 import scala.concurrent.Future
 
 trait MockAgentAssuranceService {
   this: ResettingMockitoSugar =>
 
-  val mockAgentAssuranceService: AgentAssuranceService = resettingMock[AgentAssuranceService]
+  val mockAgentRecordService: AgentRecordService = resettingMock[AgentRecordService]
 
   def mockGetAgentRecord(
     arn: Arn
   )(response: AgentDetailsDesResponse): OngoingStubbing[Future[AgentDetailsDesResponse]] = when(
-    mockAgentAssuranceService.getAgentRecord(eqs(arn))(any[RequestHeader])
+    mockAgentRecordService.getAgentRecordWithChecks(eqs(arn))(any[RequestHeader])
   ).thenReturn(Future.successful(response))
 
   def mockGetNonSuspendedAgentRecord(
     arn: Arn
   )(response: Option[AgentDetailsDesResponse]): OngoingStubbing[Future[Option[AgentDetailsDesResponse]]] = when(
-    mockAgentAssuranceService.getNonSuspendedAgentRecord(eqs(arn))(any[RequestHeader])
+    mockAgentRecordService.getNonSuspendedAgentRecord(eqs(arn))(any[RequestHeader])
   ).thenReturn(Future.successful(response))
 
   def mockFailedGetAgentRecord(arn: Arn): OngoingStubbing[Future[AgentDetailsDesResponse]] = when(
-    mockAgentAssuranceService.getAgentRecord(eqs(arn))(any[RequestHeader])
+    mockAgentRecordService.getAgentRecordWithChecks(eqs(arn))(any[RequestHeader])
   ).thenReturn(Future.failed(new Exception("something went wrong")))
 
 }

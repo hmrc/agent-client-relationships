@@ -34,7 +34,7 @@ import scala.concurrent.Future
 @Singleton
 class InvitationLinkService @Inject() (
   agentReferenceRepository: AgentReferenceRepository,
-  agentAssuranceService: AgentAssuranceService
+  agentRecordService: AgentRecordService
 )(implicit ec: ExecutionContext)
 extends RequestAwareLogging {
 
@@ -61,7 +61,7 @@ extends RequestAwareLogging {
 
   def createLink(arn: Arn)(implicit request: RequestHeader): Future[CreateLinkResponse] =
     for {
-      agentDetailsResponse <- agentAssuranceService.getAgentRecord(arn)
+      agentDetailsResponse <- agentRecordService.getAgentRecordWithChecks(arn)
       newNormaliseAgentName = normaliseAgentName(agentDetailsResponse.agencyDetails.agencyName)
 
       agentReferenceRecord <- getAgentReferenceRecordByArn(arn, newNormaliseAgentName)
@@ -142,7 +142,7 @@ extends RequestAwareLogging {
     Future,
     InvitationLinkFailureResponse,
     AgentDetailsDesResponse
-  ] = EitherT.fromOptionF(agentAssuranceService.getNonSuspendedAgentRecord(arn), InvitationLinkFailureResponse.AgentSuspended)
+  ] = EitherT.fromOptionF(agentRecordService.getNonSuspendedAgentRecord(arn), InvitationLinkFailureResponse.AgentSuspended)
 
   private def getAgencyName(
     agentDetailsDesResponse: AgentDetailsDesResponse

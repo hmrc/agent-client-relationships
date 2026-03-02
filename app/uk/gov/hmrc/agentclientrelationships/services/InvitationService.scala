@@ -53,7 +53,7 @@ import scala.concurrent.Future
 class InvitationService @Inject() (
   invitationsRepository: InvitationsRepository,
   hipConnector: HipConnector,
-  agentAssuranceService: AgentAssuranceService,
+  agentRecordService: AgentRecordService,
   emailService: EmailService,
   appConfig: AppConfig
 )(implicit ec: ExecutionContext)
@@ -83,7 +83,7 @@ extends RequestAwareLogging {
         suppliedClientId <- EitherT.fromEither[Future](createInvitationInputData.getSuppliedClientId)
         service <- EitherT.fromEither[Future](createInvitationInputData.getService)
         clientType <- EitherT.fromEither[Future](createInvitationInputData.getClientType)
-        agentRecord <- EitherT.right(agentAssuranceService.getAgentRecord(arn))
+        agentRecord <- EitherT.right(agentRecordService.getAgentRecordWithChecks(arn))
         clientId <- EitherT(getClientId(suppliedClientId, service))
         invitation <- EitherT(
           create(
@@ -150,7 +150,7 @@ extends RequestAwareLogging {
     def getSuspendedArns(arns: Seq[String]) = Future
       .sequence(
         arns.map { arn =>
-          agentAssuranceService.getNonSuspendedAgentRecord(Arn(arn))
+          agentRecordService.getNonSuspendedAgentRecord(Arn(arn))
             .map {
               case None => Some(arn)
               case Some(_) => None

@@ -145,5 +145,7 @@ class AppConfig @Inject() (
   val emailSchedulerWarningCronExp: String = servicesConfig.getString("emailScheduler.warningEmailCronExpression")
   val emailSchedulerExpiredCronExp: String = servicesConfig.getString("emailScheduler.expiredEmailCronExpression")
   val emailSchedulerLockTTL: Int = servicesConfig.getInt("emailScheduler.lockDurationInSeconds")
+  val enableAgentRecordViaAsa: Boolean = servicesConfig.getBoolean("features.enable-agent-record-via-asa")
+  val agentServicesAccountBaseUrl: String = servicesConfig.baseUrl("agent-services-account")
 
 }

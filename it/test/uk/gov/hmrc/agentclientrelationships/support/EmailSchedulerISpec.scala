@@ -20,7 +20,6 @@ import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.stream.Materializer
 import org.apache.pekko.testkit.TestKit
 import org.scalatest.BeforeAndAfterEach
-import org.scalatest.concurrent.Eventually.eventually
 import org.scalatest.concurrent.PatienceConfiguration.Interval
 import org.scalatest.concurrent.PatienceConfiguration.Timeout
 import org.scalatest.time.Seconds
@@ -33,6 +32,8 @@ import play.api.test.Helpers.await
 import play.api.test.Helpers.defaultAwaitTimeout
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model._
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Vat
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Vrn
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
 import uk.gov.hmrc.agentclientrelationships.services.EmailService
 import uk.gov.hmrc.agentclientrelationships.services.MongoLockService
@@ -40,8 +41,6 @@ import uk.gov.hmrc.agentclientrelationships.stubs.DataStreamStub
 import uk.gov.hmrc.agentclientrelationships.stubs.EmailStubs
 import uk.gov.hmrc.agentclientrelationships.stubs.EnrolmentStoreProxyStubs
 import uk.gov.hmrc.agentclientrelationships.util.DateTimeHelper
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Vat
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Vrn
 
 import java.time.Instant
 import java.time.LocalDate

@@ -166,7 +166,7 @@ with AfiRelationshipStub {
 
         givenVatCustomerInfoError(vrn.value, 404)
         getActiveRelationshipsViaClient(vrn, arn)
-        givenAgentRecordFound(arn, testAgentRecord)
+        givenAgentRecord(arn, testAgentRecord)
         val result = doGetRequest(
           makeRequestUrl(
             "HMRC-MTD-VAT",
@@ -185,7 +185,7 @@ with AfiRelationshipStub {
 
         givenVatCustomerInfoExists(vrn.value)
         getActiveRelationshipsViaClient(vrn, arn)
-        givenAgentRecordFound(arn, testAgentRecord)
+        givenAgentRecord(arn, testAgentRecord)
         val result = doGetRequest(
           makeRequestUrl(
             "HMRC-MTD-VAT",
@@ -206,7 +206,7 @@ with AfiRelationshipStub {
 
         givenVatCustomerInfoExists(vrn.value)
         getActiveRelationshipFailsWith(vrn, 422)
-        givenAgentRecordFound(arn, testAgentRecord)
+        givenAgentRecord(arn, testAgentRecord)
         val result = doGetRequest(
           makeRequestUrl(
             "HMRC-MTD-VAT",
@@ -226,7 +226,7 @@ with AfiRelationshipStub {
         invitationsRepo.collection.insertOne(pendingInvitation).toFuture().futureValue
 
         getActiveRelationshipFailsWith(vrn, 422)
-        givenAgentRecordFound(arn, testAgentRecord)
+        givenAgentRecord(arn, testAgentRecord)
         val result = doGetRequest(
           makeRequestUrl(
             "HMRC-MTD-VAT",
@@ -253,11 +253,11 @@ with AfiRelationshipStub {
 
         invitationsRepo.collection.insertOne(pendingInvitation).toFuture().futureValue
 
-        givenAgentRecordFound(arn, testAgentRecord)
+        givenAgentRecord(arn, testAgentRecord)
 
         getActiveRelationshipsViaClient(vrn, arn2)
 
-        givenAgentRecordFound(arn2, testAgentRecord)
+        givenAgentRecord(arn2, testAgentRecord)
 
         val result = doGetRequest(
           makeRequestUrl(
@@ -293,7 +293,7 @@ with AfiRelationshipStub {
 
         invitationsRepo.collection.insertOne(pendingInvitation).toFuture().futureValue
 
-        givenAgentRecordFound(
+        givenAgentRecord(
           arn,
           testAgentRecord
             .copy(suspensionDetails = Some(SuspensionDetails(suspensionStatus = true, regimes = Some(Set("AGSV")))))
@@ -301,7 +301,7 @@ with AfiRelationshipStub {
 
         getActiveRelationshipsViaClient(vrn, arn2)
 
-        givenAgentRecordFound(arn2, testAgentRecord)
+        givenAgentRecord(arn2, testAgentRecord)
 
         val result = doGetRequest(
           makeRequestUrl(
@@ -344,9 +344,9 @@ with AfiRelationshipStub {
 
         partialAuthRepo.collection.insertOne(partialAuthRelationship).toFuture().futureValue
 
-        givenAgentRecordFound(arn, testAgentRecord)
+        givenAgentRecord(arn, testAgentRecord)
 
-        givenAgentRecordFound(arn2, testAgentRecord)
+        givenAgentRecord(arn2, testAgentRecord)
 
         val result = doGetRequest(
           makeRequestUrl(
@@ -387,12 +387,12 @@ with AfiRelationshipStub {
 
         invitationsRepo.collection.insertOne(itsaPendingInvitation).toFuture().futureValue
 
-        givenAgentRecordFound(arn, testAgentRecord)
+        givenAgentRecord(arn, testAgentRecord)
 
         givenMtdItIdIsKnownFor(nino, mtdItId)
         getActiveRelationshipsViaClient(mtdItId, arn2)
 
-        givenAgentRecordFound(arn2, testAgentRecord)
+        givenAgentRecord(arn2, testAgentRecord)
 
         val result = doGetRequest(
           makeRequestUrl(
@@ -433,7 +433,7 @@ with AfiRelationshipStub {
 
         invitationsRepo.collection.insertOne(irvPendingInvitation).toFuture().futureValue
 
-        givenAgentRecordFound(arn, testAgentRecord)
+        givenAgentRecord(arn, testAgentRecord)
 
         givenAfiRelationshipForClientIsActive(
           arn2,
@@ -442,7 +442,7 @@ with AfiRelationshipStub {
           fromCesa = true
         )
 
-        givenAgentRecordFound(arn2, testAgentRecord)
+        givenAgentRecord(arn2, testAgentRecord)
 
         val result = doGetRequest(
           makeRequestUrl(
@@ -483,7 +483,7 @@ with AfiRelationshipStub {
 
         invitationsRepo.collection.insertOne(cbcPendingInvitation).toFuture().futureValue
 
-        givenAgentRecordFound(arn, testAgentRecord)
+        givenAgentRecord(arn, testAgentRecord)
 
         givenKnownFactsQuery(
           Cbc,
@@ -493,7 +493,7 @@ with AfiRelationshipStub {
 
         getActiveRelationshipsViaClient(cbcId, arn2)
 
-        givenAgentRecordFound(arn2, testAgentRecord)
+        givenAgentRecord(arn2, testAgentRecord)
 
         val result = doGetRequest(
           makeRequestUrl(
@@ -534,7 +534,7 @@ with AfiRelationshipStub {
 
         invitationsRepo.collection.insertOne(cbcPendingInvitation).toFuture().futureValue
 
-        givenAgentRecordFound(arn, testAgentRecord)
+        givenAgentRecord(arn, testAgentRecord)
 
         givenCbcUkDoesNotExistInES(cbcId)
         givenKnownFactsQuery(
@@ -545,7 +545,7 @@ with AfiRelationshipStub {
 
         getActiveRelationshipsViaClient(cbcId, arn2)
 
-        givenAgentRecordFound(arn2, testAgentRecord)
+        givenAgentRecord(arn2, testAgentRecord)
 
         val result = doGetRequest(
           makeRequestUrl(
@@ -617,29 +617,29 @@ with AfiRelationshipStub {
               )
               givenItsaCitizenDetailsExists(nino)
               givenItsaDesignatoryDetailsExists(nino)
-              givenAgentRecordFound(arn, testAgentRecord)
-              givenAgentRecordFound(arn2, testAgentRecord2)
+              givenAgentRecord(arn, testAgentRecord)
+              givenAgentRecord(arn2, testAgentRecord2)
               partialAuthRepo.collection.insertOne(partialAuthRelationship).toFuture().futureValue
             case VrnType.id =>
               getVrnIsKnownInETMPFor2(vrn)
               getAllActiveRelationshipsViaClient(taxIdentifier, arn)
-              givenAgentRecordFound(arn, testAgentRecord)
+              givenAgentRecord(arn, testAgentRecord)
             case UtrType.id =>
               getAllActiveRelationshipsViaClient(taxIdentifier, arn)
               givenTrustDetailsExist(taxIdentifier.value, UtrType.id.toUpperCase)
-              givenAgentRecordFound(arn, testAgentRecord)
+              givenAgentRecord(arn, testAgentRecord)
             case UrnType.id =>
               getAllActiveRelationshipsViaClient(taxIdentifier, arn)
               givenTrustDetailsExist(taxIdentifier.value, UrnType.id.toUpperCase)
-              givenAgentRecordFound(arn, testAgentRecord)
+              givenAgentRecord(arn, testAgentRecord)
             case CgtRefType.id =>
               getAllActiveRelationshipsViaClient(taxIdentifier, arn)
               givenCgtDetailsExist(taxIdentifier.value)
-              givenAgentRecordFound(arn, testAgentRecord)
+              givenAgentRecord(arn, testAgentRecord)
             case PptRefType.id =>
               getAllActiveRelationshipsViaClient(taxIdentifier, arn)
               givenPptDetailsExist(taxIdentifier.value)
-              givenAgentRecordFound(arn, testAgentRecord)
+              givenAgentRecord(arn, testAgentRecord)
             case CbcIdType.id =>
               getAllActiveRelationshipsViaClient(taxIdentifier, arn)
               givenKnownFactsQuery(
@@ -653,11 +653,11 @@ with AfiRelationshipStub {
                 taxIdentifier,
                 Some(Seq(Identifier("cbcId", taxIdentifier.value), Identifier("UTR", utr.value)))
               )
-              givenAgentRecordFound(arn, testAgentRecord)
+              givenAgentRecord(arn, testAgentRecord)
             case PlrIdType.id =>
               getAllActiveRelationshipsViaClient(taxIdentifier, arn)
               givenPillar2DetailsExist(taxIdentifier.value)
-              givenAgentRecordFound(arn, testAgentRecord)
+              givenAgentRecord(arn, testAgentRecord)
             case _ =>
           }
 
@@ -741,7 +741,7 @@ with AfiRelationshipStub {
       givenAfiRelationshipForClientNotFound(nino.value)
       givenItsaCitizenDetailsExists(nino)
       givenItsaDesignatoryDetailsExists(nino)
-      givenAgentRecordFound(arn2, testAgentRecord2)
+      givenAgentRecord(arn2, testAgentRecord2)
       partialAuthRepo.collection.insertOne(partialAuthRelationship).toFuture().futureValue
 
       val expectedPartialAuthRelationship = ActiveClientRelationship(
@@ -770,7 +770,7 @@ with AfiRelationshipStub {
       givenAfiRelationshipForClientNotFound(nino.value)
       givenItsaCitizenDetailsExists(nino)
       givenItsaDesignatoryDetailsExists(nino)
-      givenAgentRecordFound(arn2, testAgentRecord2)
+      givenAgentRecord(arn2, testAgentRecord2)
       partialAuthRepo.collection.insertOne(partialAuthRelationship).toFuture().futureValue
 
       val expectedPartialAuthRelationship = ActiveClientRelationship(
@@ -812,7 +812,7 @@ with AfiRelationshipStub {
             case VrnType.id =>
               getVrnIsKnownInETMPFor2(vrn)
               getAllActiveRelationshipsViaClient(taxIdentifier, arn)
-              givenAgentRecordFound(arn, testAgentRecord)
+              givenAgentRecord(arn, testAgentRecord)
             case _ =>
           }
 
@@ -869,7 +869,7 @@ with AfiRelationshipStub {
             case VrnType.id =>
               getVrnIsKnownInETMPFor2(vrn)
               getAllActiveRelationshipsViaClient(taxIdentifier, arn)
-              givenAgentRecordFound(arn, testAgentRecord)
+              givenAgentRecord(arn, testAgentRecord)
             case _ =>
 
           }
@@ -1058,12 +1058,12 @@ with AfiRelationshipStub {
               givenAfiRelationshipForClientNotFound(cr.clientId)
               givenItsaCitizenDetailsError(nino, 403)
               givenItsaDesignatoryDetailsExists(nino)
-              givenAgentRecordFound(arn, testAgentRecord)
-              givenAgentRecordFound(arn2, testAgentRecord2)
+              givenAgentRecord(arn, testAgentRecord)
+              givenAgentRecord(arn2, testAgentRecord2)
             case VrnType.id =>
               getVrnIsKnownInETMPFor2(vrn)
               getAllActiveRelationshipsViaClient(vrn, arn)
-              givenAgentRecordFound(arn, testAgentRecord)
+              givenAgentRecord(arn, testAgentRecord)
             case _ =>
           }
 
@@ -1096,12 +1096,12 @@ with AfiRelationshipStub {
               givenAfiRelationshipForClientNotFound(cr.clientId)
               givenItsaCitizenDetailsExists(nino)
               givenItsaDesignatoryDetailsExists(nino)
-              givenAgentRecordFound(arn, testAgentRecord)
-              givenAgentDetailsErrorResponse(arn2, 404)
+              givenAgentRecord(arn, testAgentRecord)
+              givenAgentRecordErrorResponse(arn2, 404)
             case VrnType.id =>
               getVrnIsKnownInETMPFor2(vrn)
               getAllActiveRelationshipsViaClient(vrn, arn)
-              givenAgentRecordFound(arn, testAgentRecord)
+              givenAgentRecord(arn, testAgentRecord)
             case _ =>
           }
 
@@ -1110,7 +1110,7 @@ with AfiRelationshipStub {
       // Test
       val result = doAgentPostRequest(requestPath, Json.toJson(clientsRelationshipsRequest).toString())
       result.status shouldBe 500
-      result.body.contains("/agent-assurance/agent-record-with-checks/arn/AARN0000004' returned 404") shouldBe true
+      result.body.contains("/agent-services-account/agent-record-with-checks/arn/AARN0000004' returned 404") shouldBe true
     }
     "return 404 when get client data fail" in {
       val clientsRelationshipsRequest: ClientsRelationshipsRequest = ClientsRelationshipsRequest(
@@ -1126,7 +1126,7 @@ with AfiRelationshipStub {
             case VrnType.id =>
               givenDESRespondsWithStatusForVrn(vrn, 404)
               getAllActiveRelationshipsViaClient(taxIdentifier, arn)
-              givenAgentRecordFound(arn, testAgentRecord)
+              givenAgentRecord(arn, testAgentRecord)
             case _ =>
           }
         }
@@ -1151,7 +1151,7 @@ with AfiRelationshipStub {
         fromCesa = true
       )
       givenItsaCitizenDetailsExists(nino)
-      givenAgentRecordFound(arn, testAgentRecord)
+      givenAgentRecord(arn, testAgentRecord)
 
       val expectedJsonBody = Json.obj(
         "clientName" -> "Matthew Kovacic",
@@ -1213,7 +1213,7 @@ with AfiRelationshipStub {
           fromCesa = true
         )
         givenItsaCitizenDetailsExists(nino)
-        givenAgentDetailsErrorResponse(arn, 500)
+        givenAgentRecordErrorResponse(arn, 500)
 
         val result = doGetRequest(requestPath(nino.value))
         result.status shouldBe 500

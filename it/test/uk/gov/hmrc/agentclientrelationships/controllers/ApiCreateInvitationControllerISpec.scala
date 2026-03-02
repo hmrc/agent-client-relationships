@@ -33,10 +33,10 @@ import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiFailureResponse.
 import uk.gov.hmrc.agentclientrelationships.repository.AgentReferenceRepository
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
 import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
-import uk.gov.hmrc.agentclientrelationships.services.AgentAssuranceService
+import uk.gov.hmrc.agentclientrelationships.services.AgentRecordService
+import uk.gov.hmrc.agentclientrelationships.services.ApiKnownFactsCheckService
 import uk.gov.hmrc.agentclientrelationships.services.CheckRelationshipsOrchestratorService
 import uk.gov.hmrc.agentclientrelationships.services.ClientDetailsService
-import uk.gov.hmrc.agentclientrelationships.services.ApiKnownFactsCheckService
 import uk.gov.hmrc.agentclientrelationships.stubs._
 import uk.gov.hmrc.agentclientrelationships.support.TestData
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service._
@@ -66,7 +66,7 @@ with CitizenDetailsStub {
   val clientDetailsService: ClientDetailsService = app.injector.instanceOf[ClientDetailsService]
   val knowFactsCheckService: ApiKnownFactsCheckService = app.injector.instanceOf[ApiKnownFactsCheckService]
   val checkRelationshipsService: CheckRelationshipsOrchestratorService = app.injector.instanceOf[CheckRelationshipsOrchestratorService]
-  val agentAssuranceService: AgentAssuranceService = app.injector.instanceOf[AgentAssuranceService]
+  val agentRecordService: AgentRecordService = app.injector.instanceOf[AgentRecordService]
   val invitationRepo: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
   val partialAuthRepository: PartialAuthRepository = app.injector.instanceOf[PartialAuthRepository]
   val agentReferenceRepo: AgentReferenceRepository = app.injector.instanceOf[AgentReferenceRepository]
@@ -83,7 +83,7 @@ with CitizenDetailsStub {
       clientDetailsService,
       knowFactsCheckService,
       checkRelationshipsService,
-      agentAssuranceService,
+      agentRecordService,
       invitationRepo,
       partialAuthRepository,
       auditService,
@@ -142,7 +142,7 @@ with CitizenDetailsStub {
     givenAgentGroupExistsFor("foo")
     givenAdminUser("foo", "bar")
     givenPrincipalGroupIdExistsFor(agentEnrolmentKey(arn), "foo")
-    givenAgentRecordFound(arn, testAgentRecord)
+    givenAgentRecord(arn, testAgentRecord)
     givenUserAuthorised()
 
     if (taxService == HMRCMTDIT || taxService == HMRCMTDITSUPP) {
@@ -691,7 +691,7 @@ with CitizenDetailsStub {
         val inputData: ApiCreateInvitationRequest = allServices(taxService)
 
         getStandardStubForCreateInvitation(taxService)
-        givenAgentRecordFound(
+        givenAgentRecord(
           arn,
           testAgentRecord.copy(suspensionDetails = Some(SuspensionDetails(suspensionStatus = true, regimes = None)))
         )
@@ -719,7 +719,7 @@ with CitizenDetailsStub {
         val inputData: ApiCreateInvitationRequest = allServices(taxService)
 
         getStandardStubForCreateInvitation(taxService)
-        givenAgentDetailsErrorResponse(arn, 404)
+        givenAgentRecordErrorResponse(arn, 404)
 
         val requestPath = s"/agent-client-relationships/api/${arn.value}/invitation"
         val result = doAgentPostRequest(requestPath, Json.toJson(inputData).toString())

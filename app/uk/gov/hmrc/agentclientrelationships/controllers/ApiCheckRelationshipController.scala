@@ -35,7 +35,7 @@ import scala.concurrent.Future
 // This controller meant only for use by agent-authorisation-api
 @Singleton
 class ApiCheckRelationshipController @Inject() (
-  agentAssuranceService: AgentAssuranceService,
+  agentRecordService: AgentRecordService,
   clientDetailsService: ClientDetailsService,
   checkRelationshipsService: CheckRelationshipsOrchestratorService,
   val authConnector: AuthConnector,
@@ -51,7 +51,7 @@ with AuthActions {
   def checkRelationship(arn: Arn): Action[ApiCheckRelationshipRequest] =
     Action.async(parse.json[ApiCheckRelationshipRequest]) { implicit request =>
       authorised() {
-        agentAssuranceService.getNonSuspendedAgentRecord(arn).flatMap {
+        agentRecordService.getNonSuspendedAgentRecord(arn).flatMap {
           case None => Future.successful(AgentSuspended.getResult)
           case Some(_) =>
             clientDetailsService.findClientDetails(request.body.service, request.body.suppliedClientId).flatMap {

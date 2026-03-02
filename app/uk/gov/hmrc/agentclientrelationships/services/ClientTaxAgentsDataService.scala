@@ -44,7 +44,7 @@ import scala.concurrent.Future
 @Singleton
 class ClientTaxAgentsDataService @Inject() (
   invitationsRepository: InvitationsRepository,
-  agentAssuranceService: AgentAssuranceService,
+  agentRecordService: AgentRecordService,
   invitationLinkService: InvitationLinkService,
   agentFiRelationshipConnector: AgentFiRelationshipConnector,
   findRelationshipsService: FindRelationshipsService,
@@ -418,7 +418,7 @@ class ClientTaxAgentsDataService @Inject() (
     Future,
     RelationshipFailureResponse,
     AgentDetailsDesResponse
-  ] = EitherT.fromOptionF(agentAssuranceService.getNonSuspendedAgentRecord(arn), RelationshipFailureResponse.AgentSuspended)
+  ] = EitherT.fromOptionF(agentRecordService.getNonSuspendedAgentRecord(arn), RelationshipFailureResponse.AgentSuspended)
 
   private def filterOutSuspendedAgent[A](
     myEitherT: EitherT[
