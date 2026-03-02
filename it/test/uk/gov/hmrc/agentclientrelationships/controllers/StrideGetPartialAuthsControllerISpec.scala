@@ -83,7 +83,7 @@ with CitizenDetailsStub {
       givenAuditConnector()
       partialAuthRepo.collection.insertOne(partialAuthRelationship).toFuture().futureValue
       givenCitizenDetailsExists(nino)
-      givenAgentRecordFound(arn, testAgentRecord)
+      givenAgentRecord(arn, testAgentRecord)
 
       val expectedJsonBody = Json.obj(
         "clientName" -> "Matthew Kovacic",
@@ -102,7 +102,7 @@ with CitizenDetailsStub {
       givenAuthorisedAsStrideUser(req, "user-123")
       givenAuditConnector()
       givenCitizenDetailsExists(nino)
-      givenAgentRecordFound(arn, testAgentRecord)
+      givenAgentRecord(arn, testAgentRecord)
       val result = doGetRequest(requestPath(nino.value))
       result.status shouldBe UNPROCESSABLE_ENTITY
       result.json shouldBe Json.obj(
@@ -129,7 +129,7 @@ with CitizenDetailsStub {
       givenAuditConnector()
       partialAuthRepo.collection.insertOne(partialAuthRelationship).toFuture().futureValue
       givenCitizenDetailsHasNoName(nino)
-      givenAgentRecordFound(arn, testAgentRecord)
+      givenAgentRecord(arn, testAgentRecord)
       val result = doGetRequest(requestPath(nino.value))
       result.status shouldBe INTERNAL_SERVER_ERROR
       result.json shouldBe Json.obj(

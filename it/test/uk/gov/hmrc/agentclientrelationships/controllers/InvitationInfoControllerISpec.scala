@@ -88,7 +88,7 @@ with TestData {
       givenAuditConnector()
       givenAuthorisedAsValidAgent(fakeRequest, arn.value)
 
-      givenAgentRecordFound(arn, agentRecordResponse)
+      givenAgentRecord(arn, agentRecordResponse)
 
       await(invitationRepo.collection.insertOne(testInvitation).toFuture())
 
@@ -135,7 +135,7 @@ with TestData {
       val fakeRequest = FakeRequest("GET", testClientUrl)
       givenAuditConnector()
       givenAuthorisedAsVatClient(fakeRequest, vrn)
-      givenAgentRecordFound(arn, agentRecordResponse)
+      givenAgentRecord(arn, agentRecordResponse)
       await(invitationRepo.collection.insertOne(testInvitation.copy(status = Accepted)).toFuture())
       val result = doGetRequest(testClientUrl)
       result.status shouldBe 200

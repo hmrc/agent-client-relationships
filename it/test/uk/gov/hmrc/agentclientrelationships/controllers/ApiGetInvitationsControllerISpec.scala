@@ -177,7 +177,7 @@ with TestData {
 
       invitationRepo.collection.insertMany(invitations).toFuture().futureValue
       agentReferenceRepo.create(agentReferenceRecord).futureValue
-      givenAgentRecordFound(arn, testAgentRecord)
+      givenAgentRecord(arn, testAgentRecord)
       givenUserAuthorised()
 
       val requestPath = s"/agent-client-relationships/api/${arn.value}/invitations"
@@ -227,7 +227,7 @@ with TestData {
 
       invitationRepo.collection.insertMany(invitations).toFuture().futureValue
       agentReferenceRepo.create(agentReferenceRecord).futureValue
-      givenAgentRecordFound(arn, testAgentRecord)
+      givenAgentRecord(arn, testAgentRecord)
       givenUserAuthorised()
 
       val requestPath = s"/agent-client-relationships/api/${arn.value}/invitations"
@@ -252,7 +252,7 @@ with TestData {
 
       invitationRepo.collection.insertMany(invitations).toFuture().futureValue
       agentReferenceRepo.create(agentReferenceRecord).futureValue
-      givenAgentRecordFound(
+      givenAgentRecord(
         arn,
         testAgentRecord.copy(suspensionDetails = Some(SuspensionDetails(suspensionStatus = true, regimes = None)))
       )
@@ -283,7 +283,7 @@ with TestData {
 
       invitationRepo.collection.insertMany(invitations).toFuture().futureValue
       agentReferenceRepo.create(agentReferenceRecord).futureValue
-      givenAgentDetailsErrorResponse(arn, 404)
+      givenAgentRecordErrorResponse(arn, 404)
       givenUserAuthorised()
 
       val requestPath = s"/agent-client-relationships/api/${arn.value}/invitations"
