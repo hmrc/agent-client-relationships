@@ -137,8 +137,7 @@ extends RequestAwareLogging {
       itsaCitizenDetailsEither <- clientDetailsConnector.getItsaCitizenDetails(NinoWithoutSuffix(nino))
       finalResponse <-
         itsaCitizenDetailsEither match {
-          case Left(_) =>
-            Future.successful(Left(ClientDetailsNotFound))
+          case Left(_) => Future.successful(Left(ClientDetailsNotFound))
           case Right(citizenDetails) =>
 
             for {
@@ -146,8 +145,7 @@ extends RequestAwareLogging {
 
               intermediateResponse <-
                 itsaDesignatoryDetailsEither match {
-                  case Left(_) =>
-                    Future.successful(Left(ClientDetailsNotFound))
+                  case Left(_) => Future.successful(Left(ClientDetailsNotFound))
                   case Right(itsaDesignatoryDetails) =>
 
                     (citizenDetails.name, citizenDetails.saUtr, itsaDesignatoryDetails.postCode, itsaDesignatoryDetails.country) match {

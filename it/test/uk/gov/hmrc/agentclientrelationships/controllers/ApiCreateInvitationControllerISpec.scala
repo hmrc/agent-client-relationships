@@ -754,7 +754,7 @@ with CitizenDetailsStub {
           givenVatCustomerInfoExists(vrn = vrn.value)
         }
 
-        givenAgentRecordFound(
+        givenAgentRecord(
           arn,
           testAgentRecord.copy(suspensionDetails = Some(SuspensionDetails(suspensionStatus = true, regimes = None)))
         )
@@ -793,7 +793,7 @@ with CitizenDetailsStub {
           givenVatCustomerInfoExists(vrn = vrn.value)
         }
 
-        givenAgentDetailsErrorResponse(arn, 404)
+        givenAgentRecordErrorResponse(arn, 404)
 
         val requestPath = s"/agent-client-relationships/api/${arn.value}/invitation"
         val result = doAgentPostRequest(requestPath, Json.toJson(inputData).toString())
