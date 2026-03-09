@@ -34,6 +34,7 @@ import uk.gov.hmrc.agentclientrelationships.repository.RelationshipCopyRecord
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus.Success
 import uk.gov.hmrc.agentclientrelationships.services.CheckRelationshipsOrchestratorService
 import uk.gov.hmrc.agentclientrelationships.services.ClientDetailsService
+import uk.gov.hmrc.agentclientrelationships.stubs.CitizenDetailsStub
 import uk.gov.hmrc.agentclientrelationships.stubs.ClientDetailsStub
 import uk.gov.hmrc.agentclientrelationships.stubs.HipStub
 import uk.gov.hmrc.agentclientrelationships.stubs.MappingStubs
@@ -46,6 +47,7 @@ import scala.concurrent.ExecutionContext
 
 class ClientDetailsControllerISpec
 extends BaseControllerISpec
+with CitizenDetailsStub
 with ClientDetailsStub
 with HipStub
 with MappingStubs {
@@ -77,15 +79,17 @@ with MappingStubs {
           setupCommonStubs(request)
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
-          givenMtdItsaBusinessDetailsExists(NinoWithoutSuffix("AA000001"), MtdItId("XAIT0000111122"))
-          givenNinoItsaBusinessDetailsExists(MtdItId("XAIT0000111122"), NinoWithoutSuffix("AA000001"))
+          givenMtdItIdIsKnownFor(NinoWithoutSuffix("AA000001"), MtdItId("XAIT0000111122"))
+          givenNinoIsKnownFor(MtdItId("XAIT0000111122"), NinoWithoutSuffix("AA000001")) // TODO: Why is this needed when the HipConnector.getNinoFor() method is not used by the ApiCreateInvitationController at all ?!!
+          givenCitizenDetailsExists(NinoWithoutSuffix("AA000001"))
+          givenItsaDesignatoryDetailsExists(NinoWithoutSuffix("AA000001"))
           givenClientHasNoRelationshipWithAnyAgentInCESA(nino = NinoWithoutSuffix("AA000001"))
           givenArnIsUnknownFor(Arn("XARN1234567"))
 
           val result = doGetRequest(request.uri)
           result.status shouldBe 200
           result.json shouldBe Json.obj(
-            "name" -> "Erling Haal",
+            "name" -> "Matthew Kovacic",
             "isOverseas" -> false,
             "knownFacts" -> Json.arr("AA11AA"),
             "knownFactType" -> "PostalCode",
@@ -100,15 +104,17 @@ with MappingStubs {
           setupCommonStubs(request)
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
-          givenMtdItsaBusinessDetailsExists(NinoWithoutSuffix("AA000001"), MtdItId("XAIT0000111122"))
-          givenNinoItsaBusinessDetailsExists(MtdItId("XAIT0000111122"), NinoWithoutSuffix("AA000001"))
+          givenMtdItIdIsKnownFor(NinoWithoutSuffix("AA000001"), MtdItId("XAIT0000111122"))
+          givenNinoIsKnownFor(MtdItId("XAIT0000111122"), NinoWithoutSuffix("AA000001")) // TODO: Why is this needed when the HipConnector.getNinoFor() method is not used by the ApiCreateInvitationController at all ?!!
+          givenCitizenDetailsExists(NinoWithoutSuffix("AA000001"))
+          givenItsaDesignatoryDetailsExists(NinoWithoutSuffix("AA000001"))
           givenArnIsUnknownFor(Arn("XARN1234567"))
           givenClientHasRelationshipWithAgentInCESA(NinoWithoutSuffix("AA000001"), "A12345")
 
           val result = doGetRequest(request.uri)
           result.status shouldBe 200
           result.json shouldBe Json.obj(
-            "name" -> "Erling Haal",
+            "name" -> "Matthew Kovacic",
             "isOverseas" -> false,
             "knownFacts" -> Json.arr("AA11AA"),
             "knownFactType" -> "PostalCode",
@@ -122,7 +128,7 @@ with MappingStubs {
           val request = FakeRequest("GET", "/agent-client-relationships/client/HMRC-MTD-IT/details/AA000001")
           setupCommonStubs(request)
           givenMtdItIdIsUnKnownFor(NinoWithoutSuffix("AA000001"))
-          givenItsaCitizenDetailsExists(NinoWithoutSuffix("AA000001"))
+          givenCitizenDetailsExists(NinoWithoutSuffix("AA000001"))
           givenItsaDesignatoryDetailsExists(NinoWithoutSuffix("AA000001"))
           givenArnIsKnownFor(Arn("XARN1234567"), SaAgentReference("A12345"))
           givenClientHasRelationshipWithAgentInCESA(NinoWithoutSuffix("AA000001"), "A12345")
@@ -145,13 +151,13 @@ with MappingStubs {
           setupCommonStubs(request)
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
-          givenMtdItsaBusinessDetailsExists(NinoWithoutSuffix("AA000001"), MtdItId("XAIT0000111122"))
-          givenNinoItsaBusinessDetailsExists(MtdItId("XAIT0000111122"), NinoWithoutSuffix("AA000001"))
+          givenMtdItIdIsKnownFor(NinoWithoutSuffix("AA000001"), MtdItId("XAIT0000111122"))
+          givenNinoIsKnownFor(MtdItId("XAIT0000111122"), NinoWithoutSuffix("AA000001")) // TODO: Why is this needed when the HipConnector.getNinoFor() method is not used by the ApiCreateInvitationController at all ?!!
+          givenCitizenDetailsExists(NinoWithoutSuffix("AA000001"))
+          givenItsaDesignatoryDetailsExists(NinoWithoutSuffix("AA000001"))
           givenArnIsKnownFor(Arn("XARN1234567"), SaAgentReference("A12345"))
           givenClientHasRelationshipWithAgentInCESA(NinoWithoutSuffix("AA000001"), "A12345")
           givenAgentCanBeAllocated(MtdItId("XAIT0000111122"), Arn("XARN1234567"))
-          givenAgentGroupExistsFor("foo")
-          givenAdminUser("foo", "bar")
           givenEnrolmentAllocationSucceeds(
             "foo",
             "bar",
@@ -163,7 +169,7 @@ with MappingStubs {
           val result = doGetRequest(request.uri)
           result.status shouldBe 200
           result.json shouldBe Json.obj(
-            "name" -> "Erling Haal",
+            "name" -> "Matthew Kovacic",
             "isOverseas" -> false,
             "knownFacts" -> Json.arr("AA11AA"),
             "knownFactType" -> "PostalCode",
@@ -178,8 +184,10 @@ with MappingStubs {
             setupCommonStubs(request)
             givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")))
             givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
-            givenMtdItsaBusinessDetailsExists(NinoWithoutSuffix("AA000001"), MtdItId("XAIT0000111122"))
-            givenNinoItsaBusinessDetailsExists(MtdItId("XAIT0000111122"), NinoWithoutSuffix("AA000001"))
+            givenMtdItIdIsKnownFor(NinoWithoutSuffix("AA000001"), MtdItId("XAIT0000111122"))
+            givenNinoIsKnownFor(MtdItId("XAIT0000111122"), NinoWithoutSuffix("AA000001")) // TODO: Why is this needed when the HipConnector.getNinoFor() method is not used by the ApiCreateInvitationController at all ?!!
+            givenCitizenDetailsExists(NinoWithoutSuffix("AA000001"))
+            givenItsaDesignatoryDetailsExists(NinoWithoutSuffix("AA000001"))
             givenArnIsKnownFor(Arn("XARN1234567"), SaAgentReference("A12345"))
             givenClientHasRelationshipWithAgentInCESA(NinoWithoutSuffix("AA000001"), "A12345")
             relationshipCopyRecordRepository.collection.insertOne(
@@ -194,7 +202,7 @@ with MappingStubs {
             val result = doGetRequest(request.uri)
             result.status shouldBe 200
             result.json shouldBe Json.obj(
-              "name" -> "Erling Haal",
+              "name" -> "Matthew Kovacic",
               "isOverseas" -> false,
               "knownFacts" -> Json.arr("AA11AA"),
               "knownFactType" -> "PostalCode",
@@ -205,10 +213,12 @@ with MappingStubs {
         "there is a pending invitation" in {
           val request = FakeRequest("GET", "/agent-client-relationships/client/HMRC-MTD-IT/details/AA000001")
           setupCommonStubs(request)
-          givenMtdItsaBusinessDetailsExists(NinoWithoutSuffix("AA000001"), MtdItId("XAIT0000111122"))
-          givenNinoItsaBusinessDetailsExists(MtdItId("XAIT0000111122"), NinoWithoutSuffix("AA000001"))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
+          givenMtdItIdIsKnownFor(NinoWithoutSuffix("AA000001"), MtdItId("XAIT0000111122"))
+          givenNinoIsKnownFor(MtdItId("XAIT0000111122"), NinoWithoutSuffix("AA000001")) // TODO: Why is this needed when the HipConnector.getNinoFor() method is not used by the ApiCreateInvitationController at all ?!!
+          givenCitizenDetailsExists(NinoWithoutSuffix("AA000001"))
+          givenItsaDesignatoryDetailsExists(NinoWithoutSuffix("AA000001"))
           givenClientHasNoRelationshipWithAnyAgentInCESA(nino = NinoWithoutSuffix("AA000001"))
 
           await(
@@ -217,7 +227,7 @@ with MappingStubs {
               MtdIt,
               NinoWithoutSuffix("AA000001"),
               NinoWithoutSuffix("AA000001"),
-              "Erling Haal",
+              "Matthew Kovacic",
               "testAgentName",
               "agent@email.com",
               LocalDate.now(),
@@ -228,7 +238,7 @@ with MappingStubs {
           val result = doGetRequest(request.uri)
           result.status shouldBe 200
           result.json shouldBe Json.obj(
-            "name" -> "Erling Haal",
+            "name" -> "Matthew Kovacic",
             "isOverseas" -> false,
             "knownFacts" -> Json.arr("AA11AA"),
             "knownFactType" -> "PostalCode",
@@ -239,10 +249,12 @@ with MappingStubs {
         "there is a pending supporting ITSA invitation" in {
           val request = FakeRequest("GET", "/agent-client-relationships/client/HMRC-MTD-IT/details/AA000001")
           setupCommonStubs(request)
-          givenMtdItsaBusinessDetailsExists(NinoWithoutSuffix("AA000001"), MtdItId("XAIT0000111122"))
-          givenNinoItsaBusinessDetailsExists(MtdItId("XAIT0000111122"), NinoWithoutSuffix("AA000001"))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
+          givenMtdItIdIsKnownFor(NinoWithoutSuffix("AA000001"), MtdItId("XAIT0000111122"))
+          givenNinoIsKnownFor(MtdItId("XAIT0000111122"), NinoWithoutSuffix("AA000001")) // TODO: Why is this needed when the HipConnector.getNinoFor() method is not used by the ApiCreateInvitationController at all ?!!
+          givenCitizenDetailsExists(NinoWithoutSuffix("AA000001"))
+          givenItsaDesignatoryDetailsExists(NinoWithoutSuffix("AA000001"))
           givenClientHasNoRelationshipWithAnyAgentInCESA(nino = NinoWithoutSuffix("AA000001"))
           await(
             invitationsRepo.create(
@@ -250,7 +262,7 @@ with MappingStubs {
               MtdItSupp,
               NinoWithoutSuffix("AA000001"),
               NinoWithoutSuffix("AA000001"),
-              "Erling Haal",
+              "Matthew Kovacic",
               "testAgentName",
               "agent@email.com",
               LocalDate.now(),
@@ -261,7 +273,7 @@ with MappingStubs {
           val result = doGetRequest(request.uri)
           result.status shouldBe 200
           result.json shouldBe Json.obj(
-            "name" -> "Erling Haal",
+            "name" -> "Matthew Kovacic",
             "isOverseas" -> false,
             "knownFacts" -> Json.arr("AA11AA"),
             "knownFactType" -> "PostalCode",
@@ -272,15 +284,17 @@ with MappingStubs {
         "there is an existing relationship in a main role" in {
           val request = FakeRequest("GET", "/agent-client-relationships/client/HMRC-MTD-IT/details/AA000001")
           setupCommonStubs(request)
-          givenMtdItsaBusinessDetailsExists(NinoWithoutSuffix("AA000001"), MtdItId("XAIT0000111122"))
-          givenNinoItsaBusinessDetailsExists(MtdItId("XAIT0000111122"), NinoWithoutSuffix("AA000001"))
+          givenMtdItIdIsKnownFor(NinoWithoutSuffix("AA000001"), MtdItId("XAIT0000111122"))
+          givenNinoIsKnownFor(MtdItId("XAIT0000111122"), NinoWithoutSuffix("AA000001")) // TODO: Why is this needed when the HipConnector.getNinoFor() method is not used by the ApiCreateInvitationController at all ?!!
+          givenCitizenDetailsExists(NinoWithoutSuffix("AA000001"))
+          givenItsaDesignatoryDetailsExists(NinoWithoutSuffix("AA000001"))
           givenDelegatedGroupIdsExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")), Set("foo"))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
 
           val result = doGetRequest(request.uri)
           result.status shouldBe 200
           result.json shouldBe Json.obj(
-            "name" -> "Erling Haal",
+            "name" -> "Matthew Kovacic",
             "isOverseas" -> false,
             "knownFacts" -> Json.arr("AA11AA"),
             "knownFactType" -> "PostalCode",
@@ -292,8 +306,10 @@ with MappingStubs {
         "there is an existing relationship in a supporting role" in {
           val request = FakeRequest("GET", "/agent-client-relationships/client/HMRC-MTD-IT/details/AA000001")
           setupCommonStubs(request)
-          givenMtdItsaBusinessDetailsExists(NinoWithoutSuffix("AA000001"), MtdItId("XAIT0000111122"))
-          givenNinoItsaBusinessDetailsExists(MtdItId("XAIT0000111122"), NinoWithoutSuffix("AA000001"))
+          givenMtdItIdIsKnownFor(NinoWithoutSuffix("AA000001"), MtdItId("XAIT0000111122"))
+          givenNinoIsKnownFor(MtdItId("XAIT0000111122"), NinoWithoutSuffix("AA000001")) // TODO: Why is this needed when the HipConnector.getNinoFor() method is not used by the ApiCreateInvitationController at all ?!!
+          givenCitizenDetailsExists(NinoWithoutSuffix("AA000001"))
+          givenItsaDesignatoryDetailsExists(NinoWithoutSuffix("AA000001"))
           givenDelegatedGroupIdsExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")), Set("foo"))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")))
           givenClientHasNoRelationshipWithAnyAgentInCESA(nino = NinoWithoutSuffix("AA000001"))
@@ -301,7 +317,7 @@ with MappingStubs {
           val result = doGetRequest(request.uri)
           result.status shouldBe 200
           result.json shouldBe Json.obj(
-            "name" -> "Erling Haal",
+            "name" -> "Matthew Kovacic",
             "isOverseas" -> false,
             "knownFacts" -> Json.arr("AA11AA"),
             "knownFactType" -> "PostalCode",
@@ -386,8 +402,10 @@ with MappingStubs {
         "there is both a pending invitation and an existing relationship" in {
           val request = FakeRequest("GET", "/agent-client-relationships/client/HMRC-MTD-IT/details/AA000001")
           setupCommonStubs(request)
-          givenMtdItsaBusinessDetailsExists(NinoWithoutSuffix("AA000001"), MtdItId("XAIT0000111122"))
-          givenNinoItsaBusinessDetailsExists(MtdItId("XAIT0000111122"), NinoWithoutSuffix("AA000001"))
+          givenMtdItIdIsKnownFor(NinoWithoutSuffix("AA000001"), MtdItId("XAIT0000111122"))
+          givenNinoIsKnownFor(MtdItId("XAIT0000111122"), NinoWithoutSuffix("AA000001")) // TODO: Why is this needed when the HipConnector.getNinoFor() method is not used by the ApiCreateInvitationController at all ?!!
+          givenCitizenDetailsExists(NinoWithoutSuffix("AA000001"))
+          givenItsaDesignatoryDetailsExists(NinoWithoutSuffix("AA000001"))
           givenDelegatedGroupIdsExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")), Set("foo"))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
           await(
@@ -396,7 +414,7 @@ with MappingStubs {
               MtdIt,
               NinoWithoutSuffix("AA000001"),
               NinoWithoutSuffix("AA000001"),
-              "Erling Haal",
+              "Matthew Kovacic",
               "testAgentName",
               "agent@email.com",
               LocalDate.now(),
@@ -407,7 +425,7 @@ with MappingStubs {
           val result = doGetRequest(request.uri)
           result.status shouldBe 200
           result.json shouldBe Json.obj(
-            "name" -> "Erling Haal",
+            "name" -> "Matthew Kovacic",
             "isOverseas" -> false,
             "knownFacts" -> Json.arr("AA11AA"),
             "knownFactType" -> "PostalCode",

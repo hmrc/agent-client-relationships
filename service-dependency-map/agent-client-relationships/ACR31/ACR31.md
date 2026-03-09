@@ -16,9 +16,9 @@
 
 ## Path Parameters
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| arn | String | Yes | Agent Reference Number (must be valid ARN format, e.g., AARN1234567) |
+| Parameter | Type   | Required | Description                                                          |
+|-----------|--------|----------|----------------------------------------------------------------------|
+| arn       | String | Yes      | Agent Reference Number (must be valid ARN format, e.g., AARN1234567) |
 
 ## Request Body
 
@@ -31,12 +31,12 @@
 }
 ```
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| service | String | Yes | Service identifier (e.g., HMRC-MTD-IT, HMRC-MTD-VAT, HMRC-TERS-ORG) - must be in API supported services list |
-| suppliedClientId | String | Yes | Client identifier value (e.g., NINO for MTD-IT, VRN for VAT) - must match service type and be valid format |
-| knownFact | String | Yes | Known fact for verification (e.g., postcode for MTD-IT, VAT registration date for VAT) |
-| clientType | String | No | Client type: 'personal', 'business', or 'trust' |
+| Field            | Type   | Required | Description                                                                                                  |
+|------------------|--------|----------|--------------------------------------------------------------------------------------------------------------|
+| service          | String | Yes      | Service identifier (e.g., HMRC-MTD-IT, HMRC-MTD-VAT, HMRC-TERS-ORG) - must be in API supported services list |
+| suppliedClientId | String | Yes      | Client identifier value (e.g., NINO for MTD-IT, VRN for VAT) - must match service type and be valid format   |
+| knownFact        | String | Yes      | Known fact for verification (e.g., postcode for MTD-IT, VAT registration date for VAT)                       |
+| clientType       | String | No       | Client type: 'personal', 'business', or 'trust'                                                              |
 
 ## Response
 
@@ -48,30 +48,30 @@
 }
 ```
 
-| Field | Type | Description |
-|-------|------|-------------|
+| Field        | Type   | Description                        |
+|--------------|--------|------------------------------------|
 | invitationId | String | Unique invitation ID (UUID format) |
 
 ### Error Responses
 
-| Status Code | Error Code | Description |
-|-------------|------------|-------------|
-| 400 | INVALID_PAYLOAD | Request body doesn't match expected schema |
-| 401 | N/A | OAuth2 authentication failed |
-| 403 | AGENT_SUSPENDED | Agent's account is suspended |
-| 403 | POSTCODE_FORMAT_INVALID | Postcode format is invalid (MTD-IT) |
-| 403 | POSTCODE_DOES_NOT_MATCH | Postcode doesn't match HMRC records (MTD-IT) |
-| 403 | VAT_REG_DATE_FORMAT_INVALID | VAT registration date format is invalid |
-| 403 | VAT_REG_DATE_DOES_NOT_MATCH | VAT registration date doesn't match HMRC records |
-| 422 | UNSUPPORTED_SERVICE | Service not in API supported services list |
-| 422 | CLIENT_ID_INVALID_FORMAT | Client ID format doesn't match service requirements |
-| 422 | CLIENT_ID_DOES_NOT_MATCH_SERVICE | Client ID type doesn't match service |
-| 422 | UNSUPPORTED_CLIENT_TYPE | Client type not valid (must be personal/business/trust) |
-| 422 | CLIENT_REGISTRATION_NOT_FOUND | Client not registered for this service in DES |
-| 422 | VAT_CLIENT_INSOLVENT | VAT client has insolvency status |
-| 422 | DUPLICATE_AUTHORISATION_REQUEST | Pending invitation already exists (includes invitationId) |
-| 422 | ALREADY_AUTHORISED | Active relationship already exists |
-| 500 | N/A | Internal server error |
+| Status Code | Error Code                       | Description                                               |
+|-------------|----------------------------------|-----------------------------------------------------------|
+| 400         | INVALID_PAYLOAD                  | Request body doesn't match expected schema                |
+| 401         | N/A                              | OAuth2 authentication failed                              |
+| 403         | AGENT_SUSPENDED                  | Agent's account is suspended                              |
+| 403         | POSTCODE_FORMAT_INVALID          | Postcode format is invalid (MTD-IT)                       |
+| 403         | POSTCODE_DOES_NOT_MATCH          | Postcode doesn't match HMRC records (MTD-IT)              |
+| 403         | VAT_REG_DATE_FORMAT_INVALID      | VAT registration date format is invalid                   |
+| 403         | VAT_REG_DATE_DOES_NOT_MATCH      | VAT registration date doesn't match HMRC records          |
+| 422         | UNSUPPORTED_SERVICE              | Service not in API supported services list                |
+| 422         | CLIENT_ID_INVALID_FORMAT         | Client ID format doesn't match service requirements       |
+| 422         | CLIENT_ID_DOES_NOT_MATCH_SERVICE | Client ID type doesn't match service                      |
+| 422         | UNSUPPORTED_CLIENT_TYPE          | Client type not valid (must be personal/business/trust)   |
+| 422         | CLIENT_REGISTRATION_NOT_FOUND    | Client not registered for this service in DES             |
+| 422         | VAT_CLIENT_INSOLVENT             | VAT client has insolvency status                          |
+| 422         | DUPLICATE_AUTHORISATION_REQUEST  | Pending invitation already exists (includes invitationId) |
+| 422         | ALREADY_AUTHORISED               | Active relationship already exists                        |
+| 500         | N/A                              | Internal server error                                     |
 
 ## Service Architecture
 
@@ -166,32 +166,32 @@ External system must be authenticated via OAuth2 with appropriate scopes for cre
 
 ### External Services
 
-| Service | Method | Purpose | Note |
-|---------|--------|---------|------|
-| IF (Integration Framework) | getMtdIdFor | Convert NINO to MtdItId | Only for MTD-IT/MTD-IT-SUPP. If no MtdItId, uses NINO |
-| Agent Maintainer | GET /agent-maintainer/agent/{arn} | Retrieve agent record and suspension status | Returns 403 if suspended |
-| DES (Multiple endpoints) | Various | Retrieve client details | Different endpoint per service. VAT includes insolvency check |
-| HIP (ETMP) | GET /registration/relationship | Check for existing relationship | Via CheckRelationshipsOrchestratorService |
+| Service                    | Method                            | Purpose                                     | Note                                                          |
+|----------------------------|-----------------------------------|---------------------------------------------|---------------------------------------------------------------|
+| IF (Integration Framework) | getMtdIdFor                       | Convert NINO to MtdItId                     | Only for MTD-IT/MTD-IT-SUPP. If no MtdItId, uses NINO         |
+| Agent Maintainer           | GET /agent-maintainer/agent/{arn} | Retrieve agent record and suspension status | Returns 403 if suspended                                      |
+| DES (Multiple endpoints)   | Various                           | Retrieve client details                     | Different endpoint per service. VAT includes insolvency check |
+| HIP (ETMP)                 | GET /registration/relationship    | Check for existing relationship             | Via CheckRelationshipsOrchestratorService                     |
 
 ### Internal Services
 
-| Service | Method | Purpose |
-|---------|--------|---------|
-| ValidationService | Inline methods | Validate payload structure and values |
-| IfOrHipConnector | getMtdIdFor | NINO to MtdItId conversion |
-| InvitationsRepository | findAllForAgent, create | Check for duplicates, create invitation |
-| AgentAssuranceService | getNonSuspendedAgentRecord | Get agent details, filter suspended |
-| ClientDetailsService | findClientDetails | Retrieve client details from DES |
-| ApiKnownFactsCheckService | checkKnownFacts | Verify known facts |
-| CheckRelationshipsOrchestratorService | checkForRelationship | Check HIP for existing relationship |
-| PartialAuthRepository | findActive | Check PartialAuth for ITSA |
+| Service                               | Method                     | Purpose                                 |
+|---------------------------------------|----------------------------|-----------------------------------------|
+| ValidationService                     | Inline methods             | Validate payload structure and values   |
+| IfOrHipConnector                      | getMtdIdFor                | NINO to MtdItId conversion              |
+| InvitationsRepository                 | findAllForAgent, create    | Check for duplicates, create invitation |
+| AgentAssuranceService                 | getNonSuspendedAgentRecord | Get agent details, filter suspended     |
+| ClientDetailsService                  | findClientDetails          | Retrieve client details from DES        |
+| ApiKnownFactsCheckService             | checkKnownFacts            | Verify known facts                      |
+| CheckRelationshipsOrchestratorService | checkForRelationship       | Check HIP for existing relationship     |
+| PartialAuthRepository                 | findActive                 | Check PartialAuth for ITSA              |
 
 ### Database Collections
 
-| Collection | Operation | Description |
-|------------|-----------|-------------|
-| invitations | READ, WRITE | Check for duplicates, create new invitation |
-| partial-auth | READ | For ITSA: check existing PartialAuth relationships |
+| Collection   | Operation   | Description                                        |
+|--------------|-------------|----------------------------------------------------|
+| invitations  | READ, WRITE | Check for duplicates, create new invitation        |
+| partial-auth | READ        | For ITSA: check existing PartialAuth relationships |
 
 ## Use Cases
 
@@ -365,25 +365,25 @@ External system must be authenticated via OAuth2 with appropriate scopes for cre
 
 ## Error Handling
 
-| Error Scenario | Response | Code | Note |
-|----------------|----------|------|------|
-| Invalid JSON payload | 400 Bad Request | INVALID_PAYLOAD | Malformed JSON or missing required fields |
-| Unsupported service | 422 Unprocessable Entity | UNSUPPORTED_SERVICE | Service not in API supported list |
-| Invalid client ID format | 422 Unprocessable Entity | CLIENT_ID_INVALID_FORMAT | Format doesn't match service |
-| Client ID doesn't match service | 422 Unprocessable Entity | CLIENT_ID_DOES_NOT_MATCH_SERVICE | Type mismatch |
-| Unsupported client type | 422 Unprocessable Entity | UNSUPPORTED_CLIENT_TYPE | Not personal/business/trust |
-| OAuth2 auth failure | 401 Unauthorized | N/A | Not authenticated |
-| Agent suspended | 403 Forbidden | AGENT_SUSPENDED | Agent Maintainer suspension status |
-| Client not registered | 422 Unprocessable Entity | CLIENT_REGISTRATION_NOT_FOUND | Not in DES |
-| VAT client insolvent | 422 Unprocessable Entity | VAT_CLIENT_INSOLVENT | DES insolvency status |
-| Invalid postcode format | 403 Forbidden | POSTCODE_FORMAT_INVALID | MTD-IT postcode invalid |
-| Postcode mismatch | 403 Forbidden | POSTCODE_DOES_NOT_MATCH | Doesn't match DES |
-| Invalid VAT reg date format | 403 Forbidden | VAT_REG_DATE_FORMAT_INVALID | Format invalid |
-| VAT reg date mismatch | 403 Forbidden | VAT_REG_DATE_DOES_NOT_MATCH | Doesn't match DES |
-| Duplicate invitation | 422 Unprocessable Entity | DUPLICATE_AUTHORISATION_REQUEST | Pending invitation exists |
-| Relationship exists | 422 Unprocessable Entity | ALREADY_AUTHORISED | HIP or PartialAuth |
-| MongoDB race condition | 422 Unprocessable Entity | DUPLICATE_AUTHORISATION_REQUEST | Concurrent create |
-| Internal error | 500 Internal Server Error | N/A | Unexpected failures |
+| Error Scenario                  | Response                  | Code                             | Note                                      |
+|---------------------------------|---------------------------|----------------------------------|-------------------------------------------|
+| Invalid JSON payload            | 400 Bad Request           | INVALID_PAYLOAD                  | Malformed JSON or missing required fields |
+| Unsupported service             | 422 Unprocessable Entity  | UNSUPPORTED_SERVICE              | Service not in API supported list         |
+| Invalid client ID format        | 422 Unprocessable Entity  | CLIENT_ID_INVALID_FORMAT         | Format doesn't match service              |
+| Client ID doesn't match service | 422 Unprocessable Entity  | CLIENT_ID_DOES_NOT_MATCH_SERVICE | Type mismatch                             |
+| Unsupported client type         | 422 Unprocessable Entity  | UNSUPPORTED_CLIENT_TYPE          | Not personal/business/trust               |
+| OAuth2 auth failure             | 401 Unauthorized          | N/A                              | Not authenticated                         |
+| Agent suspended                 | 403 Forbidden             | AGENT_SUSPENDED                  | Agent Maintainer suspension status        |
+| Client not registered           | 422 Unprocessable Entity  | CLIENT_REGISTRATION_NOT_FOUND    | Not in DES                                |
+| VAT client insolvent            | 422 Unprocessable Entity  | VAT_CLIENT_INSOLVENT             | DES insolvency status                     |
+| Invalid postcode format         | 403 Forbidden             | POSTCODE_FORMAT_INVALID          | MTD-IT postcode invalid                   |
+| Postcode mismatch               | 403 Forbidden             | POSTCODE_DOES_NOT_MATCH          | Doesn't match DES                         |
+| Invalid VAT reg date format     | 403 Forbidden             | VAT_REG_DATE_FORMAT_INVALID      | Format invalid                            |
+| VAT reg date mismatch           | 403 Forbidden             | VAT_REG_DATE_DOES_NOT_MATCH      | Doesn't match DES                         |
+| Duplicate invitation            | 422 Unprocessable Entity  | DUPLICATE_AUTHORISATION_REQUEST  | Pending invitation exists                 |
+| Relationship exists             | 422 Unprocessable Entity  | ALREADY_AUTHORISED               | HIP or PartialAuth                        |
+| MongoDB race condition          | 422 Unprocessable Entity  | DUPLICATE_AUTHORISATION_REQUEST  | Concurrent create                         |
+| Internal error                  | 500 Internal Server Error | N/A                              | Unexpected failures                       |
 
 ## Important Notes
 

@@ -17,6 +17,7 @@
 package uk.gov.hmrc.agentclientrelationships.testOnly.models
 
 import play.api.libs.json.Json
+import play.api.libs.json.OFormat
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.domain.Nino
 
@@ -27,5 +28,5 @@ case class User(
 )
 
 object User {
-  implicit val format = Json.format[User]
+  implicit val format: OFormat[User] = Json.format[User]
 }

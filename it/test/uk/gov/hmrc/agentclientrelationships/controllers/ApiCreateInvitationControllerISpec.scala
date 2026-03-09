@@ -137,34 +137,13 @@ with CitizenDetailsStub {
     Some("personal")
   )
 
-  private def getStandardStubForCreateInvitation(taxService: String) = {
+  private def generateStandardStubForCreateInvitation() = {
     givenAuditConnector()
     givenAgentGroupExistsFor("foo")
     givenAdminUser("foo", "bar")
     givenPrincipalGroupIdExistsFor(agentEnrolmentKey(arn), "foo")
     givenAgentRecord(arn, testAgentRecord)
     givenUserAuthorised()
-
-    if (taxService == HMRCMTDIT || taxService == HMRCMTDITSUPP) {
-      givenDelegatedGroupIdsNotExistFor(EnrolmentKey(taxService, mtdItId))
-      givenDelegatedGroupIdsNotExistFor(EnrolmentKey(multiAgentServicesOtherService(taxService), mtdItId))
-      givenMtdItsaBusinessDetailsExists(
-        nino = nino,
-        mtdId = mtdItId,
-        postCode = "AA1 1AA"
-      )
-      givenNinoItsaBusinessDetailsExists(
-        mtdId = mtdItId,
-        nino = nino,
-        postCode = "AA1 1AA"
-      )
-    }
-
-    if (taxService == HMRCMTDVAT) {
-      givenDelegatedGroupIdsNotExistFor(EnrolmentKey(taxService, vrn))
-      givenVatCustomerInfoExists(vrn = vrn.value, regDate = "2020-01-01")
-    }
-
   }
 
   def allServices: Map[String, ApiCreateInvitationRequest] = Map(
@@ -215,7 +194,20 @@ with CitizenDetailsStub {
           else
             inputData.suppliedClientId
 
-        getStandardStubForCreateInvitation(taxService)
+        generateStandardStubForCreateInvitation()
+
+        if (taxService == HMRCMTDIT || taxService == HMRCMTDITSUPP) {
+          givenDelegatedGroupIdsNotExistFor(EnrolmentKey(taxService, mtdItId))
+          givenDelegatedGroupIdsNotExistFor(EnrolmentKey(multiAgentServicesOtherService(taxService), mtdItId))
+          givenMtdItIdIsKnownFor(nino, mtdItId)
+          givenCitizenDetailsExists(nino)
+          givenItsaDesignatoryDetailsExists(nino)
+        }
+
+        if (taxService == HMRCMTDVAT) {
+          givenDelegatedGroupIdsNotExistFor(EnrolmentKey(taxService, vrn))
+          givenVatCustomerInfoExists(vrn = vrn.value)
+        }
 
         val requestPath = s"/agent-client-relationships/api/${arn.value}/invitation"
         val result = doAgentPostRequest(requestPath, Json.toJson(inputData).toString())
@@ -246,10 +238,11 @@ with CitizenDetailsStub {
     s"return UnprocessableEntity status and valid JSON CLIENT_REGISTRATION_NOT_FOUND when invitation is created for Alt Itsa - no client mtdItId" in {
       val inputData: ApiCreateInvitationRequest = baseInvitationInputData
 
-      givenCitizenDetailsError(nino, 404)
-      getStandardStubForCreateInvitation(HMRCMTDIT)
+      generateStandardStubForCreateInvitation()
+      givenDelegatedGroupIdsNotExistFor(EnrolmentKey(HMRCMTDIT, mtdItId))
+      givenDelegatedGroupIdsNotExistFor(EnrolmentKey(multiAgentServicesOtherService(HMRCMTDIT), mtdItId))
       givenMtdItIdIsUnKnownFor(nino)
-      givenNinoIsUnknownFor(mtdItId)
+      givenCitizenDetailsError(nino, 404)
 
       val expectedJson: JsValue = Json.toJson(
         toJson(
@@ -267,11 +260,14 @@ with CitizenDetailsStub {
 
     // PENDING INVITATION
     s"return UNPROCESSABLE_ENTITY status and valid JSON DUPLICATE_AUTHORISATION_REQUEST when ITSA invitation is already exists for ITSA " in {
-      val taxService = HMRCMTDIT
       val inputData: ApiCreateInvitationRequest = baseInvitationInputData
 
       invitationRepo.collection.insertOne(itsaInvitation).toFuture().futureValue
-      getStandardStubForCreateInvitation(taxService)
+
+      generateStandardStubForCreateInvitation()
+      givenDelegatedGroupIdsNotExistFor(EnrolmentKey(HMRCMTDIT, mtdItId))
+      givenDelegatedGroupIdsNotExistFor(EnrolmentKey(multiAgentServicesOtherService(HMRCMTDIT), mtdItId))
+      givenMtdItIdIsKnownFor(nino, mtdItId)
 
       val expectedJson: JsValue = Json.toJson(
         toJson(
@@ -290,11 +286,14 @@ with CitizenDetailsStub {
 
     // can not be MAIN and SUPP pending invitations at the same time for the same agent
     s"return UNPROCESSABLE_ENTITY status and valid JSON DUPLICATE_AUTHORISATION_REQUEST for ITSA MAIN request when ITSA SUPP Pending invitation already exists" in {
-      val taxService = HMRCMTDIT
       val inputData: ApiCreateInvitationRequest = baseInvitationInputData
 
       invitationRepo.collection.insertOne(itsaSuppInvitation).toFuture().futureValue
-      getStandardStubForCreateInvitation(taxService)
+
+      generateStandardStubForCreateInvitation()
+      givenDelegatedGroupIdsNotExistFor(EnrolmentKey(HMRCMTDIT, mtdItId))
+      givenDelegatedGroupIdsNotExistFor(EnrolmentKey(multiAgentServicesOtherService(HMRCMTDIT), mtdItId))
+      givenMtdItIdIsKnownFor(nino, mtdItId)
 
       val expectedJson: JsValue = Json.toJson(
         toJson(
@@ -312,11 +311,14 @@ with CitizenDetailsStub {
     }
 
     s"return UNPROCESSABLE_ENTITY status and valid JSON DUPLICATE_AUTHORISATION_REQUEST for ITSA SUPP request when ITSA MAIN Pending invitation already exists" in {
-      val taxService = HMRCMTDITSUPP
       val inputData: ApiCreateInvitationRequest = baseInvitationInputData.copy(service = MtdItSupp.id)
 
       invitationRepo.collection.insertOne(itsaInvitation).toFuture().futureValue
-      getStandardStubForCreateInvitation(taxService)
+
+      generateStandardStubForCreateInvitation()
+      givenDelegatedGroupIdsNotExistFor(EnrolmentKey(HMRCMTDITSUPP, mtdItId))
+      givenDelegatedGroupIdsNotExistFor(EnrolmentKey(multiAgentServicesOtherService(HMRCMTDITSUPP), mtdItId))
+      givenMtdItIdIsKnownFor(nino, mtdItId)
 
       val expectedJson: JsValue = Json.toJson(
         toJson(
@@ -335,16 +337,18 @@ with CitizenDetailsStub {
 
     s"return 201 status and valid JSON for ITSA request when Rejected request already exists in repo" in {
       givenClientHasNoRelationshipWithAnyAgentInCESA(nino = nino)
-      val taxService = HMRCMTDIT
       val inputData: ApiCreateInvitationRequest = baseInvitationInputData
 
-      val clientId =
-        if (taxService == HMRCMTDIT || taxService == HMRCMTDITSUPP)
-          mtdItId.value
-        else
-          inputData.suppliedClientId
+      val clientId = mtdItId.value
       invitationRepo.collection.insertOne(itsaInvitation.copy(status = Rejected)).toFuture().futureValue
-      getStandardStubForCreateInvitation(taxService)
+      generateStandardStubForCreateInvitation()
+
+      givenDelegatedGroupIdsNotExistFor(EnrolmentKey(HMRCMTDIT, mtdItId))
+      givenDelegatedGroupIdsNotExistFor(EnrolmentKey(multiAgentServicesOtherService(HMRCMTDIT), mtdItId))
+      givenMtdItIdIsKnownFor(nino, mtdItId)
+      givenNinoIsKnownFor(mtdItId, nino) // TODO: Why is this needed when the HipConnector.getNinoFor() method is not used by the ApiCreateInvitationController at all ?!!
+      givenCitizenDetailsExists(nino)
+      givenItsaDesignatoryDetailsExists(nino)
 
       val requestPath = s"/agent-client-relationships/api/${arn.value}/invitation"
       val result = doAgentPostRequest(requestPath, Json.toJson(inputData).toString())
@@ -382,9 +386,19 @@ with CitizenDetailsStub {
           else
             vrn
 
-        getStandardStubForCreateInvitation(taxService)
+        generateStandardStubForCreateInvitation()
         getActiveRelationshipsViaClient(taxIdentifier, arn)
         givenDelegatedGroupIdsExistFor(EnrolmentKey(taxService, taxIdentifier), Set("foo"))
+
+        if (taxService == HMRCMTDIT || taxService == HMRCMTDITSUPP) {
+          givenMtdItIdIsKnownFor(nino, mtdItId)
+          givenCitizenDetailsExists(nino)
+          givenItsaDesignatoryDetailsExists(nino)
+        }
+
+        if (taxService == HMRCMTDVAT) {
+          givenVatCustomerInfoExists(vrn = vrn.value)
+        }
 
         val expectedJson: JsValue = Json.toJson(
           toJson(
@@ -408,10 +422,17 @@ with CitizenDetailsStub {
       val taxIdentifier = mtdItId
       val clientId = mtdItId.value
 
-      givenClientHasNoRelationshipWithAnyAgentInCESA(nino = nino)
-      getStandardStubForCreateInvitation(HMRCMTDIT)
       getActiveRelationshipsViaClient(taxIdentifier, arn)
+
+      givenClientHasNoRelationshipWithAnyAgentInCESA(nino = nino)
+      generateStandardStubForCreateInvitation()
       givenDelegatedGroupIdsExistFor(EnrolmentKey(HMRCMTDITSUPP, taxIdentifier), Set("foo"))
+      givenDelegatedGroupIdsNotExistFor(EnrolmentKey(HMRCMTDIT, mtdItId))
+      givenDelegatedGroupIdsNotExistFor(EnrolmentKey(multiAgentServicesOtherService(HMRCMTDIT), mtdItId))
+      givenMtdItIdIsKnownFor(nino, mtdItId)
+      givenNinoIsKnownFor(mtdItId, nino) // TODO: Why is this needed when the HipConnector.getNinoFor() method is not used by the ApiCreateInvitationController at all ?!!
+      givenCitizenDetailsExists(nino)
+      givenItsaDesignatoryDetailsExists(nino)
 
       val requestPath = s"/agent-client-relationships/api/${arn.value}/invitation"
       val result = doAgentPostRequest(requestPath, Json.toJson(inputData).toString())
@@ -445,9 +466,17 @@ with CitizenDetailsStub {
       val taxIdentifier = mtdItId
       val clientId = mtdItId.value
 
-      getStandardStubForCreateInvitation(HMRCMTDITSUPP)
       getActiveRelationshipsViaClient(taxIdentifier, arn)
+
+      givenClientHasNoRelationshipWithAnyAgentInCESA(nino = nino)
+      generateStandardStubForCreateInvitation()
       givenDelegatedGroupIdsExistFor(EnrolmentKey(HMRCMTDIT, taxIdentifier), Set("foo"))
+      givenDelegatedGroupIdsNotExistFor(EnrolmentKey(HMRCMTDITSUPP, mtdItId))
+      givenDelegatedGroupIdsNotExistFor(EnrolmentKey(multiAgentServicesOtherService(HMRCMTDITSUPP), mtdItId))
+      givenMtdItIdIsKnownFor(nino, mtdItId)
+      givenNinoIsKnownFor(mtdItId, nino) // TODO: Why is this needed when the HipConnector.getNinoFor() method is not used by the ApiCreateInvitationController at all ?!!
+      givenCitizenDetailsExists(nino)
+      givenItsaDesignatoryDetailsExists(nino)
 
       val requestPath = s"/agent-client-relationships/api/${arn.value}/invitation"
       val result = doAgentPostRequest(requestPath, Json.toJson(inputData).toString())
@@ -477,10 +506,11 @@ with CitizenDetailsStub {
     s"return UNPROCESSABLE_ENTITY status and valid JSON CLIENT_REGISTRATION_NOT_FOUND when invitation is created for Alt Itsa - no client mtdItId and PartialAuth relationship exists" in {
       val inputData: ApiCreateInvitationRequest = baseInvitationInputData
 
-      givenCitizenDetailsError(nino, 404)
-      getStandardStubForCreateInvitation(HMRCMTDIT)
+      generateStandardStubForCreateInvitation()
+      givenDelegatedGroupIdsNotExistFor(EnrolmentKey(HMRCMTDIT, mtdItId))
+      givenDelegatedGroupIdsNotExistFor(EnrolmentKey(multiAgentServicesOtherService(HMRCMTDIT), mtdItId))
       givenMtdItIdIsUnKnownFor(nino)
-      givenNinoIsUnknownFor(mtdItId)
+      givenCitizenDetailsError(nino, 404)
 
       partialAuthRepository
         .create(
@@ -507,7 +537,14 @@ with CitizenDetailsStub {
     s"return UNPROCESSABLE_ENTITY status and valid JSON ALREADY_AUTHORISED when invitation is created for Alt Itsa - client mtdItId exists and PartialAuth relationship exists (triggers a proper relationship creation in the background)" in {
       val inputData: ApiCreateInvitationRequest = baseInvitationInputData
 
-      getStandardStubForCreateInvitation(HMRCMTDIT)
+      generateStandardStubForCreateInvitation()
+      givenDelegatedGroupIdsNotExistFor(EnrolmentKey(HMRCMTDIT, mtdItId))
+      givenDelegatedGroupIdsNotExistFor(EnrolmentKey(multiAgentServicesOtherService(HMRCMTDIT), mtdItId))
+      givenMtdItIdIsKnownFor(nino, mtdItId)
+      givenNinoIsKnownFor(mtdItId, nino) // TODO: Why is this needed when the HipConnector.getNinoFor() method is not used by the ApiCreateInvitationController at all ?!!
+      givenCitizenDetailsExists(nino)
+      givenItsaDesignatoryDetailsExists(nino)
+
       givenAgentCanBeAllocated(mtdItId, arn)
       givenEnrolmentAllocationSucceeds(
         "foo",
@@ -542,8 +579,15 @@ with CitizenDetailsStub {
     s"return 201 status and valid JSON when invitation is created for Alt Itsa - client mtdItId exists and PartialAuth for Alt Itsa Supp relationship exists" in {
       val inputData: ApiCreateInvitationRequest = baseInvitationInputData
 
-      getStandardStubForCreateInvitation(HMRCMTDIT)
       val clientId = mtdItId.value
+
+      generateStandardStubForCreateInvitation()
+      givenDelegatedGroupIdsNotExistFor(EnrolmentKey(HMRCMTDIT, mtdItId))
+      givenDelegatedGroupIdsNotExistFor(EnrolmentKey(multiAgentServicesOtherService(HMRCMTDIT), mtdItId))
+      givenMtdItIdIsKnownFor(nino, mtdItId)
+      givenNinoIsKnownFor(mtdItId, nino) // TODO: Why is this needed when the HipConnector.getNinoFor() method is not used by the ApiCreateInvitationController at all ?!!
+      givenCitizenDetailsExists(nino)
+      givenItsaDesignatoryDetailsExists(nino)
 
       partialAuthRepository
         .create(
@@ -581,8 +625,15 @@ with CitizenDetailsStub {
     s"return 201 status and valid JSON when invitation is created for Alt Itsa Supp - client mtdItId exists and PartialAuth for Alt Itsa Main relationship exists" in {
       val inputData: ApiCreateInvitationRequest = baseInvitationInputData.copy(service = HMRCMTDITSUPP)
 
-      getStandardStubForCreateInvitation(HMRCMTDITSUPP)
       val clientId = mtdItId.value
+
+      generateStandardStubForCreateInvitation()
+      givenDelegatedGroupIdsNotExistFor(EnrolmentKey(HMRCMTDITSUPP, mtdItId))
+      givenDelegatedGroupIdsNotExistFor(EnrolmentKey(multiAgentServicesOtherService(HMRCMTDITSUPP), mtdItId))
+      givenMtdItIdIsKnownFor(nino, mtdItId)
+      givenNinoIsKnownFor(mtdItId, nino) // TODO: Why is this needed when the HipConnector.getNinoFor() method is not used by the ApiCreateInvitationController at all ?!!
+      givenCitizenDetailsExists(nino)
+      givenItsaDesignatoryDetailsExists(nino)
 
       partialAuthRepository
         .create(
@@ -690,12 +741,23 @@ with CitizenDetailsStub {
       s"return UNPROCESSABLE_ENTITY status and valid JSON AGENT_TYPE_NOT_SUPPORTED when agent is suspended for $taxService" in {
         val inputData: ApiCreateInvitationRequest = allServices(taxService)
 
-        getStandardStubForCreateInvitation(taxService)
-        givenAgentRecord(
+        generateStandardStubForCreateInvitation()
+
+        if (taxService == HMRCMTDIT || taxService == HMRCMTDITSUPP) {
+          givenDelegatedGroupIdsNotExistFor(EnrolmentKey(taxService, mtdItId))
+          givenDelegatedGroupIdsNotExistFor(EnrolmentKey(multiAgentServicesOtherService(taxService), mtdItId))
+          givenMtdItIdIsKnownFor(nino, mtdItId)
+        }
+
+        if (taxService == HMRCMTDVAT) {
+          givenDelegatedGroupIdsNotExistFor(EnrolmentKey(taxService, vrn))
+          givenVatCustomerInfoExists(vrn = vrn.value)
+        }
+
+        givenAgentRecordFound(
           arn,
           testAgentRecord.copy(suspensionDetails = Some(SuspensionDetails(suspensionStatus = true, regimes = None)))
         )
-        givenUserAuthorised()
 
         val requestPath = s"/agent-client-relationships/api/${arn.value}/invitation"
         val result = doAgentPostRequest(requestPath, Json.toJson(inputData).toString())
@@ -718,8 +780,20 @@ with CitizenDetailsStub {
       s"return InternalServerError status and error message when agent DES return 404 for $taxService" in {
         val inputData: ApiCreateInvitationRequest = allServices(taxService)
 
-        getStandardStubForCreateInvitation(taxService)
-        givenAgentRecordErrorResponse(arn, 404)
+        generateStandardStubForCreateInvitation()
+
+        if (taxService == HMRCMTDIT || taxService == HMRCMTDITSUPP) {
+          givenDelegatedGroupIdsNotExistFor(EnrolmentKey(taxService, mtdItId))
+          givenDelegatedGroupIdsNotExistFor(EnrolmentKey(multiAgentServicesOtherService(taxService), mtdItId))
+          givenMtdItIdIsKnownFor(nino, mtdItId)
+        }
+
+        if (taxService == HMRCMTDVAT) {
+          givenDelegatedGroupIdsNotExistFor(EnrolmentKey(taxService, vrn))
+          givenVatCustomerInfoExists(vrn = vrn.value)
+        }
+
+        givenAgentDetailsErrorResponse(arn, 404)
 
         val requestPath = s"/agent-client-relationships/api/${arn.value}/invitation"
         val result = doAgentPostRequest(requestPath, Json.toJson(inputData).toString())
@@ -738,10 +812,10 @@ with CitizenDetailsStub {
           knownFact = "2020-01-01"
         )
 
-      getStandardStubForCreateInvitation(HMRCMTDVAT)
+      generateStandardStubForCreateInvitation()
+      givenDelegatedGroupIdsNotExistFor(EnrolmentKey(HMRCMTDVAT, vrn))
       givenVatCustomerInfoExists(
         vrn = vrn.value,
-        regDate = "2020-01-01",
         isInsolvent = true
       )
 
@@ -769,7 +843,9 @@ with CitizenDetailsStub {
           knownFact = "2020/01/01"
         )
 
-      getStandardStubForCreateInvitation(HMRCMTDVAT)
+      generateStandardStubForCreateInvitation()
+      givenDelegatedGroupIdsNotExistFor(EnrolmentKey(HMRCMTDVAT, vrn))
+      givenVatCustomerInfoExists(vrn = vrn.value)
 
       val expectedJson: JsValue = Json.toJson(
         toJson(
@@ -794,7 +870,9 @@ with CitizenDetailsStub {
           knownFact = "2020-01-02"
         )
 
-      getStandardStubForCreateInvitation(HMRCMTDVAT)
+      generateStandardStubForCreateInvitation()
+      givenDelegatedGroupIdsNotExistFor(EnrolmentKey(HMRCMTDVAT, vrn))
+      givenVatCustomerInfoExists(vrn = vrn.value)
 
       val expectedJson: JsValue = Json.toJson(
         toJson(
@@ -814,7 +892,13 @@ with CitizenDetailsStub {
       val inputData: ApiCreateInvitationRequest = baseInvitationInputData
         .copy(knownFact = "IAMWRONG12")
 
-      getStandardStubForCreateInvitation(HMRCMTDIT)
+      generateStandardStubForCreateInvitation()
+      givenDelegatedGroupIdsNotExistFor(EnrolmentKey(HMRCMTDIT, mtdItId))
+      givenDelegatedGroupIdsNotExistFor(EnrolmentKey(multiAgentServicesOtherService(HMRCMTDIT), mtdItId))
+      givenMtdItIdIsKnownFor(nino, mtdItId)
+      givenNinoIsKnownFor(mtdItId, nino) // TODO: Why is this needed when the HipConnector.getNinoFor() method is not used by the ApiCreateInvitationController at all ?!!
+      givenCitizenDetailsExists(nino)
+      givenItsaDesignatoryDetailsExists(nino)
 
       val expectedJson: JsValue = Json.toJson(
         toJson(
@@ -835,7 +919,13 @@ with CitizenDetailsStub {
       val inputData: ApiCreateInvitationRequest = baseInvitationInputData
         .copy(knownFact = "DM11 8DX")
 
-      getStandardStubForCreateInvitation(HMRCMTDIT)
+      generateStandardStubForCreateInvitation()
+      givenDelegatedGroupIdsNotExistFor(EnrolmentKey(HMRCMTDIT, mtdItId))
+      givenDelegatedGroupIdsNotExistFor(EnrolmentKey(multiAgentServicesOtherService(HMRCMTDIT), mtdItId))
+      givenMtdItIdIsKnownFor(nino, mtdItId)
+      givenNinoIsKnownFor(mtdItId, nino) // TODO: Why is this needed when the HipConnector.getNinoFor() method is not used by the ApiCreateInvitationController at all ?!!
+      givenCitizenDetailsExists(nino)
+      givenItsaDesignatoryDetailsExists(nino)
 
       val expectedJson: JsValue = Json.toJson(
         toJson(
@@ -855,19 +945,13 @@ with CitizenDetailsStub {
     s"return UNPROCESSABLE_ENTITY status and valid JSON INVALID_PAYLOAD when ITSA country is not valid" in {
       val inputData: ApiCreateInvitationRequest = baseInvitationInputData
 
-      getStandardStubForCreateInvitation(HMRCMTDIT)
-      givenMtdItsaBusinessDetailsExists(
-        nino = nino,
-        mtdId = mtdItId,
-        postCode = "AA1 1AA",
-        countryCode = "XX"
-      )
-      givenNinoItsaBusinessDetailsExists(
-        mtdId = mtdItId,
-        nino = nino,
-        postCode = "AA1 1AA",
-        countryCode = "XX"
-      )
+      generateStandardStubForCreateInvitation()
+      givenDelegatedGroupIdsNotExistFor(EnrolmentKey(HMRCMTDIT, mtdItId))
+      givenDelegatedGroupIdsNotExistFor(EnrolmentKey(multiAgentServicesOtherService(HMRCMTDIT), mtdItId))
+      givenMtdItIdIsKnownFor(nino, mtdItId)
+      givenNinoIsKnownFor(mtdItId, nino) // TODO: Why is this needed when the HipConnector.getNinoFor() method is not used by the ApiCreateInvitationController at all ?!!
+      givenCitizenDetailsExists(nino)
+      givenItsaDesignatoryDetailsReturnsInvalidCountryCode(nino)
 
       val expectedJson: JsValue = Json.toJson(
         toJson(

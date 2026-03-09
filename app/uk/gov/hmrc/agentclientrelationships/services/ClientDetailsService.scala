@@ -26,7 +26,6 @@ import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientStatus._
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.KnownFactType._
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails._
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.cgt.CgtSubscriptionDetails
-import uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa.ItsaBusinessDetails
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.vat.VatCustomerDetails
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdIt
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdItSupp
@@ -132,57 +131,45 @@ extends RequestAwareLogging {
     "SCOTLAND"
   ).contains(countryName)
 
-  private def checkCitizenDetails(nino: NinoWithoutSuffix)(implicit rh: RequestHeader): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] =
-    (
-      for {
-        citizenDetails <- EitherT(clientDetailsConnector.getItsaCitizenDetails(nino))
-        designatoryDetails <- EitherT(clientDetailsConnector.getItsaDesignatoryDetails(nino))
-      } yield (citizenDetails.name, citizenDetails.saUtr, designatoryDetails.postCode, designatoryDetails.country)
-    ).subflatMap {
-      case (Some(name), Some(_), Some(postcode), Some(country)) if isUk(country) =>
-        Right(makeItsaUkResponse(
-          postcode = postcode,
-          name = name
-        ))
-      case (Some(name), Some(_), _, Some(country)) if appConfig.overseasItsaEnabled =>
-        Right(makeItsaOverseasResponse(
-          country = country,
-          name = name,
-          factType = Country
-        ))
-      case _ => Left(ClientDetailsNotFound)
-    }.value
+  // scalastyle:off cyclomatic.complexity
+  private def getItsaClientDetails(nino: String)(implicit request: RequestHeader): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] = {
+    for {
+      itsaCitizenDetailsEither <- clientDetailsConnector.getItsaCitizenDetails(NinoWithoutSuffix(nino))
+      finalResponse <-
+        itsaCitizenDetailsEither match {
+          case Left(_) =>
+            Future.successful(Left(ClientDetailsNotFound))
+          case Right(citizenDetails) =>
 
-  private def getItsaClientDetails(nino: String)(implicit
-    request: RequestHeader
-  ): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] = hipConnector
-    .getItsaBusinessDetails(NinoWithoutSuffix(nino))
-    .flatMap {
-      case Right(details @ ItsaBusinessDetails(
-            _,
-            Some(postcode),
-            _
-          )) if !details.isOverseas =>
-        Future.successful(Right(makeItsaUkResponse(
-          postcode = postcode,
-          name = details.name
-        )))
-      case Right(details @ ItsaBusinessDetails(
-            _,
-            _,
-            countryCode
-          )) if appConfig.overseasItsaEnabled =>
-        Future.successful(Right(makeItsaOverseasResponse(
-          country = countryCode,
-          name = details.name,
-          factType = CountryCode
-        )))
-      case Right(_) =>
-        logger.warn(s"[getItsaClientDetails] - Valid business details not found in ETMP for $nino")
-        Future.successful(Left(ClientDetailsNotFound))
-      case Left(ClientDetailsNotFound) => checkCitizenDetails(NinoWithoutSuffix(nino))
-      case Left(err) => Future.successful(Left(err))
-    }
+            for {
+              itsaDesignatoryDetailsEither <- clientDetailsConnector.getItsaDesignatoryDetails(NinoWithoutSuffix(nino))
+
+              intermediateResponse <-
+                itsaDesignatoryDetailsEither match {
+                  case Left(_) =>
+                    Future.successful(Left(ClientDetailsNotFound))
+                  case Right(itsaDesignatoryDetails) =>
+
+                    (citizenDetails.name, citizenDetails.saUtr, itsaDesignatoryDetails.postCode, itsaDesignatoryDetails.country) match {
+                      case (Some(name), Some(_), Some(postcode), Some(country)) if isUk(country) =>
+                        Future.successful(Right(makeItsaUkResponse(postcode = postcode, name = name)))
+                      case (Some(name), Some(_), _, Some(country)) if appConfig.overseasItsaEnabled =>
+                        Future.successful(Right(makeItsaOverseasResponse(
+                          country = country,
+                          name = name,
+                          factType = Country
+                        )))
+                      case _ => Future.successful(Left(ClientDetailsNotFound))
+                    }
+
+                }
+
+            } yield intermediateResponse
+
+        }
+
+    } yield finalResponse
+  }
 
   private def getVatClientDetails(vrn: String)(implicit
     request: RequestHeader
