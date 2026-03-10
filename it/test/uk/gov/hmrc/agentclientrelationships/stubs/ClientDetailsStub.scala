@@ -18,6 +18,7 @@ package uk.gov.hmrc.agentclientrelationships.stubs
 
 import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.stubbing.StubMapping
+import play.api.libs.json.Json
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
 
 trait ClientDetailsStub {
@@ -46,6 +47,39 @@ trait ClientDetailsStub {
   ): StubMapping = stubFor(
     get(urlEqualTo(s"/citizen-details/${nino.anySuffixValue}/designatory-details"))
       .willReturn(aResponse().withStatus(status))
+  )
+
+  def givenItsaDesignatoryDetailsReturnsInvalidCountryCode(nino: NinoWithoutSuffix): StubMapping = stubFor(
+    get(urlEqualTo(s"/citizen-details/${nino.anySuffixValue}/designatory-details"))
+      .willReturn(
+        aResponse()
+          .withBody(
+            Json.obj(
+              "address" -> Json.obj(
+                "postcode" -> "AA1 1AA",
+                "country" -> "XX"
+              )
+            ).toString()
+          )
+      )
+  )
+
+  def givenItsaDesignatoryDetailsReturnsPostcode(
+    nino: NinoWithoutSuffix,
+    postcode: String
+  ): StubMapping = stubFor(
+    get(urlEqualTo(s"/citizen-details/${nino.anySuffixValue}/designatory-details"))
+      .willReturn(
+        aResponse()
+          .withBody(
+            Json.obj(
+              "address" -> Json.obj(
+                "postcode" -> postcode,
+                "country" -> "GREAT BRITAIN"
+              )
+            ).toString()
+          )
+      )
   )
 
   def givenItsaCitizenDetailsExists(nino: NinoWithoutSuffix): StubMapping = stubFor(

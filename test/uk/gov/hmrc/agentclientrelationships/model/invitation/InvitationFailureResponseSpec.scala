@@ -20,7 +20,6 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import play.api.http.HttpEntity
 import play.api.libs.json.Json
-import play.api.test.Helpers
 
 class InvitationFailureResponseSpec
 extends AnyWordSpec
@@ -28,7 +27,7 @@ with Matchers {
 
   "RelationshipNotFound" should {
     "map to a 404 response with the expected body" in {
-      val result = InvitationFailureResponse.RelationshipNotFound.getResult("")
+      val result = InvitationFailureResponse.RelationshipNotFound.getResult()
 
       result.header.status shouldBe 404
 
@@ -40,7 +39,7 @@ with Matchers {
 
   "RelationshipDeleteFailed" should {
     "map to a 500 response containing the failure message" in {
-      val result = InvitationFailureResponse.RelationshipDeleteFailed("boom").getResult("")
+      val result = InvitationFailureResponse.RelationshipDeleteFailed("boom").getResult()
 
       result.header.status shouldBe 500
       Json.parse(bodyAsString(result)).as[String] shouldBe "boom"

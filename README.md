@@ -71,12 +71,12 @@ The provided error code is to help diagnose potential issues in production and w
 
 #### The valid combinations for service and clientIdTypes for GET/PUT/DELETE endpoints are as follows: 
 
- | Service         | ClientIdType |
- | -------------   | ------------ |
- | HMRC-MTD-IT     | MTDITID or NI|
- | HMRC-MTD-VAT    | VRN          |
- | HMRC-TERS-ORG   | SAUTR        |
- | IR-SA           | ni           |
+ | Service       | ClientIdType  |
+ |---------------|---------------|
+ | HMRC-MTD-IT   | MTDITID or NI |
+ | HMRC-MTD-VAT  | VRN           |
+ | HMRC-TERS-ORG | SAUTR         |
+ | IR-SA         | ni            |
 
 ### Retrieve client details
 

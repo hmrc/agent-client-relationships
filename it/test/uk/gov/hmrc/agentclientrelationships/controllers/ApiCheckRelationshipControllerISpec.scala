@@ -20,10 +20,10 @@ import play.api.http.Status.NOT_FOUND
 import play.api.libs.json.Json.toJson
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.api.ApiCheckRelationshipRequest
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service._
 import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiFailureResponse.ErrorBody
 import uk.gov.hmrc.agentclientrelationships.stubs._
 import uk.gov.hmrc.agentclientrelationships.support.TestData
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service._
 
 class ApiCheckRelationshipControllerISpec
 extends BaseControllerISpec
@@ -45,11 +45,9 @@ with TestData {
     "return 204 when the relationship is found for ITSA" in {
       givenAuditConnector()
       givenAgentRecord(arn, agentRecordResponse)
-      givenMtdItsaBusinessDetailsExists(
-        nino,
-        mtdItId,
-        testPostcode
-      )
+      givenMtdItIdIsKnownFor(nino, mtdItId)
+      givenCitizenDetailsExists(nino)
+      givenItsaDesignatoryDetailsExists(nino)
       givenAgentGroupExistsFor("groupId")
       givenAdminUser("groupId", "userId")
       givenPrincipalGroupIdExistsFor(agentEnrolmentKey(arn), "groupId")
@@ -120,11 +118,8 @@ with TestData {
     "return 422 with KNOWN_FACT_DOES_NOT_MATCH when known fact is not found" in {
       givenAuditConnector()
       givenAgentRecord(arn, agentRecordResponse)
-      givenMtdItsaBusinessDetailsExists(
-        nino = nino,
-        mtdId = mtdItId,
-        postCode = "Z11 11Z"
-      )
+      givenCitizenDetailsExists(nino)
+      givenItsaDesignatoryDetailsReturnsPostcode(nino, "Z11 11Z")
       givenUserAuthorised()
 
       val testData = ApiCheckRelationshipRequest(
@@ -158,20 +153,12 @@ with TestData {
     "return 422 with RELATIONSHIP_NOT_FOUND when relationship is not found" in {
       givenAuditConnector()
       givenAgentRecord(arn, agentRecordResponse)
-      givenMtdItsaBusinessDetailsExists(
-        nino,
-        mtdItId,
-        testPostcode
-      )
+      givenCitizenDetailsExists(nino)
+      givenItsaDesignatoryDetailsExists(nino)
       givenAgentGroupExistsFor("groupId")
       givenAdminUser("groupId", "userId")
       givenPrincipalGroupIdExistsFor(agentEnrolmentKey(arn), "groupId")
       givenDelegatedGroupIdsNotExistFor(EnrolmentKey(HMRCMTDIT, mtdItId))
-      givenNinoItsaBusinessDetailsExists(
-        mtdItId,
-        nino,
-        testPostcode
-      )
       givenClientHasNoActiveRelationshipWithAgentInCESA(nino)
       givenUserAuthorised()
 
@@ -187,11 +174,9 @@ with TestData {
     "return 500 when relationship check fails unexpectedly" in {
       givenAuditConnector()
       givenAgentRecord(arn, agentRecordResponse)
-      givenMtdItsaBusinessDetailsExists(
-        nino,
-        mtdItId,
-        testPostcode
-      )
+      givenMtdItIdIsKnownFor(nino, mtdItId)
+      givenCitizenDetailsExists(nino)
+      givenItsaDesignatoryDetailsExists(nino)
       givenAgentGroupExistsFor("groupId")
       givenAdminUser("groupId", "userId")
       givenPrincipalGroupIdExistsFor(agentEnrolmentKey(arn), "groupId")
