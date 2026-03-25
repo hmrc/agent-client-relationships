@@ -24,6 +24,7 @@ import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 import uk.gov.hmrc.agentclientrelationships.services.AgentTerminationService
+import uk.gov.hmrc.agentclientrelationships.services.CheckRelationshipEnrolmentNotFound
 import uk.gov.hmrc.agentclientrelationships.services.CheckRelationshipFound
 import uk.gov.hmrc.agentclientrelationships.services.CheckRelationshipInvalidRequest
 import uk.gov.hmrc.agentclientrelationships.services.CheckRelationshipNotFound
@@ -69,7 +70,7 @@ with RequestAwareLogging {
         .map {
           case CheckRelationshipFound => Ok
           case CheckRelationshipNotFound(message) => NotFound(Json.obj("code" -> message))
-          case CheckRelationshipInvalidRequest => BadRequest
+          case CheckRelationshipInvalidRequest | CheckRelationshipEnrolmentNotFound => BadRequest
         }
     }
   }

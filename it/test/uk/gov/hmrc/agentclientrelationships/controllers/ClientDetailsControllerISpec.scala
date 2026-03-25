@@ -80,7 +80,7 @@ with MappingStubs {
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
           givenMtdItIdIsKnownFor(NinoWithoutSuffix("AA000001"), MtdItId("XAIT0000111122"))
-          givenNinoIsKnownFor(MtdItId("XAIT0000111122"), NinoWithoutSuffix("AA000001")) // TODO: Why is this needed when the HipConnector.getNinoFor() method is not used by the ApiCreateInvitationController at all ?!!
+          givenNinoIsKnownFor(MtdItId("XAIT0000111122"), NinoWithoutSuffix("AA000001"))
           givenCitizenDetailsExists(NinoWithoutSuffix("AA000001"))
           givenItsaDesignatoryDetailsExists(NinoWithoutSuffix("AA000001"))
           givenClientHasNoRelationshipWithAnyAgentInCESA(nino = NinoWithoutSuffix("AA000001"))
@@ -95,7 +95,8 @@ with MappingStubs {
             "knownFactType" -> "PostalCode",
             "hasPendingInvitation" -> false,
             "isMapped" -> false,
-            "clientsLegacyRelationships" -> Json.arr()
+            "clientsLegacyRelationships" -> Json.arr(),
+            "isMissingEacdKnownFacts" -> false
           )
         }
 
@@ -105,7 +106,7 @@ with MappingStubs {
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
           givenMtdItIdIsKnownFor(NinoWithoutSuffix("AA000001"), MtdItId("XAIT0000111122"))
-          givenNinoIsKnownFor(MtdItId("XAIT0000111122"), NinoWithoutSuffix("AA000001")) // TODO: Why is this needed when the HipConnector.getNinoFor() method is not used by the ApiCreateInvitationController at all ?!!
+          givenNinoIsKnownFor(MtdItId("XAIT0000111122"), NinoWithoutSuffix("AA000001"))
           givenCitizenDetailsExists(NinoWithoutSuffix("AA000001"))
           givenItsaDesignatoryDetailsExists(NinoWithoutSuffix("AA000001"))
           givenArnIsUnknownFor(Arn("XARN1234567"))
@@ -120,7 +121,8 @@ with MappingStubs {
             "knownFactType" -> "PostalCode",
             "hasPendingInvitation" -> false,
             "isMapped" -> false,
-            "clientsLegacyRelationships" -> Json.arr("A12345")
+            "clientsLegacyRelationships" -> Json.arr("A12345"),
+            "isMissingEacdKnownFacts" -> false
           )
         }
 
@@ -142,7 +144,8 @@ with MappingStubs {
             "knownFactType" -> "PostalCode",
             "hasPendingInvitation" -> false,
             "isMapped" -> true,
-            "clientsLegacyRelationships" -> Json.arr("A12345")
+            "clientsLegacyRelationships" -> Json.arr("A12345"),
+            "isMissingEacdKnownFacts" -> false
           )
         }
 
@@ -152,7 +155,7 @@ with MappingStubs {
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
           givenMtdItIdIsKnownFor(NinoWithoutSuffix("AA000001"), MtdItId("XAIT0000111122"))
-          givenNinoIsKnownFor(MtdItId("XAIT0000111122"), NinoWithoutSuffix("AA000001")) // TODO: Why is this needed when the HipConnector.getNinoFor() method is not used by the ApiCreateInvitationController at all ?!!
+          givenNinoIsKnownFor(MtdItId("XAIT0000111122"), NinoWithoutSuffix("AA000001"))
           givenCitizenDetailsExists(NinoWithoutSuffix("AA000001"))
           givenItsaDesignatoryDetailsExists(NinoWithoutSuffix("AA000001"))
           givenArnIsKnownFor(Arn("XARN1234567"), SaAgentReference("A12345"))
@@ -174,7 +177,8 @@ with MappingStubs {
             "knownFacts" -> Json.arr("AA11AA"),
             "knownFactType" -> "PostalCode",
             "hasPendingInvitation" -> false,
-            "hasExistingRelationshipFor" -> "HMRC-MTD-IT"
+            "hasExistingRelationshipFor" -> "HMRC-MTD-IT",
+            "isMissingEacdKnownFacts" -> false
           )
         }
 
@@ -185,7 +189,7 @@ with MappingStubs {
             givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")))
             givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
             givenMtdItIdIsKnownFor(NinoWithoutSuffix("AA000001"), MtdItId("XAIT0000111122"))
-            givenNinoIsKnownFor(MtdItId("XAIT0000111122"), NinoWithoutSuffix("AA000001")) // TODO: Why is this needed when the HipConnector.getNinoFor() method is not used by the ApiCreateInvitationController at all ?!!
+            givenNinoIsKnownFor(MtdItId("XAIT0000111122"), NinoWithoutSuffix("AA000001"))
             givenCitizenDetailsExists(NinoWithoutSuffix("AA000001"))
             givenItsaDesignatoryDetailsExists(NinoWithoutSuffix("AA000001"))
             givenArnIsKnownFor(Arn("XARN1234567"), SaAgentReference("A12345"))
@@ -206,7 +210,8 @@ with MappingStubs {
               "isOverseas" -> false,
               "knownFacts" -> Json.arr("AA11AA"),
               "knownFactType" -> "PostalCode",
-              "hasPendingInvitation" -> false
+              "hasPendingInvitation" -> false,
+              "isMissingEacdKnownFacts" -> false
             )
           }
 
@@ -216,7 +221,7 @@ with MappingStubs {
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
           givenMtdItIdIsKnownFor(NinoWithoutSuffix("AA000001"), MtdItId("XAIT0000111122"))
-          givenNinoIsKnownFor(MtdItId("XAIT0000111122"), NinoWithoutSuffix("AA000001")) // TODO: Why is this needed when the HipConnector.getNinoFor() method is not used by the ApiCreateInvitationController at all ?!!
+          givenNinoIsKnownFor(MtdItId("XAIT0000111122"), NinoWithoutSuffix("AA000001"))
           givenCitizenDetailsExists(NinoWithoutSuffix("AA000001"))
           givenItsaDesignatoryDetailsExists(NinoWithoutSuffix("AA000001"))
           givenClientHasNoRelationshipWithAnyAgentInCESA(nino = NinoWithoutSuffix("AA000001"))
@@ -242,7 +247,8 @@ with MappingStubs {
             "isOverseas" -> false,
             "knownFacts" -> Json.arr("AA11AA"),
             "knownFactType" -> "PostalCode",
-            "hasPendingInvitation" -> true
+            "hasPendingInvitation" -> true,
+            "isMissingEacdKnownFacts" -> false
           )
         }
 
@@ -252,7 +258,7 @@ with MappingStubs {
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")))
           givenDelegatedGroupIdsNotExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")))
           givenMtdItIdIsKnownFor(NinoWithoutSuffix("AA000001"), MtdItId("XAIT0000111122"))
-          givenNinoIsKnownFor(MtdItId("XAIT0000111122"), NinoWithoutSuffix("AA000001")) // TODO: Why is this needed when the HipConnector.getNinoFor() method is not used by the ApiCreateInvitationController at all ?!!
+          givenNinoIsKnownFor(MtdItId("XAIT0000111122"), NinoWithoutSuffix("AA000001"))
           givenCitizenDetailsExists(NinoWithoutSuffix("AA000001"))
           givenItsaDesignatoryDetailsExists(NinoWithoutSuffix("AA000001"))
           givenClientHasNoRelationshipWithAnyAgentInCESA(nino = NinoWithoutSuffix("AA000001"))
@@ -277,7 +283,8 @@ with MappingStubs {
             "isOverseas" -> false,
             "knownFacts" -> Json.arr("AA11AA"),
             "knownFactType" -> "PostalCode",
-            "hasPendingInvitation" -> true
+            "hasPendingInvitation" -> true,
+            "isMissingEacdKnownFacts" -> false
           )
         }
 
@@ -285,7 +292,7 @@ with MappingStubs {
           val request = FakeRequest("GET", "/agent-client-relationships/client/HMRC-MTD-IT/details/AA000001")
           setupCommonStubs(request)
           givenMtdItIdIsKnownFor(NinoWithoutSuffix("AA000001"), MtdItId("XAIT0000111122"))
-          givenNinoIsKnownFor(MtdItId("XAIT0000111122"), NinoWithoutSuffix("AA000001")) // TODO: Why is this needed when the HipConnector.getNinoFor() method is not used by the ApiCreateInvitationController at all ?!!
+          givenNinoIsKnownFor(MtdItId("XAIT0000111122"), NinoWithoutSuffix("AA000001"))
           givenCitizenDetailsExists(NinoWithoutSuffix("AA000001"))
           givenItsaDesignatoryDetailsExists(NinoWithoutSuffix("AA000001"))
           givenDelegatedGroupIdsExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")), Set("foo"))
@@ -299,7 +306,8 @@ with MappingStubs {
             "knownFacts" -> Json.arr("AA11AA"),
             "knownFactType" -> "PostalCode",
             "hasPendingInvitation" -> false,
-            "hasExistingRelationshipFor" -> "HMRC-MTD-IT"
+            "hasExistingRelationshipFor" -> "HMRC-MTD-IT",
+            "isMissingEacdKnownFacts" -> false
           )
         }
 
@@ -307,7 +315,7 @@ with MappingStubs {
           val request = FakeRequest("GET", "/agent-client-relationships/client/HMRC-MTD-IT/details/AA000001")
           setupCommonStubs(request)
           givenMtdItIdIsKnownFor(NinoWithoutSuffix("AA000001"), MtdItId("XAIT0000111122"))
-          givenNinoIsKnownFor(MtdItId("XAIT0000111122"), NinoWithoutSuffix("AA000001")) // TODO: Why is this needed when the HipConnector.getNinoFor() method is not used by the ApiCreateInvitationController at all ?!!
+          givenNinoIsKnownFor(MtdItId("XAIT0000111122"), NinoWithoutSuffix("AA000001"))
           givenCitizenDetailsExists(NinoWithoutSuffix("AA000001"))
           givenItsaDesignatoryDetailsExists(NinoWithoutSuffix("AA000001"))
           givenDelegatedGroupIdsExistFor(EnrolmentKey("HMRC-MTD-IT-SUPP", MtdItId("XAIT0000111122")), Set("foo"))
@@ -322,7 +330,8 @@ with MappingStubs {
             "knownFacts" -> Json.arr("AA11AA"),
             "knownFactType" -> "PostalCode",
             "hasPendingInvitation" -> false,
-            "hasExistingRelationshipFor" -> "HMRC-MTD-IT-SUPP"
+            "hasExistingRelationshipFor" -> "HMRC-MTD-IT-SUPP",
+            "isMissingEacdKnownFacts" -> false
           )
         }
 
@@ -341,7 +350,8 @@ with MappingStubs {
             "knownFacts" -> Json.arr("test@email.com", "test2@email.com"),
             "knownFactType" -> "Email",
             "hasPendingInvitation" -> false,
-            "hasExistingRelationshipFor" -> "HMRC-CBC-NONUK-ORG"
+            "hasExistingRelationshipFor" -> "HMRC-CBC-NONUK-ORG",
+            "isMissingEacdKnownFacts" -> false
           )
         }
 
@@ -368,7 +378,8 @@ with MappingStubs {
             "knownFacts" -> Json.arr("AA11AA"),
             "knownFactType" -> "PostalCode",
             "hasPendingInvitation" -> false,
-            "hasExistingRelationshipFor" -> "HMRC-MTD-IT"
+            "hasExistingRelationshipFor" -> "HMRC-MTD-IT",
+            "isMissingEacdKnownFacts" -> false
           )
         }
 
@@ -395,7 +406,8 @@ with MappingStubs {
             "knownFacts" -> Json.arr("AA11AA"),
             "knownFactType" -> "PostalCode",
             "hasPendingInvitation" -> false,
-            "hasExistingRelationshipFor" -> "HMRC-MTD-IT-SUPP"
+            "hasExistingRelationshipFor" -> "HMRC-MTD-IT-SUPP",
+            "isMissingEacdKnownFacts" -> false
           )
         }
 
@@ -403,7 +415,7 @@ with MappingStubs {
           val request = FakeRequest("GET", "/agent-client-relationships/client/HMRC-MTD-IT/details/AA000001")
           setupCommonStubs(request)
           givenMtdItIdIsKnownFor(NinoWithoutSuffix("AA000001"), MtdItId("XAIT0000111122"))
-          givenNinoIsKnownFor(MtdItId("XAIT0000111122"), NinoWithoutSuffix("AA000001")) // TODO: Why is this needed when the HipConnector.getNinoFor() method is not used by the ApiCreateInvitationController at all ?!!
+          givenNinoIsKnownFor(MtdItId("XAIT0000111122"), NinoWithoutSuffix("AA000001"))
           givenCitizenDetailsExists(NinoWithoutSuffix("AA000001"))
           givenItsaDesignatoryDetailsExists(NinoWithoutSuffix("AA000001"))
           givenDelegatedGroupIdsExistFor(EnrolmentKey("HMRC-MTD-IT", MtdItId("XAIT0000111122")), Set("foo"))
@@ -430,7 +442,8 @@ with MappingStubs {
             "knownFacts" -> Json.arr("AA11AA"),
             "knownFactType" -> "PostalCode",
             "hasPendingInvitation" -> true,
-            "hasExistingRelationshipFor" -> "HMRC-MTD-IT"
+            "hasExistingRelationshipFor" -> "HMRC-MTD-IT",
+            "isMissingEacdKnownFacts" -> false
           )
         }
       }
@@ -449,7 +462,8 @@ with MappingStubs {
             "name" -> "CFG Solutions",
             "knownFacts" -> Json.arr("2020-01-01"),
             "knownFactType" -> "Date",
-            "hasPendingInvitation" -> false
+            "hasPendingInvitation" -> false,
+            "isMissingEacdKnownFacts" -> false
           )
         }
 
@@ -478,7 +492,8 @@ with MappingStubs {
             "name" -> "CFG Solutions",
             "knownFacts" -> Json.arr("2020-01-01"),
             "knownFactType" -> "Date",
-            "hasPendingInvitation" -> true
+            "hasPendingInvitation" -> true,
+            "isMissingEacdKnownFacts" -> false
           )
         }
 
@@ -495,7 +510,35 @@ with MappingStubs {
             "knownFacts" -> Json.arr("2020-01-01"),
             "knownFactType" -> "Date",
             "hasPendingInvitation" -> false,
-            "hasExistingRelationshipFor" -> "HMRC-MTD-VAT"
+            "hasExistingRelationshipFor" -> "HMRC-MTD-VAT",
+            "isMissingEacdKnownFacts" -> false
+          )
+        }
+
+        "the relationship check fails due to missing known facts" in {
+          val request = FakeRequest("GET", "/agent-client-relationships/client/HMRC-CBC-ORG/details/XCBCX1234567890")
+          setupCommonStubs(request)
+          givenCbcDetailsExist()
+          givenKnownFactsQuery(
+            Service.Cbc,
+            CbcId("XCBCX1234567890"),
+            None
+          )
+          givenKnownFactsQuery(
+            Service.CbcNonUk,
+            CbcId("XCBCX1234567890"),
+            None
+          )
+
+          val result = doGetRequest(request.uri)
+          result.status shouldBe 200
+          result.json shouldBe Json.obj(
+            "name" -> "CFG Solutions",
+            "isOverseas" -> false,
+            "knownFacts" -> Json.arr("test@email.com", "test2@email.com"),
+            "knownFactType" -> "Email",
+            "hasPendingInvitation" -> false,
+            "isMissingEacdKnownFacts" -> true
           )
         }
 
@@ -525,7 +568,8 @@ with MappingStubs {
             "knownFacts" -> Json.arr("2020-01-01"),
             "knownFactType" -> "Date",
             "hasPendingInvitation" -> true,
-            "hasExistingRelationshipFor" -> "HMRC-MTD-VAT"
+            "hasExistingRelationshipFor" -> "HMRC-MTD-VAT",
+            "isMissingEacdKnownFacts" -> false
           )
         }
       }

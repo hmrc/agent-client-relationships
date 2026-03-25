@@ -113,7 +113,7 @@ extends RequestAwareLogging {
       case Right(enrolmentKey) => proceed(enrolmentKey)
       case Left(validationError) =>
         logger.warn(s"Invalid parameters: $validationError")
-        Future.successful(CheckRelationshipInvalidRequest)
+        Future.successful(CheckRelationshipEnrolmentNotFound)
     }
 
   private def checkWithTaxIdentifier(
@@ -244,6 +244,7 @@ sealed trait CheckRelationshipResult
 case object CheckRelationshipFound extends CheckRelationshipResult
 case class CheckRelationshipNotFound(message: String = relationshipNotFound) extends CheckRelationshipResult
 case object CheckRelationshipInvalidRequest extends CheckRelationshipResult
+case object CheckRelationshipEnrolmentNotFound extends CheckRelationshipResult
 
 object CheckRelationshipResult {
 
