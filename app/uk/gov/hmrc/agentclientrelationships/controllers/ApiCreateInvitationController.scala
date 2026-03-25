@@ -280,7 +280,7 @@ with AuthActions {
     .map {
       case CheckRelationshipFound => Left(ApiFailureResponse.AlreadyAuthorised)
       case CheckRelationshipNotFound(_) => Right(false)
-      case CheckRelationshipInvalidRequest => Left(ApiFailureResponse.ApiInternalServerError)
+      case CheckRelationshipInvalidRequest | CheckRelationshipEnrolmentNotFound => Left(ApiFailureResponse.ApiInternalServerError)
     }
     .flatMap {
       case Right(false) if ItsaServices.contains(service) =>

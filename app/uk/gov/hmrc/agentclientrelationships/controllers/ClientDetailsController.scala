@@ -94,14 +94,14 @@ with AuthActions {
                     clientId
                   )
                 )
-              (currentRelationshipMain, alreadyCopied) <- existingRelationship(
+              (currentRelationshipMain, alreadyCopied, isMissingEacdKnownFacts) <- existingRelationship(
                 arn,
                 refinedService,
                 clientIdType,
                 clientId
               )
-              (currentRelationshipSupp, _) <-
-                multiAgentServices.get(refinedService).fold(Future.successful((Option.empty[String], false)))(
+              (currentRelationshipSupp, _, _) <-
+                multiAgentServices.get(refinedService).fold(Future.successful((Option.empty[String], false, false)))(
                   existingRelationship(
                     arn,
                     _,
@@ -126,7 +126,8 @@ with AuthActions {
                   hasPendingInvitation = pendingInvitation,
                   hasExistingRelationshipFor = currentRelationship,
                   isMapped = isMapped,
-                  clientsLegacyRelationships = legacyRelationships
+                  clientsLegacyRelationships = legacyRelationships,
+                  isMissingEacdKnownFacts = Some(isMissingEacdKnownFacts)
                 )
               )
             )
@@ -142,7 +143,7 @@ with AuthActions {
     service: String,
     clientIdType: String,
     clientId: String
-  )(implicit request: RequestHeader): Future[(Option[String], Boolean)] = checkRelationshipsService
+  )(implicit request: RequestHeader): Future[(Option[String], Boolean, Boolean)] = checkRelationshipsService
     .checkForRelationship(
       arn,
       service,
@@ -151,7 +152,7 @@ with AuthActions {
       None
     )
     .flatMap {
-      case CheckRelationshipFound => Future.successful((Some(service), false))
+      case CheckRelationshipFound => Future.successful((Some(service), false, false))
       case CheckRelationshipNotFound(reason) if Seq(HMRCMTDIT, HMRCMTDITSUPP).contains(service) =>
         partialAuthRepository
           .findActive(
@@ -159,8 +160,9 @@ with AuthActions {
             NinoWithoutSuffix(clientId),
             arn
           )
-          .map(auth => (auth.map(_ => service), reason.contains(relationshipNotFoundAlreadyCopied)))
-      case CheckRelationshipNotFound(_) => Future.successful((None, false))
+          .map(auth => (auth.map(_ => service), reason.contains(relationshipNotFoundAlreadyCopied), false))
+      case CheckRelationshipNotFound(_) => Future.successful((None, false, false))
+      case CheckRelationshipEnrolmentNotFound => Future.successful((None, false, true))
       case CheckRelationshipInvalidRequest => throw new RuntimeException("Unexpected error during relationship check")
     }
 
