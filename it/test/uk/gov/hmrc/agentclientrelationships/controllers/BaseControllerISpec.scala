@@ -29,6 +29,7 @@ import play.api.mvc.RequestHeader
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import play.utils.UriEncoding
+import uk.gov.hmrc.agentclientrelationships.connectors.helpers.CorrelationIdGenerator
 import uk.gov.hmrc.agentclientrelationships.model.identifiers._
 import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey => LocalEnrolmentKey}
 import uk.gov.hmrc.agentclientrelationships.repository._
@@ -46,6 +47,7 @@ import uk.gov.hmrc.mongo.test.MongoSupport
 
 import scala.concurrent.Future
 
+// TODO make all inheriting specs extend only the stubs they require and remove the stubs from this base spec
 trait BaseControllerISpec
 extends UnitSpec
 with MongoSupport
@@ -69,15 +71,25 @@ with IntegrationPatience {
   import scala.concurrent.ExecutionContext.Implicits.global
 
   def additionalConfig: Map[String, Any] = Map.empty
+  def additionalOverrides: AbstractModule =
+    new AbstractModule {
+      override def configure(): Unit = ()
+    }
 
   lazy val mongoRecoveryLockService: MongoLockService = new MongoLockServiceImpl(mongoLockRepository)
   def mongoLockRepository = new MongoLockRepositoryWithMdc(mongoComponent, new CurrentTimestampSupport)
+
+  object FakeCorrelationIdGenerator
+  extends CorrelationIdGenerator {
+    override def makeCorrelationId()(implicit requestHeader: RequestHeader): String = "testCorrelationId"
+  }
 
   lazy val moduleWithOverrides: AbstractModule =
     new AbstractModule {
       override def configure(): Unit = {
         bind(classOf[MongoComponent]).toInstance(mongoComponent)
         bind(classOf[MongoLockService]).toInstance(mongoRecoveryLockService)
+        bind(classOf[CorrelationIdGenerator]).toInstance(FakeCorrelationIdGenerator)
       }
     }
 
@@ -113,10 +125,12 @@ with IntegrationPatience {
       "internal-auth.token" -> "internalAuthToken",
       "new.auth.stride.role" -> NEW_STRIDE_ROLE,
       "old.auth.stride.role" -> STRIDE_ROLE,
-      "play.http.router" -> "testOnlyDoNotUseInAppConf.Routes"
+      "play.http.router" -> "testOnlyDoNotUseInAppConf.Routes",
+      "http-verbs.retries.intervals" -> List("1ms")
     )
     .overrides(moduleWithOverrides)
     .configure(additionalConfig)
+    .overrides(additionalOverrides)
 
   implicit lazy val ws: WSClient = app.injector.instanceOf[WSClient]
   implicit val request: RequestHeader = FakeRequest()

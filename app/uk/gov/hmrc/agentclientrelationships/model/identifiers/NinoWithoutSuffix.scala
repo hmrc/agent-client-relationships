@@ -24,6 +24,8 @@ import uk.gov.hmrc.domain.SimpleObjectReads
 import uk.gov.hmrc.domain.SimpleObjectWrites
 import uk.gov.hmrc.domain.TaxIdentifier
 
+// Special class to replace the domain NINO model
+// Used to represent a NINO without a suffix requirement, but still allow for the possibility of a suffix being present in the input
 case class NinoWithoutSuffix(nino: String)
 extends TaxIdentifier
 with SimpleName {
@@ -32,13 +34,14 @@ with SimpleName {
 
   private val suffixlessNinoLength = 8
 
-  private val ninoWithoutSpace = nino.replace(" ", "")
-  override def value: String = ninoWithoutSpace.take(suffixlessNinoLength)
+  def rawValue: String = nino.replace(" ", "") // NINO as passed in, may or may not have a suffix
+  override def value: String = rawValue.take(suffixlessNinoLength)
 
+  // Meant to be used when the full nino is required
   // When using this make sure whatever uses the nino does not actually care about the suffix
   def anySuffixValue: String =
-    ninoWithoutSpace.length match {
-      case len if len > suffixlessNinoLength => ninoWithoutSpace
+    rawValue.length match {
+      case len if len > suffixlessNinoLength => rawValue
       case _ => value + "A"
     }
 
@@ -47,6 +50,8 @@ with SimpleName {
   override val name: String = "nino-without-suffix"
 
   override def hashCode(): Int = value.hashCode
+
+  def rawEquals(other: NinoWithoutSuffix): Boolean = rawValue == other.rawValue // Use when suffix is important for equality
 
   override def equals(obj: Any): Boolean =
     obj match {

@@ -18,12 +18,6 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 
 import com.google.inject.AbstractModule
 import org.apache.pekko.Done
-import org.scalatestplus.play.guice.GuiceOneServerPerSuite
-import play.api.Application
-import play.api.inject.guice.GuiceApplicationBuilder
-import play.api.libs.ws.WSClient
-import play.api.mvc.RequestHeader
-import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
@@ -36,11 +30,8 @@ import uk.gov.hmrc.agentclientrelationships.repository.RelationshipCopyRecord
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipCopyRecordRepository
 import uk.gov.hmrc.agentclientrelationships.stubs._
 import uk.gov.hmrc.agentclientrelationships.support.Resource
-import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
-import uk.gov.hmrc.agentclientrelationships.support.WireMockSupport
 import uk.gov.hmrc.domain.SaAgentReference
 import uk.gov.hmrc.mongo.MongoComponent
-import uk.gov.hmrc.mongo.test.MongoSupport
 
 import java.time.Instant
 import java.time.temporal.ChronoUnit
@@ -55,52 +46,15 @@ extends RelationshipCopyRecordRepository(moduleComponent) {
 }
 
 class RelationshipsControllerWithoutMongoISpec
-extends UnitSpec
-with MongoSupport
-with GuiceOneServerPerSuite
-with WireMockSupport
-with RelationshipStubs
-with DesStubs
-with HipStub
-with DesStubsGet
-with MappingStubs
-with DataStreamStub
-with AgentServicesAccountStubs
-with AuthStub {
+extends BaseControllerISpec
+with HipStub {
 
-  override implicit lazy val app: Application = appBuilder.build()
-
-  protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder()
-    .configure(
-      "microservice.services.enrolment-store-proxy.port" -> wireMockPort,
-      "microservice.services.tax-enrolments.port" -> wireMockPort,
-      "microservice.services.users-groups-search.port" -> wireMockPort,
-      "microservice.services.des.port" -> wireMockPort,
-      "microservice.services.if.port" -> wireMockPort,
-      "microservice.services.hip.port" -> wireMockPort,
-      "microservice.services.auth.port" -> wireMockPort,
-      "microservice.services.agent-mapping.port" -> wireMockPort,
-      "microservice.services.agent-client-authorisation.port" -> wireMockPort,
-      "microservice.services.agent-assurance.port" -> wireMockPort,
-      "microservice.services.agent-services-account.port" -> wireMockPort,
-      "internal-auth.token" -> "internalAuthToken",
-      "auditing.consumer.baseUri.host" -> wireMockHost,
-      "auditing.consumer.baseUri.port" -> wireMockPort,
-      "features.recovery-enable" -> false,
-      "agent.cache.expires" -> "1 millis",
-      "agent.cache.enabled" -> true,
-      "mongodb.uri" -> mongoUri,
-      "features.enable-agent-record-via-asa" -> true
-    )
-    .overrides(new AbstractModule {
+  override val additionalOverrides: AbstractModule =
+    new AbstractModule {
       override def configure(): Unit = {
         bind(classOf[RelationshipCopyRecordRepository]).to(classOf[TestRelationshipCopyRecordRepository])
-        ()
       }
-    })
-
-  implicit lazy val ws: WSClient = app.injector.instanceOf[WSClient]
-  implicit val request: RequestHeader = FakeRequest()
+    }
 
   def repo: RelationshipCopyRecordRepository = app.injector.instanceOf[RelationshipCopyRecordRepository]
 
@@ -111,12 +65,6 @@ with AuthStub {
     prepareDatabase()
     ()
   }
-
-  val arn = Arn("AARN0000002")
-  val mtditid = MtdItId("ABCDEF123456789")
-  val mtdItEnrolmentKey: EnrolmentKey = EnrolmentKey(Service.MtdIt, mtditid)
-  val nino = NinoWithoutSuffix("AB123456")
-  val oldAgentCode = "oldAgentCode"
 
   def partialAuthRelationship(service: String): PartialAuthRelationship = PartialAuthRelationship(
     Instant.now().truncatedTo(ChronoUnit.SECONDS),
@@ -129,18 +77,18 @@ with AuthStub {
 
   "GET /agent/:arn/service/HMRC-MTD-IT/client/MTDITID/:identifierValue" should {
 
-    val requestPath = s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-IT/client/MTDITID/${mtditid.value}"
+    val requestPath = s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-IT/client/MTDITID/${mtdItId.value}"
 
     "return 200 when relationship exists only in cesa and relationship copy attempt fails because of mongo" in {
       givenPrincipalAgentUser(arn, "foo")
       givenGroupInfo("foo", "bar")
-      givenDelegatedGroupIdsNotExistForMtdItId(mtditid)
-      givenNinoIsKnownFor(mtditid, nino)
-      givenMtdItIdIsKnownFor(nino, mtditid)
+      givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
+      givenNinoIsKnownFor(mtdItId, nino)
+      givenMtdItIdIsKnownFor(nino, mtdItId)
       givenArnIsKnownFor(arn, SaAgentReference("foo"))
       givenClientHasRelationshipWithAgentInCESA(nino, "foo")
-      givenAgentCanBeAllocated(mtditid, arn)
-      givenMTDITEnrolmentAllocationSucceeds(mtditid, "bar")
+      givenAgentCanBeAllocated(mtdItId, arn)
+      givenMTDITEnrolmentAllocationSucceeds(mtdItId, "bar")
       givenAuditConnector()
       givenAdminUser("foo", "any")
       givenUserAuthorised()

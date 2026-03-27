@@ -16,73 +16,24 @@
 
 package uk.gov.hmrc.agentclientrelationships.connectors
 
-import org.scalatestplus.play.guice.GuiceOneServerPerSuite
-import play.api.Application
-import play.api.inject.guice.GuiceApplicationBuilder
-import play.api.mvc.RequestHeader
-import play.api.test.FakeRequest
 import play.api.test.Helpers._
-import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.connectors.helpers.CorrelationIdGenerator
+import uk.gov.hmrc.agentclientrelationships.controllers.BaseControllerISpec
 import uk.gov.hmrc.agentclientrelationships.model.identifiers._
-import uk.gov.hmrc.agentclientrelationships.stubs.DataStreamStub
-import uk.gov.hmrc.agentclientrelationships.stubs.DesStubs
-import uk.gov.hmrc.agentclientrelationships.stubs.DesStubsGet
-import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
-import uk.gov.hmrc.agentclientrelationships.support.WireMockSupport
 import uk.gov.hmrc.domain.SaAgentReference
-import uk.gov.hmrc.http.client.HttpClientV2
+import uk.gov.hmrc.http.UpstreamErrorResponse
 
 import scala.concurrent.ExecutionContext
 
 class DesConnectorISpec
-extends UnitSpec
-with GuiceOneServerPerSuite
-with WireMockSupport
-with DesStubs
-with DesStubsGet
-with DataStreamStub {
+extends BaseControllerISpec {
 
-  override implicit lazy val app: Application = appBuilder.build()
-
-  val httpClient: HttpClientV2 = app.injector.instanceOf[HttpClientV2]
-  implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
-
-  protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder().configure(
-    "microservice.services.enrolment-store-proxy.port" -> wireMockPort,
-    "microservice.services.tax-enrolments.port" -> wireMockPort,
-    "microservice.services.users-groups-search.port" -> wireMockPort,
-    "microservice.services.des.port" -> wireMockPort,
-    "microservice.services.auth.port" -> wireMockPort,
-    "microservice.services.des.environment" -> "stub",
-    "microservice.services.des.authorization-token" -> "token",
-    "microservice.services.agent-mapping.port" -> wireMockPort,
-    "auditing.consumer.baseUri.host" -> wireMockHost,
-    "auditing.consumer.baseUri.port" -> wireMockPort,
-    "features.copy-relationship.mtd-it" -> true,
-    "features.recovery-enable" -> false,
-    "agent.cache.expires" -> "1 millis",
-    "agent.cache.enabled" -> false
-  )
-
-  private implicit val request: RequestHeader = FakeRequest()
   implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
 
-  val desConnector =
-    new DesConnector(
-      httpClient,
-      app.injector.instanceOf[CorrelationIdGenerator],
-      appConfig
-    )(ec)
-
-  val mtdItId: MtdItId = MtdItId("ABCDEF123456789")
-  val agentARN: Arn = Arn("ABCDE123456")
-  val utr: Utr = Utr("1704066305")
-  val cgt: CgtRef = CgtRef("XMCGTP837878749")
+  val desConnector: DesConnector = app.injector.instanceOf[DesConnector]
 
   "DesConnector GetStatusAgentRelationship" should {
 
-    val nino = NinoWithoutSuffix("AB123456")
+    val nino = NinoWithoutSuffix("AB123456D")
 
     "return a CESA identifier when client has an active agent" in {
       val agentId = "bar"
@@ -143,28 +94,45 @@ with DataStreamStub {
       await(desConnector.getClientSaAgentSaReferences(nino)) shouldBe empty
     }
 
-    "return empty seq when client's nino is invalid" in {
+    "throw error when client's nino is invalid" in {
       givenNinoIsInvalid(nino)
       givenAuditConnector()
-      await(desConnector.getClientSaAgentSaReferences(nino)) shouldBe empty
+      intercept[UpstreamErrorResponse](await(desConnector.getClientSaAgentSaReferences(nino))).statusCode shouldBe 400
     }
 
-    "return empty seq when client is unknown" in {
+    "return a CESA identifier when client has an active agent but with a different NINO suffix" in {
       givenClientIsUnknownInCESAFor(nino)
+      givenClientIsUnknownInCESAFor(NinoWithoutSuffix("AB123456A"))
+      givenClientIsUnknownInCESAFor(NinoWithoutSuffix("AB123456B"))
+      val agentId = "bar"
+
+      givenClientHasRelationshipWithAgentInCESA(NinoWithoutSuffix("AB123456C"), agentId)
+      givenAuditConnector()
+
+      await(desConnector.getClientSaAgentSaReferences(nino)) shouldBe Seq(SaAgentReference(agentId))
+    }
+
+    "return empty seq when client is unknown for all nino variations" in {
+      givenClientIsUnknownInCESAFor(nino)
+      givenClientIsUnknownInCESAFor(NinoWithoutSuffix("AB123456A"))
+      givenClientIsUnknownInCESAFor(NinoWithoutSuffix("AB123456B"))
+      givenClientIsUnknownInCESAFor(NinoWithoutSuffix("AB123456C"))
+      givenClientIsUnknownInCESAFor(NinoWithoutSuffix("AB123456"))
+
       givenAuditConnector()
       await(desConnector.getClientSaAgentSaReferences(nino)) shouldBe empty
     }
 
-    "return empty seq when DES is unavailable" in {
+    "throw error when DES is unavailable" in {
       givenDesReturnsServiceUnavailable()
       givenAuditConnector()
-      await(desConnector.getClientSaAgentSaReferences(nino)) shouldBe empty
+      intercept[UpstreamErrorResponse](await(desConnector.getClientSaAgentSaReferences(nino))).statusCode shouldBe 503
     }
 
-    "return empty seq when DES is throwing errors" in {
+    "throw error when DES is throwing errors" in {
       givenDesReturnsServerError()
       givenAuditConnector()
-      await(desConnector.getClientSaAgentSaReferences(nino)) shouldBe empty
+      intercept[UpstreamErrorResponse](await(desConnector.getClientSaAgentSaReferences(nino))).statusCode shouldBe 500
     }
   }
 
