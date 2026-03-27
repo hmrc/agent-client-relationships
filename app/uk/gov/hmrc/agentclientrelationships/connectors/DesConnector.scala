@@ -75,7 +75,7 @@ with Retries {
     def execute(nino: NinoWithoutSuffix) = {
       val url = url"${appConfig.desUrl}/registration/relationship/nino/${nino.rawValue}"
 
-      retryFor(s"CESA agent lookup for NINO: $nino")(retryCondition) {
+      retryFor(s"CESA agent lookup for NINO: ${nino.rawValue}")(retryCondition) {
         getWithDesHeaders(url).map { response =>
           response.status match {
             case Status.OK =>
@@ -96,13 +96,14 @@ with Retries {
         result.flatMap {
           case None =>
             execute(nextNino).andThen { case Success(Some(_)) =>
-              if (nextNino != nino) {
-                logger.warn(s"[getClientSaAgentSaReferences] Found details for NINO '$nino', but not for the original NINO '${nino.anySuffixValue}'")
+              if (!nextNino.rawEquals(nino)) {
+                logger.warn(s"[getClientSaAgentSaReferences] Found CESA details for NINO '${nextNino.rawValue}'," +
+                  s" but not for the original NINO '${nino.rawValue}'")
               }
             }
           case Some(value) => Future.successful(Some(value))
         }
-    }.andThen { case Success(None) => logger.warn(s"[getClientSaAgentSaReferences] No details found for any NINO variant of '${nino.anySuffixValue}'") }
+    }.andThen { case Success(None) => logger.warn(s"[getClientSaAgentSaReferences] No CESA details found for any NINO variant of '${nino.rawValue}'") }
       .map(_.getOrElse(Seq.empty))
   }
 
