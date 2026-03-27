@@ -19,25 +19,31 @@ package uk.gov.hmrc.agentclientrelationships.stubs
 import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.stubbing.StubMapping
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
+import uk.gov.hmrc.domain.Nino
 
 trait DesStubs {
 
-  def givenDesReturnsServiceUnavailable() = stubFor(
+  def givenDesReturnsServiceUnavailable(): StubMapping = stubFor(
     any(urlMatching(s"/registration/.*")).willReturn(aResponse().withStatus(503))
   )
 
-  def givenDesReturnsServerError() = stubFor(
+  def givenDesReturnsServerError(): StubMapping = stubFor(
     any(urlMatching(s"/registration/.*")).willReturn(aResponse().withStatus(500))
   )
 
   val someAlienAgent = """{"hasAgent":false,"agentId":"alien"}"""
   val someCeasedAgent = """{"hasAgent":true,"agentId":"ex-agent","agentCeasedDate":"someDate"}"""
 
+  private def request(nino: NinoWithoutSuffix) = get(urlEqualTo(s"/registration/relationship/nino/${nino.rawValue}"))
+    .withHeader("Authorization", equalTo("Bearer secret"))
+    .withHeader("Environment", equalTo("test"))
+    .withHeader("CorrelationId", equalTo("testCorrelationId"))
+
   def givenClientHasRelationshipWithAgentInCESA(
     nino: NinoWithoutSuffix,
     agentId: String
-  ) = stubFor(
-    get(urlEqualTo(s"/registration/relationship/nino/${nino.anySuffixValue}")).willReturn(
+  ): StubMapping = stubFor(
+    request(nino).willReturn(
       aResponse()
         .withStatus(200)
         .withBody(s"""{"agents":[$someCeasedAgent,{"hasAgent":true,"agentId":"$agentId"}, $someAlienAgent]}""")
@@ -47,8 +53,8 @@ trait DesStubs {
   def givenClientHasRelationshipWithMultipleAgentsInCESA(
     nino: NinoWithoutSuffix,
     agentIds: Seq[String]
-  ) = stubFor(
-    get(urlEqualTo(s"/registration/relationship/nino/${nino.anySuffixValue}")).willReturn(
+  ): StubMapping = stubFor(
+    request(nino).willReturn(
       aResponse()
         .withStatus(200)
         .withBody(s"""{"agents":[${agentIds
@@ -60,8 +66,8 @@ trait DesStubs {
   def givenClientRelationshipWithAgentCeasedInCESA(
     nino: NinoWithoutSuffix,
     agentId: String
-  ) = stubFor(
-    get(urlEqualTo(s"/registration/relationship/nino/${nino.anySuffixValue}")).willReturn(
+  ): StubMapping = stubFor(
+    request(nino).willReturn(
       aResponse()
         .withStatus(200)
         .withBody(s"""{"agents":[{"hasAgent":true,"agentId":"$agentId","agentCeasedDate":"2010-01-01"}]}""")
@@ -71,8 +77,8 @@ trait DesStubs {
   def givenAllClientRelationshipsWithAgentsCeasedInCESA(
     nino: NinoWithoutSuffix,
     agentIds: Seq[String]
-  ) = stubFor(
-    get(urlEqualTo(s"/registration/relationship/nino/${nino.anySuffixValue}")).willReturn(
+  ): StubMapping = stubFor(
+    request(nino).willReturn(
       aResponse()
         .withStatus(200)
         .withBody(s"""{"agents":[${agentIds
@@ -81,19 +87,29 @@ trait DesStubs {
     )
   )
 
-  def givenClientHasNoActiveRelationshipWithAgentInCESA(nino: NinoWithoutSuffix) = stubFor(
-    get(urlEqualTo(s"/registration/relationship/nino/${nino.anySuffixValue}"))
+  def givenClientHasNoActiveRelationshipWithAgentInCESA(nino: NinoWithoutSuffix): StubMapping = stubFor(
+    request(nino)
       .willReturn(aResponse().withStatus(200).withBody(s"""{"agents":[$someCeasedAgent, $someAlienAgent]}"""))
   )
 
-  def givenClientHasNoRelationshipWithAnyAgentInCESA(nino: NinoWithoutSuffix) = stubFor(
-    get(urlEqualTo(s"/registration/relationship/nino/${nino.anySuffixValue}"))
+  def givenClientHasNoRelationshipWithAnyAgentInCESA(nino: NinoWithoutSuffix): StubMapping = stubFor(
+    request(nino)
       .willReturn(aResponse().withStatus(200).withBody(s"""{}"""))
   )
 
-  def givenClientIsUnknownInCESAFor(nino: NinoWithoutSuffix) = stubFor(
-    get(urlEqualTo(s"/registration/relationship/nino/${nino.anySuffixValue}")).willReturn(aResponse().withStatus(404))
+  def givenClientIsUnknownInCESAFor(nino: NinoWithoutSuffix): StubMapping = stubFor(
+    request(nino)
+      .willReturn(aResponse().withStatus(404).withBody("""{"code":"NOT_FOUND_NINO","message":"NINO not found"}"""))
   )
+
+  def givenClientIsUnknownInCESAForAllVariants(nino: NinoWithoutSuffix): Unit = (Nino.validSuffixes :+ "").map(suffix =>
+    NinoWithoutSuffix(nino.value + suffix)
+  ).foreach { ninoVariant =>
+    stubFor(
+      request(ninoVariant)
+        .willReturn(aResponse().withStatus(404).withBody("""{"code":"NOT_FOUND_NINO","message":"NINO not found"}"""))
+    )
+  }
 
   def givenNinoIsInvalid(nino: NinoWithoutSuffix): StubMapping = stubFor(
     get(urlMatching(s"/registration/relationship/nino/${nino.anySuffixValue}")).willReturn(aResponse().withStatus(400))

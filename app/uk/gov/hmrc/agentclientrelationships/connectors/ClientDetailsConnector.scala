@@ -21,6 +21,8 @@ import play.api.http.Status.OK
 import play.api.libs.json.Json
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
+import uk.gov.hmrc.agentclientrelationships.connectors.helpers.CommonHeaders
+import uk.gov.hmrc.agentclientrelationships.connectors.helpers.CorrelationIdGenerator
 import uk.gov.hmrc.agentclientrelationships.model.CitizenDetails
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails._
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.cbc._
@@ -49,23 +51,24 @@ import scala.concurrent.Future
 @Singleton
 class ClientDetailsConnector @Inject() (
   appConfig: AppConfig,
-  httpClient: HttpClientV2
+  httpClient: HttpClientV2,
+  correlationIdGenerator: CorrelationIdGenerator
 )(implicit val ec: ExecutionContext)
 extends RequestAwareLogging {
 
-  private def desHeaders(authToken: String): Seq[(String, String)] = Seq(
-    "Environment" -> appConfig.desEnv,
-    // TODO: The correlationId is used to link our request with the corresponding request received in DES/IF/HIP. Without logging, it would be impossible to associate these requests.
-    "CorrelationId" -> UUID.randomUUID().toString,
-    HeaderNames.authorisation -> s"Bearer $authToken"
-  )
+  private def desHeaders(authToken: String)(implicit requestHeader: RequestHeader): Seq[(String, String)] =
+    CommonHeaders() ++ Seq(
+      "Environment" -> appConfig.desEnv,
+      "CorrelationId" -> correlationIdGenerator.makeCorrelationId(),
+      HeaderNames.authorisation -> s"Bearer $authToken"
+    )
 
-  private def ifHeaders(authToken: String): Seq[(String, String)] = Seq(
-    "Environment" -> appConfig.ifsEnvironment,
-    // TODO: The correlationId is used to link our request with the corresponding request received in DES/IF/HIP. Without logging, it would be impossible to associate these requests.
-    "CorrelationId" -> UUID.randomUUID().toString,
-    HeaderNames.authorisation -> s"Bearer $authToken"
-  )
+  private def ifHeaders(authToken: String)(implicit requestHeader: RequestHeader): Seq[(String, String)] =
+    CommonHeaders() ++ Seq(
+      "Environment" -> appConfig.ifsEnvironment,
+      "CorrelationId" -> correlationIdGenerator.makeCorrelationId(),
+      HeaderNames.authorisation -> s"Bearer $authToken"
+    )
 
   def getItsaDesignatoryDetails(
     nino: NinoWithoutSuffix
