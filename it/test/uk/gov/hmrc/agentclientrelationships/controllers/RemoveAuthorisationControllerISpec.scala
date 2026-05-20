@@ -285,6 +285,37 @@ with TestData {
       }
     }
 
+  "when the agent principal enrolment is missing in ES" should {
+    val service: Service = Vat
+
+    trait StubsForThisScenario {
+      givenUserIsSubscribedAgent(arn, withThisGgUserId = "ggUserId-agent")
+      givenPrincipalGroupIdNotExistsFor(agentEnrolmentKey(arn))
+      givenAgentCanBeDeallocated(vrn, arn)
+      givenCacheRefresh(arn)
+    }
+
+    "return 204 and still delete the ETMP relationship" in new StubsForThisScenario {
+      doAgentPostRequest(
+        requestPath,
+        Json.toJson(RemoveAuthorisationRequest(clientId = vrn.value, service = service.id)).toString()
+      ).status shouldBe 204
+
+      verifyAgentDeallocationCalled(vrn, arn)
+      verifyNoEnrolmentHasBeenDeallocated()
+      verifyDeleteRecordNotExists
+      verifyTerminateRelationshipAuditSent(
+        requestPath,
+        arn.value,
+        vrn.value,
+        "VRN",
+        service.id,
+        "AgentLedTermination",
+        enrolmentDeallocated = false
+      )
+    }
+  }
+
   "for alt Itsa relationship" should {
     val taxIdentifier = mtdItId
     val service = MtdIt
