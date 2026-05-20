@@ -44,6 +44,7 @@ import uk.gov.hmrc.agentclientrelationships.repository.DeleteRecord
 import uk.gov.hmrc.agentclientrelationships.repository.FakeDeleteRecordRepository
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
 import uk.gov.hmrc.agentclientrelationships.support.NoRequest
+import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 import uk.gov.hmrc.auth.core.retrieve.Credentials
 import uk.gov.hmrc.domain._
@@ -101,6 +102,56 @@ extends UnitSpec {
         ).futureValue shouldBe Some(true)
 
         verifyESDeAllocateHasBeenPerformed
+        verifyETMPDeAuthorisationHasBeenPerformed
+
+        await(repo.findBy(arn, mtdItEnrolmentKey)) shouldBe None
+      }
+
+    "delete ETMP relationship and keep no deleteRecord if agent principal group does not exist in ES" in
+      new TestFixture {
+        givenAgentDoesNotExist
+        givenETMPDeAuthSucceeds
+        givenSetRelationshipEndedSucceeds
+        givenAucdCacheRefresh
+
+        implicit val request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
+        implicit val currentUser: CurrentUser = CurrentUser(
+          credentials = Some(Credentials("GG-00001", "GovernmentGateway")),
+          affinityGroup = None
+        )
+
+        underTest.deleteRelationship(
+          arn,
+          mtdItEnrolmentKey,
+          None
+        ).futureValue shouldBe Some(true)
+
+        verifyESDeAllocateHasNOTBeenPerformed
+        verifyETMPDeAuthorisationHasBeenPerformed
+
+        await(repo.findBy(arn, mtdItEnrolmentKey)) shouldBe None
+      }
+
+    "delete relationship and return false when agent principal group and ETMP relationship do not exist" in
+      new TestFixture {
+        givenAgentDoesNotExist
+        givenETMPDeAuthNoRelationshipFound
+        givenSetRelationshipEndedSucceeds
+        givenAucdCacheRefresh
+
+        implicit val request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
+        implicit val currentUser: CurrentUser = CurrentUser(
+          credentials = Some(Credentials("GG-00001", "GovernmentGateway")),
+          affinityGroup = None
+        )
+
+        underTest.deleteRelationship(
+          arn,
+          mtdItEnrolmentKey,
+          None
+        ).futureValue shouldBe Some(false)
+
+        verifyESDeAllocateHasNOTBeenPerformed
         verifyETMPDeAuthorisationHasBeenPerformed
 
         await(repo.findBy(arn, mtdItEnrolmentKey)) shouldBe None
@@ -457,6 +508,28 @@ extends UnitSpec {
         await(repo.findBy(arn, mtdItEnrolmentKey)) shouldBe None
       }
 
+    "Retry ETMP de-authorisation and skip ES de-allocation when agent principal group no longer exists" in
+      new TestFixture {
+        val deleteRecord: DeleteRecord = DeleteRecord(
+          arn.value,
+          mtdItEnrolmentKey,
+          syncToETMPStatus = Some(Failed),
+          syncToESStatus = Some(Failed)
+        )
+        await(repo.create(deleteRecord))
+        givenAgentDoesNotExist
+        givenETMPDeAuthSucceeds
+        givenSetRelationshipEndedSucceeds
+        givenAucdCacheRefresh
+
+        underTest.resumeRelationshipRemoval(deleteRecord).futureValue shouldBe Some(true)
+
+        verifyESDeAllocateHasNOTBeenPerformed
+        verifyETMPDeAuthorisationHasBeenPerformed
+
+        await(repo.findBy(arn, mtdItEnrolmentKey)) shouldBe None
+      }
+
     // FAILURE SCENARIOS
 
     "keep ETMP sync status Failed when ETMP de-authorisation fails" in
@@ -714,6 +787,10 @@ extends UnitSpec {
     def givenAgentExists: OngoingStubbing[Future[String]] = when(
       es.getPrincipalGroupIdFor(eqs[Arn](arn))(any[RequestHeader])
     ).thenReturn(Future.successful(agentGroupId))
+
+    def givenAgentDoesNotExist: OngoingStubbing[Future[String]] = when(
+      es.getPrincipalGroupIdFor(eqs[Arn](arn))(any[RequestHeader])
+    ).thenReturn(Future.failed(RelationshipNotFound("UNKNOWN_ARN")))
 
     def givenRelationshipBetweenAgentAndClientExists: OngoingStubbing[Future[Boolean]] = when(
       checkService.checkForRelationship(

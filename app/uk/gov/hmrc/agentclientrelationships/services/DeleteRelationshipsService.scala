@@ -28,6 +28,7 @@ import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
 import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _, _}
 import uk.gov.hmrc.agentclientrelationships.support.NoRequest
+import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
 import uk.gov.hmrc.agentclientrelationships.util.RequestSupport._
 import uk.gov.hmrc.agentclientrelationships.model.identifiers._
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository.endedByAgent
@@ -85,12 +86,10 @@ extends RequestAwareLogging {
           )
 
           for {
-            groupId <- es.getPrincipalGroupIdFor(arn)
             _ <- createDeleteRecord(record)
             enrolmentDeallocated <- deallocateEsEnrolment(
               arn,
-              enrolmentKey,
-              groupId
+              enrolmentKey
             )
             etmpRelationshipRemoved <- removeEtmpRelationship(arn, enrolmentKey)
             _ <- removeDeleteRecord(arn, enrolmentKey)
@@ -160,8 +159,7 @@ extends RequestAwareLogging {
 
   private def deallocateEsEnrolment(
     arn: Arn,
-    enrolmentKey: EnrolmentKey,
-    groupId: String
+    enrolmentKey: EnrolmentKey
   )(implicit
     request: RequestHeader,
     auditData: AuditData
@@ -177,15 +175,23 @@ extends RequestAwareLogging {
     (
       for {
         _ <- updateEsSyncStatus(InProgress)
-        enrolmentDeallocated <- checkService
-          .checkForRelationship(
-            arn,
-            None,
-            enrolmentKey
-          )
-          .flatMap {
-            case true => es.deallocateEnrolmentFromAgent(groupId, enrolmentKey).map(_ => true)
-            case false => Future.successful(false)
+        maybeGroupId <- getPrincipalGroupIdForDeallocation(arn)
+        enrolmentDeallocated <-
+          maybeGroupId match {
+            case Some(groupId) =>
+              checkService
+                .checkForRelationship(
+                  arn,
+                  None,
+                  enrolmentKey
+                )
+                .flatMap {
+                  case true => es.deallocateEnrolmentFromAgent(groupId, enrolmentKey).map(_ => true)
+                  case false => Future.successful(false)
+                }
+            case None =>
+              logger.warn(s"[DeleteRelationshipsService] Agent principal group not found for ${arn.value}; skipping ES de-allocation for $enrolmentKey")
+              Future.successful(false)
           }
         _ = auditData.set(enrolmentDeallocatedKey, enrolmentDeallocated)
         _ = agentUserClientDetailsConnector.cacheRefresh(arn)
@@ -200,6 +206,11 @@ extends RequestAwareLogging {
         updateEsSyncStatus(Failed).map(_ => throw ex)
     }
   }
+
+  private def getPrincipalGroupIdForDeallocation(arn: Arn)(implicit request: RequestHeader): Future[Option[String]] = es
+    .getPrincipalGroupIdFor(arn)
+    .map(Some(_))
+    .recover { case RelationshipNotFound("UNKNOWN_ARN") => None }
 
   def createDeleteRecord(record: DeleteRecord): Future[Done] = deleteRecordRepository
     .create(record)
@@ -286,11 +297,9 @@ extends RequestAwareLogging {
           case (true, true) =>
             for {
               _ <- deleteRecordRepository.markRecoveryAttempt(arn, enrolmentKey)
-              groupId <- es.getPrincipalGroupIdFor(arn)
               _ <- deallocateEsEnrolment(
                 arn,
-                enrolmentKey,
-                groupId
+                enrolmentKey
               )
               _ <- removeEtmpRelationship(arn, enrolmentKey)
               _ <- removeDeleteRecord(arn, enrolmentKey)
@@ -308,11 +317,9 @@ extends RequestAwareLogging {
             for {
               _ <- deleteRecordRepository.markRecoveryAttempt(arn, enrolmentKey)
               _ = auditData.set(etmpRelationshipRemovedKey, deleteRecord.syncToETMPStatus.contains(Success))
-              groupId <- es.getPrincipalGroupIdFor(arn)
               _ <- deallocateEsEnrolment(
                 arn,
-                enrolmentKey,
-                groupId
+                enrolmentKey
               )
               _ <- removeDeleteRecord(arn, enrolmentKey)
               _ <- setRelationshipEnded(
