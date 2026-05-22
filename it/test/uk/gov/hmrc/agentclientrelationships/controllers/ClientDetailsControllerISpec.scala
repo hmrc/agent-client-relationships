@@ -231,7 +231,6 @@ with MappingStubs {
               "XARN1234567",
               MtdIt,
               NinoWithoutSuffix("AA000001"),
-              NinoWithoutSuffix("AA000001"),
               "Matthew Kovacic",
               "testAgentName",
               "agent@email.com",
@@ -266,7 +265,6 @@ with MappingStubs {
             invitationsRepo.create(
               "XARN1234567",
               MtdItSupp,
-              NinoWithoutSuffix("AA000001"),
               NinoWithoutSuffix("AA000001"),
               "Matthew Kovacic",
               "testAgentName",
@@ -425,7 +423,6 @@ with MappingStubs {
               "XARN1234567",
               MtdIt,
               NinoWithoutSuffix("AA000001"),
-              NinoWithoutSuffix("AA000001"),
               "Matthew Kovacic",
               "testAgentName",
               "agent@email.com",
@@ -476,7 +473,6 @@ with MappingStubs {
             invitationsRepo.create(
               "XARN1234567",
               Vat,
-              Vrn("101747641"),
               Vrn("101747641"),
               "My Name",
               "testAgentName",
@@ -551,7 +547,6 @@ with MappingStubs {
             invitationsRepo.create(
               "XARN1234567",
               Vat,
-              Vrn("101747641"),
               Vrn("101747641"),
               "My Name",
               "testAgentName",

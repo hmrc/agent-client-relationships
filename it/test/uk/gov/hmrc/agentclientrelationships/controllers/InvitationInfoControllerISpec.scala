@@ -47,8 +47,6 @@ with TestData {
   val testInvitation: Invitation = Invitation(
     testInvitationId,
     arn.value,
-    "HMRC-MTD-VAT",
-    vrn.value,
     "vrn",
     vrn.value,
     "vrn",
@@ -66,12 +64,10 @@ with TestData {
   )
   val testInvitation2: Invitation = testInvitation.copy(
     invitationId = "testInvitationId2",
-    clientId = vrn2.value,
     suppliedClientId = vrn2.value
   )
   val testInvitation3: Invitation = testInvitation.copy(
     invitationId = "testInvitationId3",
-    clientId = vrn3.value,
     suppliedClientId = vrn3.value
   )
 

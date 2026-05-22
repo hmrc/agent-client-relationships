@@ -82,8 +82,8 @@ extends RequestAwareLogging {
     arnKey,
     saAgentRefKey,
     serviceKey,
-    clientIdKey,
-    clientIdTypeKey,
+    suppliedClientIdKey,
+    suppliedIdTypeKey,
     cesaRelationshipKey,
     etmpRelationshipCreatedKey,
     enrolmentDelegatedKey,
@@ -95,8 +95,8 @@ extends RequestAwareLogging {
   private val createPartialAuthDetailsFields: Seq[String] = Seq(
     arnKey,
     serviceKey,
-    clientIdKey,
-    clientIdTypeKey,
+    suppliedClientIdKey,
+    suppliedIdTypeKey,
     howPartialAuthCreatedKey,
     invitationIdKey
   )
@@ -116,8 +116,8 @@ extends RequestAwareLogging {
     credIdKey,
     arnKey,
     serviceKey, // this can hold a number of different values for different services
-    clientIdKey,
-    clientIdTypeKey,
+    suppliedClientIdKey,
+    suppliedIdTypeKey,
     etmpRelationshipRemovedKey, // true or false
     enrolmentDeallocatedKey, // true or false
     howRelationshipTerminatedKey
@@ -126,15 +126,15 @@ extends RequestAwareLogging {
   private val terminatePartialAuthFields: Seq[String] = Seq(
     arnKey,
     serviceKey,
-    clientIdKey,
-    clientIdTypeKey,
+    suppliedClientIdKey,
+    suppliedIdTypeKey,
     howPartialAuthTerminatedKey
   )
 
   private val recoveryOfDeleteRelationshipDetailsFields: Seq[String] = Seq(
     "agentReferenceNumber",
-    clientIdKey,
-    clientIdTypeKey,
+    suppliedClientIdKey,
+    suppliedIdTypeKey,
     serviceKey,
     "currentUserAffinityGroup",
     "authProviderId",
@@ -150,8 +150,6 @@ extends RequestAwareLogging {
     Seq(
       arnKey -> invitation.arn,
       serviceKey -> invitation.service,
-      clientIdKey -> invitation.clientId,
-      clientIdTypeKey -> invitation.clientIdType,
       invitationIdKey -> invitation.invitationId,
       suppliedClientIdKey -> invitation.suppliedClientId
     )
@@ -167,8 +165,6 @@ extends RequestAwareLogging {
     Seq(
       arnKey -> invitation.arn,
       serviceKey -> invitation.service,
-      clientIdKey -> invitation.clientId,
-      clientIdTypeKey -> invitation.clientIdType,
       invitationIdKey -> invitation.invitationId,
       suppliedClientIdKey -> invitation.suppliedClientId,
       responseKey ->
@@ -239,8 +235,8 @@ extends RequestAwareLogging {
       )
     }
     auditData.set(arnKey, arn.value)
-    auditData.set(clientIdKey, enrolmentKey.oneIdentifier().value)
-    auditData.set(clientIdTypeKey, enrolmentKey.oneIdentifier().key)
+    auditData.set(suppliedClientIdKey, enrolmentKey.oneIdentifier().value)
+    auditData.set(suppliedIdTypeKey, enrolmentKey.oneIdentifier().key)
     auditData.set(serviceKey, enrolmentKey.service)
     auditData.set(enrolmentDeallocatedKey, false)
     auditData.set(etmpRelationshipRemovedKey, false)
@@ -304,8 +300,8 @@ extends RequestAwareLogging {
       )
     }
     auditData.set(arnKey, arn)
-    auditData.set(clientIdKey, nino)
-    auditData.set(clientIdTypeKey, "nino")
+    auditData.set(suppliedClientIdKey, nino)
+    auditData.set(suppliedIdTypeKey, "nino")
     auditData.set(serviceKey, service)
 
     auditEvent(
@@ -374,9 +370,8 @@ object AuditKeys {
   val arnKey: String = "agentReferenceNumber"
   val saAgentRefKey: String = "saAgentRef"
   val serviceKey: String = "service"
-  val clientIdKey: String = "clientId"
   val suppliedClientIdKey: String = "suppliedClientId"
-  val clientIdTypeKey: String = "clientIdType"
+  val suppliedIdTypeKey: String = "suppliedIdType"
   val cesaRelationshipKey: String = "cesaRelationship"
   val etmpRelationshipCreatedKey: String = "etmpRelationshipCreated"
   val etmpRelationshipRemovedKey: String = "etmpRelationshipRemoved"

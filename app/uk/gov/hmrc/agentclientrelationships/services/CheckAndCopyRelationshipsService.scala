@@ -268,8 +268,8 @@ extends RequestAwareLogging {
     auditData: AuditData
   ): Future[CheckAndCopyResult] = {
 
-    auditData.set(clientIdKey, mtdItId)
-    auditData.set(clientIdTypeKey, "mtditid")
+    auditData.set(suppliedClientIdKey, mtdItId)
+    auditData.set(suppliedIdTypeKey, "mtditid")
     auditData.set(arnKey, s"${arn.value}")
 
     implicit val currentUser: CurrentUser = CurrentUser(credentials = None, affinityGroup = Some(Agent))

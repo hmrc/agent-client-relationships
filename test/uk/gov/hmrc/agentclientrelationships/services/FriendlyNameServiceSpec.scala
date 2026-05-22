@@ -31,6 +31,7 @@ import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdIt
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdItSupp
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.PersonalIncomeRecord
 import uk.gov.hmrc.agentclientrelationships.model.identifiers._
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 import uk.gov.hmrc.http.UpstreamErrorResponse
 
@@ -59,7 +60,16 @@ with BeforeAndAfterEach {
   val testInvitation: Invitation = Invitation.createNew(
     arn = "testArn",
     service = MtdIt,
-    clientId = MtdItId("ABCDEF123456789"),
+    suppliedClientId = MtdItId("ABCDEF123456789"),
+    clientName = "test Name",
+    agencyName = "AgentName",
+    agencyEmail = "agent@email.com",
+    expiryDate = LocalDate.now(),
+    clientType = Some("personal")
+  )
+  val altItsaInvitation: Invitation = Invitation.createNew(
+    arn = "testArn",
+    service = MtdIt,
     suppliedClientId = NinoWithoutSuffix("AB123456"),
     clientName = "test Name",
     agencyName = "AgentName",
@@ -133,7 +143,7 @@ with BeforeAndAfterEach {
     }
     "ignore Alt ITSA clients" in {
       await(
-        testService.updateFriendlyName(testInvitation.copy(clientId = testInvitation.suppliedClientId), testEnrolment)
+        testService.updateFriendlyName(altItsaInvitation, testEnrolment)
       ) shouldBe ()
       verify(mockEsp, times(0)).updateEnrolmentFriendlyName(
         eqs(testGroupId),
@@ -144,7 +154,7 @@ with BeforeAndAfterEach {
     "ignore Alt ITSA SUPP clients" in {
       await(
         testService.updateFriendlyName(
-          testInvitation.copy(service = MtdItSupp.id, clientId = testInvitation.suppliedClientId),
+          altItsaInvitation.copy(service = MtdItSupp.id),
           testEnrolment
         )
       ) shouldBe ()

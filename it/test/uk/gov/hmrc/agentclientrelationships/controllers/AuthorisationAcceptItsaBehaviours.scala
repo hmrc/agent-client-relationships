@@ -109,7 +109,6 @@ trait AuthorisationAcceptItsaBehaviours {
           invitationRepo.create(
             arn = arn.value,
             service = Service.forId(serviceIdAccept),
-            clientId = clientId,
             suppliedClientId = suppliedClientId,
             clientName = "Erling Haal",
             agencyName = "testAgentName",
@@ -179,7 +178,6 @@ trait AuthorisationAcceptItsaBehaviours {
         invitationRepo.create(
           arn = arn.value,
           service = Service.forId(serviceIdCheck),
-          clientId = clientId,
           suppliedClientId = suppliedClientId,
           clientName = "Erling Haal",
           agencyName = "testAgentName",
@@ -194,7 +192,6 @@ trait AuthorisationAcceptItsaBehaviours {
           invitationRepo.create(
             arn = arn.value,
             service = Service.forId(serviceIdAccept),
-            clientId = clientId,
             suppliedClientId = suppliedClientId,
             clientName = "Erling Haal",
             agencyName = "testAgentName",

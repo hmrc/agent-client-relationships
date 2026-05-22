@@ -93,7 +93,6 @@ with TestData {
     .createNew(
       arn = arn.value,
       service = MtdIt,
-      clientId = mtdItId,
       suppliedClientId = nino,
       clientName = "TestClientName",
       agencyName = agencyName,
@@ -107,7 +106,6 @@ with TestData {
     .createNew(
       arn = arn.value,
       service = MtdItSupp,
-      clientId = mtdItId,
       suppliedClientId = nino,
       clientName = "TestClientName",
       agencyName = agencyName,
@@ -121,7 +119,6 @@ with TestData {
     .createNew(
       arn = arn.value,
       service = Vat,
-      clientId = vrn,
       suppliedClientId = vrn,
       clientName = "TestClientName",
       agencyName = agencyName,
@@ -135,7 +132,6 @@ with TestData {
     .createNew(
       arn = arn.value,
       service = Trust,
-      clientId = utr,
       suppliedClientId = utr,
       clientName = "TestClientName",
       agencyName = agencyName,

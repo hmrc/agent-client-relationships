@@ -58,7 +58,6 @@ object FieldKeys {
 
   val arnKey: String = "arn"
   val invitationIdKey: String = "invitationId"
-  val clientIdKey: String = "clientId"
   val clientIdTypeKey: String = "clientIdTypeKey"
   val suppliedClientIdKey: String = "suppliedClientId"
   val suppliedClientIdTypeKey: String = "suppliedClientIdType"
@@ -112,7 +111,6 @@ extends PlayMongoRepository[Invitation](
       ),
       IndexOptions().name("arnCreatedIdx")
     ),
-    IndexModel(Indexes.ascending(clientIdKey)),
     IndexModel(Indexes.ascending(suppliedClientIdKey)),
     IndexModel(Indexes.ascending(statusKey)),
     IndexModel(Indexes.ascending(serviceKey)),
@@ -129,7 +127,6 @@ with RequestAwareLogging {
   def create(
     arn: String,
     service: Service,
-    clientId: ClientId,
     suppliedClientId: ClientId,
     clientName: String,
     agencyName: String,
@@ -140,7 +137,6 @@ with RequestAwareLogging {
     val invitation = Invitation.createNew(
       arn,
       service,
-      clientId,
       suppliedClientId,
       clientName,
       agencyName,
@@ -216,11 +212,7 @@ with RequestAwareLogging {
               else
                 None,
               if (clientIds.nonEmpty) {
-                val key =
-                  if (isSuppliedClientId)
-                    suppliedClientIdKey
-                  else
-                    clientIdKey
+                val key = Option.when(suppliedClientIdKey.nonEmpty)(suppliedClientIdKey).getOrElse("")
                 Some(in(key, clientIds.map(getValidNinoWithoutSuffixOrClientId).map(encryptedString): _*))
               }
               else
@@ -262,10 +254,7 @@ with RequestAwareLogging {
           equal(arnKey, arn),
           in(serviceKey, services: _*),
           in(
-            if (isSuppliedClientId)
-              suppliedClientIdKey
-            else
-              clientIdKey,
+            Option.when(suppliedClientIdKey.nonEmpty)(suppliedClientIdKey).getOrElse(""),
             clientIds.map(_.replaceAll(" ", "")).map(getValidNinoWithoutSuffixOrClientId).map(encryptedString): _*
           )
         )
@@ -307,8 +296,7 @@ with RequestAwareLogging {
             )),
             Some(equal(serviceKey, service)),
             Some(or(
-              equal(suppliedClientIdKey, encryptedString(getValidNinoWithoutSuffixOrClientId(clientId))),
-              equal(clientIdKey, encryptedString(getValidNinoWithoutSuffixOrClientId(clientId))) // Some deauth requests target the MTDITID for ITSA
+              equal(suppliedClientIdKey, encryptedString(getValidNinoWithoutSuffixOrClientId(clientId)))
             )),
             optArn.map(a => equal(arnKey, a)),
             invitationIdToIgnore
@@ -336,14 +324,14 @@ with RequestAwareLogging {
       .updateOne(
         and(
           equal(arnKey, arn.value),
-          equal(clientIdKey, encryptedString(nino.value)),
+          equal(suppliedClientIdKey, encryptedString(nino.value)),
           equal(serviceKey, service),
           equal(statusKey, Codecs.toBson[InvitationStatus](PartialAuth))
         ),
         combine(
           set(statusKey, Codecs.toBson[InvitationStatus](Accepted)),
           set(lastUpdatedKey, Instant.now),
-          set(clientIdKey, encryptedString(mtdItId.value)),
+          set(suppliedClientIdKey, encryptedString(mtdItId.value)),
           set(clientIdTypeKey, "MTDITID")
         )
       )
@@ -353,25 +341,23 @@ with RequestAwareLogging {
 
   def updateInvitation(
     service: String,
-    clientId: String,
-    clientIdType: String,
+    suppliedClientId: String,
+    suppliedClientIdType: String,
     newService: String,
-    newClientId: String,
-    newClientIdType: String
+    newSuppliedClientId: String,
+    newSuppliedClientIdType: String
   ): Future[Boolean] = Mdc.preservingMdc {
     collection
       .updateOne(
         and(
           equal(serviceKey, service),
-          equal(clientIdKey, encryptedString(clientId)),
-          equal("clientIdType", clientIdType)
+          equal(suppliedClientIdKey, encryptedString(suppliedClientId)),
+          equal("suppliedClientIdType", suppliedClientIdType)
         ),
         combine(
           set(serviceKey, newService),
-          set(clientIdKey, encryptedString(newClientId)),
-          set("clientIdType", newClientIdType),
-          set(suppliedClientIdKey, encryptedString(newClientId)),
-          set("suppliedClientIdType", newClientIdType),
+          set(suppliedClientIdKey, encryptedString(newSuppliedClientId)),
+          set("suppliedClientIdType", newSuppliedClientIdType),
           set("lastUpdated", Instant.now)
         )
       )

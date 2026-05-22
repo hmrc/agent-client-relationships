@@ -89,7 +89,6 @@ extends RequestAwareLogging {
           create(
             arn,
             service,
-            clientId,
             suppliedClientId,
             createInvitationInputData.clientName,
             clientType,
@@ -217,7 +216,6 @@ extends RequestAwareLogging {
   private def create(
     arn: Arn,
     service: Service,
-    clientId: ClientId,
     suppliedClientId: ClientId,
     clientName: String,
     clientType: Option[String],
@@ -229,7 +227,6 @@ extends RequestAwareLogging {
         invitation <- invitationsRepository.create(
           arn.value,
           service,
-          clientId,
           suppliedClientId,
           clientName,
           agentDetails.agencyName,

@@ -90,7 +90,6 @@ with TestData {
     .createNew(
       arn.value,
       Service.Vat,
-      vrn,
       ClientIdentifier(vrn),
       clientName,
       agentName1,
@@ -104,7 +103,6 @@ with TestData {
     .createNew(
       arn.value,
       Service.MtdIt,
-      mtdItId,
       ClientIdentifier(nino),
       clientName,
       agentName1,
@@ -118,7 +116,6 @@ with TestData {
     .createNew(
       arn.value,
       Service.Cbc,
-      cbcId,
       ClientIdentifier(cbcId),
       clientName,
       agentName1,
@@ -132,7 +129,6 @@ with TestData {
     .createNew(
       arn2.value,
       Service.Vat,
-      vrn,
       ClientIdentifier(vrn),
       clientName,
       agentName2,
@@ -146,7 +142,6 @@ with TestData {
     .createNew(
       arn2.value,
       Service.MtdIt,
-      mtdItId,
       ClientIdentifier(nino),
       clientName,
       agentName2,
@@ -160,7 +155,6 @@ with TestData {
     .createNew(
       arn2.value,
       Service.Cbc,
-      cbcId,
       ClientIdentifier(cbcId),
       clientName,
       agentName2,
@@ -174,7 +168,6 @@ with TestData {
     .createNew(
       arn.value,
       Service.Vat,
-      vrn,
       ClientIdentifier(vrn),
       clientName,
       agentName1,
@@ -188,7 +181,6 @@ with TestData {
     .createNew(
       arn2.value,
       Service.CapitalGains,
-      cgtRef,
       ClientIdentifier(cgtRef),
       clientName,
       agentName2,
@@ -202,7 +194,6 @@ with TestData {
     .createNew(
       arn2.value,
       Service.Cbc,
-      cbcId,
       ClientIdentifier(cbcId),
       clientName,
       agentName2,
@@ -216,7 +207,6 @@ with TestData {
     .createNew(
       arn2.value,
       Service.MtdIt,
-      mtdItId,
       ClientIdentifier(nino),
       clientName,
       agentName2,
@@ -230,7 +220,6 @@ with TestData {
     .createNew(
       arn2.value,
       Service.MtdIt,
-      nino,
       ClientIdentifier(nino),
       clientName,
       agentName2,
@@ -244,7 +233,6 @@ with TestData {
     .createNew(
       arn2.value,
       Service.Vat,
-      vrn,
       ClientIdentifier(vrn),
       clientName,
       agentName2,
@@ -258,7 +246,6 @@ with TestData {
     .createNew(
       arn.value,
       Service.MtdIt,
-      mtdItId,
       ClientIdentifier(nino),
       clientName,
       agentName1,

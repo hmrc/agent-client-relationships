@@ -95,7 +95,6 @@ with MockAuditService {
     testArn.value,
     Vat,
     testVrn,
-    testVrn,
     testName,
     testAgentName,
     testAgentEmail,
@@ -106,7 +105,6 @@ with MockAuditService {
     .createNew(
       testArn2.value,
       Vat,
-      testVrn,
       testVrn,
       testName,
       testAgentName,
@@ -121,7 +119,6 @@ with MockAuditService {
     testArn.value,
     PersonalIncomeRecord,
     testNino,
-    testNino,
     testName,
     testAgentName,
     testAgentEmail,
@@ -132,7 +129,6 @@ with MockAuditService {
     .createNew(
       testArn2.value,
       PersonalIncomeRecord,
-      testNino,
       testNino,
       testName,
       testAgentName,
@@ -146,7 +142,6 @@ with MockAuditService {
   val itsaInvitation: Invitation = Invitation.createNew(
     testArn.value,
     MtdIt,
-    testMtdItId,
     testNino,
     testName,
     testAgentName,
@@ -159,7 +154,6 @@ with MockAuditService {
     testArn.value,
     MtdIt,
     testNino,
-    testNino,
     testName,
     testAgentName,
     testAgentEmail,
@@ -171,7 +165,6 @@ with MockAuditService {
       testArn2.value,
       MtdIt,
       testMtdItId,
-      testNino,
       testName,
       testAgentName,
       testAgentEmail,
@@ -183,7 +176,6 @@ with MockAuditService {
     .createNew(
       testArn3.value,
       MtdIt,
-      testNino,
       testNino,
       testName,
       testAgentName,
@@ -204,7 +196,6 @@ with MockAuditService {
   val itsaSuppInvitation: Invitation = Invitation.createNew(
     testArn.value,
     MtdItSupp,
-    testMtdItId,
     testNino,
     testName,
     testAgentName,
@@ -216,7 +207,6 @@ with MockAuditService {
   val altItsaSuppInvitation: Invitation = Invitation.createNew(
     testArn.value,
     MtdItSupp,
-    testNino,
     testNino,
     testName,
     testAgentName,
@@ -271,7 +261,7 @@ with MockAuditService {
             mockCreateFiRelationship(
               testArn,
               pirInvitation.service,
-              pirInvitation.clientId
+              pirInvitation.suppliedClientId
             )
             mockUpdateStatus(pirInvitation.invitationId, Accepted)(
               Future.successful(pirInvitation.copy(status = Accepted))
@@ -314,10 +304,11 @@ with MockAuditService {
                 mockDeleteSameAgentRelationship(
                   MtdIt.id,
                   testArn.value,
-                  Some(testMtdItId.value),
+                  None,
                   testNino.nino
                 )(Future.successful(true))
                 mockFindMainAgent(testNino.nino)(Future.successful(Some(oldAltItsaPartialAuth)))
+                mockFindMainAgent(testMtdItId.value)(Future.successful(Some(oldAltItsaPartialAuth)))
                 mockDeauthorisePartialAuth(
                   MtdIt.id,
                   testNino,
@@ -366,7 +357,7 @@ with MockAuditService {
                 mockDeleteSameAgentRelationship(
                   MtdItSupp.id,
                   testArn.value,
-                  Some(testMtdItId.value),
+                  None,
                   testNino.nino
                 )(Future.successful(true))
                 mockCreateRelationship(testArn, itsaSuppEnrolment)(Future.successful(Some(Done)))
@@ -400,6 +391,7 @@ with MockAuditService {
                   testNino.nino
                 )(Future.successful(true))
                 mockFindMainAgent(testNino.nino)(Future.successful(Some(oldAltItsaPartialAuth)))
+                mockFindMainAgent(testMtdItId.value)(Future.successful(Some(oldAltItsaPartialAuth)))
                 mockDeauthorisePartialAuth(
                   MtdIt.id,
                   testNino,

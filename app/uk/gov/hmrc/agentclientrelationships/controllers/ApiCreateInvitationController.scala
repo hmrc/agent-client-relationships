@@ -184,7 +184,6 @@ with AuthActions {
       invitation <- invitationsRepository.create(
         arn.value,
         service,
-        clientId,
         suppliedClientId,
         clientName,
         agentDetails.agencyName,

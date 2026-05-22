@@ -62,15 +62,15 @@ extends RequestAwareLogging {
           enrolment.toString,
           clientName
         )
-      } yield logger.info(s"updateFriendlyName succeeded for client ${invitation.clientId}, agent ${invitation.arn}")
+      } yield logger.info(s"updateFriendlyName succeeded for client ${invitation.suppliedClientId}, agent ${invitation.arn}")
     ).recover {
       case GroupIdError =>
         logger.warn(
-          s"updateFriendlyName not attempted due to error retrieving agent's group id for client ${invitation.clientId}, agent ${invitation.arn}"
+          s"updateFriendlyName not attempted due to error retrieving agent's group id for client ${invitation.suppliedClientId}, agent ${invitation.arn}"
         )
       case exception =>
         logger.warn(
-          s"updateFriendlyName failed due to ES19 error for client ${invitation.clientId}, agent ${invitation.arn}: $exception"
+          s"updateFriendlyName failed due to ES19 error for client ${invitation.suppliedClientId}, agent ${invitation.arn}: $exception"
         )
     }
   }

@@ -73,8 +73,8 @@ with RequestAwareLogging {
           for {
             enrolment <- validationService.validateForEnrolmentKey(
               invitation.service,
-              invitation.clientId,
-              Some(ClientIdType.forId(invitation.clientIdType).enrolmentId)
+              invitation.suppliedClientId,
+              Some(ClientIdType.forId(invitation.suppliedClientIdType).enrolmentId)
             )
             result <-
               authorisedUser(
@@ -117,8 +117,7 @@ with RequestAwareLogging {
     val auditData: AuditData = new AuditData()
     auditData.set(arnKey, invitation.arn)
     auditData.set(serviceKey, invitation.service)
-    auditData.set(clientIdKey, invitation.clientId)
-    auditData.set(clientIdTypeKey, invitation.clientIdType)
+    auditData.set(suppliedClientIdKey, invitation.suppliedClientId)
     auditData.set(invitationIdKey, invitation.invitationId)
     auditData.set(enrolmentDelegatedKey, false)
     auditData.set(etmpRelationshipCreatedKey, false)

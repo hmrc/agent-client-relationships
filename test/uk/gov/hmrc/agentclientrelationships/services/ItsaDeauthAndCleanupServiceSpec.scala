@@ -88,7 +88,6 @@ with MockAuditService {
     .createNew(
       testArn.value,
       MtdIt,
-      testMtdItId,
       testNino,
       testName,
       testAgentName,
@@ -101,7 +100,6 @@ with MockAuditService {
     .createNew(
       testArn.value,
       MtdIt,
-      testNino,
       testNino,
       testName,
       testAgentName,

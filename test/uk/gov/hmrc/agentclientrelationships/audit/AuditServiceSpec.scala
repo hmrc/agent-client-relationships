@@ -65,8 +65,8 @@ with Eventually {
       auditData.set("agentCode", AgentCode("ES1234567890").value)
       auditData.set("saAgentRef", "12313")
       auditData.set("service", "mtd-it")
-      auditData.set("clientId", "XX1234")
-      auditData.set("clientIdType", "ni")
+      auditData.set("suppliedClientId", "XX1234")
+      auditData.set("suppliedIdType", "ni")
       auditData.set("nino", NinoWithoutSuffix("KS969148D").value)
       auditData.set("cesaRelationship", true)
       auditData.set("etmpRelationshipCreated", true)
@@ -88,8 +88,8 @@ with Eventually {
         sentEvent.detail("saAgentRef") shouldBe "12313"
         sentEvent.detail("credId") shouldBe "0000001234567890"
         sentEvent.detail("service") shouldBe "mtd-it"
-        sentEvent.detail("clientId") shouldBe "XX1234"
-        sentEvent.detail("clientIdType") shouldBe "ni"
+        sentEvent.detail("suppliedClientId") shouldBe "XX1234"
+        sentEvent.detail("suppliedIdType") shouldBe "ni"
         sentEvent.detail("nino") shouldBe "KS969148"
         sentEvent.detail("cesaRelationship") shouldBe "true"
         sentEvent.detail("etmpRelationshipCreated") shouldBe "true"

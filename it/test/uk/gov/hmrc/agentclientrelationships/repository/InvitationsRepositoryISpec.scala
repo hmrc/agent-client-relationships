@@ -71,7 +71,6 @@ with RepositoryCleanupSupport {
     .createNew(
       arn,
       service,
-      clientId,
       suppliedClientId.getOrElse(clientId),
       "Macrosoft",
       "testAgentName",
@@ -121,7 +120,6 @@ with RepositoryCleanupSupport {
           "XARN1234567",
           Vat,
           Vrn("123456789"),
-          Vrn("123456789"),
           "Macrosoft",
           "testAgentName",
           "agent@email.com",
@@ -139,7 +137,6 @@ with RepositoryCleanupSupport {
           repository.create(
             "XARN1234567",
             Vat,
-            Vrn("123456789"),
             Vrn("123456789"),
             "Macrosoft",
             "testAgentName",
@@ -289,7 +286,7 @@ with RepositoryCleanupSupport {
       repository.deauthAcceptedInvitations(
         invitation.service,
         None,
-        invitation.clientId,
+        invitation.suppliedClientIdType,
         Some(newInvitation.invitationId),
         "TEST",
         Instant.now()
@@ -354,7 +351,7 @@ with RepositoryCleanupSupport {
       repository.deauthAcceptedInvitations(
         invitation.service,
         Some(invitation.arn),
-        invitation.clientId,
+        invitation.suppliedClientId,
         None,
         "TEST",
         Instant.now()
@@ -391,16 +388,14 @@ with RepositoryCleanupSupport {
       await(
         repository.updateInvitation(
           invitation.service,
-          invitation.clientId,
-          invitation.clientIdType,
+          invitation.suppliedClientId,
+          invitation.suppliedClientIdType,
           invitation.service,
           "ABC",
           "ABCType"
         )
       ) shouldBe true
       lazy val updatedInvitation = await(repository.findOneById(invitation.invitationId)).get
-      updatedInvitation.clientId shouldBe "ABC"
-      updatedInvitation.clientIdType shouldBe "ABCType"
       updatedInvitation.suppliedClientId shouldBe "ABC"
       updatedInvitation.suppliedClientIdType shouldBe "ABCType"
     }
@@ -632,7 +627,6 @@ with RepositoryCleanupSupport {
         .copy(
           arn = "TARN7654321",
           service = HMRCMTDIT,
-          clientId = "AABBCC12D",
           status = Accepted
         )
 
@@ -692,7 +686,6 @@ with RepositoryCleanupSupport {
       repository.create(
         "XARN1234567",
         MtdIt,
-        MtdItId("1234567890"),
         NinoWithoutSuffix(ninoWithoutSuffix + "A"),
         "client name",
         "agent name",
@@ -705,7 +698,6 @@ with RepositoryCleanupSupport {
         await(repository.create(
           "XARN1234567",
           MtdIt,
-          MtdItId("1234567890"),
           NinoWithoutSuffix(ninoWithoutSuffix + "B"),
           "client name",
           "agent name",

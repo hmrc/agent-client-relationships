@@ -40,8 +40,6 @@ extends Eventually {
     detail = Map(
       "agentReferenceNumber" -> invitation.arn,
       "service" -> invitation.service,
-      "clientId" -> invitation.clientId,
-      "clientIdType" -> invitation.clientIdType,
       "suppliedClientId" -> invitation.suppliedClientId,
       "invitationId" -> invitation.invitationId
     ),
@@ -59,8 +57,6 @@ extends Eventually {
     detail = Map(
       "agentReferenceNumber" -> invitation.arn,
       "service" -> invitation.service,
-      "clientId" -> invitation.clientId,
-      "clientIdType" -> invitation.clientIdType,
       "suppliedClientId" -> invitation.suppliedClientId,
       "invitationId" -> invitation.invitationId,
       "response" -> (if (accepted)

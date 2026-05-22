@@ -51,8 +51,6 @@ with HipStub {
   val pendingInvitation: Invitation = Invitation(
     "123",
     arn.value,
-    "HMRC-MTD-IT",
-    mtdItId.value,
     "MTDITID",
     mtdItId.value,
     "MTDITID",

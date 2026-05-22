@@ -80,8 +80,6 @@ with AfiRelationshipStub {
   val pendingInvitation: Invitation = Invitation(
     "123",
     arn.value,
-    "HMRC-MTD-VAT",
-    vrn.value,
     "vrn",
     vrn.value,
     "vrn",
@@ -336,8 +334,7 @@ with AfiRelationshipStub {
         val altItsaPendingInvitation = pendingInvitation
           .copy(
             service = "HMRC-MTD-IT",
-            suppliedClientId = nino.value,
-            clientId = nino.value
+            suppliedClientId = nino.value
           )
 
         invitationsRepo.collection.insertOne(altItsaPendingInvitation).toFuture().futureValue
@@ -381,8 +378,7 @@ with AfiRelationshipStub {
         val itsaPendingInvitation = pendingInvitation
           .copy(
             service = "HMRC-MTD-IT",
-            suppliedClientId = nino.value,
-            clientId = mtdItId.value
+            suppliedClientId = nino.value
           )
 
         invitationsRepo.collection.insertOne(itsaPendingInvitation).toFuture().futureValue
@@ -427,8 +423,7 @@ with AfiRelationshipStub {
         val irvPendingInvitation = pendingInvitation
           .copy(
             service = "PERSONAL-INCOME-RECORD",
-            suppliedClientId = nino.value,
-            clientId = nino.value
+            suppliedClientId = nino.value
           )
 
         invitationsRepo.collection.insertOne(irvPendingInvitation).toFuture().futureValue
@@ -477,8 +472,7 @@ with AfiRelationshipStub {
         val cbcPendingInvitation = pendingInvitation
           .copy(
             service = "HMRC-CBC-ORG",
-            suppliedClientId = cbcId.value,
-            clientId = cbcId.value
+            suppliedClientId = cbcId.value
           )
 
         invitationsRepo.collection.insertOne(cbcPendingInvitation).toFuture().futureValue
@@ -528,8 +522,7 @@ with AfiRelationshipStub {
         val cbcPendingInvitation = pendingInvitation
           .copy(
             service = "HMRC-CBC-NONUK-ORG",
-            suppliedClientId = cbcId.value,
-            clientId = cbcId.value
+            suppliedClientId = cbcId.value
           )
 
         invitationsRepo.collection.insertOne(cbcPendingInvitation).toFuture().futureValue

@@ -38,8 +38,6 @@ extends BaseControllerISpec {
   val invitation: Invitation = Invitation(
     "QWERTYUIOP123",
     arn.value,
-    "HMRC-MTD-IT",
-    mtdItId.value,
     "MTDITID",
     mtdItId.value,
     "MTDITID",

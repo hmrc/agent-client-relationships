@@ -51,7 +51,6 @@ with TestData {
   val baseInvitation: Invitation = Invitation.createNew(
     arn = arn.value,
     service = MtdIt,
-    clientId = mtdItId,
     suppliedClientId = nino,
     clientName = "C Name",
     agencyName = "A Name",
@@ -134,7 +133,6 @@ with TestData {
           val newInvitation: Invitation = baseInvitation
             .copy(
               service = serviceId,
-              clientId = clientId.value,
               suppliedClientId = clientId.value,
               status = Accepted
             )

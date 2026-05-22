@@ -144,7 +144,6 @@ trait AuthorisationAcceptGenericBehaviours {
           invitationRepo.create(
             arn = arn.value,
             service = Service.forId(serviceId),
-            clientId = clientId,
             suppliedClientId = suppliedClientId,
             clientName = "Erling Haal",
             agencyName = "testAgentName",
@@ -224,7 +223,6 @@ trait AuthorisationAcceptGenericBehaviours {
           invitationRepo.create(
             arn = arn.value,
             service = Service.forId(serviceId),
-            clientId = clientId,
             suppliedClientId = suppliedClientId,
             clientName = "Erling Haal",
             agencyName = "testAgentName",
@@ -270,7 +268,6 @@ trait AuthorisationAcceptGenericBehaviours {
           invitationRepo.create(
             arn = arn.value,
             service = Service.forId(serviceId),
-            clientId = clientId,
             suppliedClientId = suppliedClientId,
             clientName = "Erling Haal",
             agencyName = "testAgentName",
@@ -302,7 +299,6 @@ trait AuthorisationAcceptGenericBehaviours {
           invitationRepo.create(
             arn = arn.value,
             service = Service.forId(serviceId),
-            clientId = clientId,
             suppliedClientId = suppliedClientId,
             clientName = "Erling Haal",
             agencyName = "testAgentName",
@@ -353,7 +349,6 @@ trait AuthorisationAcceptGenericBehaviours {
           invitationRepo.create(
             arn = arn.value,
             service = Service.forId(serviceId),
-            clientId = clientId,
             suppliedClientId = suppliedClientId,
             clientName = "Erling Haal",
             agencyName = "testAgentName",
@@ -456,7 +451,6 @@ trait AuthorisationAcceptGenericBehaviours {
           invitationRepo.create(
             arn = arn.value,
             service = Service.forId(serviceId),
-            clientId = clientId,
             suppliedClientId = suppliedClientId,
             clientName = "Erling Haal",
             agencyName = "testAgentName",
@@ -530,7 +524,6 @@ trait AuthorisationAcceptGenericBehaviours {
           invitationRepo.create(
             arn = arn.value,
             service = Service.forId(serviceId),
-            clientId = clientId,
             suppliedClientId = suppliedClientId,
             clientName = "Erling Haal",
             agencyName = "testAgentName",
@@ -610,7 +603,6 @@ trait AuthorisationAcceptGenericBehaviours {
           invitationRepo.create(
             arn = arn.value,
             service = Service.forId(serviceId),
-            clientId = clientId,
             suppliedClientId = suppliedClientId,
             clientName = "Erling Haal",
             agencyName = "testAgentName",

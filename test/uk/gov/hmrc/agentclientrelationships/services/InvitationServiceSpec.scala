@@ -66,7 +66,6 @@ with MockEmailService {
     testArn1,
     Vat,
     testVrn,
-    testVrn,
     "",
     "",
     "",
@@ -77,7 +76,6 @@ with MockEmailService {
     testArn2,
     Vat,
     testVrn,
-    testVrn,
     "",
     "",
     "",
@@ -87,7 +85,6 @@ with MockEmailService {
   val invitation3: Invitation = Invitation.createNew(
     testArn3,
     Vat,
-    testVrn,
     testVrn,
     "",
     "",

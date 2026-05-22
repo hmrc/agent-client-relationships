@@ -106,7 +106,6 @@ with CitizenDetailsStub {
     .createNew(
       arn = arn.value,
       service = MtdIt,
-      clientId = mtdItId,
       suppliedClientId = nino,
       clientName = "TestClientName",
       agencyName = agencyName,
@@ -120,7 +119,6 @@ with CitizenDetailsStub {
     .createNew(
       arn = arn.value,
       service = MtdItSupp,
-      clientId = mtdItId,
       suppliedClientId = nino,
       clientName = "TestClientName",
       agencyName = agencyName,
@@ -228,7 +226,6 @@ with CitizenDetailsStub {
 
         invitation.status shouldBe Pending
         invitation.suppliedClientId shouldBe inputData.suppliedClientId
-        invitation.clientId shouldBe clientId
         invitation.service shouldBe inputData.service
 
         verifyCreateInvitationAuditSent(requestPath, invitation)
@@ -369,7 +366,6 @@ with CitizenDetailsStub {
 
       invitation.status shouldBe Pending
       invitation.suppliedClientId shouldBe inputData.suppliedClientId
-      invitation.clientId shouldBe clientId
       invitation.service shouldBe inputData.service
 
       verifyCreateInvitationAuditSent(requestPath, invitation)
@@ -453,7 +449,6 @@ with CitizenDetailsStub {
 
       invitation.status shouldBe Pending
       invitation.suppliedClientId shouldBe inputData.suppliedClientId
-      invitation.clientId shouldBe clientId
       invitation.service shouldBe inputData.service
 
       verifyCreateInvitationAuditSent(requestPath, invitation)
@@ -497,7 +492,6 @@ with CitizenDetailsStub {
 
       invitation.status shouldBe Pending
       invitation.suppliedClientId shouldBe inputData.suppliedClientId
-      invitation.clientId shouldBe clientId
       invitation.service shouldBe inputData.service
 
       verifyCreateInvitationAuditSent(requestPath, invitation)
@@ -616,7 +610,6 @@ with CitizenDetailsStub {
 
       invitation.status shouldBe Pending
       invitation.suppliedClientId shouldBe inputData.suppliedClientId
-      invitation.clientId shouldBe clientId
       invitation.service shouldBe inputData.service
 
       verifyCreateInvitationAuditSent(requestPath, invitation)
@@ -662,7 +655,6 @@ with CitizenDetailsStub {
 
       invitation.status shouldBe Pending
       invitation.suppliedClientId shouldBe inputData.suppliedClientId
-      invitation.clientId shouldBe clientId
       invitation.service shouldBe inputData.service
 
       verifyCreateInvitationAuditSent(requestPath, invitation)

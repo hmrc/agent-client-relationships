@@ -83,7 +83,7 @@ extends RequestAwareLogging {
               if (isAltItsa)
                 None
               else
-                Some(invitation.clientId),
+                Some(invitation.suppliedClientId),
             nino = invitation.suppliedClientId,
             timestamp = timestamp
           )

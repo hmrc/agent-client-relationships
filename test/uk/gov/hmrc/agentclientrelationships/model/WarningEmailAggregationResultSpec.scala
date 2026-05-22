@@ -37,8 +37,6 @@ extends UnitSpec {
     "123",
     "XARN1234567",
     "HMRC-MTD-VAT",
-    "123456789",
-    "vrn",
     "234567890",
     "vrn",
     "Macrosoft",
@@ -56,7 +54,6 @@ extends UnitSpec {
 
   val invitation2: Invitation = invitation.copy(
     invitationId = "456",
-    clientId = "999999999",
     suppliedClientId = "888888888"
   )
 
