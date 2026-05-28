@@ -23,6 +23,7 @@ import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.CleanUpInvitationStatusRequest
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
+import uk.gov.hmrc.agentclientrelationships.services.ClientDetailsService
 import uk.gov.hmrc.agentclientrelationships.services.InvitationService
 import uk.gov.hmrc.agentclientrelationships.services.ValidationService
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
@@ -38,6 +39,7 @@ import scala.concurrent.Future
 class CleanUpInvitationStatusController @Inject() (
   validationService: ValidationService,
   invitationService: InvitationService,
+  clientDetailsService: ClientDetailsService,
   val appConfig: AppConfig,
   val authConnector: AuthConnector,
   cc: ControllerComponents
@@ -59,14 +61,19 @@ with RequestAwareLogging {
           payload.clientId
         ).flatMap {
           case Right(enrolment) =>
-            invitationService.deauthoriseInvitation(
-              arn = Arn(payload.arn),
-              enrolmentKey = enrolment,
-              endedBy = "HMRC"
-            ).map {
-              case true => NoContent
-              case false => NotFound
-            }
+            for {
+              (suppliedClientId, _) <- clientDetailsService.expandClientId(enrolment.serviceType, enrolment.oneTaxIdentifier())
+              deauthorised <- invitationService.deauthoriseInvitation(
+                arn = Arn(payload.arn),
+                service = enrolment.service,
+                suppliedClientId.value,
+                endedBy = "HMRC"
+              )
+            } yield
+              if (deauthorised)
+                NoContent
+              else
+                NotFound
           case Left(_) => Future.successful(BadRequest)
         }
       }

@@ -33,6 +33,7 @@ import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDITS
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository.endedByClient
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
 import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
+import uk.gov.hmrc.domain.Nino
 
 import java.time.Instant
 import javax.inject.Inject
@@ -97,9 +98,10 @@ class ItsaDeauthAndCleanupService @Inject() (
                     auditData.set(howRelationshipTerminatedKey, agentRoleChange)
                     deleteRelationshipsService
                       .deleteRelationship(
-                        Arn(arn),
-                        EnrolmentKey(serviceToCheck, MtdItId(mtdItId)),
-                        currentUser.affinityGroup
+                        arn = Arn(arn),
+                        enrolmentKey = EnrolmentKey(serviceToCheck, MtdItId(mtdItId)),
+                        suppliedClientId = Nino(nino),
+                        affinityGroup = currentUser.affinityGroup
                       )
                       .map(_ => true)
                   case _ => Future.successful(false)

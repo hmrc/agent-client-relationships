@@ -36,6 +36,7 @@ import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository.end
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository.endedByHMRC
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.auth.core.AffinityGroup
+import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.UpstreamErrorResponse
 
 import java.time.Instant
@@ -66,6 +67,7 @@ extends RequestAwareLogging {
   def deleteRelationship(
     arn: Arn,
     enrolmentKey: EnrolmentKey,
+    suppliedClientId: TaxIdentifier, // Required for invitation cleanup code as the ID provided by users is not always the ID on the enrolment (e.g. ITSA)
     affinityGroup: Option[AffinityGroup]
   )(implicit
     request: RequestHeader,
@@ -79,8 +81,9 @@ extends RequestAwareLogging {
         .recoveryLock(arn, enrolmentKey) {
           val endedBy = determineUserTypeFromAG(affinityGroup)
           val record = DeleteRecord(
-            arn.value,
-            enrolmentKey,
+            arn = arn.value,
+            enrolmentKey = enrolmentKey,
+            suppliedClientId = Some(suppliedClientId.value),
             headerCarrier = Some(hc),
             relationshipEndedBy = endedBy
           )
@@ -95,7 +98,8 @@ extends RequestAwareLogging {
             _ <- removeDeleteRecord(arn, enrolmentKey)
             _ <- setRelationshipEnded(
               arn,
-              enrolmentKey,
+              enrolmentKey.service,
+              suppliedClientId.value,
               endedBy.getOrElse("HMRC")
             )
           } yield {
@@ -305,7 +309,8 @@ extends RequestAwareLogging {
               _ <- removeDeleteRecord(arn, enrolmentKey)
               _ <- setRelationshipEnded(
                 arn,
-                enrolmentKey,
+                enrolmentKey.service,
+                deleteRecord.suppliedClientId.getOrElse(enrolmentKey.oneTaxIdentifier().value),
                 deleteRecord.relationshipEndedBy.getOrElse("HMRC")
               )
             } yield true
@@ -324,7 +329,8 @@ extends RequestAwareLogging {
               _ <- removeDeleteRecord(arn, enrolmentKey)
               _ <- setRelationshipEnded(
                 arn,
-                enrolmentKey,
+                enrolmentKey.service,
+                deleteRecord.suppliedClientId.getOrElse(enrolmentKey.oneTaxIdentifier().value),
                 deleteRecord.relationshipEndedBy.getOrElse("HMRC")
               )
             } yield true
@@ -336,7 +342,8 @@ extends RequestAwareLogging {
               _ <- removeDeleteRecord(arn, enrolmentKey)
               _ <- setRelationshipEnded(
                 arn,
-                enrolmentKey,
+                enrolmentKey.service,
+                deleteRecord.suppliedClientId.getOrElse(enrolmentKey.oneTaxIdentifier().value),
                 deleteRecord.relationshipEndedBy.getOrElse("HMRC")
               )
             } yield true
@@ -356,12 +363,14 @@ extends RequestAwareLogging {
 
   def setRelationshipEnded(
     arn: Arn,
-    enrolmentKey: EnrolmentKey,
+    service: String,
+    clientId: String,
     endedBy: String
   ): Future[Done] = invitationService
     .deauthoriseInvitation(
       arn,
-      enrolmentKey,
+      service,
+      clientId,
       endedBy
     )
     .map(_ => Done)

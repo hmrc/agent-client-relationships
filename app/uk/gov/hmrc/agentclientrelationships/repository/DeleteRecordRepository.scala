@@ -52,6 +52,7 @@ import scala.concurrent.Future
 case class DeleteRecord(
   arn: String,
   enrolmentKey: EnrolmentKey,
+  suppliedClientId: Option[String],
   dateTime: LocalDateTime = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime.truncatedTo(MILLIS),
   syncToETMPStatus: Option[SyncStatus] = None,
   syncToESStatus: Option[SyncStatus] = None,
