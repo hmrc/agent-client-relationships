@@ -85,6 +85,7 @@ with HipStub {
           DeleteRecord(
             arn.value,
             EnrolmentKey(Service.MtdIt, MtdItId("ABCDEF0000000001")),
+            Some("AB123456"),
             dateTime = LocalDateTime.now.minusMinutes(1),
             syncToETMPStatus = Some(SyncStatus.Success),
             syncToESStatus = Some(SyncStatus.Failed)

@@ -227,6 +227,7 @@ with HipStub {
       givenDelegatedGroupIdsExistFor(mtdItEnrolmentKey, Set(testExistingAgentGroup))
       givenGetAgentReferenceNumberFor(testExistingAgentGroup, existingAgentArn.value)
       givenAgentRecord(existingAgentArn, existingAgentRecordResponse)
+      givenMtdItIdIsKnownFor(nino, mtdItId)
       await(agentReferenceRepo.create(agentReferenceRecord))
       val expectedExistingMainAgent = ExistingMainAgent(agencyName = "ExistingAgent", sameAgent = false)
       val pendingInvitation = await(
@@ -267,6 +268,7 @@ with HipStub {
       givenGetAgentReferenceNumberFor(testExistingAgentGroup, existingAgentArn.value)
       givenAgentRecord(existingAgentArn, existingAgentRecordResponse)
       await(agentReferenceRepo.create(existingAgentReferenceRecord))
+      givenMtdItIdIsKnownFor(nino, mtdItId)
       val expectedExistingMainAgent = ExistingMainAgent(agencyName = "ExistingAgent", sameAgent = true)
       val pendingInvitation = await(
         invitationsRepo.create(

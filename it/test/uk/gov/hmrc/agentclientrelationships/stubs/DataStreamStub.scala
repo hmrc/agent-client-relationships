@@ -24,6 +24,10 @@ import org.scalatest.time.Span
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent.AgentClientRelationshipEvent
+import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys.clientIdKey
+import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys.clientIdTypeKey
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.ClientIdentifier
+import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.Invitation
 
 trait DataStreamStub
@@ -40,9 +44,8 @@ extends Eventually {
     detail = Map(
       "agentReferenceNumber" -> invitation.arn,
       "service" -> invitation.service,
-      "clientId" -> invitation.clientId,
-      "clientIdType" -> invitation.clientIdType,
       "suppliedClientId" -> invitation.suppliedClientId,
+      "suppliedClientIdType" -> invitation.suppliedClientIdType,
       "invitationId" -> invitation.invitationId
     ),
     tags = Map("transactionName" -> "create-invitation", "path" -> requestPath)
@@ -52,15 +55,16 @@ extends Eventually {
     requestPath: String,
     invitation: Invitation,
     accepted: Boolean,
-    isStride: Boolean
+    isStride: Boolean,
+    enrolmentKey: Option[EnrolmentKey]
   ): Unit = verifyAuditRequestSent(
     1,
     event = AgentClientRelationshipEvent.RespondToInvitation,
     detail = Map(
       "agentReferenceNumber" -> invitation.arn,
       "service" -> invitation.service,
-      "clientId" -> invitation.clientId,
-      "clientIdType" -> invitation.clientIdType,
+      "clientId" -> enrolmentKey.map(_.oneTaxIdentifier().value).getOrElse(""),
+      "clientIdType" -> enrolmentKey.map(key => ClientIdentifier(key.oneTaxIdentifier()).typeId).getOrElse(""),
       "suppliedClientId" -> invitation.suppliedClientId,
       "invitationId" -> invitation.invitationId,
       "response" -> (if (accepted)

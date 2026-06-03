@@ -141,7 +141,8 @@ with AuthActions {
                         auditService.sendRespondToInvitationAuditEvent(
                           invitation,
                           accepted = false,
-                          isStride = currentUser.isStride
+                          isStride = currentUser.isStride,
+                          enrolmentKey = None
                         )
                         NoContent
                       }

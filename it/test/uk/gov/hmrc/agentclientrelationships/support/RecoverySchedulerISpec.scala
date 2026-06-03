@@ -34,6 +34,7 @@ import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 import uk.gov.hmrc.agentclientrelationships.repository._
 import uk.gov.hmrc.agentclientrelationships.services.DeleteRelationshipsService
@@ -88,6 +89,7 @@ with BeforeAndAfterEach {
 
   private val arn: Arn = Arn("AARN0000002")
   private val mtdItId: MtdItId = MtdItId("ABCDEF123456789")
+  private val nino: NinoWithoutSuffix = NinoWithoutSuffix("AB123456")
   private val mtdItEnrolmentKey = EnrolmentKey(Service.MtdIt, mtdItId)
 
   override def beforeEach(): Unit = {
@@ -129,6 +131,7 @@ with BeforeAndAfterEach {
       val deleteRecord = DeleteRecord(
         arn.value,
         mtdItEnrolmentKey,
+        Some(nino.value),
         dateTime = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime.minusSeconds(60),
         syncToESStatus = Some(SyncStatus.Success),
         syncToETMPStatus = Some(SyncStatus.Failed)
@@ -158,6 +161,7 @@ with BeforeAndAfterEach {
       val deleteRecord = DeleteRecord(
         arn.value,
         mtdItEnrolmentKey,
+        Some(nino.value),
         dateTime = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime.minusSeconds(60),
         syncToESStatus = Some(SyncStatus.Failed),
         syncToETMPStatus = Some(SyncStatus.Failed)
@@ -187,6 +191,7 @@ with BeforeAndAfterEach {
       val deleteRecord = DeleteRecord(
         arn.value,
         mtdItEnrolmentKey,
+        Some(nino.value),
         dateTime = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime.minusSeconds(60),
         syncToESStatus = Some(SyncStatus.Failed),
         syncToETMPStatus = Some(SyncStatus.Failed)
@@ -212,6 +217,7 @@ with BeforeAndAfterEach {
         val deleteRecord = DeleteRecord(
           arn.value,
           EnrolmentKey(Service.MtdIt, iMtdItId),
+          Some(nino.value),
           dateTime = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime.minusSeconds(60 + index),
           syncToESStatus = Some(SyncStatus.Success),
           syncToETMPStatus = Some(SyncStatus.Failed)
@@ -241,6 +247,7 @@ with BeforeAndAfterEach {
         val deleteRecord = DeleteRecord(
           arn.value,
           EnrolmentKey(Service.MtdIt, iMtdItId),
+          Some(nino.value),
           dateTime = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime.minusSeconds(60 + index),
           syncToESStatus = Some(SyncStatus.Failed),
           syncToETMPStatus = Some(SyncStatus.Failed)

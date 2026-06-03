@@ -39,12 +39,13 @@ extends RequestAwareLogging {
   def updateFriendlyName(
     invitation: Invitation,
     enrolment: EnrolmentKey
-  )(implicit request: RequestHeader): Future[Unit] =
+  )(implicit request: RequestHeader): Future[Unit] = {
     invitation.service match {
       case `HMRCPIR` => Future.unit
-      case `HMRCMTDITSUPP` | `HMRCMTDIT` if invitation.isAltItsa => Future.unit
+      case `HMRCMTDITSUPP` | `HMRCMTDIT` if enrolment.oneTaxIdentifier().isInstanceOf[NinoWithoutSuffix] => Future.unit
       case _ => doUpdateFriendlyName(invitation, enrolment)
     }
+  }
 
   private def doUpdateFriendlyName(
     invitation: Invitation,
@@ -62,15 +63,15 @@ extends RequestAwareLogging {
           enrolment.toString,
           clientName
         )
-      } yield logger.info(s"updateFriendlyName succeeded for client ${invitation.clientId}, agent ${invitation.arn}")
+      } yield logger.info(s"updateFriendlyName succeeded for client ${enrolment.oneTaxIdentifier()}, agent ${invitation.arn}")
     ).recover {
       case GroupIdError =>
         logger.warn(
-          s"updateFriendlyName not attempted due to error retrieving agent's group id for client ${invitation.clientId}, agent ${invitation.arn}"
+          s"updateFriendlyName not attempted due to error retrieving agent's group id for client ${enrolment.oneTaxIdentifier()}, agent ${invitation.arn}"
         )
       case exception =>
         logger.warn(
-          s"updateFriendlyName failed due to ES19 error for client ${invitation.clientId}, agent ${invitation.arn}: $exception"
+          s"updateFriendlyName failed due to ES19 error for client ${enrolment.oneTaxIdentifier()}, agent ${invitation.arn}: $exception"
         )
     }
   }

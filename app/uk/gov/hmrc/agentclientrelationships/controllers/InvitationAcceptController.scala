@@ -70,7 +70,6 @@ with RequestAwareLogging {
       .findInvitation(invitationId)
       .flatMap {
         case Some(invitation) =>
-          implicit val auditData: AuditData = prepareAuditData(invitation)
 
           for {
             enrolment <- validationService.validateForEnrolmentKey(
@@ -87,6 +86,8 @@ with RequestAwareLogging {
                 enrolmentKeyForAuth.oneTaxIdentifier(),
                 strideRoles
               ) { implicit currentUser =>
+                implicit val auditData: AuditData = prepareAuditData(invitation, refinedEnrolmentKey)
+
                 invitation.status match {
                   case model.Accepted | PartialAuth => Future.successful(NoContent)
                   case Pending =>
@@ -96,7 +97,8 @@ with RequestAwareLogging {
                         auditService.sendRespondToInvitationAuditEvent(
                           invitation,
                           accepted = true,
-                          isStride = currentUser.isStride
+                          isStride = currentUser.isStride,
+                          enrolmentKey = Some(refinedEnrolmentKey)
                         )
                         friendlyNameService.updateFriendlyName(invitation, refinedEnrolmentKey)
                         NoContent
@@ -117,12 +119,15 @@ with RequestAwareLogging {
       }
   }
 
-  private def prepareAuditData(invitation: Invitation): AuditData = {
+  private def prepareAuditData(
+    invitation: Invitation,
+    enrolmentKey: EnrolmentKey
+  ): AuditData = {
     val auditData: AuditData = new AuditData()
     auditData.set(arnKey, invitation.arn)
     auditData.set(serviceKey, invitation.service)
-    auditData.set(clientIdKey, invitation.clientId)
-    auditData.set(clientIdTypeKey, invitation.clientIdType)
+    auditData.set(clientIdKey, enrolmentKey.oneTaxIdentifier().value)
+    auditData.set(clientIdTypeKey, ClientIdentifier(enrolmentKey.oneTaxIdentifier()).typeId)
     auditData.set(invitationIdKey, invitation.invitationId)
     auditData.set(enrolmentDelegatedKey, false)
     auditData.set(etmpRelationshipCreatedKey, false)

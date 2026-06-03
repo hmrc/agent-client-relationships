@@ -68,6 +68,8 @@ with BeforeAndAfterEach {
     clientType = Some("personal")
   )
   val testEnrolment: EnrolmentKey = EnrolmentKey(MtdIt, MtdItId("ABCDEF123456789"))
+  val testAltItsaEnrolment: EnrolmentKey = EnrolmentKey(MtdIt, NinoWithoutSuffix("AB123456"))
+  val testAltItsaSuppEnrolment: EnrolmentKey = EnrolmentKey(MtdItSupp, NinoWithoutSuffix("AB123456"))
   val testGroupId = "testGroupId"
   val encodedName = "test+Name"
 
@@ -133,11 +135,14 @@ with BeforeAndAfterEach {
     }
     "ignore Alt ITSA clients" in {
       await(
-        testService.updateFriendlyName(testInvitation.copy(clientId = testInvitation.suppliedClientId), testEnrolment)
+        testService.updateFriendlyName(
+          testInvitation.copy(clientId = testInvitation.suppliedClientId),
+          testAltItsaEnrolment
+        )
       ) shouldBe ()
       verify(mockEsp, times(0)).updateEnrolmentFriendlyName(
         eqs(testGroupId),
-        eqs(testEnrolment.toString),
+        eqs(testAltItsaEnrolment.toString),
         eqs(encodedName)
       )(any[RequestHeader])
     }
@@ -145,12 +150,12 @@ with BeforeAndAfterEach {
       await(
         testService.updateFriendlyName(
           testInvitation.copy(service = MtdItSupp.id, clientId = testInvitation.suppliedClientId),
-          testEnrolment
+          testAltItsaSuppEnrolment
         )
       ) shouldBe ()
       verify(mockEsp, times(0)).updateEnrolmentFriendlyName(
         eqs(testGroupId),
-        eqs(testEnrolment.toString),
+        eqs(testAltItsaSuppEnrolment.toString),
         eqs(encodedName)
       )(any[RequestHeader])
     }

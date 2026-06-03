@@ -28,6 +28,7 @@ import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.auth.core.AffinityGroup
 import play.api.mvc.RequestHeader
+import uk.gov.hmrc.domain.TaxIdentifier
 
 import scala.concurrent.Future
 
@@ -39,11 +40,13 @@ trait MockDeleteRelationshipsService {
   def mockDeleteRelationship(
     arn: Arn,
     enrolment: EnrolmentKey,
+    suppliedClientId: TaxIdentifier,
     affinityGroup: Option[AffinityGroup]
   )(response: Future[Option[Boolean]] = Future.successful(Some(true))): OngoingStubbing[Future[Option[Boolean]]] = when(
     mockDeleteRelationshipsService.deleteRelationship(
       eqs(arn),
       eqs(enrolment),
+      eqs(suppliedClientId),
       eqs(affinityGroup)
     )(
       any[RequestHeader],

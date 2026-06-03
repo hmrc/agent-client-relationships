@@ -101,6 +101,12 @@ with TestData {
             case id => EnrolmentKey(service.enrolmentKey, id)
           }
 
+        val suppliedClientId: TaxIdentifier =
+          taxIdentifier match {
+            case _: MtdItId => nino
+            case _ => taxIdentifier
+          }
+
         val expiryDate = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime.plusSeconds(60).toLocalDate
 
         abstract class StubsForThisScenario(isAgent: Boolean = true) {
@@ -198,6 +204,7 @@ with TestData {
                 DeleteRecord(
                   arn = arn.value,
                   enrolmentKey = enrolmentKey,
+                  suppliedClientId = Some(suppliedClientId.value),
                   dateTime = LocalDateTime.now.minusMinutes(1),
                   syncToETMPStatus = Some(SyncStatus.Success),
                   syncToESStatus = Some(SyncStatus.Failed)
@@ -229,6 +236,7 @@ with TestData {
                 DeleteRecord(
                   arn = arn.value,
                   enrolmentKey = enrolmentKey,
+                  suppliedClientId = Some(suppliedClientId.value),
                   dateTime = LocalDateTime.now.minusMinutes(1),
                   syncToETMPStatus = Some(SyncStatus.Failed)
                 )
@@ -249,6 +257,7 @@ with TestData {
                 DeleteRecord(
                   arn = arn.value,
                   enrolmentKey = enrolmentKey,
+                  suppliedClientId = Some(suppliedClientId.value),
                   dateTime = LocalDateTime.now.minusMinutes(1)
                 )
               )
@@ -355,6 +364,7 @@ with TestData {
           DeleteRecord(
             arn = arn.value,
             enrolmentKey = EnrolmentKey(service.enrolmentKey, nino),
+            suppliedClientId = Some(nino.value),
             dateTime = LocalDateTime.now.minusMinutes(1),
             syncToETMPStatus = Some(SyncStatus.Success),
             syncToESStatus = Some(SyncStatus.Failed)

@@ -39,6 +39,7 @@ import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 import uk.gov.hmrc.auth.core.AffinityGroup
 import uk.gov.hmrc.auth.core.retrieve.Credentials
+import uk.gov.hmrc.domain.TaxIdentifier
 
 import java.time.Instant
 import java.time.LocalDate
@@ -163,6 +164,7 @@ with MockAuditService {
         verify(mockDeleteRelationshipsService, times(0)).deleteRelationship(
           any[Arn],
           any[EnrolmentKey],
+          any[TaxIdentifier],
           any[Option[AffinityGroup]]
         )(
           any[RequestHeader],
@@ -190,6 +192,7 @@ with MockAuditService {
         mockDeleteRelationship(
           testArn,
           itsaSuppEnrolment,
+          testNino,
           currentUser.affinityGroup
         )()
         mockDeauthAcceptedInvitations(
@@ -223,6 +226,7 @@ with MockAuditService {
         verify(mockDeleteRelationshipsService, times(1)).deleteRelationship(
           any[Arn],
           any[EnrolmentKey],
+          any[TaxIdentifier],
           any[Option[AffinityGroup]]
         )(
           any[RequestHeader],
@@ -268,6 +272,7 @@ with MockAuditService {
         verify(mockDeleteRelationshipsService, times(0)).deleteRelationship(
           any[Arn],
           any[EnrolmentKey],
+          any[TaxIdentifier],
           any[Option[AffinityGroup]]
         )(
           any[RequestHeader],

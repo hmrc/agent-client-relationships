@@ -23,8 +23,6 @@ import play.api.libs.json.__
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.ClientIdentifier.ClientId
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.InvitationId
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDIT
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDITSUPP
 import uk.gov.hmrc.crypto.Decrypter
 import uk.gov.hmrc.crypto.Encrypter
 import uk.gov.hmrc.crypto.json.JsonEncryption.stringEncrypterDecrypter
@@ -53,9 +51,7 @@ case class Invitation(
   created: Instant,
   lastUpdated: Instant
 ) {
-  def isAltItsa: Boolean =
-    (Seq(HMRCMTDIT, HMRCMTDITSUPP).contains(this.service) && this.clientId == this.suppliedClientId) ||
-      this.status == PartialAuth
+  def isAltItsa: Boolean = this.status == PartialAuth
 }
 
 object Invitation {

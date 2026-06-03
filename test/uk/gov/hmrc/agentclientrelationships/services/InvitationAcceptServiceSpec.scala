@@ -258,7 +258,7 @@ with MockAuditService {
                 any[String],
                 any[Instant]
               )
-              verify(mockEmailService, times(1)).sendAcceptedEmail(any[Invitation])(any[RequestHeader])
+              verify(mockEmailService, times(1)).sendAcceptedEmail(any[Invitation], any[Boolean])(any[RequestHeader])
             }
           }
         }
@@ -299,7 +299,7 @@ with MockAuditService {
                 any[String],
                 any[Instant]
               )
-              verify(mockEmailService, times(1)).sendAcceptedEmail(any[Invitation])(any[RequestHeader])
+              verify(mockEmailService, times(1)).sendAcceptedEmail(any[Invitation], any[Boolean])(any[RequestHeader])
             }
           }
         }
@@ -350,7 +350,7 @@ with MockAuditService {
                     any[String],
                     any[Instant]
                   )
-                  verify(mockEmailService, times(1)).sendAcceptedEmail(any[Invitation])(any[RequestHeader])
+                  verify(mockEmailService, times(1)).sendAcceptedEmail(any[Invitation], any[Boolean])(any[RequestHeader])
                 }
               }
             }
@@ -380,7 +380,7 @@ with MockAuditService {
 
                 // Verifying non blocking side effects actually happen
                 verifySideEffectsOccur { _ =>
-                  verify(mockEmailService, times(1)).sendAcceptedEmail(any[Invitation])(any[RequestHeader])
+                  verify(mockEmailService, times(1)).sendAcceptedEmail(any[Invitation], any[Boolean])(any[RequestHeader])
                 }
               }
             }
@@ -422,7 +422,7 @@ with MockAuditService {
                 )(
                   Future.successful(true)
                 )
-                mockSendAcceptedEmail(altItsaInvitation)()
+                mockSendAcceptedEmail(altItsaInvitation, isAltItsa = true)()
 
                 await(TestService.acceptInvitation(altItsaInvitation, altItsaEnrolment)) shouldBe
                   altItsaInvitation.copy(status = PartialAuth)
@@ -437,7 +437,7 @@ with MockAuditService {
                     any[String],
                     any[Instant]
                   )
-                  verify(mockEmailService, times(1)).sendAcceptedEmail(any[Invitation])(any[RequestHeader])
+                  verify(mockEmailService, times(1)).sendAcceptedEmail(any[Invitation], any[Boolean])(any[RequestHeader])
                 }
               }
             }
@@ -471,7 +471,7 @@ with MockAuditService {
 
                 // Verifying non blocking side effects actually happen
                 verifySideEffectsOccur { _ =>
-                  verify(mockEmailService, times(1)).sendAcceptedEmail(any[Invitation])(any[RequestHeader])
+                  verify(mockEmailService, times(1)).sendAcceptedEmail(any[Invitation], any[Boolean])(any[RequestHeader])
                 }
               }
             }
