@@ -30,6 +30,7 @@ import uk.gov.hmrc.agentclientrelationships.model.identifiers.ClientIdType
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.ClientIdentifier
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.NoPendingInvitation
+import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.Invitation
 import uk.gov.hmrc.agentclientrelationships.model.PartialAuth
 import uk.gov.hmrc.agentclientrelationships.model.Pending
@@ -50,6 +51,7 @@ class InvitationAcceptController @Inject() (
   validationService: ValidationService,
   friendlyNameService: FriendlyNameService,
   auditService: AuditService,
+  clientDetailsService: ClientDetailsService,
   val authConnector: AuthConnector,
   val appConfig: AppConfig,
   cc: ControllerComponents
@@ -68,33 +70,37 @@ with RequestAwareLogging {
       .findInvitation(invitationId)
       .flatMap {
         case Some(invitation) =>
-          implicit val auditData: AuditData = prepareAuditData(invitation)
 
           for {
             enrolment <- validationService.validateForEnrolmentKey(
               invitation.service,
-              invitation.clientId,
-              Some(ClientIdType.forId(invitation.clientIdType).enrolmentId)
+              invitation.suppliedClientId,
+              Some(ClientIdType.forId(invitation.suppliedClientIdType).enrolmentId)
             )
+            (suppliedClientId, optClientId) <- clientDetailsService.expandClientId(enrolment.serviceType, enrolment.oneTaxIdentifier())
+            enrolmentKeyForAuth = optClientId.fold(enrolment)(_ => EnrolmentKey(enrolment.serviceType, suppliedClientId))
+            refinedEnrolmentKey = optClientId.fold(enrolment)(clientId => EnrolmentKey(enrolment.serviceType, clientId))
             result <-
               authorisedUser(
                 None,
-                ClientIdentifier(invitation.suppliedClientId, invitation.suppliedClientIdType).underlying,
+                enrolmentKeyForAuth.oneTaxIdentifier(),
                 strideRoles
               ) { implicit currentUser =>
-                invitation.status match {
+                implicit val auditData: AuditData = prepareAuditData(invitation, refinedEnrolmentKey)
 
+                invitation.status match {
                   case model.Accepted | PartialAuth => Future.successful(NoContent)
                   case Pending =>
                     authorisationAcceptService
-                      .acceptInvitation(invitation, enrolment)
+                      .acceptInvitation(invitation, refinedEnrolmentKey)
                       .map { _ =>
                         auditService.sendRespondToInvitationAuditEvent(
                           invitation,
                           accepted = true,
-                          isStride = currentUser.isStride
+                          isStride = currentUser.isStride,
+                          enrolmentKey = Some(refinedEnrolmentKey)
                         )
-                        friendlyNameService.updateFriendlyName(invitation, enrolment)
+                        friendlyNameService.updateFriendlyName(invitation, refinedEnrolmentKey)
                         NoContent
                       }
                       .recoverWith {
@@ -113,12 +119,15 @@ with RequestAwareLogging {
       }
   }
 
-  private def prepareAuditData(invitation: Invitation): AuditData = {
+  private def prepareAuditData(
+    invitation: Invitation,
+    enrolmentKey: EnrolmentKey
+  ): AuditData = {
     val auditData: AuditData = new AuditData()
     auditData.set(arnKey, invitation.arn)
     auditData.set(serviceKey, invitation.service)
-    auditData.set(clientIdKey, invitation.clientId)
-    auditData.set(clientIdTypeKey, invitation.clientIdType)
+    auditData.set(clientIdKey, enrolmentKey.oneTaxIdentifier().value)
+    auditData.set(clientIdTypeKey, ClientIdentifier(enrolmentKey.oneTaxIdentifier()).typeId)
     auditData.set(invitationIdKey, invitation.invitationId)
     auditData.set(enrolmentDelegatedKey, false)
     auditData.set(etmpRelationshipCreatedKey, false)

@@ -65,18 +65,26 @@ extends RequestAwareLogging {
   def sendExpiredEmail(invitation: Invitation)(implicit request: RequestHeader): Future[Boolean] = emailConnector
     .sendEmail(emailInformation("client_expired_authorisation_request", invitation))
 
-  def sendAcceptedEmail(invitation: Invitation)(implicit request: RequestHeader): Future[Boolean] = emailConnector
-    .sendEmail(emailInformation("client_accepted_authorisation_request", invitation))
+  def sendAcceptedEmail(
+    invitation: Invitation,
+    isAltItsa: Boolean
+  )(implicit request: RequestHeader): Future[Boolean] = emailConnector
+    .sendEmail(emailInformation(
+      "client_accepted_authorisation_request",
+      invitation,
+      isAltItsa
+    ))
 
   def sendRejectedEmail(invitation: Invitation)(implicit request: RequestHeader): Future[Boolean] = emailConnector
     .sendEmail(emailInformation("client_rejected_authorisation_request", invitation))
 
   private def emailInformation(
     templateId: String,
-    invitation: Invitation
+    invitation: Invitation,
+    isAltItsa: Boolean = false
   ) = {
     val altItsaParam =
-      if (invitation.isAltItsa)
+      if (isAltItsa)
         Map("additionalInfo" -> s"You must now sign ${invitation.clientName} up to Making Tax Digital for Income Tax.")
       else
         Map()

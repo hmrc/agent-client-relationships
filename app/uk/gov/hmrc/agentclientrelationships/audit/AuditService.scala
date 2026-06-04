@@ -25,6 +25,7 @@ import uk.gov.hmrc.agentclientrelationships.auth.CurrentUser
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.Invitation
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.ClientIdentifier
 import uk.gov.hmrc.agentclientrelationships.util.RequestSupport
 import uk.gov.hmrc.auth.core.AffinityGroup
 import uk.gov.hmrc.domain.TaxIdentifier
@@ -150,25 +151,25 @@ extends RequestAwareLogging {
     Seq(
       arnKey -> invitation.arn,
       serviceKey -> invitation.service,
-      clientIdKey -> invitation.clientId,
-      clientIdTypeKey -> invitation.clientIdType,
-      invitationIdKey -> invitation.invitationId,
-      suppliedClientIdKey -> invitation.suppliedClientId
+      suppliedClientIdKey -> invitation.suppliedClientId,
+      suppliedClientIdTypeKey -> invitation.suppliedClientIdType,
+      invitationIdKey -> invitation.invitationId
     )
   )
 
   def sendRespondToInvitationAuditEvent(
     invitation: Invitation,
     accepted: Boolean,
-    isStride: Boolean
+    isStride: Boolean,
+    enrolmentKey: Option[EnrolmentKey]
   )(implicit request: RequestHeader): Future[Unit] = auditEvent(
     AgentClientRelationshipEvent.RespondToInvitation,
     "respond-to-invitation",
     Seq(
       arnKey -> invitation.arn,
       serviceKey -> invitation.service,
-      clientIdKey -> invitation.clientId,
-      clientIdTypeKey -> invitation.clientIdType,
+      clientIdKey -> enrolmentKey.map(_.oneTaxIdentifier().value).getOrElse(""),
+      clientIdTypeKey -> enrolmentKey.map(key => ClientIdentifier(key.oneTaxIdentifier()).typeId).getOrElse(""),
       invitationIdKey -> invitation.invitationId,
       suppliedClientIdKey -> invitation.suppliedClientId,
       responseKey ->
@@ -377,6 +378,7 @@ object AuditKeys {
   val clientIdKey: String = "clientId"
   val suppliedClientIdKey: String = "suppliedClientId"
   val clientIdTypeKey: String = "clientIdType"
+  val suppliedClientIdTypeKey: String = "suppliedClientIdType"
   val cesaRelationshipKey: String = "cesaRelationship"
   val etmpRelationshipCreatedKey: String = "etmpRelationshipCreated"
   val etmpRelationshipRemovedKey: String = "etmpRelationshipRemoved"

@@ -65,8 +65,8 @@ extends RequestAwareLogging {
     auditData: AuditData
   ): Future[Invitation] = {
     val timestamp = Instant.now
-    val isAltItsa = invitation.isAltItsa
     val isItsa = Seq(HMRCMTDIT, HMRCMTDITSUPP).contains(invitation.service)
+    val isAltItsa = isItsa && enrolment.oneTaxIdentifier().isInstanceOf[NinoWithoutSuffix]
     val nextStatus =
       if (isAltItsa)
         PartialAuth
@@ -83,7 +83,7 @@ extends RequestAwareLogging {
               if (isAltItsa)
                 None
               else
-                Some(invitation.clientId),
+                Some(enrolment.oneTaxIdentifier().value),
             nino = invitation.suppliedClientId,
             timestamp = timestamp
           )
@@ -118,7 +118,7 @@ extends RequestAwareLogging {
           Future.unit
       )
       // Accept confirmation email (non blocking)
-      _ <- Future.successful(emailService.sendAcceptedEmail(invitation))
+      _ <- Future.successful(emailService.sendAcceptedEmail(invitation, isAltItsa))
     } yield updated
   }
 

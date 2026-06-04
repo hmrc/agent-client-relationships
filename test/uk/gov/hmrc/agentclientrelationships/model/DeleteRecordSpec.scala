@@ -38,6 +38,42 @@ with Inside {
       val deleteRecord = DeleteRecord(
         "TARN0000001",
         EnrolmentKey(s"${Service.Vat.id}~VRN~101747696"),
+        Some("101747696"),
+        Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime,
+        Some(SyncStatus.Failed),
+        Some(SyncStatus.Failed),
+        headerCarrier = Some(
+          HeaderCarrier(
+            authorization = Some(Authorization("foo1")),
+            sessionId = Some(SessionId("foo2")),
+            gaToken = Some("foo4")
+          )
+        )
+      )
+
+      val json = Json.toJson(deleteRecord)
+
+      val result = json.as[DeleteRecord]
+
+      result.enrolmentKey shouldBe deleteRecord.enrolmentKey
+      result.syncToESStatus shouldBe deleteRecord.syncToESStatus
+      result.syncToETMPStatus shouldBe deleteRecord.syncToETMPStatus
+      result.syncToETMPStatus shouldBe deleteRecord.syncToETMPStatus
+      result.lastRecoveryAttempt shouldBe deleteRecord.lastRecoveryAttempt
+      result.numberOfAttempts shouldBe deleteRecord.numberOfAttempts
+
+      inside(result.headerCarrier) { case Some(hc: HeaderCarrier) =>
+        hc.authorization.map(_.value) shouldBe Some("foo1")
+        hc.sessionId.map(_.value) shouldBe Some("foo2")
+        hc.gaToken.get shouldBe "foo4"
+      }
+    }
+
+    "serialize and deserialize old entry from and to json" in {
+      val deleteRecord = DeleteRecord(
+        "TARN0000001",
+        EnrolmentKey(s"${Service.Vat.id}~VRN~101747696"),
+        None,
         Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime,
         Some(SyncStatus.Failed),
         Some(SyncStatus.Failed),

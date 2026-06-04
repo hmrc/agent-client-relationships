@@ -234,6 +234,7 @@ with IntegrationPatience {
               arn.value,
               enrolmentKey,
               _,
+              _,
               `etmpStatus`,
               `esStatus`,
               _,

@@ -23,6 +23,8 @@ import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.CapitalGains
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Cbc
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.CbcNonUk
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDIT
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDITSUPP
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdIt
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdItSupp
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.PersonalIncomeRecord
@@ -33,6 +35,7 @@ import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.TrustNT
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Vat
 import uk.gov.hmrc.agentclientrelationships.model.identifiers._
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
+import uk.gov.hmrc.agentclientrelationships.stubs.HipStub
 import uk.gov.hmrc.agentclientrelationships.support.TestData
 import uk.gov.hmrc.domain.TaxIdentifier
 
@@ -41,6 +44,7 @@ import scala.concurrent.ExecutionContext
 
 class CleanUpInvitationStatusControllerISpec
 extends BaseControllerISpec
+with HipStub
 with TestData {
 
   implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
@@ -102,6 +106,10 @@ with TestData {
 
       s"when no invitation record for ${service.id}" should {
         s"return 404 NOT_FOUND" in {
+          // If ITSA then convert nino to mtdid
+          if (Seq(MtdIt, MtdItSupp).contains(service))
+            givenNinoIsKnownFor(mtdItId, nino)
+
           if (service == Cbc)
             givenKnownFactsQuery(
               Service.Cbc,
@@ -124,6 +132,10 @@ with TestData {
 
       s"when invitation exists with the status Accepted in invitationStore for ${service.id}" should {
         s"update status to DeAuthorised" in {
+          // If ITSA then convert nino to mtdid
+          if (Seq(MtdIt, MtdItSupp).contains(service))
+            givenNinoIsKnownFor(mtdItId, nino)
+
           if (service == Cbc)
             givenKnownFactsQuery(
               Service.Cbc,
@@ -135,7 +147,11 @@ with TestData {
             .copy(
               service = serviceId,
               clientId = clientId.value,
-              suppliedClientId = clientId.value,
+              suppliedClientId =
+                if (Seq(MtdIt, MtdItSupp).contains(service))
+                  nino.value
+                else
+                  clientId.value,
               status = Accepted
             )
 

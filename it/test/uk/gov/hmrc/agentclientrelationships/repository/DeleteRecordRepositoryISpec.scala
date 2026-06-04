@@ -62,13 +62,15 @@ with IntegrationPatience {
     ()
   }
 
-  private val vatEnrolmentKey = EnrolmentKey(Service.Vat, Vrn("101747696"))
+  private val vrn = Vrn("101747696")
+  private val vatEnrolmentKey = EnrolmentKey(Service.Vat, vrn)
 
   "DeleteRecordRepository" should {
     "create, find and update and remove a record" in {
       val deleteRecord = DeleteRecord(
         "TARN0000001",
         vatEnrolmentKey,
+        Some(vrn.value),
         syncToETMPStatus = Some(SyncStatus.Failed),
         syncToESStatus = Some(SyncStatus.Failed),
         numberOfAttempts = 3,
@@ -111,6 +113,7 @@ with IntegrationPatience {
       val deleteRecordOld = DeleteRecord(
         "TARN0000001",
         vatEnrolmentKey,
+        Some(vrn.value),
         syncToETMPStatus = Some(SyncStatus.Failed),
         syncToESStatus = Some(SyncStatus.Failed),
         numberOfAttempts = 3,
@@ -120,6 +123,7 @@ with IntegrationPatience {
       val deleteRecordNew = DeleteRecord(
         "TARN0000001",
         EnrolmentKey(Service.Vat, Vrn("101747697")), // a different VRN
+        Some("101747697"),
         syncToETMPStatus = Some(SyncStatus.Failed),
         syncToESStatus = Some(SyncStatus.Failed),
         numberOfAttempts = 3,
@@ -134,6 +138,7 @@ with IntegrationPatience {
       val deleteRecordOld = DeleteRecord(
         "TARN0000001",
         vatEnrolmentKey,
+        Some(vrn.value),
         syncToETMPStatus = Some(SyncStatus.Failed),
         syncToESStatus = Some(SyncStatus.Failed),
         numberOfAttempts = 3,
@@ -143,6 +148,7 @@ with IntegrationPatience {
       val deleteRecordNew = DeleteRecord(
         "TARN0000001",
         vatEnrolmentKey,
+        Some(vrn.value),
         syncToETMPStatus = Some(SyncStatus.Success),
         syncToESStatus = Some(SyncStatus.Success),
         numberOfAttempts = 5,
@@ -159,6 +165,7 @@ with IntegrationPatience {
       val deleteRecord1 = DeleteRecord(
         "TARN0000001",
         EnrolmentKey(Service.MtdIt, MtdItId("ABCDEF0000000001")),
+        Some("AB123456"),
         syncToETMPStatus = Some(Success),
         syncToESStatus = Some(Failed),
         lastRecoveryAttempt = Some(now.minusMinutes(1)),
@@ -167,6 +174,7 @@ with IntegrationPatience {
       val deleteRecord2 = DeleteRecord(
         "TARN0000002",
         EnrolmentKey(Service.MtdIt, MtdItId("ABCDEF0000000002")),
+        Some("AB123457"),
         syncToETMPStatus = Some(Success),
         syncToESStatus = Some(Failed),
         lastRecoveryAttempt = None,
@@ -175,6 +183,7 @@ with IntegrationPatience {
       val deleteRecord3 = DeleteRecord(
         "TARN0000003",
         EnrolmentKey(Service.MtdIt, MtdItId("ABCDEF0000000001")),
+        Some("AB123456"),
         syncToETMPStatus = Some(Success),
         syncToESStatus = Some(Failed),
         lastRecoveryAttempt = Some(now.minusMinutes(5)),
@@ -193,6 +202,7 @@ with IntegrationPatience {
       val deleteRecord1 = DeleteRecord(
         "TARN0000001",
         EnrolmentKey(Service.MtdIt, MtdItId("ABCDEF0000000001")),
+        Some("AB123456"),
         syncToETMPStatus = Some(Success),
         syncToESStatus = Some(Failed),
         lastRecoveryAttempt = Some(now.minusMinutes(1)),
@@ -201,6 +211,7 @@ with IntegrationPatience {
       val deleteRecord2 = DeleteRecord(
         "TARN0000002",
         EnrolmentKey(Service.MtdIt, MtdItId("ABCDEF0000000002")),
+        Some("AB123457"),
         syncToETMPStatus = Some(Success),
         syncToESStatus = Some(Failed),
         lastRecoveryAttempt = Some(now.minusMinutes(13)),
@@ -209,6 +220,7 @@ with IntegrationPatience {
       val deleteRecord3 = DeleteRecord(
         "TARN0000003",
         EnrolmentKey(Service.MtdIt, MtdItId("ABCDEF0000000001")),
+        Some("AB123456"),
         syncToETMPStatus = Some(Success),
         syncToESStatus = Some(Failed),
         lastRecoveryAttempt = Some(now.minusMinutes(5)),
@@ -227,6 +239,7 @@ with IntegrationPatience {
       val deleteRecord1 = DeleteRecord(
         "TARN0000001",
         EnrolmentKey(Service.MtdIt, MtdItId("ABCDEF0000000001")),
+        Some("AB123456"),
         syncToETMPStatus = Some(Success),
         syncToESStatus = Some(Failed),
         lastRecoveryAttempt = None

@@ -97,9 +97,10 @@ class ItsaDeauthAndCleanupService @Inject() (
                     auditData.set(howRelationshipTerminatedKey, agentRoleChange)
                     deleteRelationshipsService
                       .deleteRelationship(
-                        Arn(arn),
-                        EnrolmentKey(serviceToCheck, MtdItId(mtdItId)),
-                        currentUser.affinityGroup
+                        arn = Arn(arn),
+                        enrolmentKey = EnrolmentKey(serviceToCheck, MtdItId(mtdItId)),
+                        suppliedClientId = NinoWithoutSuffix(nino),
+                        affinityGroup = currentUser.affinityGroup
                       )
                       .map(_ => true)
                   case _ => Future.successful(false)

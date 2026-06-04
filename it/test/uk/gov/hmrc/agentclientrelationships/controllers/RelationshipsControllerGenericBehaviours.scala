@@ -19,6 +19,7 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.CbcId
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 import uk.gov.hmrc.agentclientrelationships.repository.DeleteRecord
@@ -75,6 +76,12 @@ trait RelationshipsControllerGenericBehaviours {
       }
       else {
         EnrolmentKey(Service.forId(serviceId), clientId)
+      }
+
+    val suppliedClientId: TaxIdentifier =
+      clientId match {
+        case _: MtdItId => nino
+        case _ => clientId
       }
     def extraSetup(
       serviceId: String,
@@ -140,6 +147,7 @@ trait RelationshipsControllerGenericBehaviours {
             DeleteRecord(
               arn.value,
               enrolmentKey,
+              Some(suppliedClientId.value),
               syncToETMPStatus = Some(SyncStatus.Success),
               syncToESStatus = Some(SyncStatus.Failed)
             )

@@ -41,6 +41,7 @@ import uk.gov.hmrc.agentclientrelationships.services.DeleteRelationshipsService
 import uk.gov.hmrc.agentclientrelationships.services.InvitationService
 import uk.gov.hmrc.agentclientrelationships.services.ValidationService
 import uk.gov.hmrc.auth.core.AuthConnector
+import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import java.time.Instant
@@ -90,7 +91,8 @@ with AuthActions {
           ) { implicit currentUser =>
             removeAuthorisationForValidRequest(
               arn,
-              refinedEnrolmentKey
+              refinedEnrolmentKey,
+              suppliedClientId
             ).map {
               case Some(true) => NoContent
               case Some(false) => RelationshipNotFound.getResult()
@@ -103,7 +105,8 @@ with AuthActions {
   // scalastyle:off method.length
   private def removeAuthorisationForValidRequest(
     arn: Arn,
-    enrolmentKey: EnrolmentKey
+    enrolmentKey: EnrolmentKey,
+    suppliedClientId: TaxIdentifier
   )(implicit
     request: RequestHeader,
     currentUser: CurrentUser
@@ -121,7 +124,8 @@ with AuthActions {
               val userType = deleteService.determineUserTypeFromAG(currentUser.affinityGroup).getOrElse(endedByHMRC)
               invitationService.deauthoriseInvitation(
                 arn,
-                enrolmentKey,
+                service.id,
+                clientId.value,
                 userType
               )
               auditService.auditForPirTermination(arn, enrolmentKey)
@@ -139,7 +143,8 @@ with AuthActions {
             val userType = deleteService.determineUserTypeFromAG(currentUser.affinityGroup).getOrElse(endedByHMRC)
             invitationService.deauthoriseInvitation(
               arn,
-              enrolmentKey,
+              service.id,
+              clientId.value,
               userType
             )
             auditService.sendTerminatePartialAuthAuditEvent(
@@ -153,9 +158,10 @@ with AuthActions {
       case _ => // Handles invitation deauth and auditing on its own
         deleteService
           .deleteRelationship(
-            arn,
-            enrolmentKey,
-            currentUser.affinityGroup
+            arn = arn,
+            enrolmentKey = enrolmentKey,
+            suppliedClientId = suppliedClientId,
+            affinityGroup = currentUser.affinityGroup
           )
     }
   // scalastyle:on method.length

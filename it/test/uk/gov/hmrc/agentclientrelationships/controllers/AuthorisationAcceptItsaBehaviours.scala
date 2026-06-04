@@ -51,7 +51,7 @@ trait AuthorisationAcceptItsaBehaviours {
     serviceIdCheck: String
   ): Unit = {
 
-    val suppliedClientId: TaxIdentifier = nino
+    val suppliedClientId = nino
     val clientId = mtdItId
     val emailInfo = EmailInformation(
       to = Seq("agent@email.com"),
@@ -72,6 +72,8 @@ trait AuthorisationAcceptItsaBehaviours {
 
         // OAuth
         givenUserIsSubscribedClient(suppliedClientId)
+
+        givenMtdItIdIsKnownFor(suppliedClientId, clientId)
 
         val enrolmentKeyAccept = EnrolmentKey(Service.forId(serviceIdAccept), clientId)
         val enrolmentKeyToCheck = EnrolmentKey(Service.forId(serviceIdCheck), clientId)
@@ -136,7 +138,8 @@ trait AuthorisationAcceptItsaBehaviours {
           getRequestPath(pendingInvitation.invitationId),
           invitations.head,
           accepted = true,
-          isStride = false
+          isStride = false,
+          Some(enrolmentKeyAccept)
         )
       }
 
@@ -147,6 +150,8 @@ trait AuthorisationAcceptItsaBehaviours {
 
         val enrolmentKeyAccept = EnrolmentKey(Service.forId(serviceIdAccept), clientId)
         val enrolmentKeyToCheck = EnrolmentKey(Service.forId(serviceIdCheck), clientId)
+
+        givenMtdItIdIsKnownFor(suppliedClientId, clientId)
 
         // checkRelationshipsService for HMRCMTDIT
         givenDelegatedGroupIdsExistFor(enrolmentKeyToCheck, Set("foo")) // exists for HMRCMTDIT in ETMP
@@ -226,7 +231,8 @@ trait AuthorisationAcceptItsaBehaviours {
           getRequestPath(pendingInvitationSupport.invitationId),
           invitations.filter(_.status == Accepted).head,
           accepted = true,
-          isStride = false
+          isStride = false,
+          Some(enrolmentKeyAccept)
         )
       }
 

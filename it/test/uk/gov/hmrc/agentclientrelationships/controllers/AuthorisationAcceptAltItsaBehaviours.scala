@@ -54,7 +54,7 @@ trait AuthorisationAcceptAltItsaBehaviours {
     serviceIdCheck: String
   ): Unit = {
 
-    val suppliedClientId: TaxIdentifier = nino
+    val suppliedClientId = nino
     val clientId = nino
     val emailInfo = EmailInformation(
       to = Seq("agent@email.com"),
@@ -75,6 +75,8 @@ trait AuthorisationAcceptAltItsaBehaviours {
 
         // OAuth
         givenUserIsSubscribedClient(suppliedClientId)
+
+        givenMtdItIdIsUnKnownFor(suppliedClientId)
 
         val enrolmentKeyAccept = EnrolmentKey(Service.forId(serviceIdAccept), clientId)
 
@@ -131,7 +133,8 @@ trait AuthorisationAcceptAltItsaBehaviours {
           getRequestPath(pendingInvitation.invitationId),
           invitations.head,
           accepted = true,
-          isStride = false
+          isStride = false,
+          Some(enrolmentKeyAccept)
         )
       }
 
@@ -139,6 +142,8 @@ trait AuthorisationAcceptAltItsaBehaviours {
 
         // OAuth
         givenUserIsSubscribedClient(suppliedClientId)
+
+        givenMtdItIdIsUnKnownFor(suppliedClientId)
 
         val enrolmentKeyAccept = EnrolmentKey(Service.forId(serviceIdAccept), clientId)
 
@@ -219,7 +224,8 @@ trait AuthorisationAcceptAltItsaBehaviours {
           getRequestPath(pendingInvitationSupport.invitationId),
           invitations.filter(_.status == PartialAuth).head,
           accepted = true,
-          isStride = false
+          isStride = false,
+          Some(enrolmentKeyAccept)
         )
       }
 

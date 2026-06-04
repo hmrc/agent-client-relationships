@@ -131,7 +131,7 @@ extends RequestAwareLogging {
   private def findMainAgentForNino(
     invitation: Invitation
   )(implicit request: RequestHeader): Future[Option[ExistingMainAgent]] = partialAuthRepository
-    .findMainAgent(invitation.clientId)
+    .findMainAgent(invitation.suppliedClientId)
     .flatMap {
       case Some(p) =>
         agentRecordService
@@ -141,7 +141,7 @@ extends RequestAwareLogging {
           )
       case None =>
         hipConnector
-          .getMtdIdFor(NinoWithoutSuffix(invitation.clientId))
+          .getMtdIdFor(NinoWithoutSuffix(invitation.suppliedClientId))
           .flatMap {
             case Some(mtdItId) =>
               getArnForDelegatedEnrolmentKey(LocalEnrolmentKey(enrolmentKey(HMRCMTDIT, mtdItId.value))).flatMap {
@@ -164,10 +164,10 @@ extends RequestAwareLogging {
     enrolment: Option[LocalEnrolmentKey]
   )(implicit request: RequestHeader): Future[Option[ExistingMainAgent]] =
     invitation.service match {
-      case HMRCMTDIT | HMRCMTDITSUPP if NinoWithoutSuffix.isValid(invitation.clientId) => findMainAgentForNino(invitation)
+      case HMRCMTDIT | HMRCMTDITSUPP => findMainAgentForNino(invitation)
       case HMRCPIR =>
         agentFiRelationshipConnector
-          .findIrvActiveRelationshipForClient(invitation.clientId)
+          .findIrvActiveRelationshipForClient(invitation.suppliedClientId)
           .flatMap {
             case Right(r :: _) => returnExistingMainAgentFromArn(r.arn.value, invitation.arn == r.arn.value)
             case _ => Future.successful(None)
@@ -185,7 +185,7 @@ extends RequestAwareLogging {
                 HMRCMTDIT
               else
                 invitation.service,
-              invitation.clientId
+              invitation.suppliedClientId
             )
           )
         ).flatMap {

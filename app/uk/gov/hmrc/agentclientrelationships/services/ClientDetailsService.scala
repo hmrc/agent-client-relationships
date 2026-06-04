@@ -48,7 +48,8 @@ class ClientDetailsService @Inject() (
 extends RequestAwareLogging {
 
   // Expands either of the ITSA clientIds to both NINO and MTDITID where possible
-  // NINO is mandatory as we treat it as a primary ITSA identifier in ASA
+  // NINO is mandatory as we treat it as a primary ITSA identifier, it is the 'suppliedClientId' as this is the only one ever manually input by users
+  // Sometimes we get MTDITID in requests (from APIs or client enrolments), requiring us to convert either of them into both
   def expandClientId(
     service: Service,
     clientId: TaxIdentifier
@@ -65,6 +66,7 @@ extends RequestAwareLogging {
           case None => throw new RuntimeException(s"NINO not found for MTDITID: ${mtdId.value}")
         }
       case _ => Future.successful((clientId, None))
+      // TODO the way this is used will fail for enrolments with multiple identifiers unless they are looked up as part of this code. Potentially merge this logic with the client id validation code?
     }
 
   def findClientDetailsByTaxIdentifier(

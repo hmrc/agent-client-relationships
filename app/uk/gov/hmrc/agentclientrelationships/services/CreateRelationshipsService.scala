@@ -207,8 +207,9 @@ extends RequestAwareLogging {
                     Future.unit
                   case Some(arnToRemove) =>
                     val deleteRecord = DeleteRecord(
-                      arnToRemove.value,
-                      enrolmentKey,
+                      arn = arnToRemove.value,
+                      enrolmentKey = enrolmentKey,
+                      suppliedClientId = None, // Not needed as invitation accept removes old invitations earlier and supplied id is only needed for that
                       syncToETMPStatus = Some(Success),
                       headerCarrier = Some(hc)
                     )

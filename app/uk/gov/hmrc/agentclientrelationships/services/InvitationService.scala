@@ -21,7 +21,6 @@ import org.mongodb.scala.MongoException
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.HipConnector
-import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.Invitation
 import uk.gov.hmrc.agentclientrelationships.model.Rejected
 import uk.gov.hmrc.agentclientrelationships.model.TrackRequestsResult
@@ -129,13 +128,14 @@ extends RequestAwareLogging {
 
   def deauthoriseInvitation(
     arn: Arn,
-    enrolmentKey: EnrolmentKey,
+    service: String,
+    clientId: String,
     endedBy: String
   ): Future[Boolean] = invitationsRepository
     .deauthAcceptedInvitations(
-      enrolmentKey.service,
+      service,
       Some(arn.value),
-      enrolmentKey.oneIdentifier().value,
+      clientId,
       None,
       endedBy
     )

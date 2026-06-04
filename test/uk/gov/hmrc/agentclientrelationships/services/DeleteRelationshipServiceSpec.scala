@@ -39,6 +39,7 @@ import uk.gov.hmrc.agentclientrelationships.model.RegistrationRelationshipRespon
 import uk.gov.hmrc.agentclientrelationships.model.UserId
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 import uk.gov.hmrc.agentclientrelationships.repository.DeleteRecord
 import uk.gov.hmrc.agentclientrelationships.repository.FakeDeleteRecordRepository
@@ -67,6 +68,7 @@ extends UnitSpec {
 
   val arn: Arn = Arn("AARN0000002")
   val mtdItId: MtdItId = MtdItId("ABCDEF123456789")
+  val testNino: NinoWithoutSuffix = NinoWithoutSuffix("AB123456")
   val mtdItEnrolmentKey: EnrolmentKey = EnrolmentKey(Service.MtdIt, mtdItId)
   val agentUserId = "testUserId"
   val agentGroupId = "testGroupId"
@@ -98,6 +100,7 @@ extends UnitSpec {
         underTest.deleteRelationship(
           arn,
           mtdItEnrolmentKey,
+          testNino,
           None
         ).futureValue shouldBe Some(true)
 
@@ -123,6 +126,7 @@ extends UnitSpec {
         underTest.deleteRelationship(
           arn,
           mtdItEnrolmentKey,
+          testNino,
           None
         ).futureValue shouldBe Some(true)
 
@@ -148,6 +152,7 @@ extends UnitSpec {
         underTest.deleteRelationship(
           arn,
           mtdItEnrolmentKey,
+          testNino,
           None
         ).futureValue shouldBe Some(false)
 
@@ -174,6 +179,7 @@ extends UnitSpec {
             underTest.deleteRelationship(
               arn,
               mtdItEnrolmentKey,
+              testNino,
               None
             )
           )
@@ -187,6 +193,7 @@ extends UnitSpec {
             case Some(
                   DeleteRecord(
                     arn.value,
+                    _,
                     _,
                     _,
                     None,
@@ -219,6 +226,7 @@ extends UnitSpec {
             underTest.deleteRelationship(
               arn,
               mtdItEnrolmentKey,
+              testNino,
               None
             )
           )
@@ -232,6 +240,7 @@ extends UnitSpec {
             case Some(
                   DeleteRecord(
                     arn.value,
+                    _,
                     _,
                     _,
                     Some(Failed),
@@ -263,6 +272,7 @@ extends UnitSpec {
         underTest.deleteRelationship(
           arn,
           mtdItEnrolmentKey,
+          testNino,
           None
         ).futureValue shouldBe Some(true)
 
@@ -287,6 +297,7 @@ extends UnitSpec {
         underTest.deleteRelationship(
           arn,
           mtdItEnrolmentKey,
+          testNino,
           None
         ).futureValue shouldBe Some(true)
 
@@ -310,6 +321,7 @@ extends UnitSpec {
         underTest.deleteRelationship(
           arn,
           mtdItEnrolmentKey,
+          testNino,
           None
         ).futureValue shouldBe Some(false)
 
@@ -322,6 +334,7 @@ extends UnitSpec {
         val deleteRecord: DeleteRecord = DeleteRecord(
           arn.value,
           mtdItEnrolmentKey,
+          Some(testNino.value),
           syncToETMPStatus = None,
           syncToESStatus = Some(Failed)
         )
@@ -342,6 +355,7 @@ extends UnitSpec {
           underTest.deleteRelationship(
             arn,
             mtdItEnrolmentKey,
+            testNino,
             None
           )
         )
@@ -370,6 +384,7 @@ extends UnitSpec {
           underTest.deleteRelationship(
             arn,
             mtdItEnrolmentKey,
+            testNino,
             None
           )
         )
@@ -390,6 +405,7 @@ extends UnitSpec {
         val deleteRecord: DeleteRecord = DeleteRecord(
           arn.value,
           mtdItEnrolmentKey,
+          Some(testNino.value),
           syncToETMPStatus = Some(Success),
           syncToESStatus = Some(Success)
         )
@@ -406,6 +422,7 @@ extends UnitSpec {
         val deleteRecord: DeleteRecord = DeleteRecord(
           arn.value,
           mtdItEnrolmentKey,
+          Some(testNino.value),
           syncToETMPStatus = Some(Failed),
           syncToESStatus = Some(Success)
         )
@@ -426,6 +443,7 @@ extends UnitSpec {
         val deleteRecord: DeleteRecord = DeleteRecord(
           arn.value,
           mtdItEnrolmentKey,
+          Some(testNino.value),
           syncToETMPStatus = Some(InProgress),
           syncToESStatus = Some(Success)
         )
@@ -445,6 +463,7 @@ extends UnitSpec {
         val deleteRecord: DeleteRecord = DeleteRecord(
           arn.value,
           mtdItEnrolmentKey,
+          Some(testNino.value),
           syncToETMPStatus = Some(Success),
           syncToESStatus = Some(Failed)
         )
@@ -468,6 +487,7 @@ extends UnitSpec {
         val deleteRecord: DeleteRecord = DeleteRecord(
           arn.value,
           mtdItEnrolmentKey,
+          Some(testNino.value),
           syncToETMPStatus = Some(Success),
           syncToESStatus = Some(InProgress)
         )
@@ -489,6 +509,7 @@ extends UnitSpec {
         val deleteRecord: DeleteRecord = DeleteRecord(
           arn.value,
           mtdItEnrolmentKey,
+          Some(testNino.value),
           syncToETMPStatus = Some(Failed),
           syncToESStatus = Some(Failed)
         )
@@ -513,6 +534,7 @@ extends UnitSpec {
         val deleteRecord: DeleteRecord = DeleteRecord(
           arn.value,
           mtdItEnrolmentKey,
+          Some(testNino.value),
           syncToETMPStatus = Some(Failed),
           syncToESStatus = Some(Failed)
         )
@@ -537,6 +559,7 @@ extends UnitSpec {
         val deleteRecord: DeleteRecord = DeleteRecord(
           arn.value,
           mtdItEnrolmentKey,
+          Some(testNino.value),
           syncToETMPStatus = Some(Failed),
           syncToESStatus = Some(Success)
         )
@@ -558,6 +581,7 @@ extends UnitSpec {
         val deleteRecord: DeleteRecord = DeleteRecord(
           arn.value,
           mtdItEnrolmentKey,
+          Some(testNino.value),
           syncToETMPStatus = Some(Success),
           syncToESStatus = Some(Failed)
         )
@@ -590,6 +614,7 @@ extends UnitSpec {
         val deleteRecord: DeleteRecord = DeleteRecord(
           arn.value,
           mtdItEnrolmentKey,
+          Some(testNino.value),
           syncToETMPStatus = Some(Success),
           syncToESStatus = Some(Failed)
         )
@@ -610,6 +635,7 @@ extends UnitSpec {
         val deleteRecord: DeleteRecord = DeleteRecord(
           arn.value,
           mtdItEnrolmentKey,
+          Some(testNino.value),
           syncToETMPStatus = Some(Success),
           syncToESStatus = Some(Failed)
         )
@@ -628,6 +654,7 @@ extends UnitSpec {
                     arn.value,
                     _,
                     _,
+                    _,
                     Some(Success),
                     Some(Failed),
                     Some(_),
@@ -643,6 +670,7 @@ extends UnitSpec {
         val deleteRecord: DeleteRecord = DeleteRecord(
           arn.value,
           mtdItEnrolmentKey,
+          Some(testNino.value),
           syncToETMPStatus = Some(Failed),
           syncToESStatus = Some(Success)
         )
@@ -665,6 +693,7 @@ extends UnitSpec {
         val deleteRecord1: DeleteRecord = DeleteRecord(
           arn.value + "1",
           EnrolmentKey(Service.MtdIt, MtdItId("ABCDEF0000000001")),
+          Some("AB123457"),
           syncToETMPStatus = None,
           syncToESStatus = Some(Failed),
           lastRecoveryAttempt = Some(now.minusMinutes(1))
@@ -672,6 +701,7 @@ extends UnitSpec {
         val deleteRecord2: DeleteRecord = DeleteRecord(
           arn.value,
           mtdItEnrolmentKey,
+          Some(testNino.value),
           syncToETMPStatus = Some(Failed),
           syncToESStatus = Some(Success),
           lastRecoveryAttempt = None,
@@ -680,6 +710,7 @@ extends UnitSpec {
         val deleteRecord3: DeleteRecord = DeleteRecord(
           arn.value + "3",
           EnrolmentKey(Service.MtdIt, MtdItId("ABCDEF0000000001")),
+          Some("AB123457"),
           syncToETMPStatus = Some(Success),
           syncToESStatus = Some(Failed),
           lastRecoveryAttempt = Some(now.minusMinutes(5))
@@ -707,6 +738,7 @@ extends UnitSpec {
         val deleteRecord1: DeleteRecord = DeleteRecord(
           arn.value + "1",
           EnrolmentKey(Service.MtdIt, MtdItId("ABCDEF0000000001")),
+          Some("AB123457"),
           syncToETMPStatus = Some(Success),
           syncToESStatus = Some(Failed),
           lastRecoveryAttempt = Some(now.minusMinutes(1))
@@ -714,6 +746,7 @@ extends UnitSpec {
         val deleteRecord2: DeleteRecord = DeleteRecord(
           arn.value,
           mtdItEnrolmentKey,
+          Some(testNino.value),
           syncToETMPStatus = Some(Success),
           syncToESStatus = Some(Failed),
           lastRecoveryAttempt = Some(now.minusMinutes(13))
@@ -721,6 +754,7 @@ extends UnitSpec {
         val deleteRecord3: DeleteRecord = DeleteRecord(
           arn.value + "3",
           EnrolmentKey(Service.MtdIt, MtdItId("ABCDEF0000000001")),
+          Some("AB123457"),
           syncToETMPStatus = Some(Success),
           syncToESStatus = Some(Failed),
           lastRecoveryAttempt = Some(now.minusMinutes(5))
@@ -837,7 +871,8 @@ extends UnitSpec {
     def givenSetRelationshipEndedSucceeds: OngoingStubbing[Future[Boolean]] = when(
       invitationService.deauthoriseInvitation(
         eqs(arn),
-        eqs(mtdItEnrolmentKey),
+        eqs(mtdItEnrolmentKey.service),
+        eqs(testNino.value),
         eqs("HMRC")
       )
     ).thenReturn(Future.successful(true))
@@ -845,7 +880,8 @@ extends UnitSpec {
     def givenSetRelationshipEndedFails: OngoingStubbing[Future[Boolean]] = when(
       invitationService.deauthoriseInvitation(
         eqs(arn),
-        eqs(mtdItEnrolmentKey),
+        eqs(mtdItEnrolmentKey.service),
+        eqs(testNino.value),
         eqs("HMRC")
       )
     ).thenReturn(Future.successful(false))

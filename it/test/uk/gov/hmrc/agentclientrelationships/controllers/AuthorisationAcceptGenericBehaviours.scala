@@ -100,6 +100,10 @@ trait AuthorisationAcceptGenericBehaviours {
         // OAuth
         givenUserIsSubscribedClient(suppliedClientId)
 
+        // If ITSA then convert nino to mtdid
+        if (Seq(HMRCMTDIT, HMRCMTDITSUPP).contains(serviceId))
+          givenMtdItIdIsKnownFor(nino, mtdItId)
+
         // Validation EnrolmentKey
         if (serviceId == HMRCCBCORG)
           givenCbcUkExistsInES(cbcId, utr.value)
@@ -171,7 +175,8 @@ trait AuthorisationAcceptGenericBehaviours {
           getRequestPath(pendingInvitation.invitationId),
           invitations.head,
           accepted = true,
-          isStride = false
+          isStride = false,
+          Some(enrolmentKey)
         )
       }
 
@@ -180,6 +185,10 @@ trait AuthorisationAcceptGenericBehaviours {
         // OAuth
         givenUserIsAuthenticatedWithStride(STRIDE_ROLE, "strideId-983283")
 
+        // If ITSA then convert nino to mtdid
+        if (Seq(HMRCMTDIT, HMRCMTDITSUPP).contains(serviceId))
+          givenMtdItIdIsKnownFor(nino, mtdItId)
+
         // Validation EnrolmentKey
         if (serviceId == HMRCCBCORG)
           givenCbcUkExistsInES(cbcId, utr.value)
@@ -251,7 +260,8 @@ trait AuthorisationAcceptGenericBehaviours {
           getRequestPath(pendingInvitation.invitationId),
           invitations.head,
           accepted = true,
-          isStride = true
+          isStride = true,
+          Some(enrolmentKey)
         )
       }
 
@@ -261,6 +271,10 @@ trait AuthorisationAcceptGenericBehaviours {
         givenUserIsSubscribedAgent(arn)
         givenAgentCanBeAllocated(clientId, arn)
         givenAgentGroupExistsFor("foo")
+
+        // If ITSA then convert nino to mtdid
+        if (Seq(HMRCMTDIT, HMRCMTDITSUPP).contains(serviceId))
+          givenMtdItIdIsKnownFor(nino, mtdItId)
 
         // Validation EnrolmentKey
         if (serviceId == HMRCCBCORG)
@@ -293,6 +307,10 @@ trait AuthorisationAcceptGenericBehaviours {
 
         // OAuth
         givenUserIsSubscribedClient(suppliedClientId)
+
+        // If ITSA then convert nino to mtdid
+        if (Seq(HMRCMTDIT, HMRCMTDITSUPP).contains(serviceId))
+          givenMtdItIdIsKnownFor(nino, mtdItId)
 
         // Validation EnrolmentKey
         if (serviceId == HMRCCBCORG)
@@ -344,6 +362,10 @@ trait AuthorisationAcceptGenericBehaviours {
 
         // OAuth
         givenUserIsSubscribedClient(suppliedClientId)
+
+        // If ITSA then convert nino to mtdid
+        if (Seq(HMRCMTDIT, HMRCMTDITSUPP).contains(serviceId))
+          givenMtdItIdIsKnownFor(nino, mtdItId)
 
         // Validation EnrolmentKey
         if (serviceId == HMRCCBCORG)
@@ -406,6 +428,10 @@ trait AuthorisationAcceptGenericBehaviours {
 
         // OAuth
         givenUserIsSubscribedClient(suppliedClientId)
+
+        // If ITSA then convert nino to mtdid
+        if (Seq(HMRCMTDIT, HMRCMTDITSUPP).contains(serviceId))
+          givenMtdItIdIsKnownFor(nino, mtdItId)
 
         // Validation EnrolmentKey
         if (serviceId == HMRCCBCORG)
@@ -486,6 +512,10 @@ trait AuthorisationAcceptGenericBehaviours {
         // OAuth
         givenUserIsSubscribedClient(suppliedClientId)
 
+        // If ITSA then convert nino to mtdid
+        if (Seq(HMRCMTDIT, HMRCMTDITSUPP).contains(serviceId))
+          givenMtdItIdIsKnownFor(nino, mtdItId)
+
         // Validation EnrolmentKey
         if (serviceId == HMRCCBCORG)
           givenCbcUkExistsInES(cbcId, utr.value)
@@ -564,6 +594,10 @@ trait AuthorisationAcceptGenericBehaviours {
         // OAuth
         givenUserIsSubscribedClient(suppliedClientId)
 
+        // If ITSA then convert nino to mtdid
+        if (Seq(HMRCMTDIT, HMRCMTDITSUPP).contains(serviceId))
+          givenMtdItIdIsKnownFor(nino, mtdItId)
+
         // Validation EnrolmentKey
         if (serviceId == HMRCCBCORG)
           givenCbcUkExistsInES(cbcId, utr.value)
@@ -638,7 +672,8 @@ trait AuthorisationAcceptGenericBehaviours {
           getRequestPath(pendingInvitation.invitationId),
           invitations.head,
           accepted = true,
-          isStride = false
+          isStride = false,
+          Some(enrolmentKey)
         )
       }
 
