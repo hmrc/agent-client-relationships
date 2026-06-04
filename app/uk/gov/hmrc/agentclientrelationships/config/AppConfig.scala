@@ -119,14 +119,8 @@ class AppConfig @Inject() (
     "inactive-relationships-client.record-start-date"
   )
   val overseasItsaEnabled: Boolean = servicesConfig.getBoolean("features.overseas-itsa-enabled")
-  val cbcEnabled: Boolean = servicesConfig.getBoolean("features.cbc-enabled")
 
-  val supportedServices: Seq[Service] =
-    if (cbcEnabled) {
-      Service.supportedServices
-    }
-    else
-      Service.supportedServices.filterNot(service => service == Service.Cbc || service == Service.CbcNonUk)
+  val supportedServices: Seq[Service] = Service.supportedServices
 
   // Note: Personal Income Record is not handled through agent-client-relationships for many of the endpoints
   val supportedServicesWithoutPir: Seq[Service] = supportedServices.filterNot(_ == Service.PersonalIncomeRecord)
