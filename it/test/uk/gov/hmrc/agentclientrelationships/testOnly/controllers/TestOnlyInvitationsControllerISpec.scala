@@ -28,7 +28,7 @@ import java.time.temporal.ChronoUnit
 import java.time.Instant
 import java.time.LocalDate
 
-class TestOnlyInvitationsISpec
+class TestOnlyInvitationsControllerISpec
 extends BaseISpec {
 
   val invitationsRepository: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
