@@ -19,11 +19,6 @@ package uk.gov.hmrc.agentclientrelationships.repository
 import com.mongodb.MongoWriteException
 import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.Indexes
-import org.scalatest.matchers.should.Matchers
-import org.scalatest.wordspec.AnyWordSpec
-import org.scalatestplus.play.guice.GuiceOneAppPerSuite
-import play.api.Application
-import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.Helpers.await
 import play.api.test.Helpers.defaultAwaitTimeout
 import uk.gov.hmrc.agentclientrelationships.model._
@@ -37,29 +32,18 @@ import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Vrn
-import uk.gov.hmrc.agentclientrelationships.support.RepositoryCleanupSupport
+import uk.gov.hmrc.agentclientrelationships.support.RepositoryISpec
 import uk.gov.hmrc.domain.TaxIdentifier
-import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 
 import java.time.temporal.ChronoUnit
 import java.time.Instant
 import java.time.LocalDate
-import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DAYS
 import scala.util.Random
 
 class InvitationsRepositoryISpec
-extends AnyWordSpec
-with Matchers
-with GuiceOneAppPerSuite
-with DefaultPlayMongoRepositorySupport[Invitation]
-with RepositoryCleanupSupport {
+extends RepositoryISpec[Invitation] {
 
-  override lazy val app: Application = new GuiceApplicationBuilder()
-    .configure("mongodb.uri" -> mongoUri, "fieldLevelEncryption.enable" -> true)
-    .build()
-
-  implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
   val repository: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
 
   def pendingInvitation(

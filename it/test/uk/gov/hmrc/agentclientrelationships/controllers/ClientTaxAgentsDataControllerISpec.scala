@@ -31,7 +31,7 @@ import java.time.Instant
 import java.time.ZoneOffset
 
 class ClientTaxAgentsDataControllerISpec
-extends BaseControllerISpec
+extends BaseISpec
 with ClientDetailsStub
 with AfiRelationshipStub
 with HipStub

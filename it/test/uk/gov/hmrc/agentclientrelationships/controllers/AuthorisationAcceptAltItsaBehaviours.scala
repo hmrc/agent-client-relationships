@@ -37,7 +37,7 @@ import java.time.format.DateTimeFormatter
 import scala.concurrent.ExecutionContext.Implicits.global
 
 trait AuthorisationAcceptAltItsaBehaviours {
-  this: BaseControllerISpec
+  this: BaseISpec
     with HipStub
     with EmailStubs =>
 

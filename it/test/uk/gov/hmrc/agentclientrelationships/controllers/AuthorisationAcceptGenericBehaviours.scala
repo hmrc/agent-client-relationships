@@ -40,7 +40,7 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 trait AuthorisationAcceptGenericBehaviours {
-  this: BaseControllerISpec
+  this: BaseISpec
     with HipStub
     with EmailStubs =>
 

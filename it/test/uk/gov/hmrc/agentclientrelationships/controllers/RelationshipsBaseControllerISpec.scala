@@ -17,4 +17,4 @@
 package uk.gov.hmrc.agentclientrelationships.controllers
 
 trait RelationshipsBaseControllerISpec
-extends BaseControllerISpec
+extends BaseISpec

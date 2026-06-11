@@ -48,7 +48,7 @@ import uk.gov.hmrc.mongo.test.MongoSupport
 import scala.concurrent.Future
 
 // TODO make all inheriting specs extend only the stubs they require and remove the stubs from this base spec
-trait BaseControllerISpec
+trait BaseISpec
 extends UnitSpec
 with MongoSupport
 with GuiceOneServerPerSuite

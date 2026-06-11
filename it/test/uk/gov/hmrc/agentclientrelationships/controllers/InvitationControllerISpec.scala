@@ -49,7 +49,7 @@ import java.util.Locale
 import scala.concurrent.ExecutionContext
 
 class InvitationControllerISpec
-extends BaseControllerISpec
+extends BaseISpec
 with ClientDetailsStub
 with AfiRelationshipStub
 with AgentAssuranceStubs

@@ -41,7 +41,7 @@ import java.time.LocalDate
 import scala.concurrent.ExecutionContext
 
 class CleanUpInvitationStatusControllerISpec
-extends BaseControllerISpec
+extends BaseISpec
 with HipStub
 with TestData {
 

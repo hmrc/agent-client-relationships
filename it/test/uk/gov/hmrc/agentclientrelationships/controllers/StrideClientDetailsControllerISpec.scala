@@ -41,7 +41,7 @@ import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 
 class StrideClientDetailsControllerISpec
-extends BaseControllerISpec
+extends BaseISpec
 with ClientDetailsStub
 with HipStub
 with AfiRelationshipStub {

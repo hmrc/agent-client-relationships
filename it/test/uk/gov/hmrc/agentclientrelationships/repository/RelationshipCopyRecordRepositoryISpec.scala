@@ -18,18 +18,9 @@ package uk.gov.hmrc.agentclientrelationships.repository
 
 import org.apache.pekko.Done
 import org.mongodb.scala.model.Filters
-import org.scalatestplus.play.guice.GuiceOneServerPerSuite
-import play.api.Application
-import play.api.inject.guice.GuiceApplicationBuilder
-import play.api.mvc.AnyContentAsEmpty
-import play.api.test.FakeRequest
 import play.api.test.Helpers._
-import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
+import uk.gov.hmrc.agentclientrelationships.controllers.BaseISpec
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Vrn
-import uk.gov.hmrc.agentclientrelationships.support.MongoApp
-import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 
 import java.time.Instant
 import java.time.LocalDateTime
@@ -37,17 +28,7 @@ import java.time.ZoneOffset
 import java.time.temporal.ChronoUnit.MILLIS
 
 class RelationshipCopyRecordRepositoryISpec
-extends UnitSpec
-with MongoApp
-with GuiceOneServerPerSuite {
-
-  implicit val request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
-
-  protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder()
-    .configure("features.recovery-enable" -> false)
-    .configure(mongoConfiguration)
-
-  override implicit lazy val app: Application = appBuilder.build()
+extends BaseISpec {
 
   private lazy val repo = app.injector.instanceOf[RelationshipCopyRecordRepository]
 
@@ -58,8 +39,6 @@ with GuiceOneServerPerSuite {
   }
 
   def now: LocalDateTime = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime.truncatedTo(MILLIS)
-
-  private val vatEnrolmentKey = EnrolmentKey(Service.Vat, Vrn("101747696"))
 
   "RelationshipCopyRecordRepository" should {
     "create, find and update and remove a record" in {

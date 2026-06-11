@@ -17,30 +17,13 @@
 package uk.gov.hmrc.agentclientrelationships.repository
 
 import org.mongodb.scala.MongoWriteException
-import org.scalatest.matchers.should.Matchers
-import org.scalatest.wordspec.AnyWordSpec
-import org.scalatestplus.play.guice.GuiceOneAppPerSuite
-import play.api.Application
-import play.api.inject.guice.GuiceApplicationBuilder
-import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentReferenceRecord
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
-import uk.gov.hmrc.agentclientrelationships.support.RepositoryCleanupSupport
-import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
+import uk.gov.hmrc.agentclientrelationships.support.RepositoryISpec
 
 class AgentReferenceRepositoryISpec
-extends AnyWordSpec
-with Matchers
-with GuiceOneAppPerSuite
-with DefaultPlayMongoRepositorySupport[AgentReferenceRecord]
-with RepositoryCleanupSupport {
-
-  implicit val request = FakeRequest()
-
-  override lazy val app: Application = new GuiceApplicationBuilder()
-    .configure("mongodb.uri" -> mongoUri, "fieldLevelEncryption.enable" -> true)
-    .build()
+extends RepositoryISpec[AgentReferenceRecord] {
 
   val repository: AgentReferenceRepository = app.injector.instanceOf[AgentReferenceRepository]
 

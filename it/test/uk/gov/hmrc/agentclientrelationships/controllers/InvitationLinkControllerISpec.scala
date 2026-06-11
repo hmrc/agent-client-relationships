@@ -42,7 +42,7 @@ import java.time.LocalDate
 import scala.concurrent.ExecutionContext
 
 class InvitationLinkControllerISpec
-extends BaseControllerISpec
+extends BaseISpec
 with TestData
 with HipStub {
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 HM Revenue & Customs
+ * Copyright 2026 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,15 +14,6 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.agentclientrelationships.support
+package uk.gov.hmrc.agentclientrelationships.testsupport.testdata
 
-import org.mongodb.scala.bson.BsonDocument
-import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
-
-trait RepositoryCleanupSupport {
-  this: DefaultPlayMongoRepositorySupport[_] =>
-
-  override def prepareDatabase(): Unit = {
-    repository.collection.deleteMany(BsonDocument()).toFuture().futureValue
-  }
-}
+trait TaxRegimeData {}

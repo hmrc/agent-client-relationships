@@ -29,7 +29,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 class InvitationAcceptControllerISpec
-extends BaseControllerISpec
+extends BaseISpec
 with AuthorisationAcceptGenericBehaviours
 with AuthorisationAcceptAltItsaBehaviours
 with AuthorisationAcceptItsaBehaviours

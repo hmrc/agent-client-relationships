@@ -18,34 +18,18 @@ package uk.gov.hmrc.agentclientrelationships.repository
 
 import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.Indexes
-import org.scalatest.matchers.should.Matchers
-import org.scalatest.wordspec.AnyWordSpec
-import org.scalatestplus.play.guice.GuiceOneAppPerSuite
-import play.api.Application
-import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.Helpers.await
 import play.api.test.Helpers.defaultAwaitTimeout
 import uk.gov.hmrc.agentclientrelationships.model.PartialAuthRelationship
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
-import uk.gov.hmrc.agentclientrelationships.support.RepositoryCleanupSupport
-import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
+import uk.gov.hmrc.agentclientrelationships.support.RepositoryISpec
 
 import java.time.Instant
-import scala.concurrent.ExecutionContext
 
 class PartialAuthRepositoryISpec
-extends AnyWordSpec
-with Matchers
-with GuiceOneAppPerSuite
-with DefaultPlayMongoRepositorySupport[PartialAuthRelationship]
-with RepositoryCleanupSupport {
+extends RepositoryISpec[PartialAuthRelationship] {
 
-  override lazy val app: Application = new GuiceApplicationBuilder()
-    .configure("mongodb.uri" -> mongoUri, "fieldLevelEncryption.enable" -> true)
-    .build()
-
-  implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
   val repository: PartialAuthRepository = app.injector.instanceOf[PartialAuthRepository]
 
   val partialAuth: PartialAuthRelationship = PartialAuthRelationship(

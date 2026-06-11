@@ -46,7 +46,7 @@ import java.time.LocalDate
 import scala.concurrent.ExecutionContext
 
 class ClientDetailsControllerISpec
-extends BaseControllerISpec
+extends BaseISpec
 with CitizenDetailsStub
 with ClientDetailsStub
 with HipStub

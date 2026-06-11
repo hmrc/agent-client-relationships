@@ -17,17 +17,11 @@
 package uk.gov.hmrc.agentclientrelationships.repository
 
 import org.mongodb.scala.MongoException
-import org.scalatest.concurrent.IntegrationPatience
-import org.scalatestplus.play.guice.GuiceOneAppPerSuite
-import play.api.Application
-import play.api.inject.guice.GuiceApplicationBuilder
-import play.api.test.FakeRequest
 import play.api.test.Helpers._
+import uk.gov.hmrc.agentclientrelationships.controllers.BaseISpec
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus.Failed
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus.Success
-import uk.gov.hmrc.agentclientrelationships.support.MongoApp
-import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
@@ -39,31 +33,11 @@ import java.time.ZoneOffset
 import java.time.temporal.ChronoUnit.MILLIS
 
 class DeleteRecordRepositoryISpec
-extends UnitSpec
-with MongoApp
-with GuiceOneAppPerSuite
-with IntegrationPatience {
-
-  implicit val request = FakeRequest()
-
-  protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder()
-    .configure("features.recovery-enable" -> false)
-    .configure(mongoConfiguration)
-
-  override implicit lazy val app: Application = appBuilder.build()
+extends BaseISpec {
 
   private lazy val repo = app.injector.instanceOf[DeleteRecordRepository]
 
   def now: LocalDateTime = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime.truncatedTo(MILLIS)
-
-  override def beforeEach(): Unit = {
-    super.beforeEach()
-    await(repo.ensureIndexes())
-    ()
-  }
-
-  private val vrn = Vrn("101747696")
-  private val vatEnrolmentKey = EnrolmentKey(Service.Vat, vrn)
 
   "DeleteRecordRepository" should {
     "create, find and update and remove a record" in {

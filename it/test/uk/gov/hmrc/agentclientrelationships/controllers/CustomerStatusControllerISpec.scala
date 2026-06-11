@@ -41,7 +41,7 @@ import java.time.Instant
 import java.time.LocalDate
 
 class CustomerStatusControllerISpec
-extends BaseControllerISpec
+extends BaseISpec
 with AfiRelationshipStub
 with AgentAssuranceStubs
 with HipStub {

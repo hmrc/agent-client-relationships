@@ -17,7 +17,7 @@
 package uk.gov.hmrc.agentclientrelationships.connectors
 
 import play.api.test.Helpers._
-import uk.gov.hmrc.agentclientrelationships.controllers.BaseControllerISpec
+import uk.gov.hmrc.agentclientrelationships.controllers.BaseISpec
 import uk.gov.hmrc.agentclientrelationships.model.identifiers._
 import uk.gov.hmrc.domain.SaAgentReference
 import uk.gov.hmrc.http.UpstreamErrorResponse
@@ -25,7 +25,7 @@ import uk.gov.hmrc.http.UpstreamErrorResponse
 import scala.concurrent.ExecutionContext
 
 class DesConnectorISpec
-extends BaseControllerISpec {
+extends BaseISpec {
 
   implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
 
