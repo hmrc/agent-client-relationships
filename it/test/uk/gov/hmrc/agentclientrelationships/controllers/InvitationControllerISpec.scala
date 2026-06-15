@@ -28,14 +28,7 @@ import uk.gov.hmrc.agentclientrelationships.audit.AuditService
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.AgentFiRelationshipConnector
 import uk.gov.hmrc.agentclientrelationships.connectors.EnrolmentStoreProxyConnector
-import uk.gov.hmrc.agentclientrelationships.model.Cancelled
-import uk.gov.hmrc.agentclientrelationships.model.EmailInformation
-import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
-import uk.gov.hmrc.agentclientrelationships.model.Expired
-import uk.gov.hmrc.agentclientrelationships.model.Invitation
-import uk.gov.hmrc.agentclientrelationships.model.Pending
-import uk.gov.hmrc.agentclientrelationships.model.Rejected
-import uk.gov.hmrc.agentclientrelationships.model.Accepted
+import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service._
 import uk.gov.hmrc.agentclientrelationships.model.identifiers._
 import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiFailureResponse.{ErrorBody => AFRErrorBody}
@@ -209,8 +202,6 @@ with TestData {
           invitation.status shouldBe Pending
           invitation.suppliedClientId shouldBe inputData.clientId
           invitation.suppliedClientIdType shouldBe inputData.suppliedClientIdType
-          invitation.clientId shouldBe clientId
-          invitation.clientIdType shouldBe clientIdType
           invitation.service shouldBe inputData.service
           invitation.clientName shouldBe clientName
 
@@ -258,8 +249,6 @@ with TestData {
       invitation.status shouldBe Pending
       invitation.suppliedClientId shouldBe inputData.clientId
       invitation.suppliedClientIdType shouldBe inputData.suppliedClientIdType
-      invitation.clientId shouldBe suppliedClientId
-      invitation.clientIdType shouldBe suppliedClientIdType
       invitation.service shouldBe inputData.service
       invitation.clientName shouldBe clientName
     }
@@ -464,7 +453,6 @@ with TestData {
               arn.value,
               Service.forId(taxService),
               clientIdentifier,
-              clientIdentifier,
               "Erling Haal",
               "testAgentName",
               "agent@email.com",
@@ -545,7 +533,6 @@ with TestData {
               arn.value,
               Service.forId(taxService),
               clientIdentifier,
-              clientIdentifier,
               "Erling Haal",
               "testAgentName",
               "agent@email.com",
@@ -597,7 +584,6 @@ with TestData {
           arn.value,
           Service.forId(HMRCTERSNTORG),
           Urn(urn),
-          Urn(urn),
           "Erling Haal",
           "testAgentName",
           "agent@email.com",
@@ -612,8 +598,6 @@ with TestData {
       val updatedInvitation = await(invitationRepo.findAllForAgent(arn.value)).head
 
       result.status shouldBe 204
-      updatedInvitation.clientId shouldBe utr
-      updatedInvitation.clientIdType shouldBe UtrType.id
       updatedInvitation.suppliedClientId shouldBe utr
       updatedInvitation.suppliedClientIdType shouldBe UtrType.id
     }
@@ -670,7 +654,6 @@ with TestData {
             arn.value,
             Service.forId(taxService),
             clientIdentifier,
-            clientIdentifier,
             "Erling Haal",
             "testAgentName",
             "agent@email.com",
@@ -712,7 +695,6 @@ with TestData {
           invitationRepo.create(
             arn.value,
             Service.forId(taxService),
-            clientIdentifier,
             clientIdentifier,
             "Erling Haal",
             "testAgentName",
@@ -759,7 +741,6 @@ with TestData {
             .create(
               arn.value,
               Service.forId(taxService),
-              clientIdentifier,
               clientIdentifier,
               "Erling Haal",
               "testAgentName",
@@ -810,7 +791,6 @@ with TestData {
             .create(
               arn.value,
               Service.forId(taxService),
-              clientIdentifier,
               clientIdentifier,
               "Erling Haal",
               "testAgentName",

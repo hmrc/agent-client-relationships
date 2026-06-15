@@ -41,8 +41,6 @@ extends BaseControllerISpec {
     "HMRC-MTD-IT",
     mtdItId.value,
     "MTDITID",
-    mtdItId.value,
-    "MTDITID",
     "Macrosoft",
     "testAgentName",
     "agent@email.com",

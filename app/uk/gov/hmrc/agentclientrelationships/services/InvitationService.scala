@@ -21,9 +21,6 @@ import org.mongodb.scala.MongoException
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.HipConnector
-import uk.gov.hmrc.agentclientrelationships.model.Invitation
-import uk.gov.hmrc.agentclientrelationships.model.Rejected
-import uk.gov.hmrc.agentclientrelationships.model.TrackRequestsResult
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.ClientIdentifier.ClientId
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdIt
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdItSupp
@@ -33,11 +30,14 @@ import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiFailureResponse.
 import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiFailureResponse.InvitationNotFound
 import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiFailureResponse.NoPermissionOnAgency
 import uk.gov.hmrc.agentclientrelationships.model.invitation.CancelInvitationResponse._
+import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.DuplicateInvitationError
 import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiFailureResponse
 import uk.gov.hmrc.agentclientrelationships.model.invitation.CreateInvitationRequest
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse
-import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.DuplicateInvitationError
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgencyDetails
+import uk.gov.hmrc.agentclientrelationships.model.Invitation
+import uk.gov.hmrc.agentclientrelationships.model.Rejected
+import uk.gov.hmrc.agentclientrelationships.model.TrackRequestsResult
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 
@@ -83,12 +83,10 @@ extends RequestAwareLogging {
         service <- EitherT.fromEither[Future](createInvitationInputData.getService)
         clientType <- EitherT.fromEither[Future](createInvitationInputData.getClientType)
         agentRecord <- EitherT.right(agentRecordService.getAgentRecordWithChecks(arn))
-        clientId <- EitherT(getClientId(suppliedClientId, service))
         invitation <- EitherT(
           create(
             arn,
             service,
-            clientId,
             suppliedClientId,
             createInvitationInputData.clientName,
             clientType,
@@ -217,7 +215,6 @@ extends RequestAwareLogging {
   private def create(
     arn: Arn,
     service: Service,
-    clientId: ClientId,
     suppliedClientId: ClientId,
     clientName: String,
     clientType: Option[String],
@@ -229,7 +226,6 @@ extends RequestAwareLogging {
         invitation <- invitationsRepository.create(
           arn.value,
           service,
-          clientId,
           suppliedClientId,
           clientName,
           agentDetails.agencyName,

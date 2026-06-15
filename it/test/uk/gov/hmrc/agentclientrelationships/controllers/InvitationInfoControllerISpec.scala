@@ -50,8 +50,6 @@ with TestData {
     "HMRC-MTD-VAT",
     vrn.value,
     "vrn",
-    vrn.value,
-    "vrn",
     "testName",
     "testAgentName",
     "agent@email.com",
@@ -66,12 +64,10 @@ with TestData {
   )
   val testInvitation2: Invitation = testInvitation.copy(
     invitationId = "testInvitationId2",
-    clientId = vrn2.value,
     suppliedClientId = vrn2.value
   )
   val testInvitation3: Invitation = testInvitation.copy(
     invitationId = "testInvitationId3",
-    clientId = vrn3.value,
     suppliedClientId = vrn3.value
   )
 
@@ -102,8 +98,6 @@ with TestData {
           "invitationId" -> "testInvitationId",
           "arn" -> "AARN0000002",
           "service" -> "HMRC-MTD-VAT",
-          "clientId" -> vrn.value,
-          "clientIdType" -> "vrn",
           "suppliedClientId" -> vrn.value,
           "suppliedClientIdType" -> "vrn",
           "clientName" -> "testName",

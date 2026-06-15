@@ -24,11 +24,9 @@ import org.scalatest.time.Span
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent.AgentClientRelationshipEvent
-import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys.clientIdKey
-import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys.clientIdTypeKey
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.ClientIdentifier
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.Invitation
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.ClientIdentifier
 
 trait DataStreamStub
 extends Eventually {

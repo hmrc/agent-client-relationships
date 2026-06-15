@@ -106,7 +106,6 @@ with CitizenDetailsStub {
     .createNew(
       arn = arn.value,
       service = MtdIt,
-      clientId = mtdItId,
       suppliedClientId = nino,
       clientName = "TestClientName",
       agencyName = agencyName,
@@ -120,7 +119,6 @@ with CitizenDetailsStub {
     .createNew(
       arn = arn.value,
       service = MtdItSupp,
-      clientId = mtdItId,
       suppliedClientId = nino,
       clientName = "TestClientName",
       agencyName = agencyName,
@@ -188,12 +186,6 @@ with CitizenDetailsStub {
         givenClientHasNoRelationshipWithAnyAgentInCESA(nino = nino)
         val inputData: ApiCreateInvitationRequest = allServices(taxService)
 
-        val clientId =
-          if (taxService == HMRCMTDIT || taxService == HMRCMTDITSUPP)
-            mtdItId.value
-          else
-            inputData.suppliedClientId
-
         generateStandardStubForCreateInvitation()
 
         if (taxService == HMRCMTDIT || taxService == HMRCMTDITSUPP) {
@@ -228,7 +220,6 @@ with CitizenDetailsStub {
 
         invitation.status shouldBe Pending
         invitation.suppliedClientId shouldBe inputData.suppliedClientId
-        invitation.clientId shouldBe clientId
         invitation.service shouldBe inputData.service
 
         verifyCreateInvitationAuditSent(requestPath, invitation)
@@ -369,7 +360,6 @@ with CitizenDetailsStub {
 
       invitation.status shouldBe Pending
       invitation.suppliedClientId shouldBe inputData.suppliedClientId
-      invitation.clientId shouldBe clientId
       invitation.service shouldBe inputData.service
 
       verifyCreateInvitationAuditSent(requestPath, invitation)
@@ -378,6 +368,8 @@ with CitizenDetailsStub {
     // RELATIONSHIP
     allServices.keySet.foreach(taxService =>
       s"return UNPROCESSABLE_ENTITY status and valid JSON ALREADY_AUTHORISED when relationship already exists  for $taxService" in {
+        // we get UNPROCESSABLE_ENTITY here because the controller checks for existing relationship before checking for pending invitation,
+        // so the existence of an active relationship will cause the controller to return ALREADY_AUTHORISED error instead of DUPLICATE_AUTHORISATION_REQUEST error which is returned when a pending invitation already exists
         val inputData: ApiCreateInvitationRequest = allServices(taxService)
 
         val taxIdentifier =
@@ -453,7 +445,6 @@ with CitizenDetailsStub {
 
       invitation.status shouldBe Pending
       invitation.suppliedClientId shouldBe inputData.suppliedClientId
-      invitation.clientId shouldBe clientId
       invitation.service shouldBe inputData.service
 
       verifyCreateInvitationAuditSent(requestPath, invitation)
@@ -497,7 +488,6 @@ with CitizenDetailsStub {
 
       invitation.status shouldBe Pending
       invitation.suppliedClientId shouldBe inputData.suppliedClientId
-      invitation.clientId shouldBe clientId
       invitation.service shouldBe inputData.service
 
       verifyCreateInvitationAuditSent(requestPath, invitation)
@@ -616,7 +606,6 @@ with CitizenDetailsStub {
 
       invitation.status shouldBe Pending
       invitation.suppliedClientId shouldBe inputData.suppliedClientId
-      invitation.clientId shouldBe clientId
       invitation.service shouldBe inputData.service
 
       verifyCreateInvitationAuditSent(requestPath, invitation)
@@ -662,7 +651,6 @@ with CitizenDetailsStub {
 
       invitation.status shouldBe Pending
       invitation.suppliedClientId shouldBe inputData.suppliedClientId
-      invitation.clientId shouldBe clientId
       invitation.service shouldBe inputData.service
 
       verifyCreateInvitationAuditSent(requestPath, invitation)

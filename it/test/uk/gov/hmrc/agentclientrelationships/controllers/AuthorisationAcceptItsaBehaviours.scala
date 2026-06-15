@@ -19,17 +19,16 @@ package uk.gov.hmrc.agentclientrelationships.controllers
 import play.api.i18n.Lang
 import play.api.i18n.MessagesApi
 import play.api.test.Helpers._
-import uk.gov.hmrc.agentclientrelationships.model.Accepted
-import uk.gov.hmrc.agentclientrelationships.model.DeAuthorised
 import uk.gov.hmrc.agentclientrelationships.model.EmailInformation
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.Invitation
+import uk.gov.hmrc.agentclientrelationships.model.Accepted
+import uk.gov.hmrc.agentclientrelationships.model.DeAuthorised
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDITSUPP
 import uk.gov.hmrc.agentclientrelationships.model.identifiers._
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
 import uk.gov.hmrc.agentclientrelationships.stubs.EmailStubs
 import uk.gov.hmrc.agentclientrelationships.stubs.HipStub
-import uk.gov.hmrc.domain.TaxIdentifier
 
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -111,7 +110,6 @@ trait AuthorisationAcceptItsaBehaviours {
           invitationRepo.create(
             arn = arn.value,
             service = Service.forId(serviceIdAccept),
-            clientId = clientId,
             suppliedClientId = suppliedClientId,
             clientName = "Erling Haal",
             agencyName = "testAgentName",
@@ -184,7 +182,6 @@ trait AuthorisationAcceptItsaBehaviours {
         invitationRepo.create(
           arn = arn.value,
           service = Service.forId(serviceIdCheck),
-          clientId = clientId,
           suppliedClientId = suppliedClientId,
           clientName = "Erling Haal",
           agencyName = "testAgentName",
@@ -199,7 +196,6 @@ trait AuthorisationAcceptItsaBehaviours {
           invitationRepo.create(
             arn = arn.value,
             service = Service.forId(serviceIdAccept),
-            clientId = clientId,
             suppliedClientId = suppliedClientId,
             clientName = "Erling Haal",
             agencyName = "testAgentName",

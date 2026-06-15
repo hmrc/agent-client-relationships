@@ -57,7 +57,6 @@ with ResettingMockitoSugar {
     .createNew(
       "XARN1234567",
       Vat,
-      Vrn("123456789"),
       Vrn("234567890"),
       "Macrosoft",
       "Will Gates",

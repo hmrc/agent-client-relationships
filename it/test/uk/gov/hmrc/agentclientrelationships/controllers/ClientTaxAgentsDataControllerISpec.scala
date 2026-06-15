@@ -90,7 +90,6 @@ with TestData {
     .createNew(
       arn.value,
       Service.Vat,
-      vrn,
       ClientIdentifier(vrn),
       clientName,
       agentName1,
@@ -104,8 +103,7 @@ with TestData {
     .createNew(
       arn.value,
       Service.MtdIt,
-      mtdItId,
-      ClientIdentifier(nino),
+      ClientIdentifier(mtdItId),
       clientName,
       agentName1,
       "testAgent@email.com",
@@ -118,7 +116,6 @@ with TestData {
     .createNew(
       arn.value,
       Service.Cbc,
-      cbcId,
       ClientIdentifier(cbcId),
       clientName,
       agentName1,
@@ -132,7 +129,6 @@ with TestData {
     .createNew(
       arn2.value,
       Service.Vat,
-      vrn,
       ClientIdentifier(vrn),
       clientName,
       agentName2,
@@ -146,8 +142,7 @@ with TestData {
     .createNew(
       arn2.value,
       Service.MtdIt,
-      mtdItId,
-      ClientIdentifier(nino),
+      ClientIdentifier(mtdItId),
       clientName,
       agentName2,
       "testAgent@email.com",
@@ -160,7 +155,6 @@ with TestData {
     .createNew(
       arn2.value,
       Service.Cbc,
-      cbcId,
       ClientIdentifier(cbcId),
       clientName,
       agentName2,
@@ -174,7 +168,6 @@ with TestData {
     .createNew(
       arn.value,
       Service.Vat,
-      vrn,
       ClientIdentifier(vrn),
       clientName,
       agentName1,
@@ -188,7 +181,6 @@ with TestData {
     .createNew(
       arn2.value,
       Service.CapitalGains,
-      cgtRef,
       ClientIdentifier(cgtRef),
       clientName,
       agentName2,
@@ -202,7 +194,6 @@ with TestData {
     .createNew(
       arn2.value,
       Service.Cbc,
-      cbcId,
       ClientIdentifier(cbcId),
       clientName,
       agentName2,
@@ -216,7 +207,6 @@ with TestData {
     .createNew(
       arn2.value,
       Service.MtdIt,
-      mtdItId,
       ClientIdentifier(nino),
       clientName,
       agentName2,
@@ -230,7 +220,6 @@ with TestData {
     .createNew(
       arn2.value,
       Service.MtdIt,
-      nino,
       ClientIdentifier(nino),
       clientName,
       agentName2,
@@ -244,7 +233,6 @@ with TestData {
     .createNew(
       arn2.value,
       Service.Vat,
-      vrn,
       ClientIdentifier(vrn),
       clientName,
       agentName2,
@@ -258,7 +246,6 @@ with TestData {
     .createNew(
       arn.value,
       Service.MtdIt,
-      mtdItId,
       ClientIdentifier(nino),
       clientName,
       agentName1,
@@ -328,10 +315,12 @@ with TestData {
 
       // CHeck how many Agents data we have
       val clientTaxAgentsData = result.json.as[ClientTaxAgentsData]
+      println("clientTaxAgentsData \n" + clientTaxAgentsData)
       clientTaxAgentsData.agentsInvitations.agentsInvitations.size shouldBe 1
 
       // Check how many invitations for agent we have
       val agentNameInvitations = clientTaxAgentsData.agentsInvitations.agentsInvitations.find(x => x.agentName == agentName1).get.invitations
+      println("agentNameInvitations \n" + agentNameInvitations)
       agentNameInvitations.size shouldBe 2
 
     }

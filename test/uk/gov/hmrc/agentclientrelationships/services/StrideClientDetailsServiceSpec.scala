@@ -125,7 +125,6 @@ with MockValidationService {
     testArn.value,
     MtdIt,
     testNino,
-    testNino,
     testName,
     testAgentName,
     testAgentEmail,

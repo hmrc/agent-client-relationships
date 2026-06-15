@@ -188,7 +188,6 @@ with TestData {
                 arn.value,
                 service,
                 nino,
-                nino,
                 "TestClientName",
                 "testAgentName",
                 "agent@email.com",
@@ -350,7 +349,6 @@ with TestData {
           arn.value,
           service,
           nino,
-          nino,
           "TestClientName",
           "testAgentName",
           "agent@email.com",
@@ -481,7 +479,6 @@ with TestData {
         .createNew(
           arn.value,
           PersonalIncomeRecord,
-          nino,
           nino,
           "TestClientName",
           "testAgentName",

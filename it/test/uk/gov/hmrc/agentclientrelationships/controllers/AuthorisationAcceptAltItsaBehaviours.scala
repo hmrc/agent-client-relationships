@@ -30,7 +30,6 @@ import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
 import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
 import uk.gov.hmrc.agentclientrelationships.stubs.EmailStubs
 import uk.gov.hmrc.agentclientrelationships.stubs.HipStub
-import uk.gov.hmrc.domain.TaxIdentifier
 
 import java.time.Instant
 import java.time.LocalDate
@@ -94,7 +93,6 @@ trait AuthorisationAcceptAltItsaBehaviours {
           invitationRepo.create(
             arn = arn.value,
             service = Service.forId(serviceIdAccept),
-            clientId = clientId,
             suppliedClientId = suppliedClientId,
             clientName = "Erling Haal",
             agencyName = "testAgentName",
@@ -161,7 +159,6 @@ trait AuthorisationAcceptAltItsaBehaviours {
         invitationRepo.create(
           arn = arn.value,
           service = Service.forId(serviceIdCheck),
-          clientId = clientId,
           suppliedClientId = suppliedClientId,
           clientName = "Erling Haal",
           agencyName = "testAgentName",
@@ -185,7 +182,6 @@ trait AuthorisationAcceptAltItsaBehaviours {
           invitationRepo.create(
             arn = arn.value,
             service = Service.forId(serviceIdAccept),
-            clientId = clientId,
             suppliedClientId = suppliedClientId,
             clientName = "Erling Haal",
             agencyName = "testAgentName",
