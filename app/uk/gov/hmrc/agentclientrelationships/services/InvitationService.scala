@@ -169,13 +169,11 @@ extends RequestAwareLogging {
   def findAllForAgent(
     arn: String,
     services: Set[String],
-    clientIds: Seq[String],
-    isSuppliedClientId: Boolean = false
+    clientIds: Seq[String]
   ): Future[Seq[Invitation]] = invitationsRepository.findAllForAgent(
     arn,
     services.toSeq,
-    clientIds,
-    isSuppliedClientId
+    clientIds
   )
 
   def updateInvitation(

@@ -250,8 +250,7 @@ with AuthActions {
     .findAllForAgent(
       arn.value,
       Seq(service),
-      Seq(clientId),
-      isSuppliedClientId = true
+      Seq(clientId)
     )
     .map(_.filter(_.status == Pending))
     .map {

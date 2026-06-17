@@ -27,9 +27,8 @@ import org.mongodb.scala.model.Updates.set
 import org.mongodb.scala.model._
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model._
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.ClientIdentifier.ClientId
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 import uk.gov.hmrc.agentclientrelationships.model.invitation.CancelInvitationResponse
@@ -195,8 +194,7 @@ with RequestAwareLogging {
     arn: Option[String] = None,
     services: Seq[String] = Nil,
     clientIds: Seq[String] = Nil,
-    status: Option[InvitationStatus] = None,
-    isSuppliedClientId: Boolean = false
+    status: Option[InvitationStatus] = None
   ): Future[Seq[Invitation]] = Mdc.preservingMdc {
     if (arn.isEmpty && clientIds.isEmpty)
       Future.successful(Nil) // no user-specific identifiers were provided
@@ -243,8 +241,7 @@ with RequestAwareLogging {
   def findAllForAgent(
     arn: String,
     services: Seq[String],
-    clientIds: Seq[String],
-    isSuppliedClientId: Boolean = false
+    clientIds: Seq[String]
   ): Future[Seq[Invitation]] = Mdc.preservingMdc {
     collection
       .find(
@@ -313,8 +310,7 @@ with RequestAwareLogging {
   def updatePartialAuthToAcceptedStatus(
     arn: Arn,
     service: String,
-    nino: NinoWithoutSuffix,
-    mtdItId: MtdItId
+    nino: NinoWithoutSuffix
   ): Future[Boolean] = Mdc.preservingMdc {
     collection
       .updateOne(
@@ -327,7 +323,6 @@ with RequestAwareLogging {
         combine(
           set(statusKey, Codecs.toBson[InvitationStatus](Accepted)),
           set(lastUpdatedKey, Instant.now),
-          set(suppliedClientIdKey, encryptedString(mtdItId.value)),
           set(suppliedClientIdTypeKey, "MTDITID")
         )
       )

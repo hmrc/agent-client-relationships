@@ -113,8 +113,7 @@ with AuthActions {
                 .findAllForAgent(
                   validateLinkResponse.arn.value,
                   servicesToSearch,
-                  clientIdsToSearch,
-                  isSuppliedClientId = true
+                  clientIdsToSearch
                 )
                 .flatMap {
                   case Nil =>

@@ -752,8 +752,7 @@ with RepositoryCleanupSupport {
         None,
         Seq(MtdIt.id),
         Seq(ninoWithoutSuffix + "A"),
-        None,
-        isSuppliedClientId = true
+        None
       ).futureValue shouldBe Seq(
         invitation1,
         invitation2,
