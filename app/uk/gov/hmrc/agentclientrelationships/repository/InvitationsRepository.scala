@@ -322,8 +322,7 @@ with RequestAwareLogging {
         ),
         combine(
           set(statusKey, Codecs.toBson[InvitationStatus](Accepted)),
-          set(lastUpdatedKey, Instant.now),
-          set(suppliedClientIdTypeKey, "MTDITID")
+          set(lastUpdatedKey, Instant.now)
         )
       )
       .toFuture()
