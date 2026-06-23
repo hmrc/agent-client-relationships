@@ -48,15 +48,13 @@ trait MockInvitationsRepository {
     arn: Option[String],
     services: Seq[String],
     clientIds: Seq[String],
-    status: Option[InvitationStatus],
-    isSuppliedClientId: Boolean = false
+    status: Option[InvitationStatus]
   )(response: Future[Seq[Invitation]]): OngoingStubbing[Future[Seq[Invitation]]] = when(
     mockInvitationsRepository.findAllBy(
       eqs(arn),
       eqs(services),
       eqs(clientIds),
-      eqs(status),
-      eqs(isSuppliedClientId)
+      eqs(status)
     )
   ).thenReturn(response)
 

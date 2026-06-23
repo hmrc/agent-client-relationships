@@ -49,7 +49,6 @@ extends UnitSpec {
     .createNew(
       testArn.value,
       Service.MtdIt,
-      testMtdItId,
       testNino,
       testClientName,
       testAgentName,
@@ -72,7 +71,6 @@ extends UnitSpec {
     .createNew(
       testArn.value,
       Service.Vat,
-      testMtdItId,
       testNino,
       testClientName,
       testAgentName,

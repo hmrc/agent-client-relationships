@@ -125,7 +125,6 @@ with MockValidationService {
     testArn.value,
     MtdIt,
     testNino,
-    testNino,
     testName,
     testAgentName,
     testAgentEmail,
@@ -157,8 +156,7 @@ with MockValidationService {
           None,
           Seq(HMRCMTDIT, HMRCMTDITSUPP),
           Seq(testNino.value),
-          Some(Pending),
-          isSuppliedClientId = true
+          Some(Pending)
         )(Future.successful(Seq(itsaInvitation)))
         mockGetNonSuspendedAgentRecord(testArn)(Some(testAgentDetailsDesResponse))
         mockFindMainAgent(testNino.value)(Future.successful(Some(testPartialauthRelationship)))
@@ -193,8 +191,7 @@ with MockValidationService {
           None,
           Seq(HMRCMTDIT, HMRCMTDITSUPP),
           Seq(testNino.value),
-          Some(Pending),
-          isSuppliedClientId = true
+          Some(Pending)
         )(Future.successful(Seq(itsaSuppPendingInvitation)))
         mockGetNonSuspendedAgentRecord(testArn)(Some(testAgentDetailsDesResponse))
         mockFindMainAgent(testNino.value)(
@@ -231,8 +228,7 @@ with MockValidationService {
           None,
           Seq(PersonalIncomeRecord.id),
           Seq(testNino.value),
-          Some(Pending),
-          isSuppliedClientId = true
+          Some(Pending)
         )(Future.successful(Seq(irvPendingInvitation)))
         mockGetNonSuspendedAgentRecord(testArn)(Some(testAgentDetailsDesResponse))
         mockFindRelationshipForClient(testNino.value)(Right(List(testClientRelationship)))
@@ -268,8 +264,7 @@ with MockValidationService {
           None,
           Seq(HMRCMTDVAT),
           Seq(testVrn.value),
-          Some(Pending),
-          isSuppliedClientId = true
+          Some(Pending)
         )(Future.successful(Seq(vatPendingInvitation)))
         mockGetNonSuspendedAgentRecord(testArn)(Some(testAgentDetailsDesResponse))
         mockGetActiveRelationshipsForClient(testVrn, Vat)(
@@ -314,8 +309,7 @@ with MockValidationService {
           None,
           Seq(HMRCCGTPD),
           Seq(testCgtPdRef.value),
-          Some(Pending),
-          isSuppliedClientId = true
+          Some(Pending)
         )(Future.successful(Seq(cgtPendingInvitation)))
         mockGetNonSuspendedAgentRecord(testArn)(Some(testAgentDetailsDesResponse))
         mockGetActiveRelationshipsForClient(testCgtPdRef, CapitalGains)(
@@ -361,8 +355,7 @@ with MockValidationService {
           None,
           Seq(HMRCCBCORG),
           Seq(testCbcId.value),
-          Some(Pending),
-          isSuppliedClientId = true
+          Some(Pending)
         )(Future.successful(Seq(cbcPendingInvitation)))
         mockGetNonSuspendedAgentRecord(testArn)(Some(testAgentDetailsDesResponse))
         mockGetActiveRelationshipsForClient(testCbcId, Cbc)(
@@ -408,8 +401,7 @@ with MockValidationService {
           None,
           Seq(HMRCPILLAR2ORG),
           Seq(testPillar2Ref.value),
-          Some(Pending),
-          isSuppliedClientId = true
+          Some(Pending)
         )(Future.successful(Seq(pillar2PendingInvitation)))
         mockGetNonSuspendedAgentRecord(testArn)(Some(testAgentDetailsDesResponse))
         mockGetActiveRelationshipsForClient(testPillar2Ref, Pillar2)(
@@ -455,8 +447,7 @@ with MockValidationService {
           None,
           Seq(HMRCPPTORG),
           Seq(testPptRef.value),
-          Some(Pending),
-          isSuppliedClientId = true
+          Some(Pending)
         )(Future.successful(Seq(pptPendingInvitation)))
         mockGetNonSuspendedAgentRecord(testArn)(Some(testAgentDetailsDesResponse))
         mockGetActiveRelationshipsForClient(testPptRef, Ppt)(

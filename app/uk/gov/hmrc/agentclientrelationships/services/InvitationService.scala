@@ -25,8 +25,6 @@ import uk.gov.hmrc.agentclientrelationships.model.Invitation
 import uk.gov.hmrc.agentclientrelationships.model.Rejected
 import uk.gov.hmrc.agentclientrelationships.model.TrackRequestsResult
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.ClientIdentifier.ClientId
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdIt
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdItSupp
 import uk.gov.hmrc.agentclientrelationships.model.identifiers._
 import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiFailureResponse.AlreadyCancelledInvalidInvitationStatus
 import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiFailureResponse.InvalidInvitationStatus
@@ -83,12 +81,10 @@ extends RequestAwareLogging {
         service <- EitherT.fromEither[Future](createInvitationInputData.getService)
         clientType <- EitherT.fromEither[Future](createInvitationInputData.getClientType)
         agentRecord <- EitherT.right(agentRecordService.getAgentRecordWithChecks(arn))
-        clientId <- EitherT(getClientId(suppliedClientId, service))
         invitation <- EitherT(
           create(
             arn,
             service,
-            clientId,
             suppliedClientId,
             createInvitationInputData.clientName,
             clientType,
@@ -173,13 +169,11 @@ extends RequestAwareLogging {
   def findAllForAgent(
     arn: String,
     services: Set[String],
-    clientIds: Seq[String],
-    isSuppliedClientId: Boolean = false
+    clientIds: Seq[String]
   ): Future[Seq[Invitation]] = invitationsRepository.findAllForAgent(
     arn,
     services.toSeq,
-    clientIds,
-    isSuppliedClientId
+    clientIds
   )
 
   def updateInvitation(
@@ -198,26 +192,9 @@ extends RequestAwareLogging {
     newClientIdType
   )
 
-  private def getClientId(
-    suppliedClientId: ClientId,
-    service: Service
-  )(implicit request: RequestHeader): Future[Either[InvitationFailureResponse, ClientId]] =
-    (service, suppliedClientId.typeId) match {
-      case (MtdIt | MtdItSupp, NinoType.id) =>
-        hipConnector
-          .getMtdIdFor(NinoWithoutSuffix(suppliedClientId.value))
-          .map(
-            _.fold[Either[InvitationFailureResponse, ClientId]](Right(suppliedClientId))(mdtId =>
-              Right(ClientIdentifier(mdtId))
-            )
-          )
-      case _ => Future successful Right(suppliedClientId)
-    }
-
   private def create(
     arn: Arn,
     service: Service,
-    clientId: ClientId,
     suppliedClientId: ClientId,
     clientName: String,
     clientType: Option[String],
@@ -229,7 +206,6 @@ extends RequestAwareLogging {
         invitation <- invitationsRepository.create(
           arn.value,
           service,
-          clientId,
           suppliedClientId,
           clientName,
           agentDetails.agencyName,

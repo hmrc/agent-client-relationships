@@ -23,8 +23,6 @@ import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.CapitalGains
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Cbc
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.CbcNonUk
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDIT
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDITSUPP
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdIt
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdItSupp
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.PersonalIncomeRecord
@@ -55,7 +53,6 @@ with TestData {
   val baseInvitation: Invitation = Invitation.createNew(
     arn = arn.value,
     service = MtdIt,
-    clientId = mtdItId,
     suppliedClientId = nino,
     clientName = "C Name",
     agencyName = "A Name",
@@ -146,7 +143,6 @@ with TestData {
           val newInvitation: Invitation = baseInvitation
             .copy(
               service = serviceId,
-              clientId = clientId.value,
               suppliedClientId =
                 if (Seq(MtdIt, MtdItSupp).contains(service))
                   nino.value

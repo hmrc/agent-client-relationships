@@ -220,8 +220,7 @@ extends RequestAwareLogging {
             invitationsRepository.updatePartialAuthToAcceptedStatus(
               arn,
               service,
-              ni,
-              mtdItId
+              ni
             )
           }
           else {

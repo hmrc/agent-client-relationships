@@ -32,17 +32,17 @@ import uk.gov.hmrc.agentclientrelationships.model.Pending
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsNotFound
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsResponse
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ErrorRetrievingClientDetails
-import uk.gov.hmrc.agentclientrelationships.model.invitation._
-import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgencyDetails
-import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
-import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
-import uk.gov.hmrc.agentclientrelationships.services._
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.ClientIdentifier.ClientId
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDIT
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDITSUPP
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdIt
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdItSupp
 import uk.gov.hmrc.agentclientrelationships.model.identifiers._
+import uk.gov.hmrc.agentclientrelationships.model.invitation._
+import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgencyDetails
+import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
+import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
+import uk.gov.hmrc.agentclientrelationships.services._
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
@@ -159,7 +159,6 @@ with AuthActions {
           create(
             arn = arn,
             service = service,
-            clientId = clientId,
             suppliedClientId = suppliedClientId,
             clientName = clientDetails.name,
             clientType = clientType,
@@ -173,7 +172,6 @@ with AuthActions {
   private def create(
     arn: Arn,
     service: Service,
-    clientId: ClientId,
     suppliedClientId: ClientId,
     clientName: String,
     clientType: Option[String],
@@ -184,7 +182,6 @@ with AuthActions {
       invitation <- invitationsRepository.create(
         arn.value,
         service,
-        clientId,
         suppliedClientId,
         clientName,
         agentDetails.agencyName,
@@ -253,8 +250,7 @@ with AuthActions {
     .findAllForAgent(
       arn.value,
       Seq(service),
-      Seq(clientId),
-      isSuppliedClientId = true
+      Seq(clientId)
     )
     .map(_.filter(_.status == Pending))
     .map {

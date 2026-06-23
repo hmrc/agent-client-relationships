@@ -35,8 +35,6 @@ case class Invitation(
   invitationId: String,
   arn: String,
   service: String,
-  clientId: String,
-  clientIdType: String,
   suppliedClientId: String,
   suppliedClientIdType: String,
   clientName: String,
@@ -68,8 +66,6 @@ object Invitation {
       (__ \ "invitationId").format[String] and
         (__ \ "arn").format[String] and
         (__ \ "service").format[String] and
-        (__ \ "clientId").format[String](stringEncrypterDecrypter) and
-        (__ \ "clientIdType").format[String] and
         (__ \ "suppliedClientId").format[String](stringEncrypterDecrypter) and
         (__ \ "suppliedClientIdType").format[String] and
         (__ \ "clientName").format[String](stringEncrypterDecrypter) and
@@ -90,7 +86,6 @@ object Invitation {
   def createNew(
     arn: String,
     service: Service,
-    clientId: ClientId,
     suppliedClientId: ClientId,
     clientName: String,
     agencyName: String,
@@ -101,14 +96,12 @@ object Invitation {
     InvitationId
       .create(
         arn,
-        clientId.value,
+        suppliedClientId.value,
         service.id
       )(service.invitationIdPrefix)
       .value,
     arn,
     service.id,
-    clientId.value,
-    clientId.typeId,
     suppliedClientId.value,
     suppliedClientId.typeId,
     clientName,

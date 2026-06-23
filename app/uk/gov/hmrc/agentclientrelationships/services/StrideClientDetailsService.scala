@@ -283,8 +283,7 @@ class StrideClientDetailsService @Inject() (
         arn = None,
         services = services,
         clientIds = Seq(clientId),
-        status = Some(Pending),
-        isSuppliedClientId = true
+        status = Some(Pending)
       )
       nonSuspended <- Future.sequence(
         invitations.map(i =>

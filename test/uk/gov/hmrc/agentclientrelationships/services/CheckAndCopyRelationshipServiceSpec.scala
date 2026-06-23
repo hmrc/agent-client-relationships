@@ -659,8 +659,7 @@ with ResettingMockitoSugar {
     invitationsRepository.updatePartialAuthToAcceptedStatus(
       eqs(arn),
       eqs(service),
-      eqs(NinoWithoutSuffix(nino.value)),
-      eqs(mtdItId)
+      eqs(NinoWithoutSuffix(nino.value))
     )
   ).thenReturn(Future.successful(true))
 
