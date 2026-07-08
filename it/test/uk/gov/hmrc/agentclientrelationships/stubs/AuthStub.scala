@@ -20,13 +20,16 @@ import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.stubbing.StubMapping
 import play.api.libs.json.Json
 import play.api.test.FakeRequest
+import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.support.WireMockSupport
 import uk.gov.hmrc.agentclientrelationships.model.identifiers._
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.SessionKeys
 
+object AuthStub
+extends AuthStub
+
 trait AuthStub {
-  me: WireMockSupport =>
 
   val oid: String = "556737e15500005500eaf68f"
   val defaultNino: String = "AA123456A"
@@ -717,6 +720,68 @@ trait AuthStub {
     serviceName: String,
     identifierName: String,
     identifierValue: String
+  )
+
+  def givenAuthorisedAsClientWithEnrolment(
+    enrolment: EnrolmentKey
+  ): Seq[StubMapping] = {
+    givenAuthorisedFor(
+      Json.obj(
+        "retrieve" -> Json.arr(
+          "allEnrolments",
+          "affinityGroup",
+          "optionalCredentials"
+        )
+      ).toString(),
+      Json.obj(
+        "affinityGroup" -> "Individual",
+        "optionalCredentials" -> Json.obj(
+          "providerId" -> "anyId",
+          "providerType" -> "GovernmentGateway"
+        ),
+        "allEnrolments" -> Json.arr(
+          Json.obj(
+            "key" -> enrolment.service,
+            "identifiers" -> Json.arr(
+              enrolment.identifiers.map { identifier =>
+                Json.toJsFieldJsValueWrapper(Json.obj(
+                  "key" -> identifier.key,
+                  "value" -> identifier.value
+                ))
+              }: _*
+            )
+          )
+        )
+      ).toString()
+    )
+  }
+
+  def givenAuthorisedAsClientWithNino(
+    nino: NinoWithoutSuffix
+  ): Seq[StubMapping] = givenAuthorisedFor(
+    Json.obj(
+      "retrieve" -> Json.arr(
+        "allEnrolments",
+        "affinityGroup",
+        "optionalCredentials"
+      )
+    ).toString(),
+    Json.obj(
+      "affinityGroup" -> "Individual",
+      "optionalCredentials" -> Json.obj(
+        "providerId" -> "anyId",
+        "providerType" -> "GovernmentGateway"
+      ),
+      "allEnrolments" -> Json.arr(
+        Json.obj(
+          "key" -> "HMRC-PT",
+          "identifiers" -> Json.arr(Json.obj(
+            "key" -> "NINO",
+            "value" -> nino.value
+          ))
+        )
+      )
+    ).toString()
   )
 
 }

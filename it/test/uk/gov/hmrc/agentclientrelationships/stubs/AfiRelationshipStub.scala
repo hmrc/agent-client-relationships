@@ -23,6 +23,8 @@ import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 
 import java.time.LocalDateTime
 
+object AfiRelationshipStub
+extends AfiRelationshipStub
 trait AfiRelationshipStub {
 
   def givenAfiRelationshipIsActive(

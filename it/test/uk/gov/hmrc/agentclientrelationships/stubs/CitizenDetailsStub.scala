@@ -18,8 +18,11 @@ package uk.gov.hmrc.agentclientrelationships.stubs
 
 import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.stubbing.StubMapping
+import play.api.libs.json.Json
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
 
+object CitizenDetailsStub
+extends CitizenDetailsStub
 trait CitizenDetailsStub {
 
   def givenCitizenDetailsExists(nino: NinoWithoutSuffix): StubMapping = stubFor(
@@ -70,6 +73,65 @@ trait CitizenDetailsStub {
   ): StubMapping = stubFor(
     get(urlEqualTo(s"/citizen-details/nino-no-suffix/${nino.value}"))
       .willReturn(aResponse().withStatus(status))
+  )
+
+  def givenItsaDesignatoryDetailsExists(nino: NinoWithoutSuffix): StubMapping = stubFor(
+    get(urlEqualTo(s"/citizen-details/${nino.anySuffixValue}/designatory-details"))
+      .willReturn(
+        aResponse()
+          .withBody(
+            // language=JSON
+            s"""
+                       {
+                         "address": {
+                           "postcode": "AA1 1AA",
+                           "country": "GREAT BRITAIN"
+                         }
+                       }
+          """.stripMargin
+          )
+      )
+  )
+
+  def givenItsaDesignatoryDetailsError(
+    nino: NinoWithoutSuffix,
+    status: Int
+  ): StubMapping = stubFor(
+    get(urlEqualTo(s"/citizen-details/${nino.anySuffixValue}/designatory-details"))
+      .willReturn(aResponse().withStatus(status))
+  )
+
+  def givenItsaDesignatoryDetailsReturnsInvalidCountryCode(nino: NinoWithoutSuffix): StubMapping = stubFor(
+    get(urlEqualTo(s"/citizen-details/${nino.anySuffixValue}/designatory-details"))
+      .willReturn(
+        aResponse()
+          .withBody(
+            Json.obj(
+              "address" -> Json.obj(
+                "postcode" -> "AA1 1AA",
+                "country" -> "XX"
+              )
+            ).toString()
+          )
+      )
+  )
+
+  def givenItsaDesignatoryDetailsReturnsPostcode(
+    nino: NinoWithoutSuffix,
+    postcode: String
+  ): StubMapping = stubFor(
+    get(urlEqualTo(s"/citizen-details/${nino.anySuffixValue}/designatory-details"))
+      .willReturn(
+        aResponse()
+          .withBody(
+            Json.obj(
+              "address" -> Json.obj(
+                "postcode" -> postcode,
+                "country" -> "GREAT BRITAIN"
+              )
+            ).toString()
+          )
+      )
   )
 
 }

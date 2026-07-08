@@ -21,10 +21,10 @@ import com.github.tomakehurst.wiremock.stubbing.StubMapping
 import org.scalatest.concurrent.Eventually.eventually
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentclientrelationships.model.EmailInformation
-import uk.gov.hmrc.agentclientrelationships.support.TestData
 
-trait EmailStubs
-extends TestData {
+object EmailStubs
+extends EmailStubs
+trait EmailStubs {
 
   def verifyInvitationEmailInfoSent(
     emailInformation: EmailInformation,

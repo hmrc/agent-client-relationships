@@ -20,7 +20,8 @@ import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.stubbing.StubMapping
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
 import uk.gov.hmrc.domain.Nino
-
+object DesStubs
+extends DesStubs
 trait DesStubs {
 
   def givenDesReturnsServiceUnavailable(): StubMapping = stubFor(
@@ -113,6 +114,73 @@ trait DesStubs {
 
   def givenNinoIsInvalid(nino: NinoWithoutSuffix): StubMapping = stubFor(
     get(urlMatching(s"/registration/relationship/nino/${nino.anySuffixValue}")).willReturn(aResponse().withStatus(400))
+  )
+
+  def givenVatCustomerInfoExists(
+    vrn: String,
+    regDate: String = "2020-01-01",
+    isInsolvent: Boolean = false
+  ): StubMapping = stubFor(
+    get(urlEqualTo(s"/vat/customer/vrn/$vrn/information"))
+      .willReturn(
+        aResponse()
+          .withBody(s"""
+                       |{
+                       |  "approvedInformation": {
+                       |    "customerDetails": {
+                       |      "organisationName": "CFG",
+                       |      "tradingName": "CFG Solutions",
+                       |      "individual": {
+                       |        "title": "0001",
+                       |        "firstName": "Ilkay",
+                       |        "middleName": "Silky",
+                       |        "lastName": "Gundo"
+                       |      },
+                       |      "effectiveRegistrationDate": "$regDate",
+                       |      "isInsolvent": $isInsolvent,
+                       |      "overseasIndicator": true
+                       |    }
+                       |  }
+                       |}
+          """.stripMargin)
+      )
+  )
+
+  def givenVatCustomerInfoError(
+    vrn: String,
+    status: Int
+  ): StubMapping = stubFor(
+    get(urlEqualTo(s"/vat/customer/vrn/$vrn/information"))
+      .willReturn(aResponse().withStatus(status))
+  )
+
+  def givenCgtDetailsExist(cgtRef: String): StubMapping = stubFor(
+    get(urlEqualTo(s"/subscriptions/CGT/ZCGT/$cgtRef"))
+      .willReturn(
+        aResponse()
+          .withBody(s"""
+                       |{
+                       |  "subscriptionDetails": {
+                       |    "typeOfPersonDetails": {
+                       |      "typeOfPerson": "Trustee",
+                       |      "organisationName": "CFG Solutions"
+                       |    },
+                       |    "addressDetails": {
+                       |      "postalCode": "AA1 1AA",
+                       |      "countryCode": "GB"
+                       |    }
+                       |  }
+                       |}
+            """.stripMargin)
+      )
+  )
+
+  def givenCgtDetailsError(
+    cgtRef: String,
+    status: Int
+  ): StubMapping = stubFor(
+    get(urlEqualTo(s"/subscriptions/CGT/ZCGT/$cgtRef"))
+      .willReturn(aResponse().withStatus(status))
   )
 
 }

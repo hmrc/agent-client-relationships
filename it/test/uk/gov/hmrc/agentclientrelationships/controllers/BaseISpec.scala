@@ -55,13 +55,14 @@ with GuiceOneServerPerSuite
 with WireMockSupport
 with RelationshipStubs
 with DesStubs
+with IfStubs
 with DesStubsGet
 with MappingStubs
 with DataStreamStub
 with AuthStub
 with MockitoSugar
 with JsonMatchers
-with AUCDStubs
+with AucdStubs
 with AgentServicesAccountStubs
 with IntegrationPatience {
 
@@ -148,7 +149,6 @@ with IntegrationPatience {
   }
 
   val arn = Arn("AARN0000002")
-  val arnEncoded = UriEncoding.encodePathSegment(arn.value, "UTF-8")
   val arn2 = Arn("AARN0000004")
   val arn3 = Arn("AARN0000006")
   val existingAgentArn = Arn("AARN0000007")
@@ -156,7 +156,6 @@ with IntegrationPatience {
   val testPostcode = "AA1 1AA"
   val utr = Utr("3087612352")
   val urn = Urn("XXTRUST12345678")
-  val utrUriEncoded: String = UriEncoding.encodePathSegment(utr.value, "UTF-8")
   val saUtrType = "SAUTR"
   val urnType = "URN"
   val cgtRef = CgtRef("XMCGTP123456789")
@@ -169,18 +168,13 @@ with IntegrationPatience {
     Seq(Identifier("UTR", utr.value), Identifier("cbcId", cbcId.value))
   )
   val mtdItSuppEnrolmentKey: LocalEnrolmentKey = LocalEnrolmentKey(Service.MtdItSupp, mtdItId)
-  val mtdItIdUriEncoded: String = UriEncoding.encodePathSegment(mtdItId.value, "UTF-8")
   val vrn = Vrn("101747641")
   val vrn2 = Vrn("101747642")
   val vrn3 = Vrn("101747643")
   val testVatRegDate = "2020-01-01"
   val vatEnrolmentKey: LocalEnrolmentKey = LocalEnrolmentKey(Service.Vat, vrn)
-  val vrnUriEncoded: String = UriEncoding.encodePathSegment(vrn.value, "UTF-8")
   val nino = NinoWithoutSuffix("AB123456")
   val mtdItIdType = "MTDITID"
-  val mtdVatIdType = "VRN"
-  val oldAgentCode = "oldAgentCode"
-  val testAgentUser = "testAgentUser"
   val testAgentGroup = "testAgentGroup"
   val testExistingAgentGroup = "testExistingAgentGroup"
   val STRIDE_ROLE = "maintain agent relationships"

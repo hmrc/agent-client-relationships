@@ -23,6 +23,8 @@ import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Vrn
 
+object RelationshipStubs
+extends RelationshipStubs
 trait RelationshipStubs
 extends EnrolmentStoreProxyStubs
 with UsersGroupsSearchStubs {

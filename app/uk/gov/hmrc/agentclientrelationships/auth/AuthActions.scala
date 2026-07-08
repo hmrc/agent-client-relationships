@@ -87,7 +87,7 @@ with RequestAwareLogging {
           case creds @ Credentials(_, "PrivilegedApplication") if hasRequiredStrideRole(enrolments, strideRoles) => creds
         }
         .map { creds =>
-          body(CurrentUser(Option(creds), affinity))
+          body(CurrentUser(Some(creds), affinity))
         }
         .getOrElse(Future successful NoPermissionToPerformOperation)
     }
@@ -130,10 +130,7 @@ with RequestAwareLogging {
   ): Boolean = strideRoles.exists(s => enrolments.enrolments.exists(_.key == s))
 
   // Authorisation request response is a special case where we need to check for multiple services
-  def withAuthorisedClientForServiceKeys[
-    A,
-    T
-  ](
+  def withAuthorisedClientForServiceKeys(
     serviceKeys: Seq[String]
   )(body: Seq[LocalEnrolmentKey] => Future[Result])(implicit request: RequestHeader): Future[Result] =
     authorised(AuthProviders(GovernmentGateway) and (Individual or Organisation)).retrieve(allEnrolments) {
@@ -214,7 +211,7 @@ with RequestAwareLogging {
       case None => Future.failed(InsufficientEnrolments("AgentReferenceNumber identifier not found"))
     } recoverWith { case _: InsufficientEnrolments => Future.failed(InsufficientEnrolments()) }
 
-  protected def withEnrolledAsAgent[A](
+  private def withEnrolledAsAgent[A](
     body: Option[String] => Future[Result]
   )(implicit request: RequestHeader): Future[Result] =
     authorised(Enrolment("HMRC-AS-AGENT") and AuthProviders(GovernmentGateway)).retrieve(authorisedEnrolments) {

@@ -36,9 +36,12 @@ import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ppt.PptSubscript
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.vat.VatCustomerDetails
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.vat.VatIndividual
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
+import uk.gov.hmrc.agentclientrelationships.stubs.CitizenDetailsStub
 import uk.gov.hmrc.agentclientrelationships.stubs.ClientDetailsStub
 import uk.gov.hmrc.agentclientrelationships.stubs.DataStreamStub
+import uk.gov.hmrc.agentclientrelationships.stubs.DesStubs
 import uk.gov.hmrc.agentclientrelationships.stubs.HipStub
+import uk.gov.hmrc.agentclientrelationships.stubs.IfStubs
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 import uk.gov.hmrc.agentclientrelationships.support.WireMockSupport
 
@@ -49,8 +52,10 @@ extends UnitSpec
 with GuiceOneServerPerSuite
 with WireMockSupport
 with DataStreamStub
-with ClientDetailsStub
-with HipStub {
+with HipStub
+with DesStubs
+with IfStubs
+with CitizenDetailsStub {
 
   override lazy val app: Application = appBuilder.build()
 
@@ -105,7 +110,7 @@ with HipStub {
 
     "return citizen details when receiving a 200 status" in {
       givenAuditConnector()
-      givenItsaCitizenDetailsExists(testNino)
+      givenCitizenDetailsExists(testNino)
       val expectedModel = CitizenDetails(
         Some("Matthew"),
         Some("Kovacic"),
@@ -117,13 +122,13 @@ with HipStub {
 
     "return a ClientDetailsNotFound error when receiving a 404 status" in {
       givenAuditConnector()
-      givenItsaCitizenDetailsError(testNino, NOT_FOUND)
+      givenCitizenDetailsError(testNino, NOT_FOUND)
       await(connector.getItsaCitizenDetails(testNino)) shouldBe Left(ClientDetailsNotFound)
     }
 
     "return an ErrorRetrievingClientDetails error when receiving an unexpected status" in {
       givenAuditConnector()
-      givenItsaCitizenDetailsError(testNino, INTERNAL_SERVER_ERROR)
+      givenCitizenDetailsError(testNino, INTERNAL_SERVER_ERROR)
       await(connector.getItsaCitizenDetails(testNino)) shouldBe
         Left(ErrorRetrievingClientDetails(INTERNAL_SERVER_ERROR, "Unexpected error during 'getItsaCitizenDetails'"))
     }

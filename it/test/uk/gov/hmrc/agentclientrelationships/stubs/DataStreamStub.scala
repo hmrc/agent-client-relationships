@@ -28,6 +28,8 @@ import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.Invitation
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.ClientIdentifier
 
+object DataStreamStub
+extends DataStreamStub
 trait DataStreamStub
 extends Eventually {
 

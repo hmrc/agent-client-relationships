@@ -201,7 +201,7 @@ extends RequestAwareLogging {
             for {
               maybeArn <- es.getAgentReferenceNumberFor(groupId)
               _ <-
-                maybeArn match {
+                maybeArn match { // TODO this should delete the relationship even if arn does not exist
                   case None =>
                     logger.warn(s"[CreateRelationshipsService] Arn not found for provided groupId: $groupId")
                     Future.unit
