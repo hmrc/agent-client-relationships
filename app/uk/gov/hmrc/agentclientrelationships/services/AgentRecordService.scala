@@ -17,8 +17,6 @@
 package uk.gov.hmrc.agentclientrelationships.services
 
 import play.api.mvc.RequestHeader
-import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.connectors.AgentAssuranceConnector
 import uk.gov.hmrc.agentclientrelationships.connectors.AgentServicesAccountConnector
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.SuspensionDetails
@@ -31,10 +29,8 @@ import scala.concurrent.Future
 
 @Singleton
 class AgentRecordService @Inject() (
-  agentAssuranceConnector: AgentAssuranceConnector,
   agentServicesAccountConnector: AgentServicesAccountConnector
 )(implicit
-  appConfig: AppConfig,
   ec: ExecutionContext
 ) {
 
@@ -45,10 +41,7 @@ class AgentRecordService @Inject() (
     }
 
   def getAgentRecordWithChecks(arn: Arn)(implicit rh: RequestHeader): Future[AgentDetailsDesResponse] = {
-    if (appConfig.enableAgentRecordViaAsa)
-      agentServicesAccountConnector.getAgentRecordWithChecks(arn)
-    else
-      agentAssuranceConnector.getAgentRecordWithChecks(arn)
+    agentServicesAccountConnector.getAgentRecordWithChecks(arn)
   }
 
 }

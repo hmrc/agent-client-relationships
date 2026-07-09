@@ -116,7 +116,6 @@ with IntegrationPatience {
       "microservice.services.agent-services-account.port" -> wireMockPort,
       "features.copy-relationship.mtd-it" -> true,
       "features.recovery-enable" -> false,
-      "features.enable-agent-record-via-asa" -> true,
       "agent.cache.expires" -> "1 millis",
       "agent.cache.enabled" -> true,
       "agent.customerStatusExistingRelationships.cache.expires" -> "15 minutes",
