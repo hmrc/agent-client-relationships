@@ -29,7 +29,6 @@ import uk.gov.hmrc.agentclientrelationships.model.Invitation
 import uk.gov.hmrc.agentclientrelationships.model.PartialAuth
 import uk.gov.hmrc.agentclientrelationships.model.PartialAuthRelationship
 import uk.gov.hmrc.agentclientrelationships.model.Pending
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
 import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
 import uk.gov.hmrc.agentclientrelationships.stubs.AfiRelationshipStub
@@ -44,6 +43,7 @@ import uk.gov.hmrc.agentclientrelationships.stubs.UsersGroupsSearchStubs
 import uk.gov.hmrc.agentclientrelationships.testsupport.testdata.IrvTestData
 import uk.gov.hmrc.agentclientrelationships.testsupport.testdata.ItsaSuppTestData
 import uk.gov.hmrc.agentclientrelationships.testsupport.testdata.ItsaTestData
+import uk.gov.hmrc.agentclientrelationships.testsupport.testdata.TaxRegimeTestData
 import uk.gov.hmrc.agentclientrelationships.testsupport.testdata.TestData
 
 import java.time.Instant
@@ -67,23 +67,33 @@ with EmailStubs {
 
   def getRequestPath(invitationId: String): String = s"/agent-client-relationships/authorisation-response/accept/$invitationId"
 
-  TestData.services.foreach { regimeData =>
-    val testEmail = EmailInformation(
-      to = Seq("agent@email.com"),
-      templateId = "client_accepted_authorisation_request",
-      parameters = Map(
-        "agencyName" -> "testAgentName",
-        "clientName" -> "Erling Haal",
-        "expiryDate" -> LocalDate.now().format(dateFormatter),
-        "service" -> messagesApi(s"service.${regimeData.service.id}")(lang)
-      )
+  def pendingInvitation(regimeData: TaxRegimeTestData): Invitation = Invitation
+    .createNew(
+      TestData.arn.value,
+      regimeData.service,
+      regimeData.suppliedClientId,
+      "Erling Haal",
+      "testAgentName",
+      "agent@email.com",
+      LocalDate.now(),
+      Some("personal")
     )
+
+  def testEmail(regimeData: TaxRegimeTestData) = EmailInformation(
+    to = Seq("agent@email.com"),
+    templateId = "client_accepted_authorisation_request",
+    parameters = Map(
+      "agencyName" -> "testAgentName",
+      "clientName" -> "Erling Haal",
+      "expiryDate" -> LocalDate.now().format(dateFormatter),
+      "service" -> messagesApi(s"service.${regimeData.service.id}")(lang)
+    )
+  )
+
+  TestData.services.foreach { regimeData =>
     s"PUT /agent-client-relationships/authorisation-response/accept/:invitationId" +
       s" for ${regimeData.service.id} and ${regimeData.suppliedClientId.value}" should {
-        "return 201 when client accepts invitation successfully when authorised for someone else" in {
-          // Authorised as client
-          regimeData.clientAuthStubs()
-
+        def genericStubs() = {
           // Lookup clientId if different from suppliedClientId
           regimeData.clientIdLookupStubs()
 
@@ -103,6 +113,12 @@ with EmailStubs {
           RelationshipStubs.givenPrincipalAgentUser(TestData.arn, TestData.groupId)
           UsersGroupsSearchStubs.givenGroupInfo(TestData.groupId, TestData.agentCode)
           UsersGroupsSearchStubs.givenAdminUser(TestData.groupId, TestData.adminUser)
+        }
+        "return 201 when client accepts invitation successfully when authorised for someone else" in {
+          // Authorised as client
+          regimeData.clientAuthStubs()
+
+          genericStubs()
 
           // Create ETMP relationship
           HipStub.givenAgentCanBeAllocated(regimeData.clientId, TestData.arn)
@@ -128,21 +144,12 @@ with EmailStubs {
             NO_CONTENT
           )
           AucdStubs.givenCacheRefresh(TestData.arn)
-          EmailStubs.givenEmailSent(testEmail)
+          EmailStubs.givenEmailSent(testEmail(regimeData))
 
-          val pendingInvitation =
-            invitationRepo.create(
-              arn = TestData.arn.value,
-              service = Service.forId(regimeData.service.id),
-              suppliedClientId = regimeData.suppliedClientId,
-              clientName = "Erling Haal",
-              agencyName = "testAgentName",
-              agencyEmail = "agent@email.com",
-              expiryDate = LocalDate.now(),
-              clientType = Some("personal")
-            ).futureValue
+          val invitation = pendingInvitation(regimeData)
+          invitationRepo.collection.insertOne(invitation).toFuture().futureValue
 
-          val result = doAgentPutRequest(getRequestPath(pendingInvitation.invitationId))
+          val result = doAgentPutRequest(getRequestPath(invitation.invitationId))
           result.status shouldBe 204
 
           val invitations: Seq[Invitation] = invitationRepo.findAllForAgent(TestData.arn.value).futureValue
@@ -160,9 +167,9 @@ with EmailStubs {
             agentCode = TestData.agentCode
           )
 
-          EmailStubs.verifyInvitationEmailInfoSent(testEmail)
+          EmailStubs.verifyInvitationEmailInfoSent(testEmail(regimeData))
           DataStreamStub.verifyRespondToInvitationAuditSent(
-            getRequestPath(pendingInvitation.invitationId),
+            getRequestPath(invitation.invitationId),
             invitations.head,
             accepted = true,
             isStride = false,
@@ -174,25 +181,7 @@ with EmailStubs {
           // Authorised as client
           regimeData.clientAuthStubs()
 
-          // Lookup clientId if different from suppliedClientId
-          regimeData.clientIdLookupStubs()
-
-          // Lookup for secondary enrolment identifier if needed
-          regimeData.clientKnownFactCheckStubs()
-
-          // Remove existing relationships for supporting services if needed
-          regimeData.supportingService.foreach { supp =>
-            val suppEnrolment = regimeData.enrolment.copy(service = supp.id)
-            HipStub.givenAgentCanBeDeallocated(regimeData.clientId, TestData.arn)
-            RelationshipStubs.givenPrincipalAgentUser(TestData.arn, TestData.groupId)
-            RelationshipStubs.givenDelegatedGroupIdsExistFor(suppEnrolment, Set(TestData.groupId))
-            RelationshipStubs.givenEnrolmentDeallocationSucceeds(TestData.groupId, suppEnrolment)
-          }
-
-          // Fetch agent details
-          RelationshipStubs.givenPrincipalAgentUser(TestData.arn, TestData.groupId)
-          UsersGroupsSearchStubs.givenGroupInfo(TestData.groupId, TestData.agentCode)
-          UsersGroupsSearchStubs.givenAdminUser(TestData.groupId, TestData.adminUser)
+          genericStubs()
 
           // Create ETMP relationship
           HipStub.givenAgentCanBeAllocated(regimeData.clientId, TestData.arn)
@@ -216,21 +205,12 @@ with EmailStubs {
             NO_CONTENT
           )
           AucdStubs.givenCacheRefresh(TestData.arn)
-          EmailStubs.givenEmailSent(testEmail)
+          EmailStubs.givenEmailSent(testEmail(regimeData))
 
-          val pendingInvitation =
-            invitationRepo.create(
-              arn = TestData.arn.value,
-              service = Service.forId(regimeData.service.id),
-              suppliedClientId = regimeData.suppliedClientId,
-              clientName = "Erling Haal",
-              agencyName = "testAgentName",
-              agencyEmail = "agent@email.com",
-              expiryDate = LocalDate.now(),
-              clientType = Some("personal")
-            ).futureValue
+          val invitation = pendingInvitation(regimeData)
+          invitationRepo.collection.insertOne(invitation).toFuture().futureValue
 
-          val result = doAgentPutRequest(getRequestPath(pendingInvitation.invitationId))
+          val result = doAgentPutRequest(getRequestPath(invitation.invitationId))
           result.status shouldBe 204
 
           val invitations: Seq[Invitation] = invitationRepo.findAllForAgent(TestData.arn.value).futureValue
@@ -248,9 +228,9 @@ with EmailStubs {
             agentCode = TestData.agentCode
           )
 
-          EmailStubs.verifyInvitationEmailInfoSent(testEmail)
+          EmailStubs.verifyInvitationEmailInfoSent(testEmail(regimeData))
           DataStreamStub.verifyRespondToInvitationAuditSent(
-            getRequestPath(pendingInvitation.invitationId),
+            getRequestPath(invitation.invitationId),
             invitations.head,
             accepted = true,
             isStride = false,
@@ -262,25 +242,7 @@ with EmailStubs {
           // Authorised as stride
           AuthStub.givenUserIsAuthenticatedWithStride(STRIDE_ROLE, "strideId-983283")
 
-          // Lookup clientId if different from suppliedClientId
-          regimeData.clientIdLookupStubs()
-
-          // Lookup for secondary enrolment identifier if needed
-          regimeData.clientKnownFactCheckStubs()
-
-          // Remove existing relationships for supporting services if needed
-          regimeData.supportingService.foreach { supp =>
-            val suppEnrolment = regimeData.enrolment.copy(service = supp.id)
-            HipStub.givenAgentCanBeDeallocated(regimeData.clientId, TestData.arn)
-            RelationshipStubs.givenPrincipalAgentUser(TestData.arn, TestData.groupId)
-            RelationshipStubs.givenDelegatedGroupIdsExistFor(suppEnrolment, Set(TestData.groupId))
-            RelationshipStubs.givenEnrolmentDeallocationSucceeds(TestData.groupId, suppEnrolment)
-          }
-
-          // Fetch agent details
-          RelationshipStubs.givenPrincipalAgentUser(TestData.arn, TestData.groupId)
-          UsersGroupsSearchStubs.givenGroupInfo(TestData.groupId, TestData.agentCode)
-          UsersGroupsSearchStubs.givenAdminUser(TestData.groupId, TestData.adminUser)
+          genericStubs()
 
           // Create ETMP relationship
           HipStub.givenAgentCanBeAllocated(regimeData.clientId, TestData.arn)
@@ -304,21 +266,12 @@ with EmailStubs {
             NO_CONTENT
           )
           AucdStubs.givenCacheRefresh(TestData.arn)
-          EmailStubs.givenEmailSent(testEmail)
+          EmailStubs.givenEmailSent(testEmail(regimeData))
 
-          val pendingInvitation =
-            invitationRepo.create(
-              arn = TestData.arn.value,
-              service = Service.forId(regimeData.service.id),
-              suppliedClientId = regimeData.suppliedClientId,
-              clientName = "Erling Haal",
-              agencyName = "testAgentName",
-              agencyEmail = "agent@email.com",
-              expiryDate = LocalDate.now(),
-              clientType = Some("personal")
-            ).futureValue
+          val invitation = pendingInvitation(regimeData)
+          invitationRepo.collection.insertOne(invitation).toFuture().futureValue
 
-          val result = doAgentPutRequest(getRequestPath(pendingInvitation.invitationId))
+          val result = doAgentPutRequest(getRequestPath(invitation.invitationId))
           result.status shouldBe 204
 
           val invitations: Seq[Invitation] = invitationRepo.findAllForAgent(TestData.arn.value).futureValue
@@ -336,9 +289,9 @@ with EmailStubs {
             agentCode = TestData.agentCode
           )
 
-          EmailStubs.verifyInvitationEmailInfoSent(testEmail)
+          EmailStubs.verifyInvitationEmailInfoSent(testEmail(regimeData))
           DataStreamStub.verifyRespondToInvitationAuditSent(
-            getRequestPath(pendingInvitation.invitationId),
+            getRequestPath(invitation.invitationId),
             invitations.head,
             accepted = true,
             isStride = true,
@@ -356,19 +309,10 @@ with EmailStubs {
           // Lookup for secondary enrolment identifier if needed
           regimeData.clientKnownFactCheckStubs()
 
-          val pendingInvitation =
-            invitationRepo.create(
-              arn = TestData.arn.value,
-              service = Service.forId(regimeData.service.id),
-              suppliedClientId = regimeData.suppliedClientId,
-              clientName = "Erling Haal",
-              agencyName = "testAgentName",
-              agencyEmail = "agent@email.com",
-              expiryDate = LocalDate.now(),
-              clientType = Some("personal")
-            ).futureValue
+          val invitation = pendingInvitation(regimeData)
+          invitationRepo.collection.insertOne(invitation).toFuture().futureValue
 
-          val result = doAgentPutRequest(getRequestPath(pendingInvitation.invitationId))
+          val result = doAgentPutRequest(getRequestPath(invitation.invitationId))
           result.status shouldBe 403
 
           val invitations: Seq[Invitation] = invitationRepo.findAllForAgent(TestData.arn.value).futureValue
@@ -404,21 +348,12 @@ with EmailStubs {
           // Lookup for secondary enrolment identifier if needed
           regimeData.clientKnownFactCheckStubs()
 
-          val pendingInvitation =
-            invitationRepo.create(
-              arn = TestData.arn.value,
-              service = Service.forId(regimeData.service.id),
-              suppliedClientId = regimeData.suppliedClientId,
-              clientName = "Erling Haal",
-              agencyName = "testAgentName",
-              agencyEmail = "agent@email.com",
-              expiryDate = LocalDate.now(),
-              clientType = Some("personal")
-            ).futureValue
+          val invitation = pendingInvitation(regimeData)
+          invitationRepo.collection.insertOne(invitation).toFuture().futureValue
 
           val acceptedInvitation =
             invitationRepo.updateStatus(
-              invitationId = pendingInvitation.invitationId,
+              invitationId = invitation.invitationId,
               status = Accepted
             ).futureValue
 
@@ -458,21 +393,12 @@ with EmailStubs {
           // Lookup for secondary enrolment identifier if needed
           regimeData.clientKnownFactCheckStubs()
 
-          val pendingInvitation =
-            invitationRepo.create(
-              arn = TestData.arn.value,
-              service = Service.forId(regimeData.service.id),
-              suppliedClientId = regimeData.suppliedClientId,
-              clientName = "Erling Haal",
-              agencyName = "testAgentName",
-              agencyEmail = "agent@email.com",
-              expiryDate = LocalDate.now(),
-              clientType = Some("personal")
-            ).futureValue
+          val invitation = pendingInvitation(regimeData)
+          invitationRepo.collection.insertOne(invitation).toFuture().futureValue
 
           val acceptedInvitation =
             invitationRepo.updateStatus(
-              invitationId = pendingInvitation.invitationId,
+              invitationId = invitation.invitationId,
               status = Expired
             ).futureValue
 
@@ -523,25 +449,7 @@ with EmailStubs {
           // Authorised as client
           regimeData.clientAuthStubs()
 
-          // Lookup clientId if different from suppliedClientId
-          regimeData.clientIdLookupStubs()
-
-          // Lookup for secondary enrolment identifier if needed
-          regimeData.clientKnownFactCheckStubs()
-
-          // Remove existing relationships for supporting services if needed
-          regimeData.supportingService.foreach { supp =>
-            val suppEnrolment = regimeData.enrolment.copy(service = supp.id)
-            HipStub.givenAgentCanBeDeallocated(regimeData.clientId, TestData.arn)
-            RelationshipStubs.givenPrincipalAgentUser(TestData.arn, TestData.groupId)
-            RelationshipStubs.givenDelegatedGroupIdsExistFor(suppEnrolment, Set(TestData.groupId))
-            RelationshipStubs.givenEnrolmentDeallocationSucceeds(TestData.groupId, suppEnrolment)
-          }
-
-          // Fetch agent details
-          RelationshipStubs.givenPrincipalAgentUser(TestData.arn, TestData.groupId)
-          UsersGroupsSearchStubs.givenGroupInfo(TestData.groupId, TestData.agentCode)
-          UsersGroupsSearchStubs.givenAdminUser(TestData.groupId, TestData.adminUser)
+          genericStubs()
 
           // Create ETMP relationship
           HipStub.givenAgentCanBeAllocated(regimeData.clientId, TestData.arn)
@@ -559,19 +467,10 @@ with EmailStubs {
             agentCode = TestData.agentCode
           )
 
-          val pendingInvitation =
-            invitationRepo.create(
-              arn = TestData.arn.value,
-              service = Service.forId(regimeData.service.id),
-              suppliedClientId = regimeData.suppliedClientId,
-              clientName = "Erling Haal",
-              agencyName = "testAgentName",
-              agencyEmail = "agent@email.com",
-              expiryDate = LocalDate.now(),
-              clientType = Some("personal")
-            ).futureValue
+          val invitation = pendingInvitation(regimeData)
+          invitationRepo.collection.insertOne(invitation).toFuture().futureValue
 
-          val result = doAgentPutRequest(getRequestPath(pendingInvitation.invitationId))
+          val result = doAgentPutRequest(getRequestPath(invitation.invitationId))
           result.status shouldBe 502
 
           val invitations: Seq[Invitation] = invitationRepo.findAllForAgent(TestData.arn.value).futureValue
@@ -596,42 +495,15 @@ with EmailStubs {
           // Authorised as client
           regimeData.clientAuthStubs()
 
-          // Lookup clientId if different from suppliedClientId
-          regimeData.clientIdLookupStubs()
-
-          // Lookup for secondary enrolment identifier if needed
-          regimeData.clientKnownFactCheckStubs()
-
-          // Remove existing relationships for supporting services if needed
-          regimeData.supportingService.foreach { supp =>
-            val suppEnrolment = regimeData.enrolment.copy(service = supp.id)
-            HipStub.givenAgentCanBeDeallocated(regimeData.clientId, TestData.arn)
-            RelationshipStubs.givenPrincipalAgentUser(TestData.arn, TestData.groupId)
-            RelationshipStubs.givenDelegatedGroupIdsExistFor(suppEnrolment, Set(TestData.groupId))
-            RelationshipStubs.givenEnrolmentDeallocationSucceeds(TestData.groupId, suppEnrolment)
-          }
-
-          // Fetch agent details
-          RelationshipStubs.givenPrincipalAgentUser(TestData.arn, TestData.groupId)
-          UsersGroupsSearchStubs.givenGroupInfo(TestData.groupId, TestData.agentCode)
-          UsersGroupsSearchStubs.givenAdminUser(TestData.groupId, TestData.adminUser)
+          genericStubs()
 
           // Create ETMP relationship fails
           HipStub.givenAgentCanNotBeAllocated(502)
 
-          val pendingInvitation =
-            invitationRepo.create(
-              arn = TestData.arn.value,
-              service = Service.forId(regimeData.service.id),
-              suppliedClientId = regimeData.suppliedClientId,
-              clientName = "Erling Haal",
-              agencyName = "testAgentName",
-              agencyEmail = "agent@email.com",
-              expiryDate = LocalDate.now(),
-              clientType = Some("personal")
-            ).futureValue
+          val invitation = pendingInvitation(regimeData)
+          invitationRepo.collection.insertOne(invitation).toFuture().futureValue
 
-          val result = doAgentPutRequest(getRequestPath(pendingInvitation.invitationId))
+          val result = doAgentPutRequest(getRequestPath(invitation.invitationId))
           result.status shouldBe 502
 
           val invitations: Seq[Invitation] = invitationRepo.findAllForAgent(TestData.arn.value).futureValue
@@ -655,19 +527,9 @@ with EmailStubs {
       }
   }
 
-  Seq(ItsaTestData, ItsaSuppTestData).foreach { regimeData =>
-    val testEmail = EmailInformation(
-      to = Seq("agent@email.com"),
-      templateId = "client_accepted_authorisation_request",
-      parameters = Map(
-        "agencyName" -> "testAgentName",
-        "clientName" -> "Erling Haal",
-        "expiryDate" -> LocalDate.now().format(dateFormatter),
-        "service" -> messagesApi(s"service.${regimeData.service.id}")(lang)
-      )
-    )
-    s"PUT /agent-client-relationships/authorisation-response/accept/:invitationId" +
-      s" for ITSA partial auth" should {
+  s"PUT /agent-client-relationships/authorisation-response/accept/:invitationId" +
+    s" for ITSA partial auth" should {
+      Seq(ItsaTestData, ItsaSuppTestData).foreach { regimeData =>
         s"return 201 when client accepts a partial auth ${regimeData.service} invitation and ${regimeData.supportingService} relationship does not exist" in {
           // Authorised as client
           regimeData.clientAuthStubs()
@@ -681,21 +543,12 @@ with EmailStubs {
             NO_CONTENT
           )
           AucdStubs.givenCacheRefresh(TestData.arn)
-          EmailStubs.givenEmailSent(testEmail)
+          EmailStubs.givenEmailSent(testEmail(regimeData))
 
-          val pendingInvitation =
-            invitationRepo.create(
-              arn = TestData.arn.value,
-              service = Service.forId(regimeData.service.id),
-              suppliedClientId = regimeData.suppliedClientId,
-              clientName = "Erling Haal",
-              agencyName = "testAgentName",
-              agencyEmail = "agent@email.com",
-              expiryDate = LocalDate.now(),
-              clientType = Some("personal")
-            ).futureValue
+          val invitation = pendingInvitation(regimeData)
+          invitationRepo.collection.insertOne(invitation).toFuture().futureValue
 
-          val result = doAgentPutRequest(getRequestPath(pendingInvitation.invitationId))
+          val result = doAgentPutRequest(getRequestPath(invitation.invitationId))
           result.status shouldBe 204
 
           val invitations: Seq[Invitation] = invitationRepo.findAllForAgent(TestData.arn.value).futureValue
@@ -722,9 +575,9 @@ with EmailStubs {
             count = 0
           )
 
-          EmailStubs.verifyInvitationEmailInfoSent(testEmail)
+          EmailStubs.verifyInvitationEmailInfoSent(testEmail(regimeData))
           DataStreamStub.verifyRespondToInvitationAuditSent(
-            getRequestPath(pendingInvitation.invitationId),
+            getRequestPath(invitation.invitationId),
             invitations.head,
             accepted = true,
             isStride = false,
@@ -745,43 +598,27 @@ with EmailStubs {
             NO_CONTENT
           )
           AucdStubs.givenCacheRefresh(TestData.arn)
-          EmailStubs.givenEmailSent(testEmail)
+          EmailStubs.givenEmailSent(testEmail(regimeData))
 
           // insert existing PartialAuth invitation
-          invitationRepo.create(
-            arn = TestData.arn.value,
-            service = Service.forId(regimeData.supportingService.get.id),
-            suppliedClientId = regimeData.suppliedClientId,
-            clientName = "Erling Haal",
-            agencyName = "testAgentName",
-            agencyEmail = "agent@email.com",
-            expiryDate = LocalDate.now(),
-            clientType = Some("personal")
-          ).map(invitation => invitationRepo.updateStatus(invitation.invitationId, PartialAuth))
-            .futureValue
+          invitationRepo.collection.insertOne(pendingInvitation(regimeData).copy(
+            status = PartialAuth,
+            service = regimeData.supportingService.get.id
+          )).toFuture().futureValue
 
           // insert existing PartialAuth Repo
           partialAuthRepository
             .create(
               Instant.parse("2020-01-01T00:00:00.000Z"),
-              arn,
+              TestData.arn,
               regimeData.supportingService.get.id,
-              nino
+              TestData.nino
             ).futureValue
 
-          val pendingInvitation =
-            invitationRepo.create(
-              arn = TestData.arn.value,
-              service = Service.forId(regimeData.service.id),
-              suppliedClientId = regimeData.suppliedClientId,
-              clientName = "Erling Haal",
-              agencyName = "testAgentName",
-              agencyEmail = "agent@email.com",
-              expiryDate = LocalDate.now(),
-              clientType = Some("personal")
-            ).futureValue
+          val invitation = pendingInvitation(regimeData)
+          invitationRepo.collection.insertOne(invitation).toFuture().futureValue
 
-          val result = doAgentPutRequest(getRequestPath(pendingInvitation.invitationId))
+          val result = doAgentPutRequest(getRequestPath(invitation.invitationId))
           result.status shouldBe 204
 
           val invitations: Seq[Invitation] = invitationRepo.findAllForAgent(TestData.arn.value).futureValue
@@ -822,9 +659,9 @@ with EmailStubs {
             count = 0
           )
 
-          EmailStubs.verifyInvitationEmailInfoSent(testEmail)
+          EmailStubs.verifyInvitationEmailInfoSent(testEmail(regimeData))
           DataStreamStub.verifyRespondToInvitationAuditSent(
-            getRequestPath(pendingInvitation.invitationId),
+            getRequestPath(invitation.invitationId),
             invitations.find(_.status == PartialAuth).get,
             accepted = true,
             isStride = false,
@@ -832,19 +669,9 @@ with EmailStubs {
           )
         }
       }
-  }
+    }
 
   s"PUT /agent-client-relationships/authorisation-response/accept/:invitationId for IRV" should {
-    val testEmail = EmailInformation(
-      to = Seq("agent@email.com"),
-      templateId = "client_accepted_authorisation_request",
-      parameters = Map(
-        "agencyName" -> "testAgentName",
-        "clientName" -> "Erling Haal",
-        "expiryDate" -> LocalDate.now().format(dateFormatter),
-        "service" -> messagesApi(s"service.${IrvTestData.service.id}")(lang)
-      )
-    )
     "return 201 when client accepts invitation successfully" in {
       // Authorised as client
       IrvTestData.clientAuthStubs()
@@ -862,30 +689,21 @@ with EmailStubs {
         NO_CONTENT
       )
       AucdStubs.givenCacheRefresh(TestData.arn)
-      EmailStubs.givenEmailSent(testEmail)
+      EmailStubs.givenEmailSent(testEmail(IrvTestData))
 
-      val pendingInvitation =
-        invitationRepo.create(
-          arn = TestData.arn.value,
-          service = Service.forId(IrvTestData.service.id),
-          suppliedClientId = IrvTestData.suppliedClientId,
-          clientName = "Erling Haal",
-          agencyName = "testAgentName",
-          agencyEmail = "agent@email.com",
-          expiryDate = LocalDate.now(),
-          clientType = Some("personal")
-        ).futureValue
+      val invitation = pendingInvitation(IrvTestData)
+      invitationRepo.collection.insertOne(invitation).toFuture().futureValue
 
-      val result = doAgentPutRequest(getRequestPath(pendingInvitation.invitationId))
+      val result = doAgentPutRequest(getRequestPath(invitation.invitationId))
       result.status shouldBe 204
 
       val invitations: Seq[Invitation] = invitationRepo.findAllForAgent(TestData.arn.value).futureValue
       invitations.size shouldBe 1
       invitations.head.status shouldBe Accepted
 
-      EmailStubs.verifyInvitationEmailInfoSent(testEmail)
+      EmailStubs.verifyInvitationEmailInfoSent(testEmail(IrvTestData))
       DataStreamStub.verifyRespondToInvitationAuditSent(
-        getRequestPath(pendingInvitation.invitationId),
+        getRequestPath(invitation.invitationId),
         invitations.head,
         accepted = true,
         isStride = false,
@@ -904,19 +722,10 @@ with EmailStubs {
         clientId = IrvTestData.clientId.value
       )
 
-      val pendingInvitation =
-        invitationRepo.create(
-          arn = TestData.arn.value,
-          service = Service.forId(IrvTestData.service.id),
-          suppliedClientId = IrvTestData.suppliedClientId,
-          clientName = "Erling Haal",
-          agencyName = "testAgentName",
-          agencyEmail = "agent@email.com",
-          expiryDate = LocalDate.now(),
-          clientType = Some("personal")
-        ).futureValue
+      val invitation = pendingInvitation(IrvTestData)
+      invitationRepo.collection.insertOne(invitation).toFuture().futureValue
 
-      val result = doAgentPutRequest(getRequestPath(pendingInvitation.invitationId))
+      val result = doAgentPutRequest(getRequestPath(invitation.invitationId))
       result.status shouldBe 500
 
       val invitations: Seq[Invitation] = invitationRepo.findAllForAgent(TestData.arn.value).futureValue

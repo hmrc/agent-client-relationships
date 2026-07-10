@@ -142,7 +142,10 @@ extends TaxRegimeTestData {
     CitizenDetailsStub.givenItsaDesignatoryDetailsExists(nino)
   }
   override def clientDoesNotExistStubs(): Unit = CitizenDetailsStub.givenCitizenDetailsError(nino, 404)
-  override def clientIdLookupStubs(): Unit = HipStub.givenMtdItIdIsKnownFor(nino, mtdItId)
+  override def clientIdLookupStubs(): Unit = {
+    HipStub.givenMtdItIdIsKnownFor(nino, mtdItId)
+    HipStub.givenNinoIsKnownFor(mtdItId, nino)
+  }
   override def clientIdLookupFailureStubs(): Unit = HipStub.givenMtdItIdIsUnKnownFor(nino)
 
 }
@@ -162,7 +165,10 @@ extends TaxRegimeTestData {
     CitizenDetailsStub.givenItsaDesignatoryDetailsExists(nino)
   }
   override def clientDoesNotExistStubs(): Unit = CitizenDetailsStub.givenCitizenDetailsError(nino, 404)
-  override def clientIdLookupStubs(): Unit = HipStub.givenMtdItIdIsKnownFor(nino, mtdItId)
+  override def clientIdLookupStubs(): Unit = {
+    HipStub.givenMtdItIdIsKnownFor(nino, mtdItId)
+    HipStub.givenNinoIsKnownFor(mtdItId, nino)
+  }
   override def clientIdLookupFailureStubs(): Unit = HipStub.givenMtdItIdIsUnKnownFor(nino)
 
 }
