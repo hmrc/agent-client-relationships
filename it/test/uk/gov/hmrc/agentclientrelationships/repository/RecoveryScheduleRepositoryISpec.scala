@@ -16,12 +16,10 @@
 
 package uk.gov.hmrc.agentclientrelationships.repository
 
-import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.Helpers._
-import uk.gov.hmrc.agentclientrelationships.support.MongoApp
-import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
+import uk.gov.hmrc.agentclientrelationships.controllers.BaseISpec
 
 import java.time.Instant
 import java.time.LocalDateTime
@@ -29,23 +27,9 @@ import java.time.ZoneOffset
 import java.util.UUID
 
 class RecoveryScheduleRepositoryISpec
-extends UnitSpec
-with MongoApp
-with GuiceOneServerPerSuite {
-
-  protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder()
-    .configure("features.recovery-enable" -> false)
-    .configure(mongoConfiguration)
-
-  override implicit lazy val app: Application = appBuilder.build()
+extends BaseISpec {
 
   private lazy val repo = app.injector.instanceOf[RecoveryScheduleRepository]
-
-  override def beforeEach() = {
-    super.beforeEach()
-    await(repo.ensureIndexes())
-    ()
-  }
 
   val uid: UUID = UUID.randomUUID()
   val newDate: LocalDateTime = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime

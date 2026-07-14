@@ -46,7 +46,7 @@ extends RelationshipCopyRecordRepository(moduleComponent) {
 }
 
 class RelationshipsControllerWithoutMongoISpec
-extends BaseControllerISpec
+extends BaseISpec
 with HipStub {
 
   override val additionalOverrides: AbstractModule =

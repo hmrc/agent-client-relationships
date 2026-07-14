@@ -45,7 +45,7 @@ import java.time.ZoneId
 import scala.concurrent.ExecutionContext
 
 class ApiGetInvitationsControllerISpec
-extends BaseControllerISpec
+extends BaseISpec
 with ClientDetailsStub
 with HipStub
 with TestData {

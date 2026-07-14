@@ -35,7 +35,7 @@ import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 
 class StrideGetPartialAuthsControllerISpec
-extends BaseControllerISpec
+extends BaseISpec
 with CitizenDetailsStub {
 
   val partialAuthRepo: PartialAuthRepository = app.injector.instanceOf[PartialAuthRepository]

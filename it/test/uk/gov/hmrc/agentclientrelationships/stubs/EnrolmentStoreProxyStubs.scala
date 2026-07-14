@@ -30,6 +30,8 @@ import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.identifiers._
 import uk.gov.hmrc.domain.TaxIdentifier
 
+object EnrolmentStoreProxyStubs
+extends EnrolmentStoreProxyStubs
 trait EnrolmentStoreProxyStubs
 extends Eventually {
 

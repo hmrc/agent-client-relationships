@@ -55,7 +55,7 @@ with WireMockSupport
 with RelationshipStubs
 with DataStreamStub
 with HipStub
-with AUCDStubs
+with AucdStubs
 with BeforeAndAfterEach {
 
   implicit val request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()

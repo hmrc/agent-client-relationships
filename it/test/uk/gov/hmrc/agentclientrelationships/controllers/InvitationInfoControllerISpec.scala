@@ -35,7 +35,7 @@ import java.time.ZoneId
 import scala.concurrent.ExecutionContext
 
 class InvitationInfoControllerISpec
-extends BaseControllerISpec
+extends BaseISpec
 with TestData {
 
   implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]

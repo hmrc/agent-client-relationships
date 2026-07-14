@@ -24,6 +24,8 @@ import uk.gov.hmrc.agentclientrelationships.connectors.GroupInfo
 import uk.gov.hmrc.agentclientrelationships.connectors.UserDetails
 import uk.gov.hmrc.domain.AgentCode
 
+object UsersGroupsSearchStubs
+extends UsersGroupsSearchStubs
 trait UsersGroupsSearchStubs {
 
   private val ugsBaseUrl = s"/users-groups-search"

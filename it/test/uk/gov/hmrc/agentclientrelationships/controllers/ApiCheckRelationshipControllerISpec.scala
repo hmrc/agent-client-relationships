@@ -26,7 +26,7 @@ import uk.gov.hmrc.agentclientrelationships.stubs._
 import uk.gov.hmrc.agentclientrelationships.support.TestData
 
 class ApiCheckRelationshipControllerISpec
-extends BaseControllerISpec
+extends BaseISpec
 with ClientDetailsStub
 with CitizenDetailsStub
 with HipStub

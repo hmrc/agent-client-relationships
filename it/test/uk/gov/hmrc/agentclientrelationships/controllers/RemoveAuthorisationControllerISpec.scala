@@ -20,41 +20,33 @@ import play.api.libs.json.Json
 import play.api.libs.json.Json.toJson
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.ErrorBody
+import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.errorBodyWrites
 import uk.gov.hmrc.agentclientrelationships.model.invitation.RemoveAuthorisationRequest
 import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentclientrelationships.repository.DeleteRecord
+import uk.gov.hmrc.agentclientrelationships.repository.DeleteRecordRepository
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
 import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus
 import uk.gov.hmrc.agentclientrelationships.stubs.AfiRelationshipStub
+import uk.gov.hmrc.agentclientrelationships.stubs.AucdStubs
+import uk.gov.hmrc.agentclientrelationships.stubs.AuthStub
 import uk.gov.hmrc.agentclientrelationships.stubs.ClientDetailsStub
 import uk.gov.hmrc.agentclientrelationships.stubs.HipStub
+import uk.gov.hmrc.agentclientrelationships.stubs.RelationshipStubs
 import uk.gov.hmrc.agentclientrelationships.support.TestData
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.CbcId
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.ClientIdentifier
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Identifier
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.CapitalGains
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Cbc
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.CbcNonUk
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdIt
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdItSupp
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.PersonalIncomeRecord
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Pillar2
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Ppt
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Trust
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.TrustNT
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Vat
-import uk.gov.hmrc.domain.TaxIdentifier
+import uk.gov.hmrc.agentclientrelationships.testsupport.testdata.IrvTestData
+import uk.gov.hmrc.agentclientrelationships.testsupport.testdata.ItsaSuppTestData
+import uk.gov.hmrc.agentclientrelationships.testsupport.testdata.ItsaTestData
+import uk.gov.hmrc.agentclientrelationships.testsupport.testdata.TestData
 import uk.gov.hmrc.http.HttpResponse
 import uk.gov.hmrc.mongo.lock.Lock
 
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
-import java.time.ZoneOffset
 
 class RemoveAuthorisationControllerISpec
 extends RelationshipsBaseControllerISpec
@@ -67,419 +59,32 @@ with TestData {
 
   val invitationRepo: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
   val partialAuthRepository: PartialAuthRepository = app.injector.instanceOf[PartialAuthRepository]
+  val deleteRecordRepo: DeleteRecordRepository = app.injector.instanceOf[DeleteRecordRepository]
 
-  def allServices: Seq[(Service, TaxIdentifier)] = Seq(
-    MtdIt -> mtdItId,
-    MtdItSupp -> mtdItId,
-    MtdIt -> nino,
-    MtdItSupp -> nino,
-    //    PersonalIncomeRecord -> nino, PIR tested separately in this file
-    Vat -> vrn,
-    Trust -> utr,
-    TrustNT -> urn,
-    CapitalGains -> cgtRef,
-    Ppt -> pptRef,
-    Cbc -> cbcId,
-    CbcNonUk -> cbcId,
-    Pillar2 -> plrId
-  )
+  val requestPath: String = s"/agent-client-relationships/agent/${TestData.arn.value}/remove-authorisation"
 
-  val requestPath: String = s"/agent-client-relationships/agent/${arn.value}/remove-authorisation"
+  TestData.services.foreach { regimeData =>
+    s"POST /agent/:arn/remove-authorisations for ${regimeData.service.id} and ${regimeData.clientId.value}" when {
 
-  allServices
-    .foreach { case (service, taxIdentifier) =>
-      s"/agent/:arn/remove-authorisation" should {
-        val clientId: ClientIdentifier[TaxIdentifier] =
-          service match {
-            case MtdIt | MtdItSupp if taxIdentifier == nino => ClientIdentifier(mtdItId)
-            case _ => ClientIdentifier(taxIdentifier)
-          }
+      def setupStandardRelationship(): Unit = {
+        // Lookup clientId if different from suppliedClientId
+        regimeData.clientIdLookupStubs()
+        // Lookup for secondary enrolment identifier if needed
+        regimeData.clientKnownFactCheckStubs()
+        RelationshipStubs.givenPrincipalAgentUser(TestData.arn, TestData.groupId)
 
-        val enrolmentKey: EnrolmentKey =
-          clientId.underlying match {
-            case _: CbcId if service == Cbc => EnrolmentKey(service.enrolmentKey, Seq(Identifier("cbcId", cbcId.value), Identifier("UTR", utr.value)))
-            case id => EnrolmentKey(service.enrolmentKey, id)
-          }
+        RelationshipStubs.givenDelegatedGroupIdsExistFor(regimeData.enrolment, Set(TestData.groupId))
+        RelationshipStubs.givenEnrolmentDeallocationSucceeds(TestData.groupId, regimeData.enrolment)
 
-        val suppliedClientId: TaxIdentifier =
-          taxIdentifier match {
-            case _: MtdItId => nino
-            case _ => taxIdentifier
-          }
-
-        val expiryDate = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime.plusSeconds(60).toLocalDate
-
-        abstract class StubsForThisScenario(isAgent: Boolean = true) {
-          if (isAgent)
-            givenUserIsSubscribedAgent(arn, withThisGgUserId = "ggUserId-agent")
-          else if (taxIdentifier == mtdItId)
-            givenUserIsSubscribedClient(nino, withThisGgUserId = "ggUserId-client")
-          else
-            givenUserIsSubscribedClient(taxIdentifier, withThisGgUserId = "ggUserId-client")
-          givenPrincipalAgentUser(arn, "foo")
-          givenGroupInfo("foo", "bar")
-          givenAgentIsAllocatedAndAssignedToClient(enrolmentKey, "bar")
-          givenAgentCanBeDeallocated(clientId.underlying, arn)
-          givenEnrolmentDeallocationSucceeds("foo", enrolmentKey)
-          givenAdminUser("foo", "any")
-          givenCacheRefresh(arn)
-
-          taxIdentifier match {
-            case _: NinoWithoutSuffix if Seq(MtdIt, MtdItSupp).contains(service) => givenMtdItIdIsKnownFor(nino, mtdItId)
-            case _: MtdItId => givenNinoIsKnownFor(mtdItId, nino)
-            case _: CbcId if service == Cbc =>
-              givenKnownFactsQuery(
-                Service.Cbc,
-                cbcId,
-                Some(Seq(Identifier("cbcId", cbcId.value), Identifier("UTR", utr.value)))
-              )
-            case _: CbcId if service == CbcNonUk =>
-              givenKnownFactsQuery(
-                Service.CbcNonUk,
-                cbcId,
-                Some(Seq(Identifier("cbcId", cbcId.value)))
-              )
-            case _: NinoWithoutSuffix if service == PersonalIncomeRecord =>
-              givenTerminateAfiRelationshipSucceeds(
-                arn,
-                PersonalIncomeRecord.id,
-                nino.value
-              )
-            case _ =>
-          }
-
-        }
-
-        s"when the relationship exists and no invitation record in Repository for $service and $taxIdentifier" should {
-          s"return 204 and sent audit event" in new StubsForThisScenario {
-            doAgentPostRequest(
-              requestPath,
-              Json.toJson(RemoveAuthorisationRequest(clientId = taxIdentifier.value, service = service.id)).toString()
-            ).status shouldBe 204
-            verifyDeleteRecordNotExists
-
-            verifyTerminateRelationshipAuditSent(
-              requestPath,
-              arn.value,
-              clientId.value,
-              clientId.enrolmentId,
-              service.id,
-              "AgentLedTermination"
-            )
-          }
-
-          s"return 204 when initiated by client" in new StubsForThisScenario(isAgent = false) {
-            val suppliedClientId: ClientIdentifier[TaxIdentifier] = ClientIdentifier(
-              taxIdentifier
-            ) // undoing the itsa -> nino replacement
-
-            doAgentPostRequest(
-              requestPath,
-              Json.toJson(RemoveAuthorisationRequest(clientId = suppliedClientId.value, service = service.id)).toString()
-            ).status shouldBe 204
-            verifyDeleteRecordNotExists
-          }
-        }
-
-        s"when the relationship exists and the Arn matches that of current Agent user for $service and $taxIdentifier" should {
-          s"resume an ongoing de-auth if unfinished ES delete record found" in new StubsForThisScenario {
-            val newInvitation: Invitation = Invitation
-              .createNew(
-                arn.value,
-                service,
-                nino,
-                "TestClientName",
-                "testAgentName",
-                "agent@email.com",
-                expiryDate,
-                None
-              )
-              .copy(status = Accepted)
-
-            await(invitationRepo.collection.insertOne(newInvitation).toFuture())
-
-            await(
-              deleteRecordRepository.create(
-                DeleteRecord(
-                  arn = arn.value,
-                  enrolmentKey = enrolmentKey,
-                  suppliedClientId = Some(suppliedClientId.value),
-                  dateTime = LocalDateTime.now.minusMinutes(1),
-                  syncToETMPStatus = Some(SyncStatus.Success),
-                  syncToESStatus = Some(SyncStatus.Failed)
-                )
-              )
-            )
-
-            doAgentPostRequest(
-              requestPath,
-              Json.toJson(RemoveAuthorisationRequest(clientId = taxIdentifier.value, service = service.id)).toString()
-            ).status shouldBe 204
-
-            await(invitationRepo.findOneById(newInvitation.invitationId)).get.status == DeAuthorised
-
-            verifyDeleteRecordNotExists
-            verifyTerminateRelationshipAuditSent(
-              requestPath,
-              arn.value,
-              clientId.value,
-              clientId.enrolmentId,
-              service.id,
-              "AgentLedTermination"
-            )
-          }
-
-          s"resume an ongoing de-auth if unfinished ETMP delete record found" in new StubsForThisScenario {
-            await(
-              deleteRecordRepository.create(
-                DeleteRecord(
-                  arn = arn.value,
-                  enrolmentKey = enrolmentKey,
-                  suppliedClientId = Some(suppliedClientId.value),
-                  dateTime = LocalDateTime.now.minusMinutes(1),
-                  syncToETMPStatus = Some(SyncStatus.Failed)
-                )
-              )
-            )
-            doAgentPostRequest(
-              requestPath,
-              Json
-                .toJson(RemoveAuthorisationRequest(clientId = taxIdentifier.value, service = service.id))
-                .toString()
-            ).status shouldBe 204
-            verifyDeleteRecordNotExists
-          }
-
-          s"resume an ongoing de-auth if some delete record found" in new StubsForThisScenario {
-            await(
-              deleteRecordRepository.create(
-                DeleteRecord(
-                  arn = arn.value,
-                  enrolmentKey = enrolmentKey,
-                  suppliedClientId = Some(suppliedClientId.value),
-                  dateTime = LocalDateTime.now.minusMinutes(1)
-                )
-              )
-            )
-            doAgentPostRequest(
-              requestPath,
-              Json
-                .toJson(RemoveAuthorisationRequest(clientId = taxIdentifier.value, service = service.id))
-                .toString()
-            ).status shouldBe 204
-            verifyDeleteRecordNotExists
-          }
-
-          "return 423 when relationship deletion is already in progress" in new StubsForThisScenario {
-            await(
-              mongoLockRepository.collection
-                .insertOne(
-                  Lock(
-                    id = s"recovery-${arn.value}-${enrolmentKey.tag}",
-                    owner = "86515a24-1a37-4a40-9117-4a117d8dd42e",
-                    expiryTime = Instant.now().plusSeconds(2),
-                    timeCreated = Instant.now().minusMillis(500)
-                  )
-                )
-                .toFuture()
-            )
-
-            doAgentPostRequest(
-              requestPath,
-              Json.toJson(RemoveAuthorisationRequest(clientId = taxIdentifier.value, service = service.id)).toString()
-            ).status shouldBe LOCKED
-          }
-        }
+        HipStub.givenAgentCanBeDeallocated(regimeData.clientId, TestData.arn)
+        AucdStubs.givenCacheRefresh(TestData.arn)
       }
-    }
 
-  "when the agent principal enrolment is missing in ES" should {
-    val service: Service = Vat
-
-    trait StubsForThisScenario {
-      givenUserIsSubscribedAgent(arn, withThisGgUserId = "ggUserId-agent")
-      givenPrincipalGroupIdNotExistsFor(agentEnrolmentKey(arn))
-      givenAgentCanBeDeallocated(vrn, arn)
-      givenCacheRefresh(arn)
-    }
-
-    "return 204 and still delete the ETMP relationship" in new StubsForThisScenario {
-      doAgentPostRequest(
-        requestPath,
-        Json.toJson(RemoveAuthorisationRequest(clientId = vrn.value, service = service.id)).toString()
-      ).status shouldBe 204
-
-      verifyAgentDeallocationCalled(vrn, arn)
-      verifyNoEnrolmentHasBeenDeallocated()
-      verifyDeleteRecordNotExists
-      verifyTerminateRelationshipAuditSent(
-        requestPath,
-        arn.value,
-        vrn.value,
-        "VRN",
-        service.id,
-        "AgentLedTermination",
-        enrolmentDeallocated = false
-      )
-    }
-  }
-
-  "for alt Itsa relationship" should {
-    val taxIdentifier = mtdItId
-    val service = MtdIt
-    val enrolmentKey: EnrolmentKey = EnrolmentKey(MtdIt.id, taxIdentifier)
-    val expiryDate = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime.plusSeconds(60).toLocalDate
-
-    trait StubsForThisScenario {
-      givenUserIsSubscribedAgent(arn, withThisGgUserId = "ggUserId-agent")
-      givenPrincipalAgentUser(arn, "foo")
-      givenGroupInfo("foo", "bar")
-      givenAgentIsAllocatedAndAssignedToClient(enrolmentKey, "bar")
-      givenAgentCanBeDeallocated(taxIdentifier, arn)
-      givenEnrolmentDeallocationSucceeds("foo", enrolmentKey)
-      givenAdminUser("foo", "any")
-      givenCacheRefresh(arn)
-      givenMtdItIdIsUnKnownFor(nino)
-
-    }
-
-    "return 204 when PartialAuth exists in PartialAuth and Invitation Repo" in new StubsForThisScenario {
-      val newInvitation: Invitation = Invitation
+      def acceptedInvitation: Invitation = Invitation
         .createNew(
-          arn.value,
-          service,
-          nino,
-          "TestClientName",
-          "testAgentName",
-          "agent@email.com",
-          expiryDate,
-          None
-        )
-        .copy(status = PartialAuth)
-
-      await(
-        deleteRecordRepository.create(
-          DeleteRecord(
-            arn = arn.value,
-            enrolmentKey = EnrolmentKey(service.enrolmentKey, nino),
-            suppliedClientId = Some(nino.value),
-            dateTime = LocalDateTime.now.minusMinutes(1),
-            syncToETMPStatus = Some(SyncStatus.Success),
-            syncToESStatus = Some(SyncStatus.Failed)
-          )
-        )
-      )
-      await(
-        partialAuthRepository.create(
-          Instant.now(),
-          arn,
-          MtdIt.id,
-          nino
-        )
-      )
-      await(invitationRepo.collection.insertOne(newInvitation).toFuture())
-
-      doAgentPostRequest(
-        requestPath,
-        Json.toJson(RemoveAuthorisationRequest(nino.value, MtdIt.id)).toString()
-      ).status shouldBe 204
-
-      val partialAuthInvitations: Option[PartialAuthRelationship] =
-        partialAuthRepository
-          .findActive(
-            MtdIt.id,
-            nino,
-            arn
-          )
-          .futureValue
-
-      partialAuthInvitations.isDefined shouldBe false
-      verifyDeleteRecordNotExists
-      await(invitationRepo.findOneById(newInvitation.invitationId)).get.status == DeAuthorised
-
-      verifyTerminatePartialAuthAuditSent(
-        requestPath,
-        arn.value,
-        nino.value,
-        service.id,
-        "AgentLedTermination"
-      )
-    }
-
-    "return 204 when PartialAuth exists in PartialAuth Repo and not not exists in InvitationRepo" in new StubsForThisScenario {
-      await(
-        partialAuthRepository.create(
-          Instant.now(),
-          arn,
-          MtdIt.id,
-          nino
-        )
-      )
-
-      doAgentPostRequest(
-        requestPath,
-        Json.toJson(RemoveAuthorisationRequest(nino.value, MtdIt.id)).toString()
-      ).status shouldBe 204
-
-      val partialAuthInvitations: Option[PartialAuthRelationship] =
-        partialAuthRepository
-          .findActive(
-            MtdIt.id,
-            nino,
-            arn
-          )
-          .futureValue
-
-      partialAuthInvitations.isDefined shouldBe false
-      await(invitationRepo.findAllForAgent(arn.value)) shouldBe Seq.empty
-
-      verifyTerminatePartialAuthAuditSent(
-        requestPath,
-        arn.value,
-        nino.value,
-        service.id,
-        "AgentLedTermination"
-      )
-    }
-
-    "return 404 RELATIONSHIP_NOT_FOUND when PartialAuth does not exist in PartialAuth Repo" in new StubsForThisScenario {
-      val result: HttpResponse = doAgentPostRequest(
-        requestPath,
-        Json.toJson(RemoveAuthorisationRequest(nino.value, MtdIt.id)).toString()
-      )
-
-      result.status shouldBe 404
-      result.json shouldBe toJson(
-        ErrorBody("RELATIONSHIP_NOT_FOUND", "The specified relationship was not found.")
-      )
-
-      val partialAuthInvitations: Option[PartialAuthRelationship] =
-        partialAuthRepository
-          .findActive(
-            MtdIt.id,
-            nino,
-            arn
-          )
-          .futureValue
-
-      partialAuthInvitations.isDefined shouldBe false
-    }
-
-  }
-
-  "for PersonalIncome relationship" should {
-    trait StubsForThisScenario {
-      givenUserIsSubscribedAgent(arn, withThisGgUserId = "ggUserId-agent")
-      givenPrincipalAgentUser(arn, "foo")
-      givenGroupInfo("foo", "bar")
-    }
-
-    "return 204 when AFI deletes the relationship" in new StubsForThisScenario {
-      val pirInvitation: Invitation = Invitation
-        .createNew(
-          arn.value,
-          PersonalIncomeRecord,
-          nino,
+          TestData.arn.value,
+          regimeData.service,
+          regimeData.suppliedClientId,
           "TestClientName",
           "testAgentName",
           "agent@email.com",
@@ -488,68 +93,369 @@ with TestData {
         )
         .copy(status = Accepted)
 
-      await(invitationRepo.collection.insertOne(pirInvitation).toFuture())
+      "standard relationship exists and no deauth record exists" should {
+        "return 204 when client deauthorises the relationship" in {
+          // Authorised as client
+          regimeData.clientAuthStubs()
+          setupStandardRelationship()
+          val invitation = acceptedInvitation
+          invitationRepo.collection.insertOne(invitation).toFuture().futureValue
 
-      givenTerminateAfiRelationshipSucceeds(
-        arn,
-        PersonalIncomeRecord.id,
-        nino.value
-      )
+          doAgentPostRequest(
+            requestPath,
+            Json.toJson(RemoveAuthorisationRequest(clientId = regimeData.clientId.value, service = regimeData.service.id)).toString()
+          ).status shouldBe 204
 
-      doAgentPostRequest(
-        requestPath,
-        Json.toJson(RemoveAuthorisationRequest(nino.value, PersonalIncomeRecord.id)).toString()
-      ).status shouldBe 204
+          verifyDeleteRecordNotExists
+          eventually {
+            invitationRepo.findOneById(invitation.invitationId).futureValue.get.status shouldBe DeAuthorised
+          }
+          verifyTerminateRelationshipAuditSent(
+            requestPath,
+            TestData.arn.value,
+            regimeData.clientId.value,
+            regimeData.service.supportedClientIdType.enrolmentId,
+            regimeData.service.id,
+            "ClientLedTermination"
+          )
+        }
 
-      verifyTerminateRelationshipAuditSent(
-        requestPath,
-        arn.value,
-        nino.value,
-        "NINO",
-        PersonalIncomeRecord.id,
-        "AgentLedTermination",
-        enrolmentDeallocated = false,
-        etmpRelationshipRemoved = false
-      )
+        "return 204 when agent deauthorises the relationship" in {
+          // Authorised as agent
+          AuthStub.givenUserIsSubscribedAgent(TestData.arn)
+          setupStandardRelationship()
+          val invitation = acceptedInvitation
+          invitationRepo.collection.insertOne(invitation).toFuture().futureValue
 
-      eventually {
-        await(invitationRepo.findOneById(pirInvitation.invitationId)).get.status shouldBe DeAuthorised
+          doAgentPostRequest(
+            requestPath,
+            Json.toJson(RemoveAuthorisationRequest(clientId = regimeData.clientId.value, service = regimeData.service.id)).toString()
+          ).status shouldBe 204
+
+          verifyDeleteRecordNotExists
+          eventually {
+            await(invitationRepo.findOneById(invitation.invitationId)).get.status shouldBe DeAuthorised
+          }
+          verifyTerminateRelationshipAuditSent(
+            requestPath,
+            TestData.arn.value,
+            regimeData.clientId.value,
+            regimeData.service.supportedClientIdType.enrolmentId,
+            regimeData.service.id,
+            "AgentLedTermination"
+          )
+        }
+
+        "return 204 when stride deauthorises the relationship" in {
+          // Authorised as stride
+          AuthStub.givenUserIsAuthenticatedWithStride(STRIDE_ROLE, "strideId-983283")
+          setupStandardRelationship()
+          val invitation = acceptedInvitation
+          invitationRepo.collection.insertOne(invitation).toFuture().futureValue
+
+          doAgentPostRequest(
+            requestPath,
+            Json.toJson(RemoveAuthorisationRequest(clientId = regimeData.clientId.value, service = regimeData.service.id)).toString()
+          ).status shouldBe 204
+
+          verifyDeleteRecordNotExists
+          eventually {
+            await(invitationRepo.findOneById(invitation.invitationId)).get.status shouldBe DeAuthorised
+          }
+          verifyTerminateRelationshipAuditSent(
+            requestPath,
+            TestData.arn.value,
+            regimeData.clientId.value,
+            regimeData.service.supportedClientIdType.enrolmentId,
+            regimeData.service.id,
+            "HMRCLedTermination"
+          )
+        }
       }
-    }
 
-    "return 404 when AFI returns 404" in new StubsForThisScenario {
-      givenTerminateAfiRelationshipFails(
-        arn,
-        PersonalIncomeRecord.id,
-        nino.value,
-        404
-      )
+      "standard relationship exists and there is a deauth record" should {
+        "return 204 after completing an unfinished EACD delete record" in {
+          // Authorised as client
+          regimeData.clientAuthStubs()
+          setupStandardRelationship()
+          val invitation = acceptedInvitation
+          invitationRepo.collection.insertOne(invitation).toFuture().futureValue
+          deleteRecordRepo.create(
+            DeleteRecord(
+              arn = TestData.arn.value,
+              enrolmentKey = regimeData.enrolment,
+              suppliedClientId = Some(regimeData.suppliedClientId.value),
+              dateTime = LocalDateTime.now.minusMinutes(1),
+              syncToETMPStatus = Some(SyncStatus.Success),
+              syncToESStatus = Some(SyncStatus.Failed)
+            )
+          ).futureValue
 
-      val result: HttpResponse = doAgentPostRequest(
-        requestPath,
-        Json.toJson(RemoveAuthorisationRequest(nino.value, PersonalIncomeRecord.id)).toString()
-      )
+          doAgentPostRequest(
+            requestPath,
+            Json.toJson(RemoveAuthorisationRequest(clientId = regimeData.clientId.value, service = regimeData.service.id)).toString()
+          ).status shouldBe 204
 
-      result.status shouldBe 404
-      result.json shouldBe toJson(ErrorBody("RELATIONSHIP_NOT_FOUND", "The specified relationship was not found."))
-    }
+          verifyDeleteRecordNotExists
+          eventually {
+            await(invitationRepo.findOneById(invitation.invitationId)).get.status shouldBe DeAuthorised
+          }
+          verifyTerminateRelationshipAuditSent(
+            requestPath,
+            TestData.arn.value,
+            regimeData.clientId.value,
+            regimeData.service.supportedClientIdType.enrolmentId,
+            regimeData.service.id,
+            "ClientLedTermination"
+          )
+        }
 
-    "return 500 when AFI returns 500" in new StubsForThisScenario {
-      givenTerminateAfiRelationshipFails(
-        arn,
-        PersonalIncomeRecord.id,
-        nino.value
-      )
+        "return 204 after completing an unfinished ETMP delete record" in {
+          // Authorised as client
+          regimeData.clientAuthStubs()
+          setupStandardRelationship()
+          val invitation = acceptedInvitation
+          invitationRepo.collection.insertOne(invitation).toFuture().futureValue
+          deleteRecordRepo.create(
+            DeleteRecord(
+              arn = TestData.arn.value,
+              enrolmentKey = regimeData.enrolment,
+              suppliedClientId = Some(regimeData.suppliedClientId.value),
+              dateTime = LocalDateTime.now.minusMinutes(1),
+              syncToETMPStatus = Some(SyncStatus.Failed)
+            )
+          ).futureValue
 
-      val result: HttpResponse = doAgentPostRequest(
-        requestPath,
-        Json.toJson(RemoveAuthorisationRequest(nino.value, PersonalIncomeRecord.id)).toString()
-      )
-      result.status shouldBe 500
+          doAgentPostRequest(
+            requestPath,
+            Json.toJson(RemoveAuthorisationRequest(clientId = regimeData.clientId.value, service = regimeData.service.id)).toString()
+          ).status shouldBe 204
+
+          verifyDeleteRecordNotExists
+          eventually {
+            await(invitationRepo.findOneById(invitation.invitationId)).get.status shouldBe DeAuthorised
+          }
+          verifyTerminateRelationshipAuditSent(
+            requestPath,
+            TestData.arn.value,
+            regimeData.clientId.value,
+            regimeData.service.supportedClientIdType.enrolmentId,
+            regimeData.service.id,
+            "ClientLedTermination"
+          )
+        }
+
+        "return 204 after completing a completely unfinished delete record" in {
+          // Authorised as client
+          regimeData.clientAuthStubs()
+          setupStandardRelationship()
+          val invitation = acceptedInvitation
+          invitationRepo.collection.insertOne(invitation).toFuture().futureValue
+          deleteRecordRepo.create(
+            DeleteRecord(
+              arn = TestData.arn.value,
+              enrolmentKey = regimeData.enrolment,
+              suppliedClientId = Some(regimeData.suppliedClientId.value),
+              dateTime = LocalDateTime.now.minusMinutes(1)
+            )
+          ).futureValue
+
+          doAgentPostRequest(
+            requestPath,
+            Json.toJson(RemoveAuthorisationRequest(clientId = regimeData.clientId.value, service = regimeData.service.id)).toString()
+          ).status shouldBe 204
+
+          verifyDeleteRecordNotExists
+          eventually {
+            await(invitationRepo.findOneById(invitation.invitationId)).get.status shouldBe DeAuthorised
+          }
+          verifyTerminateRelationshipAuditSent(
+            requestPath,
+            TestData.arn.value,
+            regimeData.clientId.value,
+            regimeData.service.supportedClientIdType.enrolmentId,
+            regimeData.service.id,
+            "ClientLedTermination"
+          )
+        }
+
+        "return 423 when a deauth is in progress" in {
+          // Authorised as client
+          regimeData.clientAuthStubs()
+          setupStandardRelationship()
+          val invitation = acceptedInvitation
+          invitationRepo.collection.insertOne(invitation).toFuture().futureValue
+          mongoLockRepository.collection
+            .insertOne(
+              Lock(
+                id = s"recovery-${TestData.arn.value}-${regimeData.enrolment.tag}",
+                owner = "86515a24-1a37-4a40-9117-4a117d8dd42e",
+                expiryTime = Instant.now().plusSeconds(2),
+                timeCreated = Instant.now().minusMillis(500)
+              )
+            )
+            .toFuture().futureValue
+
+          doAgentPostRequest(
+            requestPath,
+            Json.toJson(RemoveAuthorisationRequest(clientId = regimeData.clientId.value, service = regimeData.service.id)).toString()
+          ).status shouldBe LOCKED
+        }
+      }
     }
   }
 
-  "handle errors" when {
+  Seq(ItsaTestData, ItsaSuppTestData).foreach { regimeData =>
+    s"POST /agent/:arn/remove-authorisations for ${regimeData.service.id} and ${regimeData.suppliedClientId.value}" when {
+      "partial auth relationship exists" should {
+        "return 204 when client deauthorises the relationship" in {
+          // Authorised as client
+          regimeData.clientAuthStubs()
+
+          // Lookup clientId fails
+          regimeData.clientIdLookupFailureStubs()
+
+          val newInvitation: Invitation = Invitation
+            .createNew(
+              TestData.arn.value,
+              regimeData.service,
+              regimeData.suppliedClientId,
+              "TestClientName",
+              "testAgentName",
+              "agent@email.com",
+              LocalDate.now(),
+              None
+            )
+            .copy(status = PartialAuth)
+
+          await(
+            partialAuthRepository.create(
+              Instant.now(),
+              TestData.arn,
+              regimeData.service.id,
+              TestData.nino
+            )
+          )
+          await(invitationRepo.collection.insertOne(newInvitation).toFuture())
+
+          doAgentPostRequest(
+            requestPath,
+            Json.toJson(RemoveAuthorisationRequest(regimeData.suppliedClientId.value, regimeData.service.id)).toString()
+          ).status shouldBe 204
+
+          partialAuthRepository
+            .findActive(
+              regimeData.service.id,
+              TestData.nino,
+              TestData.arn
+            )
+            .futureValue shouldBe None
+
+          eventually {
+            await(invitationRepo.findOneById(newInvitation.invitationId)).get.status shouldBe DeAuthorised
+          }
+
+          verifyTerminatePartialAuthAuditSent(
+            requestPath,
+            TestData.arn.value,
+            regimeData.suppliedClientId.value,
+            regimeData.service.id,
+            "ClientLedTermination"
+          )
+        }
+      }
+      "partial auth record does not exist" should {
+        "return 404 RELATIONSHIP_NOT_FOUND" in {
+          // Authorised as client
+          regimeData.clientAuthStubs()
+
+          // Lookup clientId fails
+          regimeData.clientIdLookupFailureStubs()
+
+          val result: HttpResponse = doAgentPostRequest(
+            requestPath,
+            Json.toJson(RemoveAuthorisationRequest(TestData.nino.value, regimeData.service.id)).toString()
+          )
+
+          result.status shouldBe 404
+          result.json shouldBe toJson(
+            ErrorBody("RELATIONSHIP_NOT_FOUND", "The specified relationship was not found.")
+          )
+        }
+      }
+    }
+  }
+
+  s"POST /agent/:arn/remove-authorisations for ${IrvTestData.service.id} and ${IrvTestData.suppliedClientId.value}" when {
+    "IRV relationship exists and no deauth record exists" should {
+      "return 204 when client deauthorises the relationship" in {
+        IrvTestData.clientAuthStubs()
+
+        val pirInvitation: Invitation = Invitation
+          .createNew(
+            TestData.arn.value,
+            PersonalIncomeRecord,
+            TestData.nino,
+            "TestClientName",
+            "testAgentName",
+            "agent@email.com",
+            LocalDate.now(),
+            None
+          )
+          .copy(status = Accepted)
+
+        await(invitationRepo.collection.insertOne(pirInvitation).toFuture())
+
+        givenTerminateAfiRelationshipSucceeds(
+          TestData.arn,
+          PersonalIncomeRecord.id,
+          TestData.nino.value
+        )
+
+        doAgentPostRequest(
+          requestPath,
+          Json.toJson(RemoveAuthorisationRequest(TestData.nino.value, PersonalIncomeRecord.id)).toString()
+        ).status shouldBe 204
+
+        eventually {
+          await(invitationRepo.findOneById(pirInvitation.invitationId)).get.status shouldBe DeAuthorised
+        }
+
+        verifyTerminateRelationshipAuditSent(
+          requestPath,
+          TestData.arn.value,
+          IrvTestData.clientId.value,
+          IrvTestData.service.supportedClientIdType.enrolmentId,
+          IrvTestData.service.id,
+          "ClientLedTermination",
+          enrolmentDeallocated = false,
+          etmpRelationshipRemoved = false
+        )
+      }
+    }
+    "IRV relationship does not exist" should {
+      "return 404 RELATIONSHIP_NOT_FOUND" in {
+        IrvTestData.clientAuthStubs()
+
+        givenTerminateAfiRelationshipFails(
+          TestData.arn,
+          PersonalIncomeRecord.id,
+          TestData.nino.value,
+          404
+        )
+
+        val result: HttpResponse = doAgentPostRequest(
+          requestPath,
+          Json.toJson(RemoveAuthorisationRequest(TestData.nino.value, PersonalIncomeRecord.id)).toString()
+        )
+
+        result.status shouldBe 404
+        result.json shouldBe toJson(ErrorBody("RELATIONSHIP_NOT_FOUND", "The specified relationship was not found."))
+      }
+    }
+  }
+
+  "POST /agent/:arn/remove-authorisations should handle errors" when {
     "request data is incorrect" should {
       "throw error when clientId is not valid for service" in {
         val result = doAgentPostRequest(
@@ -572,10 +478,10 @@ with TestData {
 
     "MtdId business details errors" should {
       "throw error when MtdId business details record is invalid" in {
-        givenEmptyItsaBusinessDetailsExists(nino)
+        HipStub.givenEmptyItsaBusinessDetailsExists(TestData.nino)
         val result = doAgentPostRequest(
           requestPath,
-          Json.toJson(RemoveAuthorisationRequest(nino.value, MtdIt.id)).toString()
+          Json.toJson(RemoveAuthorisationRequest(TestData.nino.value, MtdIt.id)).toString()
         )
         result.status shouldBe 500
       }

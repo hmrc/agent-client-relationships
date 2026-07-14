@@ -24,6 +24,9 @@ import uk.gov.hmrc.domain.TaxIdentifier
 
 import java.time.LocalDate
 
+object HipStub
+extends HipStub
+
 trait HipStub {
 
   def givenReturnsServerError(): StubMapping = stubFor(

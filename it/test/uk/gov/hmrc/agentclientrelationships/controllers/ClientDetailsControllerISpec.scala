@@ -46,7 +46,7 @@ import java.time.LocalDate
 import scala.concurrent.ExecutionContext
 
 class ClientDetailsControllerISpec
-extends BaseControllerISpec
+extends BaseISpec
 with CitizenDetailsStub
 with ClientDetailsStub
 with HipStub
@@ -357,7 +357,7 @@ with MappingStubs {
           val request = FakeRequest("GET", "/agent-client-relationships/client/HMRC-MTD-IT/details/AA000001")
           setupCommonStubs(request)
           givenMtdItIdIsUnKnownFor(NinoWithoutSuffix("AA000001"))
-          givenItsaCitizenDetailsExists(NinoWithoutSuffix("AA000001"))
+          givenCitizenDetailsExists(NinoWithoutSuffix("AA000001"))
           givenItsaDesignatoryDetailsExists(NinoWithoutSuffix("AA000001"))
           await(
             partialAuthRepo.create(
@@ -385,7 +385,7 @@ with MappingStubs {
           val request = FakeRequest("GET", "/agent-client-relationships/client/HMRC-MTD-IT/details/AA000001")
           setupCommonStubs(request)
           givenMtdItIdIsUnKnownFor(NinoWithoutSuffix("AA000001"))
-          givenItsaCitizenDetailsExists(NinoWithoutSuffix("AA000001"))
+          givenCitizenDetailsExists(NinoWithoutSuffix("AA000001"))
           givenItsaDesignatoryDetailsExists(NinoWithoutSuffix("AA000001"))
           await(
             partialAuthRepo.create(
@@ -433,9 +433,6 @@ with MappingStubs {
 
           val result = doGetRequest(request.uri)
           result.status shouldBe 200
-          println(result)
-          println(result.json)
-          println("***************************************************************************************************")
           result.json shouldBe Json.obj(
             "name" -> "Matthew Kovacic",
             "isOverseas" -> false,

@@ -31,7 +31,7 @@ import java.time.Instant
 import java.time.ZoneOffset
 
 class ClientTaxAgentsDataControllerISpec
-extends BaseControllerISpec
+extends BaseISpec
 with ClientDetailsStub
 with AfiRelationshipStub
 with HipStub
@@ -315,12 +315,10 @@ with TestData {
 
       // CHeck how many Agents data we have
       val clientTaxAgentsData = result.json.as[ClientTaxAgentsData]
-      println("clientTaxAgentsData \n" + clientTaxAgentsData)
       clientTaxAgentsData.agentsInvitations.agentsInvitations.size shouldBe 1
 
       // Check how many invitations for agent we have
       val agentNameInvitations = clientTaxAgentsData.agentsInvitations.agentsInvitations.find(x => x.agentName == agentName1).get.invitations
-      println("agentNameInvitations \n" + agentNameInvitations)
       agentNameInvitations.size shouldBe 2
 
     }

@@ -19,27 +19,22 @@ package uk.gov.hmrc.agentclientrelationships.support
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.stream.Materializer
 import org.apache.pekko.testkit.TestKit
-import org.scalatest.BeforeAndAfterEach
 import org.scalatest.concurrent.PatienceConfiguration.Interval
 import org.scalatest.concurrent.PatienceConfiguration.Timeout
 import org.scalatest.time.Seconds
 import org.scalatest.time.Span
-import org.scalatestplus.play.guice.GuiceOneServerPerSuite
-import play.api.Application
 import play.api.http.Status.SERVICE_UNAVAILABLE
-import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.test.Helpers.await
 import play.api.test.Helpers.defaultAwaitTimeout
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
+import uk.gov.hmrc.agentclientrelationships.controllers.BaseISpec
 import uk.gov.hmrc.agentclientrelationships.model._
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Vat
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Vrn
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
 import uk.gov.hmrc.agentclientrelationships.services.EmailService
 import uk.gov.hmrc.agentclientrelationships.services.MongoLockService
-import uk.gov.hmrc.agentclientrelationships.stubs.DataStreamStub
 import uk.gov.hmrc.agentclientrelationships.stubs.EmailStubs
-import uk.gov.hmrc.agentclientrelationships.stubs.EnrolmentStoreProxyStubs
 import uk.gov.hmrc.agentclientrelationships.util.DateTimeHelper
 
 import java.time.Instant
@@ -48,26 +43,15 @@ import scala.concurrent.ExecutionContext
 
 class EmailSchedulerISpec
 extends TestKit(ActorSystem("testSystem"))
-with UnitSpec
-with MongoApp
-with GuiceOneServerPerSuite
-with WireMockSupport
-with BeforeAndAfterEach
-with EmailStubs
-with DataStreamStub
-with EnrolmentStoreProxyStubs {
+with BaseISpec
+with EmailStubs {
 
-  protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder()
-    .configure(
-      "emailScheduler.enabled" -> true,
-      "emailScheduler.warningEmailCronExpression" -> "*/5_*_*_?_*_*", // every 5 seconds
-      "emailScheduler.expiredEmailCronExpression" -> "*/5_*_*_?_*_*", // every 5 seconds
-      "emailScheduler.lockDurationInSeconds" -> "1",
-      "microservice.services.email.port" -> wireMockPort
-    )
-    .configure(mongoConfiguration)
-
-  override implicit lazy val app: Application = appBuilder.build()
+  override def additionalConfig: Map[String, Any] = Map(
+    "emailScheduler.enabled" -> true,
+    "emailScheduler.warningEmailCronExpression" -> "*/5_*_*_?_*_*", // every 5 seconds
+    "emailScheduler.expiredEmailCronExpression" -> "*/5_*_*_?_*_*", // every 5 seconds
+    "emailScheduler.lockDurationInSeconds" -> "1"
+  )
 
   val invitationsRepository: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
   val emailService: EmailService = app.injector.instanceOf[EmailService]
