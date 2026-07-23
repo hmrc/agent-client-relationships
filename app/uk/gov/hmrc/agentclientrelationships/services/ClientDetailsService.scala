@@ -133,6 +133,10 @@ extends RequestAwareLogging {
     "SCOTLAND"
   ).contains(countryName)
 
+  private def isMissingOrEmpty(optString: Option[String]): Boolean = {
+    optString.forall(_.trim.isEmpty)
+  }
+
   // scalastyle:off cyclomatic.complexity
   private def getItsaClientDetails(nino: String)(implicit request: RequestHeader): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] = {
     for {
@@ -150,17 +154,22 @@ extends RequestAwareLogging {
                   case Left(_) => Future.successful(Left(ClientDetailsNotFound))
                   case Right(itsaDesignatoryDetails) =>
 
-                    (citizenDetails.name, citizenDetails.saUtr, itsaDesignatoryDetails.postCode, itsaDesignatoryDetails.country) match {
-                      case (Some(name), Some(_), Some(postcode), Some(country)) if isUk(country) =>
-                        Future.successful(Right(makeItsaUkResponse(postcode = postcode, name = name)))
-                      case (Some(name), Some(_), _, Some(country)) if appConfig.overseasItsaEnabled =>
-                        Future.successful(Right(makeItsaOverseasResponse(
-                          country = country,
-                          name = name,
-                          factType = Country
-                        )))
-                      case _ => Future.successful(Left(ClientDetailsNotFound))
-                    }
+                    if (isMissingOrEmpty(citizenDetails.firstName) || isMissingOrEmpty(citizenDetails.lastName))
+                      Future.failed(new RuntimeException("The retrieved citizen details has an empty/missing name field"))
+                    else
+                      (citizenDetails.name, citizenDetails.saUtr, itsaDesignatoryDetails.postCode, itsaDesignatoryDetails.country) match {
+                        case (_, _, optPostCode, Some(country)) if isMissingOrEmpty(optPostCode) && isUk(country) =>
+                          Future.failed(new RuntimeException("The retrieved designatory details has an empty/missing post code field"))
+                        case (Some(name), Some(_), Some(postcode), Some(country)) if isUk(country) =>
+                          Future.successful(Right(makeItsaUkResponse(postcode = postcode, name = name)))
+                        case (Some(name), Some(_), _, Some(country)) if appConfig.overseasItsaEnabled =>
+                          Future.successful(Right(makeItsaOverseasResponse(
+                            country = country,
+                            name = name,
+                            factType = Country
+                          )))
+                        case _ => Future.successful(Left(ClientDetailsNotFound))
+                      }
 
                 }
 
