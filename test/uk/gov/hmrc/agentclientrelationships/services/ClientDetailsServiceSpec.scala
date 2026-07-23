@@ -19,6 +19,8 @@ package uk.gov.hmrc.agentclientrelationships.services
 import org.mockito.ArgumentMatchers.any
 import org.mockito.ArgumentMatchers.{eq => eqTo}
 import org.mockito.Mockito.when
+import org.scalatest.prop.TableDrivenPropertyChecks._
+import org.scalatest.prop.Tables.Table
 import org.scalatestplus.mockito.MockitoSugar.mock
 import play.api.mvc.RequestHeader
 import play.api.test.FakeRequest
@@ -196,34 +198,133 @@ extends UnitSpec {
 //
 //        }
 
-        "the client name is not returned" should {
-
-          "return a ClientDetailsNotFound error" in {
-            when(mockClientDetailsConnector.getItsaCitizenDetails(eqTo(nino))(any[RequestHeader])).thenReturn(
-              Future.successful(
-                Right(
-                  CitizenDetails(
-                    None,
-                    None,
-                    None,
-                    Some("11223344")
-                  )
-                )
+        "the client name is empty/missing" should {
+          val emptyNameCases = Table(
+            ("scenario", "citizenDetails"),
+            (
+              "first name empty",
+              CitizenDetails(
+                Some(""),
+                Some("Rocks"),
+                None,
+                Some("11223344")
+              )
+            ),
+            (
+              "last name empty",
+              CitizenDetails(
+                Some("John"),
+                Some(""),
+                None,
+                Some("11223344")
+              )
+            ),
+            (
+              "full name empty",
+              CitizenDetails(
+                Some(""),
+                Some(""),
+                None,
+                Some("11223344")
+              )
+            ),
+            (
+              "first name missing",
+              CitizenDetails(
+                None,
+                Some("Rocks"),
+                None,
+                Some("11223344")
+              )
+            ),
+            (
+              "last name missing",
+              CitizenDetails(
+                Some("John"),
+                None,
+                None,
+                Some("11223344")
+              )
+            ),
+            (
+              "full name missing",
+              CitizenDetails(
+                None,
+                None,
+                None,
+                Some("11223344")
               )
             )
+          )
 
-            when(mockClientDetailsConnector.getItsaDesignatoryDetails(eqTo(nino))(any[RequestHeader])).thenReturn(
-              Future.successful(
-                Right(
-                  ItsaDesignatoryDetails(
-                    Some("AA1 1AA"),
-                    Some("GREAT BRITAIN")
+          "throw a RuntimeException with the empty/missing name message" in {
+            forAll(emptyNameCases) {
+              (
+                scenario,
+                citizenDetails
+              ) =>
+                withClue(s"scenario: $scenario") {
+                  when(mockClientDetailsConnector.getItsaCitizenDetails(eqTo(nino))(any[RequestHeader])).thenReturn(
+                    Future.successful(Right(citizenDetails))
                   )
-                )
-              )
-            )
 
-            await(service.findClientDetails("HMRC-MTD-IT", "AA000001B")) shouldBe Left(ClientDetailsNotFound)
+                  when(mockClientDetailsConnector.getItsaDesignatoryDetails(eqTo(nino))(any[RequestHeader])).thenReturn(
+                    Future.successful(
+                      Right(
+                        ItsaDesignatoryDetails(
+                          Some("AA1 1AA"),
+                          Some("GREAT BRITAIN")
+                        )
+                      )
+                    )
+                  )
+
+                  val exception = intercept[RuntimeException] {
+                    await(service.findClientDetails("HMRC-MTD-IT", "AA000001B"))
+                  }
+                  exception.getMessage shouldBe "The retrieved citizen details has an empty/missing name field"
+                }
+            }
+          }
+        }
+
+        "the post code is empty/missing for UK clients" should {
+          val emptyPostCodeCases = Table(
+            ("scenario", "designatoryDetails"),
+            ("post code missing", ItsaDesignatoryDetails(None, Some("GREAT BRITAIN"))),
+            ("post code empty", ItsaDesignatoryDetails(Some(" "), Some("GREAT BRITAIN")))
+          )
+
+          "throw a RuntimeException with the empty/missing post code message" in {
+            forAll(emptyPostCodeCases) {
+              (
+                scenario,
+                designatoryDetails
+              ) =>
+                withClue(s"scenario: $scenario") {
+                  when(mockClientDetailsConnector.getItsaCitizenDetails(eqTo(nino))(any[RequestHeader])).thenReturn(
+                    Future.successful(
+                      Right(
+                        CitizenDetails(
+                          Some("John"),
+                          Some("Rocks"),
+                          None,
+                          Some("11223344")
+                        )
+                      )
+                    )
+                  )
+
+                  when(mockClientDetailsConnector.getItsaDesignatoryDetails(eqTo(nino))(any[RequestHeader])).thenReturn(
+                    Future.successful(Right(designatoryDetails))
+                  )
+
+                  val exception = intercept[RuntimeException] {
+                    await(service.findClientDetails("HMRC-MTD-IT", "AA000001B"))
+                  }
+                  exception.getMessage shouldBe "The retrieved designatory details has an empty/missing post code field"
+                }
+            }
           }
 
         }
