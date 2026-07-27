@@ -31,6 +31,7 @@ import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.agentclientrelationships.util.RequestSupport._
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.{MtdIt, MtdItSupp}
 
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -65,10 +66,10 @@ extends RequestAwareLogging {
       auditData.set(enrolmentDelegatedKey, false)
       auditData.set(etmpRelationshipCreatedKey, false)
 
-      val isCopyAcrossRelationship = oldReferences.nonEmpty
+      val createCopyRecord = Seq(MtdIt.enrolmentKey, MtdItSupp.enrolmentKey).contains(enrolmentKey.service)
 
       def createRelationshipRecord: Future[Done] = {
-        if (isCopyAcrossRelationship) {
+        if (createCopyRecord) {
           val record = RelationshipCopyRecord(
             arn.value,
             enrolmentKey,
@@ -87,14 +88,14 @@ extends RequestAwareLogging {
         _ <- createEtmpRecord(
           arn,
           enrolmentKey,
-          isCopyAcrossRelationship
+          createCopyRecord
         )
         _ <- createEsRecord(
           arn,
           enrolmentKey,
           agentUser,
           failIfAllocateAgentInESFails,
-          isCopyAcrossRelationship
+          createCopyRecord
         )
         _ = auditService.sendCreateRelationshipAuditEvent()
       } yield Done
@@ -103,7 +104,7 @@ extends RequestAwareLogging {
   private def createEtmpRecord(
     arn: Arn,
     enrolmentKey: EnrolmentKey,
-    isCopyAcrossRelationship: Boolean
+    createCopyRecord: Boolean
   )(implicit
     ec: ExecutionContext,
     request: RequestHeader,
@@ -111,7 +112,7 @@ extends RequestAwareLogging {
   ): Future[Done] = {
 
     def updateEtmpSyncStatus(status: SyncStatus): Future[Done] =
-      if (isCopyAcrossRelationship) {
+      if (createCopyRecord) {
         relationshipCopyRepository.updateEtmpSyncStatus(
           arn,
           enrolmentKey,
@@ -140,14 +141,14 @@ extends RequestAwareLogging {
     enrolmentKey: EnrolmentKey,
     agentUser: AgentUser,
     failIfAllocateAgentInESFails: Boolean,
-    isCopyAcrossRelationship: Boolean
+    createCopyRecord: Boolean
   )(implicit
     request: RequestHeader,
     auditData: AuditData
   ): Future[Done] = {
 
     def updateEsSyncStatus(status: SyncStatus): Future[Done] =
-      if (isCopyAcrossRelationship) {
+      if (createCopyRecord) {
         relationshipCopyRepository
           .updateEsSyncStatus(
             arn,
@@ -287,14 +288,14 @@ extends RequestAwareLogging {
             _ <- createEtmpRecord(
               arn,
               enrolmentKey,
-              isCopyAcrossRelationship = true
+              createCopyRecord = true
             )
             _ <- createEsRecord(
               arn,
               enrolmentKey,
               agentUser,
               failIfAllocateAgentInESFails = false,
-              isCopyAcrossRelationship = true
+              createCopyRecord = true
             )
             _ = auditService.sendCreateRelationshipAuditEvent()
           } yield Done
@@ -309,7 +310,7 @@ extends RequestAwareLogging {
               enrolmentKey,
               agentUser,
               failIfAllocateAgentInESFails = false,
-              isCopyAcrossRelationship = true
+              createCopyRecord = true
             )
             _ = auditService.sendCreateRelationshipAuditEvent()
           } yield Done
@@ -321,7 +322,7 @@ extends RequestAwareLogging {
           createEtmpRecord(
             arn,
             enrolmentKey,
-            isCopyAcrossRelationship = true
+            createCopyRecord = true
           ).map { result =>
             auditService.sendCreateRelationshipAuditEvent()
             result

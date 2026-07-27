@@ -26,6 +26,8 @@ import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.MongoLocalDateTimeFormat
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdIt
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdItSupp
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipCopyRecord.formats
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
@@ -151,6 +153,16 @@ with RequestAwareLogging {
   private def filter(
     arn: Arn,
     enrolmentKey: EnrolmentKey
-  ) = Filters.and(Filters.equal("arn", arn.value), Filters.equal("enrolmentKey", enrolmentKey.tag))
+  ) = Filters.and(
+    Filters.equal("arn", arn.value),
+    enrolmentKey.service match {
+      case MtdIt.enrolmentKey | MtdItSupp.enrolmentKey =>
+        Filters.or(
+          Filters.equal("enrolmentKey", enrolmentKey.copy(service = MtdIt.enrolmentKey).tag),
+          Filters.equal("enrolmentKey", enrolmentKey.copy(service = MtdItSupp.enrolmentKey).tag)
+        )
+      case _ => Filters.equal("enrolmentKey", enrolmentKey.tag)
+    }
+  )
 
 }

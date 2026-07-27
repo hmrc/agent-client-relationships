@@ -43,6 +43,7 @@ trait MockCreateRelationshipsService {
       eqs(arn),
       eqs(enrolment),
       eqs(Set()),
+      any[Boolean],
       any[Boolean]
     )(any[RequestHeader], any[AuditData])
   ).thenReturn(response)
