@@ -19,6 +19,8 @@ package uk.gov.hmrc.agentclientrelationships.services
 import org.mockito.ArgumentMatchers.any
 import org.mockito.ArgumentMatchers.{eq => eqTo}
 import org.mockito.Mockito.when
+import org.scalatest.prop.TableDrivenPropertyChecks._
+import org.scalatest.prop.Tables.Table
 import org.scalatestplus.mockito.MockitoSugar.mock
 import play.api.mvc.RequestHeader
 import play.api.test.FakeRequest
@@ -156,74 +158,137 @@ extends UnitSpec {
 
         }
 
-//        "all the expected details are returned for an overseas client" should {
-//
-//          "return a ClientDetailsResponse" in {
-//            when(mockClientDetailsConnector.getItsaCitizenDetails(eqTo(nino))(any[RequestHeader])).thenReturn(
-//              Future.successful(
-//                Right(
-//                  CitizenDetails(
-//                    Some("John"),
-//                    Some("Rocks"),
-//                    None,
-//                    Some("11223344")
-//                  )
-//                )
-//              )
-//            )
-//
-//            when(mockClientDetailsConnector.getItsaDesignatoryDetails(eqTo(nino))(any[RequestHeader])).thenReturn(
-//              Future.successful(
-//                Right(
-//                  ItsaDesignatoryDetails(
-//                    Some("AA1 1AA"),
-//                    Some("ARMENIA")
-//                  )
-//                )
-//              )
-//            )
-//
-//            val resultModel = ClientDetailsResponse(
-//              "John Rocks",
-//              None,
-//              isOverseas = Some(true),
-//              Seq("ARMENIA"),
-//              Some(Country)
-//            )
-//
-//            await(service.findClientDetails("HMRC-MTD-IT", "AA000001B")) shouldBe Right(resultModel)
-//          }
-//
-//        }
+        //        "all the expected details are returned for an overseas client" should {
+        //
+        //          "return a ClientDetailsResponse" in {
+        //            when(mockClientDetailsConnector.getItsaCitizenDetails(eqTo(nino))(any[RequestHeader])).thenReturn(
+        //              Future.successful(
+        //                Right(
+        //                  CitizenDetails(
+        //                    Some("John"),
+        //                    Some("Rocks"),
+        //                    None,
+        //                    Some("11223344")
+        //                  )
+        //                )
+        //              )
+        //            )
+        //
+        //            when(mockClientDetailsConnector.getItsaDesignatoryDetails(eqTo(nino))(any[RequestHeader])).thenReturn(
+        //              Future.successful(
+        //                Right(
+        //                  ItsaDesignatoryDetails(
+        //                    Some("AA1 1AA"),
+        //                    Some("ARMENIA")
+        //                  )
+        //                )
+        //              )
+        //            )
+        //
+        //            val resultModel = ClientDetailsResponse(
+        //              "John Rocks",
+        //              None,
+        //              isOverseas = Some(true),
+        //              Seq("ARMENIA"),
+        //              Some(Country)
+        //            )
+        //
+        //            await(service.findClientDetails("HMRC-MTD-IT", "AA000001B")) shouldBe Right(resultModel)
+        //          }
+        //
+        //        }
 
-        "the client name is not returned" should {
-
-          "return a ClientDetailsNotFound error" in {
-            when(mockClientDetailsConnector.getItsaCitizenDetails(eqTo(nino))(any[RequestHeader])).thenReturn(
-              Future.successful(
-                Right(
-                  CitizenDetails(
-                    None,
-                    None,
-                    None,
-                    Some("11223344")
-                  )
-                )
+        "the client name is empty/missing" should {
+          val emptyNameCases = Table(
+            ("scenario", "citizenDetails"),
+            (
+              "full name empty",
+              CitizenDetails(
+                Some(""),
+                Some(""),
+                None,
+                Some("11223344")
+              )
+            ),
+            (
+              "full name missing",
+              CitizenDetails(
+                None,
+                None,
+                None,
+                Some("11223344")
               )
             )
+          )
 
-            when(mockClientDetailsConnector.getItsaDesignatoryDetails(eqTo(nino))(any[RequestHeader])).thenReturn(
-              Future.successful(
-                Right(
-                  ItsaDesignatoryDetails(
-                    Some("AA1 1AA"),
-                    Some("GREAT BRITAIN")
+          "throw a RuntimeException with the empty/missing name message" in {
+            forAll(emptyNameCases) {
+              (
+                scenario,
+                citizenDetails
+              ) =>
+                withClue(s"scenario: $scenario") {
+                  when(mockClientDetailsConnector.getItsaCitizenDetails(eqTo(nino))(any[RequestHeader])).thenReturn(
+                    Future.successful(Right(citizenDetails))
                   )
-                )
-              )
-            )
 
-            await(service.findClientDetails("HMRC-MTD-IT", "AA000001B")) shouldBe Left(ClientDetailsNotFound)
+                  when(mockClientDetailsConnector.getItsaDesignatoryDetails(eqTo(nino))(any[RequestHeader])).thenReturn(
+                    Future.successful(
+                      Right(
+                        ItsaDesignatoryDetails(
+                          Some("AA1 1AA"),
+                          Some("GREAT BRITAIN")
+                        )
+                      )
+                    )
+                  )
+
+                  val exception = intercept[RuntimeException] {
+                    await(service.findClientDetails("HMRC-MTD-IT", "AA000001B"))
+                  }
+                  exception.getMessage shouldBe "Missing required data from ITSA APIs: Name"
+                }
+            }
+          }
+        }
+
+        "the post code is empty/missing for UK clients" should {
+          val emptyPostCodeCases = Table(
+            ("scenario", "designatoryDetails"),
+            ("post code missing", ItsaDesignatoryDetails(None, Some("GREAT BRITAIN"))),
+            ("post code empty", ItsaDesignatoryDetails(Some(""), Some("GREAT BRITAIN")))
+          )
+
+          "throw a RuntimeException with the empty/missing post code message" in {
+            forAll(emptyPostCodeCases) {
+              (
+                scenario,
+                designatoryDetails
+              ) =>
+                withClue(s"scenario: $scenario") {
+                  when(mockClientDetailsConnector.getItsaCitizenDetails(eqTo(nino))(any[RequestHeader])).thenReturn(
+                    Future.successful(
+                      Right(
+                        CitizenDetails(
+                          Some("John"),
+                          Some("Rocks"),
+                          None,
+                          Some("11223344")
+                        )
+                      )
+                    )
+                  )
+
+                  when(mockClientDetailsConnector.getItsaDesignatoryDetails(eqTo(nino))(any[RequestHeader])).thenReturn(
+                    Future.successful(Right(designatoryDetails))
+                  )
+
+                  val exception = intercept[RuntimeException] {
+                    await(service.findClientDetails("HMRC-MTD-IT", "AA000001B"))
+                  }
+                  exception.getMessage shouldBe "Missing required data from ITSA APIs: Post Code (UK Only)"
+                }
+            }
           }
 
         }
@@ -248,7 +313,7 @@ extends UnitSpec {
               Future.successful(
                 Right(
                   ItsaDesignatoryDetails(
-                    Some("AA1 1AA"),
+                    None,
                     Some("GREAT BRITAIN")
                   )
                 )
@@ -260,9 +325,9 @@ extends UnitSpec {
 
         }
 
-        "the country is not returned" should {
+        "the country is missing" should {
 
-          "return a ClientDetailsNotFound error" in {
+          "throw a RuntimeException with the empty/missing country message" in {
             when(mockClientDetailsConnector.getItsaCitizenDetails(eqTo(nino))(any[RequestHeader])).thenReturn(
               Future.successful(
                 Right(
@@ -287,7 +352,45 @@ extends UnitSpec {
               )
             )
 
-            await(service.findClientDetails("HMRC-MTD-IT", "AA000001B")) shouldBe Left(ClientDetailsNotFound)
+            val exception = intercept[RuntimeException] {
+              await(service.findClientDetails("HMRC-MTD-IT", "AA000001B"))
+            }
+            exception.getMessage shouldBe "Missing required data from ITSA APIs: Country"
+          }
+
+        }
+
+        "the name and post code are missing" should {
+
+          "throw a RuntimeException with the empty/missing country message" in {
+            when(mockClientDetailsConnector.getItsaCitizenDetails(eqTo(nino))(any[RequestHeader])).thenReturn(
+              Future.successful(
+                Right(
+                  CitizenDetails(
+                    Some(""),
+                    Some(""),
+                    None,
+                    Some("11223344")
+                  )
+                )
+              )
+            )
+
+            when(mockClientDetailsConnector.getItsaDesignatoryDetails(eqTo(nino))(any[RequestHeader])).thenReturn(
+              Future.successful(
+                Right(
+                  ItsaDesignatoryDetails(
+                    None,
+                    Some("GREAT BRITAIN")
+                  )
+                )
+              )
+            )
+
+            val exception = intercept[RuntimeException] {
+              await(service.findClientDetails("HMRC-MTD-IT", "AA000001B"))
+            }
+            exception.getMessage shouldBe "Missing required data from ITSA APIs: Name, Post Code (UK Only)"
           }
 
         }
