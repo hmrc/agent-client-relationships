@@ -29,9 +29,11 @@ case class CitizenDetails(
   saUtr: Option[String]
 ) {
   lazy val name: Option[String] = {
-    val n = Seq(firstName, lastName)
-      .collect { case Some(x) => x }
-      .mkString(" ")
+    val n =
+      Seq(firstName, lastName)
+        .collect { case Some(x) => x }
+        .mkString(" ")
+        .trim
     if (n.isEmpty)
       None
     else

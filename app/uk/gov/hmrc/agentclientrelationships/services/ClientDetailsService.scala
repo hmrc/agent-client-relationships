@@ -149,16 +149,30 @@ extends RequestAwareLogging {
                 itsaDesignatoryDetailsEither match {
                   case Left(_) => Future.successful(Left(ClientDetailsNotFound))
                   case Right(itsaDesignatoryDetails) =>
-
-                    (citizenDetails.name, citizenDetails.saUtr, itsaDesignatoryDetails.postCode, itsaDesignatoryDetails.country) match {
+                    (
+                      citizenDetails.name,
+                      citizenDetails.saUtr,
+                      itsaDesignatoryDetails.postCode.filter(_.trim.nonEmpty),
+                      itsaDesignatoryDetails.country.filter(_.trim.nonEmpty)
+                    ) match {
                       case (Some(name), Some(_), Some(postcode), Some(country)) if isUk(country) =>
                         Future.successful(Right(makeItsaUkResponse(postcode = postcode, name = name)))
-                      case (Some(name), Some(_), _, Some(country)) if appConfig.overseasItsaEnabled =>
+                      case (Some(name), Some(_), _, Some(country)) if appConfig.overseasItsaEnabled && !isUk(country) =>
                         Future.successful(Right(makeItsaOverseasResponse(
                           country = country,
                           name = name,
                           factType = Country
                         )))
+                      case (optName, Some(_), optPostcode, optCountry) if optName.isEmpty || optPostcode.isEmpty || optCountry.isEmpty =>
+                        val missingFields =
+                          List(
+                            Option.when(optName.isEmpty)("Name"),
+                            Option.when(optPostcode.isEmpty && optCountry.exists(isUk))("Post Code (UK Only)"),
+                            Option.when(optCountry.isEmpty)("Country")
+                          ).flatten
+                        val msg = s"Missing required data from ITSA APIs: ${missingFields.mkString(", ")}"
+                        logger.warn(msg)
+                        Future.failed(new RuntimeException(msg))
                       case _ => Future.successful(Left(ClientDetailsNotFound))
                     }
 
