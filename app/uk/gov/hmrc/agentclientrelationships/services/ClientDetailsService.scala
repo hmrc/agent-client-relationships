@@ -164,7 +164,7 @@ extends RequestAwareLogging {
                           factType = Country
                         )))
                       case (Some(_), Some(_), _, Some(country)) if !isUk(country) =>
-                        // TODO REMOVE THIS CASE WHEN overseasItsaEnabled FEATURE IS ENABLED
+                        // TODO REMOVE THIS CASE WHEN overseasItsaEnabled FEATURE SWITCH IS REMOVED
                         Future.successful(Left(ClientDetailsNotFound))
                       case (optName, Some(_), optPostcode, optCountry) if optName.isEmpty || optPostcode.isEmpty || optCountry.isEmpty =>
                         val missingFields =
