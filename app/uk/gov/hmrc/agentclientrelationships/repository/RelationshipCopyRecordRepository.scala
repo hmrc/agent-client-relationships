@@ -26,6 +26,7 @@ import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.MongoLocalDateTimeFormat
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdIt
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdItSupp
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipCopyRecord.formats
@@ -164,5 +165,26 @@ with RequestAwareLogging {
       case _ => Filters.equal("enrolmentKey", enrolmentKey.tag)
     }
   )
+
+  def backfillItsaCopyRecord(
+    enrolmentKey: EnrolmentKey,
+    arn: Arn
+  ): Future[Done] = Mdc.preservingMdc {
+    if (Seq(MtdIt.enrolmentKey, MtdItSupp.enrolmentKey).contains(enrolmentKey.service))
+      findBy(arn, enrolmentKey).flatMap {
+        case Some(_) => Future.successful(Done)
+        case None =>
+          create(RelationshipCopyRecord(
+            arn = arn.value,
+            enrolmentKey = enrolmentKey,
+            references = None,
+            dateTime = LocalDateTime.now().truncatedTo(MILLIS),
+            syncToETMPStatus = Some(Success),
+            syncToESStatus = Some(Success)
+          ))
+      }
+    else
+      Future.successful(Done)
+  }
 
 }

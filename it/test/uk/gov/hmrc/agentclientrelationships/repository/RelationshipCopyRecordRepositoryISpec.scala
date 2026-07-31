@@ -111,6 +111,41 @@ extends BaseISpec {
       )
       result.length shouldBe 1
     }
+
+    "backfill an ITSA copy record when one does not already exist" in {
+      val before = now
+
+      await(repo.backfillItsaCopyRecord(mtdItEnrolmentKey, arn)) shouldBe Done
+
+      val result = await(repo.findBy(arn, mtdItEnrolmentKey)).value
+      result.arn shouldBe arn.value
+      result.enrolmentKey shouldBe mtdItEnrolmentKey
+      result.references shouldBe None
+      result.syncToETMPStatus shouldBe Some(SyncStatus.Success)
+      result.syncToESStatus shouldBe Some(SyncStatus.Success)
+    }
+
+    "not overwrite an existing ITSA copy record when backfilling" in {
+      val existing = RelationshipCopyRecord(
+        arn = arn.value,
+        enrolmentKey = mtdItEnrolmentKey,
+        dateTime = now.minusDays(1),
+        syncToETMPStatus = Some(SyncStatus.Failed),
+        syncToESStatus = Some(SyncStatus.InProgress)
+      )
+
+      await(repo.create(existing))
+
+      await(repo.backfillItsaCopyRecord(mtdItEnrolmentKey, arn)) shouldBe Done
+
+      await(repo.findBy(arn, mtdItEnrolmentKey)) shouldBe Some(existing)
+    }
+
+    "not backfill a copy record for a non-ITSA service" in {
+      await(repo.backfillItsaCopyRecord(vatEnrolmentKey, arn)) shouldBe Done
+
+      await(repo.findBy(arn, vatEnrolmentKey)) shouldBe None
+    }
   }
 
 }

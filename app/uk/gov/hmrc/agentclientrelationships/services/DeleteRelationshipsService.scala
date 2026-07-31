@@ -52,6 +52,7 @@ class DeleteRelationshipsService @Inject() (
   es: EnrolmentStoreProxyConnector,
   hipConnector: HipConnector,
   deleteRecordRepository: DeleteRecordRepository,
+  copyRecordRepository: RelationshipCopyRecordRepository,
   agentUserClientDetailsConnector: AgentUserClientDetailsConnector,
   lockService: MongoLockService,
   checkService: CheckRelationshipsService,
@@ -102,6 +103,7 @@ extends RequestAwareLogging {
               suppliedClientId.value,
               endedBy.getOrElse("HMRC")
             )
+            _ = copyRecordRepository.backfillItsaCopyRecord(enrolmentKey, arn) // Creates copy record if enrolment is itsa and doesn't already exist.
           } yield {
             if (enrolmentDeallocated || etmpRelationshipRemoved)
               true
