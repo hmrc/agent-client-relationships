@@ -169,11 +169,16 @@ with RequestAwareLogging {
   def backfillItsaCopyRecord(
     enrolmentKey: EnrolmentKey,
     arn: Arn
-  ): Future[Done] = Mdc.preservingMdc {
+  )(implicit requestHeader: RequestHeader): Future[Done] = Mdc.preservingMdc {
     if (Seq(MtdIt.enrolmentKey, MtdItSupp.enrolmentKey).contains(enrolmentKey.service))
       findBy(arn, enrolmentKey).flatMap {
-        case Some(_) => Future.successful(Done)
-        case None =>
+        case Some(record) if !(record.syncToESStatus.contains(Failed) && record.syncToETMPStatus.contains(Failed)) => Future.successful(Done)
+        case optRecord =>
+          logger.warn(s"[backfillItsaCopyRecord] Backfilling completed copy record for $arn and ${enrolmentKey.tag}" +
+            (if (optRecord.isDefined)
+               " there is an existing fully failed record"
+             else
+               ""))
           create(RelationshipCopyRecord(
             arn = arn.value,
             enrolmentKey = enrolmentKey,
