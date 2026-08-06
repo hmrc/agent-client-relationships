@@ -96,7 +96,7 @@ with HipStub {
       await(repo.findBy(arn, mtdItEnrolmentKey)) shouldBe None
 
       val result = doAgentRequest(requestPath)
-      result.status shouldBe 200
+      result.status shouldBe 404
 
       await(repo.findBy(arn, mtdItEnrolmentKey)) shouldBe None
 

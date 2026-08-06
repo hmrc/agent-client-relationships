@@ -31,6 +31,8 @@ import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.agentclientrelationships.util.RequestSupport._
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdIt
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdItSupp
 
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -56,7 +58,8 @@ extends RequestAwareLogging {
     arn: Arn,
     enrolmentKey: EnrolmentKey,
     oldReferences: Set[RelationshipReference],
-    failIfAllocateAgentInESFails: Boolean
+    failIfAllocateAgentInESFails: Boolean,
+    isCopyAcross: Boolean = false
   )(implicit
     request: RequestHeader,
     auditData: AuditData = new AuditData()
@@ -65,10 +68,10 @@ extends RequestAwareLogging {
       auditData.set(enrolmentDelegatedKey, false)
       auditData.set(etmpRelationshipCreatedKey, false)
 
-      val isCopyAcrossRelationship = oldReferences.nonEmpty
+      val isItsa = Seq(MtdIt.enrolmentKey, MtdItSupp.enrolmentKey).contains(enrolmentKey.service)
 
       def createRelationshipRecord: Future[Done] = {
-        if (isCopyAcrossRelationship) {
+        if (isCopyAcross) {
           val record = RelationshipCopyRecord(
             arn.value,
             enrolmentKey,
@@ -87,23 +90,26 @@ extends RequestAwareLogging {
         _ <- createEtmpRecord(
           arn,
           enrolmentKey,
-          isCopyAcrossRelationship
+          isCopyAcross
         )
         _ <- createEsRecord(
           arn,
           enrolmentKey,
           agentUser,
           failIfAllocateAgentInESFails,
-          isCopyAcrossRelationship
+          isCopyAcross
         )
         _ = auditService.sendCreateRelationshipAuditEvent()
+        _ =
+          if (isItsa && !isCopyAcross)
+            relationshipCopyRepository.backfillItsaCopyRecord(enrolmentKey, arn) // Done separately to avoid conflicts with copy across retry logic
       } yield Done
     }
 
   private def createEtmpRecord(
     arn: Arn,
     enrolmentKey: EnrolmentKey,
-    isCopyAcrossRelationship: Boolean
+    isCopyAcross: Boolean
   )(implicit
     ec: ExecutionContext,
     request: RequestHeader,
@@ -111,7 +117,7 @@ extends RequestAwareLogging {
   ): Future[Done] = {
 
     def updateEtmpSyncStatus(status: SyncStatus): Future[Done] =
-      if (isCopyAcrossRelationship) {
+      if (isCopyAcross) {
         relationshipCopyRepository.updateEtmpSyncStatus(
           arn,
           enrolmentKey,
@@ -124,7 +130,17 @@ extends RequestAwareLogging {
     (
       for {
         _ <- updateEtmpSyncStatus(InProgress)
-        _ <- hipConnector.createAgentRelationship(enrolmentKey, arn)
+        result <- hipConnector.createAgentRelationship(enrolmentKey, arn)
+        _ <- {
+          if (result.isDefined)
+            Future.unit
+          else
+            tryToRecoverFromExistingRelationship(
+              arn,
+              enrolmentKey,
+              isCopyAcross
+            )
+        }
         _ = auditData.set(etmpRelationshipCreatedKey, true)
         _ <- updateEtmpSyncStatus(Success)
       } yield Done
@@ -135,19 +151,74 @@ extends RequestAwareLogging {
     }
   }
 
+  // scalastyle:off cyclomatic.complexity method.length
+  private def tryToRecoverFromExistingRelationship(
+    arn: Arn,
+    enrolmentKey: EnrolmentKey,
+    isCopyAcross: Boolean
+  )(implicit
+    ec: ExecutionContext,
+    request: RequestHeader
+  ): Future[Done] =
+    enrolmentKey.service match {
+      case Service.MtdIt.enrolmentKey if isCopyAcross =>
+        hipConnector.getAllRelationships(enrolmentKey.oneTaxIdentifier(), activeOnly = true).flatMap {
+          case Right(rels) if rels.exists(rel => rel.arn.value == arn.value && rel.authProfile.contains("ITSAS001")) =>
+            relationshipCopyRepository.backfillItsaCopyRecord(enrolmentKey, arn)
+            // This is a copy across scenario where the SUPP relationship already exists,
+            // so we backfill the copy record and throw an exception to indicate that the copy across cannot proceed.
+            throw new RuntimeException(
+              s"[CreateRelationshipsService] Attempted to copy across when SUPP relationship already exists for ${arn.value}. " +
+                s"Copy record backfilled to prevent further errors."
+            )
+          case Right(rels) if rels.exists(rel => rel.arn.value == arn.value) =>
+            logger.warn(
+              s"[CreateRelationshipsService] Attempted to copy across when ETMP record already exists for ${arn.value}, $enrolmentKey. " +
+                s"Deleting ETMP record and retrying. This implies that existing relationship got desynced after a proper DH."
+            )
+            hipConnector.deleteAgentRelationship(enrolmentKey, arn).flatMap { _ =>
+              hipConnector.createAgentRelationship(enrolmentKey, arn).map {
+                case Some(_) => Done
+                case None =>
+                  throw new RuntimeException(
+                    s"[CreateRelationshipsService] Attempting to recreate ETMP record for ${arn.value}, $enrolmentKey failed."
+                  )
+              }
+            }
+          case result =>
+            throw new RuntimeException(
+              s"[CreateRelationshipsService] Attempted to copy across when ETMP record already exists for ${arn.value}, $enrolmentKey. " +
+                s"However, the existing relationship could not be found in ETMP. This should not be possible! " +
+                s"Some other client relationship exists: ${result.toOption.exists(_.nonEmpty)}"
+            )
+        }
+      case _ =>
+        logger.warn(s"[CreateRelationshipsService] Attempted to create relationship when ETMP record already exists for ${arn.value}, $enrolmentKey." +
+          s" Deleting ETMP record and retrying.")
+        hipConnector.deleteAgentRelationship(enrolmentKey, arn).flatMap { _ =>
+          hipConnector.createAgentRelationship(enrolmentKey, arn).map {
+            case Some(_) => Done
+            case None =>
+              throw new RuntimeException(
+                s"[CreateRelationshipsService] Attempting to recreate ETMP record for ${arn.value}, $enrolmentKey failed."
+              )
+          }
+        }
+    }
+
   private def createEsRecord(
     arn: Arn,
     enrolmentKey: EnrolmentKey,
     agentUser: AgentUser,
     failIfAllocateAgentInESFails: Boolean,
-    isCopyAcrossRelationship: Boolean
+    isCopyAcross: Boolean
   )(implicit
     request: RequestHeader,
     auditData: AuditData
   ): Future[Done] = {
 
     def updateEsSyncStatus(status: SyncStatus): Future[Done] =
-      if (isCopyAcrossRelationship) {
+      if (isCopyAcross) {
         relationshipCopyRepository
           .updateEsSyncStatus(
             arn,
@@ -287,14 +358,14 @@ extends RequestAwareLogging {
             _ <- createEtmpRecord(
               arn,
               enrolmentKey,
-              isCopyAcrossRelationship = true
+              isCopyAcross = true
             )
             _ <- createEsRecord(
               arn,
               enrolmentKey,
               agentUser,
               failIfAllocateAgentInESFails = false,
-              isCopyAcrossRelationship = true
+              isCopyAcross = true
             )
             _ = auditService.sendCreateRelationshipAuditEvent()
           } yield Done
@@ -309,7 +380,7 @@ extends RequestAwareLogging {
               enrolmentKey,
               agentUser,
               failIfAllocateAgentInESFails = false,
-              isCopyAcrossRelationship = true
+              isCopyAcross = true
             )
             _ = auditService.sendCreateRelationshipAuditEvent()
           } yield Done
@@ -321,7 +392,7 @@ extends RequestAwareLogging {
           createEtmpRecord(
             arn,
             enrolmentKey,
-            isCopyAcrossRelationship = true
+            isCopyAcross = true
           ).map { result =>
             auditService.sendCreateRelationshipAuditEvent()
             result

@@ -70,7 +70,8 @@ extends CheckAndCopyResult {
 
 case object FoundAndFailedToCopy
 extends CheckAndCopyResult {
-  override val grantAccess = true
+  // This was originally set to true, which does not make sense as it allows agents access to clients regardless of why the copy failed.
+  override val grantAccess = false
 }
 
 case object NotFound
@@ -253,7 +254,8 @@ extends RequestAwareLogging {
       arn,
       EnrolmentKey(s"$service~MTDITID~${mtdItId.value}"),
       Set.empty,
-      failIfAllocateAgentInESFails = true
+      failIfAllocateAgentInESFails = true,
+      isCopyAcross = true
     )
   }
 
@@ -352,7 +354,8 @@ extends RequestAwareLogging {
           arn,
           enrolmentKey,
           references,
-          failIfAllocateAgentInESFails = false
+          failIfAllocateAgentInESFails = false,
+          isCopyAcross = true
         )
     }
 

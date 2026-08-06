@@ -127,7 +127,7 @@ with DataStreamStub {
       givenAgentCanBeAllocated(mtdItId, Arn("bar"))
       givenAuditConnector()
       await(hipConnector.createAgentRelationship(mtdItEnrolmentKey, Arn("bar"))) shouldBe
-        RegistrationRelationshipResponse("2001-12-17T09:30:47Z")
+        Some(RegistrationRelationshipResponse("2001-12-17T09:30:47Z"))
     }
 
     "not create relationship between agent and client and return nothing" in {

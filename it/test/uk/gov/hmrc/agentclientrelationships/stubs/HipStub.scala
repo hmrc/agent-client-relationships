@@ -19,6 +19,7 @@ package uk.gov.hmrc.agentclientrelationships.stubs
 import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.stubbing.StubMapping
 import org.scalatest.concurrent.Eventually.eventually
+import play.api.libs.json.Json
 import uk.gov.hmrc.agentclientrelationships.model.identifiers._
 import uk.gov.hmrc.domain.TaxIdentifier
 
@@ -211,7 +212,8 @@ trait HipStub {
   def getAllActiveRelationshipsViaClient(
     taxIdentifier: TaxIdentifier,
     arn: Arn,
-    activeOnly: Boolean = true
+    activeOnly: Boolean = true,
+    authProfile: Option[String] = None
   ): StubMapping = stubFor(
     get(urlEqualTo(relationshipHipUrl(
       taxIdentifier = taxIdentifier,
@@ -221,22 +223,26 @@ trait HipStub {
       .willReturn(
         aResponse()
           .withStatus(200)
-          .withBody(s"""
-                       |{
-                       |"relationshipDisplayResponse":[
-                       |{
-                       |  "refNumber" : "${taxIdentifier.value}",
-                       |  "arn" : "${arn.value}",
-                       |  "organisation" : {
-                       |    "organisationName": "someOrganisationName"
-                       |  },
-                       |  "dateFrom" : "2015-09-10",
-                       |  "dateTo" : "9999-12-31",
-                       |  "contractAccountCategory" : "01",
-                       |  "activity" : "09"
-                       |}
-                       |]
-                       |}""".stripMargin)
+          .withBody(
+            Json.obj(
+              "relationshipDisplayResponse" -> Json.arr(
+                Json.obj(
+                  "refNumber" -> taxIdentifier.value,
+                  "arn" -> arn.value,
+                  "organisation" -> Json.obj(
+                    "organisationName" -> "someOrganisationName"
+                  ),
+                  "dateFrom" -> "2015-09-10",
+                  "dateTo" -> "9999-12-31",
+                  "contractAccountCategory" -> "01",
+                  "activity" -> "09"
+                ) ++ (authProfile match {
+                  case Some(profile) => Json.obj("authProfile" -> profile)
+                  case None => Json.obj()
+                })
+              )
+            ).toString()
+          )
       )
   )
 

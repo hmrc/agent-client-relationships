@@ -26,6 +26,9 @@ import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.MongoLocalDateTimeFormat
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdIt
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdItSupp
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipCopyRecord.formats
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
@@ -151,6 +154,42 @@ with RequestAwareLogging {
   private def filter(
     arn: Arn,
     enrolmentKey: EnrolmentKey
-  ) = Filters.and(Filters.equal("arn", arn.value), Filters.equal("enrolmentKey", enrolmentKey.tag))
+  ) = Filters.and(
+    Filters.equal("arn", arn.value),
+    enrolmentKey.service match {
+      case MtdIt.enrolmentKey | MtdItSupp.enrolmentKey =>
+        Filters.or(
+          Filters.equal("enrolmentKey", enrolmentKey.copy(service = MtdIt.enrolmentKey).tag),
+          Filters.equal("enrolmentKey", enrolmentKey.copy(service = MtdItSupp.enrolmentKey).tag)
+        )
+      case _ => Filters.equal("enrolmentKey", enrolmentKey.tag)
+    }
+  )
+
+  def backfillItsaCopyRecord(
+    enrolmentKey: EnrolmentKey,
+    arn: Arn
+  )(implicit requestHeader: RequestHeader): Future[Done] = Mdc.preservingMdc {
+    if (Seq(MtdIt.enrolmentKey, MtdItSupp.enrolmentKey).contains(enrolmentKey.service))
+      findBy(arn, enrolmentKey).flatMap {
+        case Some(record) if !(record.syncToESStatus.contains(Failed) && record.syncToETMPStatus.contains(Failed)) => Future.successful(Done)
+        case optRecord =>
+          logger.warn(s"[backfillItsaCopyRecord] Backfilling completed copy record for $arn and ${enrolmentKey.tag}" +
+            (if (optRecord.isDefined)
+               " there is an existing fully failed record"
+             else
+               ""))
+          create(RelationshipCopyRecord(
+            arn = arn.value,
+            enrolmentKey = enrolmentKey,
+            references = None,
+            dateTime = LocalDateTime.now().truncatedTo(MILLIS),
+            syncToETMPStatus = Some(Success),
+            syncToESStatus = Some(Success)
+          ))
+      }
+    else
+      Future.successful(Done)
+  }
 
 }

@@ -16,6 +16,12 @@
 
 package uk.gov.hmrc.agentclientrelationships.controllers
 
+import com.github.tomakehurst.wiremock.client.WireMock.aResponse
+import com.github.tomakehurst.wiremock.client.WireMock.containing
+import com.github.tomakehurst.wiremock.client.WireMock.post
+import com.github.tomakehurst.wiremock.client.WireMock.stubFor
+import com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo
+import com.github.tomakehurst.wiremock.stubbing.Scenario
 import play.api.i18n.Lang
 import play.api.i18n.Langs
 import play.api.i18n.MessagesApi
@@ -40,11 +46,13 @@ import uk.gov.hmrc.agentclientrelationships.stubs.EnrolmentStoreProxyStubs
 import uk.gov.hmrc.agentclientrelationships.stubs.HipStub
 import uk.gov.hmrc.agentclientrelationships.stubs.RelationshipStubs
 import uk.gov.hmrc.agentclientrelationships.stubs.UsersGroupsSearchStubs
+import uk.gov.hmrc.agentclientrelationships.testsupport.testdata.CgtTestData
 import uk.gov.hmrc.agentclientrelationships.testsupport.testdata.IrvTestData
 import uk.gov.hmrc.agentclientrelationships.testsupport.testdata.ItsaSuppTestData
 import uk.gov.hmrc.agentclientrelationships.testsupport.testdata.ItsaTestData
 import uk.gov.hmrc.agentclientrelationships.testsupport.testdata.TaxRegimeTestData
 import uk.gov.hmrc.agentclientrelationships.testsupport.testdata.TestData
+import uk.gov.hmrc.agentclientrelationships.testsupport.testdata.VatTestData
 
 import java.time.Instant
 import java.time.LocalDate
@@ -733,6 +741,95 @@ with EmailStubs {
       invitations.head.status shouldBe Pending
 
       DataStreamStub.verifyAuditRequestNotSent(AgentClientRelationshipEvent.RespondToInvitation)
+    }
+  }
+
+  s"PUT /agent-client-relationships/authorisation-response/accept/:invitationId for a client with an existing ETMP relationship for this agent" should {
+    "recover from a failed authorisation by reauthorising the agent in ETMP" in {
+      // Authorised as client
+      CgtTestData.clientAuthStubs()
+
+      // Fetch agent details
+      RelationshipStubs.givenPrincipalAgentUser(TestData.arn, TestData.groupId)
+      UsersGroupsSearchStubs.givenGroupInfo(TestData.groupId, TestData.agentCode)
+      UsersGroupsSearchStubs.givenAdminUser(TestData.groupId, TestData.adminUser)
+
+      // No existing EACD relationship for this client
+      RelationshipStubs.givenDelegatedGroupIdsNotExistFor(CgtTestData.enrolment)
+
+      // Create ETMP relationship fails with 422 (Incorrect Relationship Authorisation Profile)
+      stubFor(post(urlEqualTo(s"/etmp/RESTAdapter/rosm/agent-relationship"))
+        .withRequestBody(containing("0001"))
+        .willReturn(
+          aResponse()
+            .withStatus(422)
+            .withBody(s"""{"reason": "Incorrect Relationship Authorisation Profile"}""")
+        )
+        .inScenario("retry") // Having to use scenario to simulate a retry because WireMock does not support multiple responses for the same request
+        .whenScenarioStateIs(Scenario.STARTED)
+        .willSetStateTo("failed"))
+      // Deauthorise existing ETMP relationship
+      HipStub.givenAgentCanBeDeallocated(CgtTestData.clientId, TestData.arn)
+      // Create ETMP relationship succeeds on retry
+      stubFor(post(urlEqualTo(s"/etmp/RESTAdapter/rosm/agent-relationship"))
+        .withRequestBody(containing("0001"))
+        .willReturn(
+          aResponse()
+            .withStatus(200)
+            .withBody(s"""{"processingDate": "2001-12-17T09:30:47Z"}""")
+        )
+        .inScenario("retry")
+        .whenScenarioStateIs("failed"))
+
+      // Create EACD relationship
+      EnrolmentStoreProxyStubs.givenEnrolmentAllocationSucceeds(
+        groupId = TestData.groupId,
+        clientUserId = TestData.adminUser,
+        enrolmentKey = CgtTestData.enrolment,
+        agentCode = TestData.agentCode
+      )
+
+      EnrolmentStoreProxyStubs.givenUpdateEnrolmentFriendlyNameResponse(
+        TestData.groupId,
+        CgtTestData.enrolment.tag,
+        NO_CONTENT
+      )
+      AucdStubs.givenCacheRefresh(TestData.arn)
+      EmailStubs.givenEmailSent(testEmail(CgtTestData))
+
+      val invitation = pendingInvitation(CgtTestData)
+      invitationRepo.collection.insertOne(invitation).toFuture().futureValue
+
+      val result = doAgentPutRequest(getRequestPath(invitation.invitationId))
+      result.status shouldBe 204
+
+      val invitations: Seq[Invitation] = invitationRepo.findAllForAgent(TestData.arn.value).futureValue
+      invitations.size shouldBe 1
+      invitations.head.status shouldBe Accepted
+
+      // ETMP relationship created twice (first failed, second succeeded)
+      HipStub.verifyAgentCanBeAllocatedCalled(
+        CgtTestData.clientId,
+        TestData.arn,
+        count = 2
+      )
+
+      // EACD relationship created
+      EnrolmentStoreProxyStubs.verifyEnrolmentAllocationAttempt(
+        groupId = TestData.groupId,
+        clientUserId = TestData.adminUser,
+        enrolmentKey = CgtTestData.enrolment,
+        agentCode = TestData.agentCode
+      )
+
+      EmailStubs.verifyInvitationEmailInfoSent(testEmail(CgtTestData))
+      DataStreamStub.verifyRespondToInvitationAuditSent(
+        getRequestPath(invitation.invitationId),
+        invitations.head,
+        accepted = true,
+        isStride = false,
+        Some(CgtTestData.enrolment)
+      )
     }
   }
 

@@ -16,8 +16,15 @@
 
 package uk.gov.hmrc.agentclientrelationships.controllers
 
+import com.github.tomakehurst.wiremock.client.WireMock.aResponse
+import com.github.tomakehurst.wiremock.client.WireMock.containing
+import com.github.tomakehurst.wiremock.client.WireMock.post
+import com.github.tomakehurst.wiremock.client.WireMock.stubFor
+import com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo
+import com.github.tomakehurst.wiremock.stubbing.Scenario
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
+import uk.gov.hmrc.agentclientrelationships.model.Accepted
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.Invitation
 import uk.gov.hmrc.agentclientrelationships.model.PartialAuth
@@ -27,7 +34,17 @@ import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDIT
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDITSUPP
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.SaRef
 import uk.gov.hmrc.agentclientrelationships.repository._
+import uk.gov.hmrc.agentclientrelationships.stubs.AucdStubs
+import uk.gov.hmrc.agentclientrelationships.stubs.AuthStub
+import uk.gov.hmrc.agentclientrelationships.stubs.DataStreamStub
+import uk.gov.hmrc.agentclientrelationships.stubs.EmailStubs
+import uk.gov.hmrc.agentclientrelationships.stubs.EnrolmentStoreProxyStubs
 import uk.gov.hmrc.agentclientrelationships.stubs.HipStub
+import uk.gov.hmrc.agentclientrelationships.stubs.RelationshipStubs
+import uk.gov.hmrc.agentclientrelationships.stubs.UsersGroupsSearchStubs
+import uk.gov.hmrc.agentclientrelationships.testsupport.testdata.ItsaSuppTestData
+import uk.gov.hmrc.agentclientrelationships.testsupport.testdata.ItsaTestData
+import uk.gov.hmrc.agentclientrelationships.testsupport.testdata.TestData
 import uk.gov.hmrc.domain.SaAgentReference
 
 import java.time.Instant
@@ -189,6 +206,144 @@ trait RelationshipsControllerITSABehaviours {
           tags = Map("transactionName" -> "check-cesa", "path" -> requestPath)
         )
       }
+
+      "return 404 when agent allocated to client for ITSA-SUPP but no copy across record exists and relationship exists in cesa " +
+        "this represents agents with a proper DH but no copy record that have been triggering copy across logic unintentionally" in {
+          // Authorised as agent
+          AuthStub.givenUserIsSubscribedAgent(TestData.arn)
+
+          // Fetch agent details
+          RelationshipStubs.givenPrincipalAgentUser(TestData.arn, TestData.groupId)
+          UsersGroupsSearchStubs.givenGroupInfo(TestData.groupId, TestData.agentCode)
+          UsersGroupsSearchStubs.givenAdminUser(TestData.groupId, TestData.adminUser)
+
+          // No existing EACD relationship for this client
+          RelationshipStubs.givenDelegatedGroupIdsNotExistFor(ItsaTestData.enrolment)
+          RelationshipStubs.givenDelegatedGroupIdsNotExistFor(ItsaSuppTestData.enrolment)
+
+          // Client id lookups pass
+          ItsaTestData.clientIdLookupStubs()
+
+          // CESA record and mapping exist
+          givenArnIsKnownFor(TestData.arn, SaAgentReference("foo"))
+          givenClientHasRelationshipWithAgentInCESA(TestData.nino, "foo")
+
+          // Create ETMP relationship fails with 422 (Incorrect Relationship Authorisation Profile)
+          stubFor(post(urlEqualTo(s"/etmp/RESTAdapter/rosm/agent-relationship"))
+            .withRequestBody(containing("0001"))
+            .willReturn(
+              aResponse()
+                .withStatus(422)
+                .withBody(s"""{"reason": "Incorrect Relationship Authorisation Profile"}""")
+            ))
+          // Found existing ETMP relationship for this client but for the wrong service (ITSA-SUPP)
+          HipStub.getAllActiveRelationshipsViaClient(
+            ItsaSuppTestData.clientId,
+            TestData.arn,
+            activeOnly = true,
+            authProfile = Some("ITSAS001")
+          )
+
+          // Create EACD relationship
+          EnrolmentStoreProxyStubs.givenEnrolmentAllocationSucceeds(
+            groupId = TestData.groupId,
+            clientUserId = TestData.adminUser,
+            enrolmentKey = ItsaTestData.enrolment,
+            agentCode = TestData.agentCode
+          )
+
+          val result = doGetRequest(
+            s"/agent-client-relationships/agent/${TestData.arn.value}/service/HMRC-MTD-IT/client/MTDITID/${ItsaTestData.clientId.value}"
+          )
+          result.status shouldBe 404
+
+          // ETMP relationship creation tried only once
+          HipStub.verifyAgentCanBeAllocatedCalled(
+            ItsaTestData.clientId,
+            TestData.arn,
+            count = 1
+          )
+        }
+
+      "return 200 when agent allocated to client for ITSA in etmp only but no copy across record exists and relationship exists in cesa " +
+        "this represents agents with a desynced auth (exists in etmp but not in eacd) that was created from a DH" in {
+          // Authorised as agent
+          AuthStub.givenUserIsSubscribedAgent(TestData.arn)
+
+          // Fetch agent details
+          RelationshipStubs.givenPrincipalAgentUser(TestData.arn, TestData.groupId)
+          UsersGroupsSearchStubs.givenGroupInfo(TestData.groupId, TestData.agentCode)
+          UsersGroupsSearchStubs.givenAdminUser(TestData.groupId, TestData.adminUser)
+
+          // No existing EACD relationship for this client
+          RelationshipStubs.givenDelegatedGroupIdsNotExistFor(ItsaTestData.enrolment)
+          RelationshipStubs.givenDelegatedGroupIdsNotExistFor(ItsaSuppTestData.enrolment)
+
+          // Client id lookups pass
+          ItsaTestData.clientIdLookupStubs()
+
+          // CESA record and mapping exist
+          givenArnIsKnownFor(TestData.arn, SaAgentReference("foo"))
+          givenClientHasRelationshipWithAgentInCESA(TestData.nino, "foo")
+
+          // Create ETMP relationship fails with 422 (Incorrect Relationship Authorisation Profile)
+          stubFor(post(urlEqualTo(s"/etmp/RESTAdapter/rosm/agent-relationship"))
+            .withRequestBody(containing("0001"))
+            .willReturn(
+              aResponse()
+                .withStatus(422)
+                .withBody(s"""{"reason": "Incorrect Relationship Authorisation Profile"}""")
+            )
+            .inScenario("retry") // Having to use scenario to simulate a retry because WireMock does not support multiple responses for the same request
+            .whenScenarioStateIs(Scenario.STARTED)
+            .willSetStateTo("failed"))
+          // Found existing ETMP relationship for this client
+          HipStub.getAllActiveRelationshipsViaClient(
+            ItsaTestData.clientId,
+            TestData.arn,
+            activeOnly = true
+          )
+          // Deauthorise existing ETMP relationship
+          HipStub.givenAgentCanBeDeallocated(ItsaTestData.clientId, TestData.arn)
+          // Create ETMP relationship succeeds on retry
+          stubFor(post(urlEqualTo(s"/etmp/RESTAdapter/rosm/agent-relationship"))
+            .withRequestBody(containing("0001"))
+            .willReturn(
+              aResponse()
+                .withStatus(200)
+                .withBody(s"""{"processingDate": "2001-12-17T09:30:47Z"}""")
+            )
+            .inScenario("retry")
+            .whenScenarioStateIs("failed"))
+
+          // Create EACD relationship
+          EnrolmentStoreProxyStubs.givenEnrolmentAllocationSucceeds(
+            groupId = TestData.groupId,
+            clientUserId = TestData.adminUser,
+            enrolmentKey = ItsaTestData.enrolment,
+            agentCode = TestData.agentCode
+          )
+
+          val result = doGetRequest(
+            s"/agent-client-relationships/agent/${TestData.arn.value}/service/HMRC-MTD-IT/client/MTDITID/${ItsaTestData.clientId.value}"
+          )
+          result.status shouldBe 200
+
+          // ETMP relationship created twice (first failed, second succeeded)
+          HipStub.verifyAgentCanBeAllocatedCalled(
+            ItsaTestData.clientId,
+            TestData.arn,
+            count = 2
+          )
+
+          // EACD relationship created
+          EnrolmentStoreProxyStubs.verifyEnrolmentAllocationAttempt(
+            groupId = TestData.groupId,
+            clientUserId = TestData.adminUser,
+            enrolmentKey = ItsaTestData.enrolment,
+            agentCode = TestData.agentCode
+          )
+        }
 
       // HAPPY PATH FOR ALTERNATIVE-ITSA
 
@@ -379,7 +534,7 @@ trait RelationshipsControllerITSABehaviours {
 
       // HAPPY PATHS WHEN RELATIONSHIP COPY ATTEMPT FAILS
 
-      "return 200 when relationship exists only in cesa and relationship copy attempt fails because of etmp" in {
+      "return 404 when relationship exists only in cesa and relationship copy attempt fails because of etmp" in {
         givenPrincipalAgentUser(arn, "foo")
         givenGroupInfo("foo", "bar")
         givenDelegatedGroupIdsNotExistForMtdItId(mtdItId)
@@ -400,7 +555,7 @@ trait RelationshipsControllerITSABehaviours {
         await(relationshipCopyRecordRepository.findBy(arn, mtdItEnrolmentKey)) shouldBe empty
 
         val result = doRequest
-        result.status shouldBe 200
+        result.status shouldBe 404
 
         await(relationshipCopyRecordRepository.findBy(arn, mtdItEnrolmentKey)).get should have(
           Symbol("arn")(arn.value),

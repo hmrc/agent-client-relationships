@@ -43,6 +43,7 @@ import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 import uk.gov.hmrc.agentclientrelationships.repository.DeleteRecord
 import uk.gov.hmrc.agentclientrelationships.repository.FakeDeleteRecordRepository
+import uk.gov.hmrc.agentclientrelationships.repository.RelationshipCopyRecordRepository
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
 import uk.gov.hmrc.agentclientrelationships.support.NoRequest
 import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
@@ -788,6 +789,7 @@ extends UnitSpec {
     val aucdConnector: AgentUserClientDetailsConnector = mock[AgentUserClientDetailsConnector]
     val invitationService: InvitationService = mock[InvitationService]
 
+    val copyRepo: RelationshipCopyRecordRepository = mock[RelationshipCopyRecordRepository]
     val repo = new FakeDeleteRecordRepository
     val lockService = new FakeLockService
 
@@ -810,6 +812,7 @@ extends UnitSpec {
         es,
         hipConnector,
         repo,
+        copyRepo,
         aucdConnector,
         lockService,
         checkService,

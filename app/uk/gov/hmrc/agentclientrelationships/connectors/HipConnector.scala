@@ -66,7 +66,7 @@ extends RequestAwareLogging {
   def createAgentRelationship(
     enrolmentKey: EnrolmentKey,
     arn: Arn
-  )(implicit request: RequestHeader): Future[RegistrationRelationshipResponse] = {
+  )(implicit request: RequestHeader): Future[Option[RegistrationRelationshipResponse]] = {
 
     val url = new URL(s"$baseUrl/etmp/RESTAdapter/rosm/agent-relationship")
     val isExclusiveAgent = getIsExclusiveAgent(enrolmentKey.service)
@@ -82,7 +82,14 @@ extends RequestAwareLogging {
       requestBody,
       () => headers.makeSubscriptionHeaders()
     ).map {
-      case Right(response) => response.json.as[RegistrationRelationshipResponse]
+      case Right(response) => Some(response.json.as[RegistrationRelationshipResponse])
+      case Left(ex: UpstreamErrorResponse) if ex.message.contains("Incorrect Relationship Authorisation Profile") =>
+        logger.warn(s"Relationship already exists for enrolmentKey: $enrolmentKey and arn: $arn" +
+          (if (isExclusiveAgent)
+             ""
+           else
+             " may be due to SUPP relationship"))
+        None
       case Left(errorResponse) =>
         logger.error(s"Error in HIP 'CreateAgentRelationship' with error: ${errorResponse.getMessage}")
         throw errorResponse

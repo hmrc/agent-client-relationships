@@ -699,7 +699,7 @@ with ResettingMockitoSugar {
 
   private def relationshipWillBeCreated(enrolmentKey: EnrolmentKey): OngoingStubbing[Future[Unit]] = {
     when(hipConnector.createAgentRelationship(eqs(enrolmentKey), eqs(arn))(any[RequestHeader]())).thenReturn(
-      Future.successful(RegistrationRelationshipResponse("processing date"))
+      Future.successful(Some(RegistrationRelationshipResponse("processing date")))
     )
     when(
       es.allocateEnrolmentToAgent(
@@ -726,10 +726,10 @@ with ResettingMockitoSugar {
     )(any[RequestHeader](), any[CurrentUser])
   ).thenReturn(Future.successful(true))
 
-  def verifyEtmpRecordCreated(): Future[RegistrationRelationshipResponse] =
+  def verifyEtmpRecordCreated(): Future[Option[RegistrationRelationshipResponse]] =
     verify(hipConnector).createAgentRelationship(eqs(mtdItEnrolmentKey), eqs(arn))(any[RequestHeader]())
 
-  def verifyEtmpRecordNotCreated(): Future[RegistrationRelationshipResponse] =
+  def verifyEtmpRecordNotCreated(): Future[Option[RegistrationRelationshipResponse]] =
     verify(hipConnector, never()).createAgentRelationship(eqs(mtdItEnrolmentKey), eqs(arn))(any[RequestHeader]())
 
   def verifyEsRecordCreated(): Future[Done] =
