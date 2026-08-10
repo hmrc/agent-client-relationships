@@ -221,7 +221,7 @@ extends UnitSpec {
             )
           )
 
-          "throw a RuntimeException with the empty/missing name message" in {
+          "return a ErrorRetrievingClientDetails error with the empty/missing name message" in {
             forAll(emptyNameCases) {
               (
                 scenario,
@@ -243,10 +243,10 @@ extends UnitSpec {
                     )
                   )
 
-                  val exception = intercept[RuntimeException] {
-                    await(service.findClientDetails("HMRC-MTD-IT", "AA000001B"))
-                  }
-                  exception.getMessage shouldBe "Missing required data from ITSA APIs: Name"
+                  await(service.findClientDetails("HMRC-MTD-IT", "AA000001B")) shouldBe Left(ErrorRetrievingClientDetails(
+                    200,
+                    "Missing required data from ITSA APIs: Name"
+                  ))
                 }
             }
           }
@@ -259,7 +259,7 @@ extends UnitSpec {
             ("post code empty", ItsaDesignatoryDetails(Some(""), Some("GREAT BRITAIN")))
           )
 
-          "throw a RuntimeException with the empty/missing post code message" in {
+          "return a ErrorRetrievingClientDetails error with the empty/missing post code message" in {
             forAll(emptyPostCodeCases) {
               (
                 scenario,
@@ -283,10 +283,10 @@ extends UnitSpec {
                     Future.successful(Right(designatoryDetails))
                   )
 
-                  val exception = intercept[RuntimeException] {
-                    await(service.findClientDetails("HMRC-MTD-IT", "AA000001B"))
-                  }
-                  exception.getMessage shouldBe "Missing required data from ITSA APIs: Post Code (UK Only)"
+                  await(service.findClientDetails("HMRC-MTD-IT", "AA000001B")) shouldBe Left(ErrorRetrievingClientDetails(
+                    200,
+                    "Missing required data from ITSA APIs: Post Code (UK Only)"
+                  ))
                 }
             }
           }
@@ -327,7 +327,7 @@ extends UnitSpec {
 
         "the country is missing" should {
 
-          "throw a RuntimeException with the empty/missing country message" in {
+          "return a ErrorRetrievingClientDetails error with the empty/missing country message" in {
             when(mockClientDetailsConnector.getItsaCitizenDetails(eqTo(nino))(any[RequestHeader])).thenReturn(
               Future.successful(
                 Right(
@@ -352,17 +352,17 @@ extends UnitSpec {
               )
             )
 
-            val exception = intercept[RuntimeException] {
-              await(service.findClientDetails("HMRC-MTD-IT", "AA000001B"))
-            }
-            exception.getMessage shouldBe "Missing required data from ITSA APIs: Country"
+            await(service.findClientDetails("HMRC-MTD-IT", "AA000001B")) shouldBe Left(ErrorRetrievingClientDetails(
+              200,
+              "Missing required data from ITSA APIs: Country"
+            ))
           }
 
         }
 
         "the name and post code are missing" should {
 
-          "throw a RuntimeException with the empty/missing country message" in {
+          "return a ErrorRetrievingClientDetails error with the empty/missing country message" in {
             when(mockClientDetailsConnector.getItsaCitizenDetails(eqTo(nino))(any[RequestHeader])).thenReturn(
               Future.successful(
                 Right(
@@ -387,10 +387,10 @@ extends UnitSpec {
               )
             )
 
-            val exception = intercept[RuntimeException] {
-              await(service.findClientDetails("HMRC-MTD-IT", "AA000001B"))
-            }
-            exception.getMessage shouldBe "Missing required data from ITSA APIs: Name, Post Code (UK Only)"
+            await(service.findClientDetails("HMRC-MTD-IT", "AA000001B")) shouldBe Left(ErrorRetrievingClientDetails(
+              200,
+              "Missing required data from ITSA APIs: Name, Post Code (UK Only)"
+            ))
           }
 
         }
