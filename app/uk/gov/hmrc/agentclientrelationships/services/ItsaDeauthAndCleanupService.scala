@@ -100,7 +100,8 @@ class ItsaDeauthAndCleanupService @Inject() (
                         arn = Arn(arn),
                         enrolmentKey = EnrolmentKey(serviceToCheck, MtdItId(mtdItId)),
                         suppliedClientId = NinoWithoutSuffix(nino),
-                        affinityGroup = currentUser.affinityGroup
+                        affinityGroup = currentUser.affinityGroup,
+                        backfillCopyRecord = false
                       )
                       .map(_ => true)
                   case _ => Future.successful(false)

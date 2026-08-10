@@ -68,8 +68,6 @@ extends RequestAwareLogging {
       auditData.set(enrolmentDelegatedKey, false)
       auditData.set(etmpRelationshipCreatedKey, false)
 
-      val isItsa = Seq(MtdIt.enrolmentKey, MtdItSupp.enrolmentKey).contains(enrolmentKey.service)
-
       def createRelationshipRecord: Future[Done] = {
         if (isCopyAcross) {
           val record = RelationshipCopyRecord(
@@ -101,7 +99,7 @@ extends RequestAwareLogging {
         )
         _ = auditService.sendCreateRelationshipAuditEvent()
         _ =
-          if (isItsa && !isCopyAcross)
+          if (!isCopyAcross)
             relationshipCopyRepository.backfillItsaCopyRecord(enrolmentKey, arn) // Done separately to avoid conflicts with copy across retry logic
       } yield Done
     }
@@ -145,7 +143,7 @@ extends RequestAwareLogging {
         _ <- updateEtmpSyncStatus(Success)
       } yield Done
     ).recoverWith {
-      case ex =>
+      case ex if !ex.getMessage.contains("Copy record backfilled to prevent further errors.") =>
         logger.warn(s"[CreateRelationshipsService] Creating ETMP record failed for ${arn.value}, $enrolmentKey due to: ${ex.getMessage}")
         updateEtmpSyncStatus(Failed).map(_ => throw ex)
     }

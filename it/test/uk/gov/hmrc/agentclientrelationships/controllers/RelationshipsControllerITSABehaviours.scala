@@ -882,6 +882,59 @@ trait RelationshipsControllerITSABehaviours {
         val result = doRequest
         result.status shouldBe 401
       }
+
+      "return 404 after backfilling new copy across record when there is a mapping present, but no copy across record and the agent is authorised for ITSA-SUPP" in {
+        givenPrincipalAgentUser(arn, "foo")
+        givenGroupInfo("foo", "bar")
+        givenAdminUser("foo", "any")
+        givenUserIsSubscribedAgent(
+          arn,
+          withThisGroupId = "foo",
+          withThisGgUserId = "any",
+          withThisAgentCode = "bar"
+        )
+
+        givenDelegatedGroupIdsNotExistFor(mtdItEnrolmentKey)
+        givenDelegatedGroupIdsNotExistFor(mtdItSuppEnrolmentKey)
+
+        givenNinoIsKnownFor(mtdItId, nino)
+        givenMtdItIdIsKnownFor(nino, mtdItId)
+        givenArnIsKnownFor(arn, SaAgentReference("foo"))
+        givenClientHasRelationshipWithAgentInCESA(nino, "foo")
+
+        await(relationshipCopyRecordRepository.findBy(arn, mtdItEnrolmentKey)) shouldBe None
+
+        stubFor(post(urlEqualTo(s"/etmp/RESTAdapter/rosm/agent-relationship"))
+          .withRequestBody(containing("0001"))
+          .willReturn(
+            aResponse()
+              .withStatus(422)
+              .withBody(s"""{"reason": "Incorrect Relationship Authorisation Profile"}""")
+          ))
+
+        HipStub.getAllActiveRelationshipsViaClient(
+          mtdItId,
+          arn,
+          activeOnly = true,
+          authProfile = Some("ITSAS001")
+        )
+
+        givenMTDITEnrolmentAllocationSucceeds(mtdItId, "bar")
+
+        val result = doGetRequest(
+          s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-IT/client/MTDITID/${mtdItId.value}"
+        )
+
+        result.status shouldBe 404
+
+        await(relationshipCopyRecordRepository.findBy(arn, mtdItEnrolmentKey)).get should have(
+          Symbol("arn")(arn.value),
+          Symbol("enrolmentKey")(mtdItEnrolmentKey),
+          Symbol("references")(None),
+          Symbol("syncToETMPStatus")(Some(SyncStatus.Success)),
+          Symbol("syncToESStatus")(Some(SyncStatus.Success))
+        )
+      }
     }
   }
 }
