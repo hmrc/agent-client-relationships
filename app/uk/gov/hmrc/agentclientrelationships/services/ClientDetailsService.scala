@@ -175,7 +175,7 @@ extends RequestAwareLogging {
                           ).flatten
                         val msg = s"Missing required data from ITSA APIs: ${missingFields.mkString(", ")}"
                         logger.warn(msg)
-                        Future.failed(new RuntimeException(msg))
+                        Future.successful(Left(ErrorRetrievingClientDetails(200, msg)))
                       case _ => Future.successful(Left(ClientDetailsNotFound))
                     }
 
