@@ -47,7 +47,8 @@ trait MockDeleteRelationshipsService {
       eqs(arn),
       eqs(enrolment),
       eqs(suppliedClientId),
-      eqs(affinityGroup)
+      eqs(affinityGroup),
+      any[Boolean]
     )(
       any[RequestHeader],
       any[CurrentUser],

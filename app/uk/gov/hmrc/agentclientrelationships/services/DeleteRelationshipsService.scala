@@ -69,7 +69,8 @@ extends RequestAwareLogging {
     arn: Arn,
     enrolmentKey: EnrolmentKey,
     suppliedClientId: TaxIdentifier, // Required for invitation cleanup code as the ID provided by users is not always the ID on the enrolment (e.g. ITSA)
-    affinityGroup: Option[AffinityGroup]
+    affinityGroup: Option[AffinityGroup],
+    backfillCopyRecord: Boolean = true
   )(implicit
     request: RequestHeader,
     currentUser: CurrentUser,
@@ -103,7 +104,9 @@ extends RequestAwareLogging {
               suppliedClientId.value,
               endedBy.getOrElse("HMRC")
             )
-            _ = copyRecordRepository.backfillItsaCopyRecord(enrolmentKey, arn) // Creates copy record if enrolment is itsa and doesn't already exist.
+            _ =
+              if (backfillCopyRecord)
+                copyRecordRepository.backfillItsaCopyRecord(enrolmentKey, arn) // Creates copy record if enrolment is itsa and doesn't already exist.
           } yield {
             if (enrolmentDeallocated || etmpRelationshipRemoved)
               true

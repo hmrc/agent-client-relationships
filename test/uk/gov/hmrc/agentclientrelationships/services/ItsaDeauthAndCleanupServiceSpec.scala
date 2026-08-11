@@ -163,7 +163,8 @@ with MockAuditService {
           any[Arn],
           any[EnrolmentKey],
           any[TaxIdentifier],
-          any[Option[AffinityGroup]]
+          any[Option[AffinityGroup]],
+          any[Boolean]
         )(
           any[RequestHeader],
           any[CurrentUser],
@@ -225,7 +226,8 @@ with MockAuditService {
           any[Arn],
           any[EnrolmentKey],
           any[TaxIdentifier],
-          any[Option[AffinityGroup]]
+          any[Option[AffinityGroup]],
+          any[Boolean]
         )(
           any[RequestHeader],
           any[CurrentUser],
@@ -271,7 +273,8 @@ with MockAuditService {
           any[Arn],
           any[EnrolmentKey],
           any[TaxIdentifier],
-          any[Option[AffinityGroup]]
+          any[Option[AffinityGroup]],
+          any[Boolean]
         )(
           any[RequestHeader],
           any[CurrentUser],

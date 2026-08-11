@@ -125,13 +125,13 @@ extends BaseISpec {
       result.syncToESStatus shouldBe Some(SyncStatus.Success)
     }
 
-    "not overwrite an existing ITSA copy record when backfilling" in {
+    "not overwrite an existing completed ITSA copy record when backfilling" in {
       val existing = RelationshipCopyRecord(
         arn = arn.value,
         enrolmentKey = mtdItEnrolmentKey,
         dateTime = now.minusDays(1),
-        syncToETMPStatus = Some(SyncStatus.Failed),
-        syncToESStatus = Some(SyncStatus.InProgress)
+        syncToETMPStatus = Some(SyncStatus.Success),
+        syncToESStatus = Some(SyncStatus.Success)
       )
 
       await(repo.create(existing))
