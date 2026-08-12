@@ -158,45 +158,123 @@ extends UnitSpec {
 
         }
 
-        //        "all the expected details are returned for an overseas client" should {
-        //
-        //          "return a ClientDetailsResponse" in {
-        //            when(mockClientDetailsConnector.getItsaCitizenDetails(eqTo(nino))(any[RequestHeader])).thenReturn(
-        //              Future.successful(
-        //                Right(
-        //                  CitizenDetails(
-        //                    Some("John"),
-        //                    Some("Rocks"),
-        //                    None,
-        //                    Some("11223344")
-        //                  )
-        //                )
-        //              )
-        //            )
-        //
-        //            when(mockClientDetailsConnector.getItsaDesignatoryDetails(eqTo(nino))(any[RequestHeader])).thenReturn(
-        //              Future.successful(
-        //                Right(
-        //                  ItsaDesignatoryDetails(
-        //                    Some("AA1 1AA"),
-        //                    Some("ARMENIA")
-        //                  )
-        //                )
-        //              )
-        //            )
-        //
-        //            val resultModel = ClientDetailsResponse(
-        //              "John Rocks",
-        //              None,
-        //              isOverseas = Some(true),
-        //              Seq("ARMENIA"),
-        //              Some(Country)
-        //            )
-        //
-        //            await(service.findClientDetails("HMRC-MTD-IT", "AA000001B")) shouldBe Right(resultModel)
-        //          }
-        //
-        //        }
+        "all the expected details are returned for an overseas client" should {
+
+          "return a ClientDetailsResponse with the mapped country code" in {
+            when(mockAppConfig.overseasItsaEnabled).thenReturn(true)
+
+            when(mockClientDetailsConnector.getItsaCitizenDetails(eqTo(nino))(any[RequestHeader])).thenReturn(
+              Future.successful(
+                Right(
+                  CitizenDetails(
+                    Some("John"),
+                    Some("Rocks"),
+                    None,
+                    Some("11223344")
+                  )
+                )
+              )
+            )
+
+            when(mockClientDetailsConnector.getItsaDesignatoryDetails(eqTo(nino))(any[RequestHeader])).thenReturn(
+              Future.successful(
+                Right(
+                  ItsaDesignatoryDetails(
+                    Some("AA1 1AA"),
+                    Some("ARMENIA")
+                  )
+                )
+              )
+            )
+
+            val resultModel = ClientDetailsResponse(
+              "John Rocks",
+              None,
+              isOverseas = Some(true),
+              Seq("AM"),
+              Some(CountryCode)
+            )
+
+            await(service.findClientDetails("HMRC-MTD-IT", "AA000001B")) shouldBe Right(resultModel)
+          }
+
+          "return ZZ when a country cannot be mapped" in {
+            when(mockAppConfig.overseasItsaEnabled).thenReturn(true)
+
+            when(mockClientDetailsConnector.getItsaCitizenDetails(eqTo(nino))(any[RequestHeader])).thenReturn(
+              Future.successful(
+                Right(
+                  CitizenDetails(
+                    Some("John"),
+                    Some("Rocks"),
+                    None,
+                    Some("11223344")
+                  )
+                )
+              )
+            )
+
+            when(mockClientDetailsConnector.getItsaDesignatoryDetails(eqTo(nino))(any[RequestHeader])).thenReturn(
+              Future.successful(
+                Right(
+                  ItsaDesignatoryDetails(
+                    Some("AA1 1AA"),
+                    Some("UNKNOWN LAND")
+                  )
+                )
+              )
+            )
+
+            val resultModel = ClientDetailsResponse(
+              "John Rocks",
+              None,
+              isOverseas = Some(true),
+              Seq("ZZ"),
+              Some(CountryCode)
+            )
+
+            await(service.findClientDetails("HMRC-MTD-IT", "AA000001B")) shouldBe Right(resultModel)
+          }
+
+          "return all relevant country codes when a historical country maps to multiple codes" in {
+            when(mockAppConfig.overseasItsaEnabled).thenReturn(true)
+
+            when(mockClientDetailsConnector.getItsaCitizenDetails(eqTo(nino))(any[RequestHeader])).thenReturn(
+              Future.successful(
+                Right(
+                  CitizenDetails(
+                    Some("John"),
+                    Some("Rocks"),
+                    None,
+                    Some("11223344")
+                  )
+                )
+              )
+            )
+
+            when(mockClientDetailsConnector.getItsaDesignatoryDetails(eqTo(nino))(any[RequestHeader])).thenReturn(
+              Future.successful(
+                Right(
+                  ItsaDesignatoryDetails(
+                    Some("AA1 1AA"),
+                    Some("ANTILLES (NETHERLANDS)")
+                  )
+                )
+              )
+            )
+
+            val resultModel = ClientDetailsResponse(
+              "John Rocks",
+              None,
+              isOverseas = Some(true),
+              Seq("AN", "CW", "SX", "BQ", "AW"),
+              Some(CountryCode)
+            )
+
+            await(service.findClientDetails("HMRC-MTD-IT", "AA000001B")) shouldBe Right(resultModel)
+          }
+
+        }
 
         "the client name is empty/missing" should {
           val emptyNameCases = Table(
