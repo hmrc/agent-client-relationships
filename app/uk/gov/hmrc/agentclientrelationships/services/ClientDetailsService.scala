@@ -158,11 +158,15 @@ extends RequestAwareLogging {
                       case (Some(name), Some(_), Some(postcode), Some(country)) if isUk(country) =>
                         Future.successful(Right(makeItsaUkResponse(postcode = postcode, name = name)))
                       case (Some(name), Some(_), _, Some(country)) if appConfig.overseasItsaEnabled && !isUk(country) =>
-                        Future.successful(Right(makeItsaOverseasResponse(
-                          countryCodes = toCountryCode(country),
-                          name = name,
-                          factType = CountryCode
-                        )))
+                        hipConnector.getMtdIdFor(NinoWithoutSuffix(nino)).map {
+                          case Some(_) =>
+                            Right(makeItsaOverseasResponse(
+                              countryCodes = toCountryCode(country),
+                              name = name,
+                              factType = CountryCode
+                            ))
+                          case None => Left(ClientDetailsNotFound)
+                        }
                       case (Some(_), Some(_), _, Some(country)) if !isUk(country) =>
                         // TODO REMOVE THIS CASE WHEN overseasItsaEnabled FEATURE SWITCH IS REMOVED
                         Future.successful(Left(ClientDetailsNotFound))
@@ -410,7 +414,13 @@ extends RequestAwareLogging {
     "ALBANIA" -> Seq("AL"),
     "REPUBLIC OF ARMENIA" -> Seq("AM"),
     "ARMENIA" -> Seq("AM"),
-    "ANTILLES (NETHERLANDS)" -> Seq("AN", "CW", "SX", "BQ", "AW"),
+    "ANTILLES (NETHERLANDS)" -> Seq(
+      "AN",
+      "CW",
+      "SX",
+      "BQ",
+      "AW"
+    ),
     "ANGOLA" -> Seq("AO"),
     "ANTARCTICA" -> Seq("AQ"),
     "ARGENTINA" -> Seq("AR"),
@@ -453,7 +463,11 @@ extends RequestAwareLogging {
     "CHINA PEOPLES REPUBLIC" -> Seq("CN"),
     "COLOMBIA" -> Seq("CO"),
     "COSTA RICA" -> Seq("CR"),
-    "CZECHOSLOVAKIA" -> Seq("CS", "CZ", "SK"),
+    "CZECHOSLOVAKIA" -> Seq(
+      "CS",
+      "CZ",
+      "SK"
+    ),
     "CUBA" -> Seq("CU"),
     "CAPE VERDE ISLANDS" -> Seq("CV"),
     "CURACAO" -> Seq("CW"),
@@ -481,7 +495,14 @@ extends RequestAwareLogging {
     "MICRONESIA FEDERATION OF" -> Seq("FM"),
     "FAROE ISLANDS" -> Seq("FO"),
     "FRANCE" -> Seq("FR"),
-    "FRENCH OVERSEAS DEPARTMENT" -> Seq("FR", "RE", "MQ", "GP", "GF", "YT"),
+    "FRENCH OVERSEAS DEPARTMENT" -> Seq(
+      "FR",
+      "RE",
+      "MQ",
+      "GP",
+      "GF",
+      "YT"
+    ),
     "GABON" -> Seq("GA"),
     "ENGLAND" -> Seq("GB"),
     "GREAT BRITAIN" -> Seq("GB"),
@@ -619,7 +640,11 @@ extends RequestAwareLogging {
     "SWEDEN" -> Seq("SE"),
     "SINGAPORE" -> Seq("SG"),
     "ASCENCION ISLAND" -> Seq("SH", "AC"),
-    "ST HELENA & DEPNDS" -> Seq("SH", "AC", "TA"),
+    "ST HELENA & DEPNDS" -> Seq(
+      "SH",
+      "AC",
+      "TA"
+    ),
     "TRISTAN DA CUHNA" -> Seq("SH", "TA"),
     "REPUBLIC OF SLOVENIA" -> Seq("SI"),
     "SVALBARD AND JAN MAYEN" -> Seq("SJ"),
@@ -670,8 +695,22 @@ extends RequestAwareLogging {
     "DEMOCRATIC YEMEN" -> Seq("YD", "YE"),
     "REPUBLIC OF YEMEN" -> Seq("YE"),
     "MAYOTTE" -> Seq("YT"),
-    "FEDERAL REP OF YUGOSLAVIA" -> Seq("YU", "CS", "RS", "ME"),
-    "YUGOSLAVIA" -> Seq("YU", "BA", "HR", "MK", "ME", "RS", "SI", "XK"),
+    "FEDERAL REP OF YUGOSLAVIA" -> Seq(
+      "YU",
+      "CS",
+      "RS",
+      "ME"
+    ),
+    "YUGOSLAVIA" -> Seq(
+      "YU",
+      "BA",
+      "HR",
+      "MK",
+      "ME",
+      "RS",
+      "SI",
+      "XK"
+    ),
     "SOUTH AFRICA" -> Seq("ZA"),
     "ZAMBIA" -> Seq("ZM"),
     "ZAIRE" -> Seq("ZR", "CD"),
@@ -683,15 +722,8 @@ extends RequestAwareLogging {
     "TOURS" -> Seq("ZZ")
   )
 
-  private def toCountryCode(str: String): Seq[String] = {
-    val normalized = str.trim.toUpperCase.replaceAll("\\s+", " ")
-    countryNameToCode.getOrElse(
-      normalized,
-      if (normalized.matches("^[A-Z]{2}$"))
-        Seq(normalized)
-      else
-        Seq("ZZ")
-    )
+  private def toCountryCode(country: String): Seq[String] = {
+    countryNameToCode.getOrElse(country.trim.toUpperCase, Seq("ZZ"))
   }
 
 }
