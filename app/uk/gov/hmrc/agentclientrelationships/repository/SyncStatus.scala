@@ -17,6 +17,7 @@
 package uk.gov.hmrc.agentclientrelationships.repository
 
 import play.api.libs.json.Format
+import play.api.libs.json.JsString
 import play.api.libs.json.Reads
 import play.api.libs.json.Writes
 
@@ -26,6 +27,6 @@ extends Enumeration {
   type SyncStatus = Value
   val InProgress, IncompleteInputParams, Success, Failed = Value
 
-  implicit val formats: Format[SyncStatus] = Format[SyncStatus](Reads.enumNameReads(SyncStatus), Writes.enumNameWrites)
+  given formats: Format[SyncStatus] = Format[SyncStatus](Reads.enumNameReads(SyncStatus), Writes(status => JsString(status.toString)))
 
 }

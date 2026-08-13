@@ -16,9 +16,9 @@
 
 package uk.gov.hmrc.agentclientrelationships.repository
 
-import play.api.Application
-import play.api.inject.guice.GuiceApplicationBuilder
-import play.api.test.Helpers._
+import org.mongodb.scala.ObservableFuture
+
+import play.api.test.Helpers.*
 import uk.gov.hmrc.agentclientrelationships.controllers.BaseISpec
 
 import java.time.Instant

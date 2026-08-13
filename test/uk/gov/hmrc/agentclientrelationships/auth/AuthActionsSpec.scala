@@ -17,12 +17,12 @@
 package uk.gov.hmrc.agentclientrelationships.auth
 
 import org.mockito.ArgumentMatchers.any
-import org.mockito.Mockito._
+import org.mockito.Mockito.*
 import org.mockito.stubbing.OngoingStubbing
 import play.api.mvc.Result
 import play.api.mvc.Results
 import play.api.test.FakeRequest
-import play.api.test.Helpers._
+import play.api.test.Helpers.*
 import uk.gov.hmrc.agentclientrelationships.controllers.ErrorResults.NoPermissionToPerformOperation
 import uk.gov.hmrc.agentclientrelationships.support.NoRequest
 import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
@@ -31,7 +31,7 @@ import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Utr
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Vrn
-import uk.gov.hmrc.auth.core._
+import uk.gov.hmrc.auth.core.*
 import uk.gov.hmrc.auth.core.authorise.Predicate
 import uk.gov.hmrc.auth.core.retrieve.Credentials
 import uk.gov.hmrc.auth.core.retrieve.Retrieval
@@ -49,7 +49,7 @@ with ResettingMockitoSugar
 with Results {
 
   lazy val mockAuthConnector = mock[AuthConnector]
-  implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
+  given ec: ExecutionContext = ExecutionContext.Implicits.global
 
   private val mtdItId = "ABCDEFGH"
   private val vrn = "101747641"
@@ -85,7 +85,7 @@ with Results {
   extends AuthActions
   with Results {
 
-    implicit val request: RequestHeader = NoRequest
+    given request: RequestHeader = NoRequest
 
     def testAuthActions(
       identifier: TaxIdentifier,
@@ -102,7 +102,7 @@ with Results {
     override def authConnector: AuthConnector = mockAuthConnector
 
     val supportedServices: Seq[Service] = Service.supportedServices
-    override implicit val executionContext: ExecutionContext = ec
+    override given executionContext: ExecutionContext = ec
 
   }
 

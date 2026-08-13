@@ -21,14 +21,13 @@ import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.mvc.RequestHeader
 import play.api.test.FakeRequest
-import play.api.test.Helpers._
+import play.api.test.Helpers.*
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.stubs.DataStreamStub
 import uk.gov.hmrc.agentclientrelationships.stubs.MappingStubs
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 import uk.gov.hmrc.agentclientrelationships.support.WireMockSupport
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
-import uk.gov.hmrc.domain.AgentCode
 import uk.gov.hmrc.domain.SaAgentReference
 import uk.gov.hmrc.http.client.HttpClientV2
 
@@ -41,9 +40,9 @@ with WireMockSupport
 with MappingStubs
 with DataStreamStub {
 
-  override implicit lazy val app: Application = appBuilder.build()
+  override given app: Application = appBuilder.build()
   val httpClient: HttpClientV2 = app.injector.instanceOf[HttpClientV2]
-  implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
+  given appConfig: AppConfig = app.injector.instanceOf[AppConfig]
 
   protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder().configure(
     "microservice.services.enrolment-store-proxy.port" -> wireMockPort,
@@ -60,9 +59,9 @@ with DataStreamStub {
     "agent.cache.enabled" -> true
   )
 
-  private implicit val request: RequestHeader = FakeRequest()
-  implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
-  val mappingConnector = new MappingConnector(httpClient, appConfig)(ec)
+  private given request: RequestHeader = FakeRequest()
+  given ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
+  val mappingConnector = new MappingConnector(httpClient, appConfig)
 
   "MappingConnector" should {
 

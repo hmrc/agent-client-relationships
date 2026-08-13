@@ -16,13 +16,12 @@
 
 package uk.gov.hmrc.agentclientrelationships.stubs
 
-import com.github.tomakehurst.wiremock.client.WireMock._
+import com.github.tomakehurst.wiremock.client.WireMock.*
 import com.github.tomakehurst.wiremock.stubbing.StubMapping
 import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
-import uk.gov.hmrc.agentclientrelationships.support.WireMockSupport
-import uk.gov.hmrc.agentclientrelationships.model.identifiers._
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.*
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.SessionKeys
 
@@ -635,8 +634,7 @@ trait AuthStub {
 
   def authenticated[A](
     request: FakeRequest[A],
-    enrolments: Seq[Enrolment],
-    isAgent: Boolean
+    enrolments: Seq[Enrolment]
   ): FakeRequest[A] = {
     givenAuthorisedFor(
       s"""

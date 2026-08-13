@@ -24,12 +24,10 @@ case class ClientRelationshipRequest(
   clientId: String
 )
 
-object ClientRelationshipRequest {
-  implicit val format: OFormat[ClientRelationshipRequest] = Json.format[ClientRelationshipRequest]
-}
+object ClientRelationshipRequest:
+  given format: OFormat[ClientRelationshipRequest] = Json.format[ClientRelationshipRequest]
 
 case class ClientsRelationshipsRequest(clientRelationshipRequest: Seq[ClientRelationshipRequest])
 
-object ClientsRelationshipsRequest {
-  implicit val format: OFormat[ClientsRelationshipsRequest] = Json.format[ClientsRelationshipsRequest]
-}
+object ClientsRelationshipsRequest:
+  given format: OFormat[ClientsRelationshipsRequest] = Json.format[ClientsRelationshipsRequest]

@@ -21,7 +21,7 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers.await
 import play.api.test.Helpers.defaultAwaitTimeout
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.mocks._
+import uk.gov.hmrc.agentclientrelationships.mocks.*
 import uk.gov.hmrc.agentclientrelationships.model.Invitation
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgencyDetails
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentDetailsDesResponse
@@ -45,14 +45,13 @@ with MockIFConnector
 with MockAgentAssuranceService
 with MockEmailService {
 
-  implicit val executionContext: ExecutionContext = ExecutionContext.Implicits.global
-  implicit val request: RequestHeader = FakeRequest()
+  given executionContext: ExecutionContext = ExecutionContext.Implicits.global
+  given request: RequestHeader = FakeRequest()
   val mockAppConfig: AppConfig = mock[AppConfig]
 
   object TestService
   extends InvitationService(
     mockInvitationsRepository,
-    mockHipConnector,
     mockAgentRecordService,
     mockEmailService,
     mockAppConfig

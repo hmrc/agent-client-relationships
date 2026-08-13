@@ -24,6 +24,5 @@ case class IrvAgent(
   arn: String
 )
 
-object IrvAgent {
-  implicit val writes: OWrites[IrvAgent] = Json.writes[IrvAgent]
-}
+object IrvAgent:
+  given writes: OWrites[IrvAgent] = Json.writes[IrvAgent]

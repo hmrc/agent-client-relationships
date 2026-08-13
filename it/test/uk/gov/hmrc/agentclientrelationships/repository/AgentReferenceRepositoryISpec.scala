@@ -16,8 +16,10 @@
 
 package uk.gov.hmrc.agentclientrelationships.repository
 
+import org.mongodb.scala.ObservableFuture
+
 import org.mongodb.scala.MongoWriteException
-import play.api.test.Helpers._
+import play.api.test.Helpers.*
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentReferenceRecord
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.support.RepositoryISpec

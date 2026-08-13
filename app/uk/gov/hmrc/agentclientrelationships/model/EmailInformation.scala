@@ -28,6 +28,5 @@ case class EmailInformation(
   onSendUrl: Option[String] = None
 )
 
-object EmailInformation {
-  implicit val formats: OFormat[EmailInformation] = Json.format[EmailInformation]
-}
+object EmailInformation:
+  given formats: OFormat[EmailInformation] = Json.format[EmailInformation]

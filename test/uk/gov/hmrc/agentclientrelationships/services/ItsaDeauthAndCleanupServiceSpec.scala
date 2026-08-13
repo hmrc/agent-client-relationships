@@ -26,8 +26,8 @@ import play.api.test.Helpers.await
 import play.api.test.Helpers.defaultAwaitTimeout
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.auth.CurrentUser
-import uk.gov.hmrc.agentclientrelationships.mocks._
-import uk.gov.hmrc.agentclientrelationships.model._
+import uk.gov.hmrc.agentclientrelationships.mocks.*
+import uk.gov.hmrc.agentclientrelationships.model.*
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
@@ -64,10 +64,10 @@ with MockAuditService {
     auditService = mockAuditService
   )
 
-  implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
-  implicit val request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
-  implicit val auditData: AuditData = new AuditData
-  implicit val currentUser: CurrentUser = CurrentUser(
+  given ec: ExecutionContext = ExecutionContext.Implicits.global
+  given request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
+  given auditData: AuditData = new AuditData
+  given currentUser: CurrentUser = CurrentUser(
     credentials = Some(Credentials("GG-00001", "GovernmentGateway")),
     affinityGroup = None
   )
@@ -156,7 +156,7 @@ with MockAuditService {
           any[Arn],
           any[Instant]
         )
-        verify(mockCheckRelationshipsService, times(1)).checkForRelationshipAgencyLevel(any[Arn], any[EnrolmentKey])(
+        verify(mockCheckRelationshipsService, times(1)).checkForRelationshipAgencyLevel(any[Arn], any[EnrolmentKey])(using
           any[RequestHeader]()
         )
         verify(mockDeleteRelationshipsService, times(0)).deleteRelationship(
@@ -165,7 +165,7 @@ with MockAuditService {
           any[TaxIdentifier],
           any[Option[AffinityGroup]],
           any[Boolean]
-        )(
+        )(using
           any[RequestHeader],
           any[CurrentUser],
           any[AuditData]
@@ -219,7 +219,7 @@ with MockAuditService {
           any[Arn],
           any[Instant]
         )
-        verify(mockCheckRelationshipsService, times(1)).checkForRelationshipAgencyLevel(any[Arn], any[EnrolmentKey])(
+        verify(mockCheckRelationshipsService, times(1)).checkForRelationshipAgencyLevel(any[Arn], any[EnrolmentKey])(using
           any[RequestHeader]()
         )
         verify(mockDeleteRelationshipsService, times(1)).deleteRelationship(
@@ -228,7 +228,7 @@ with MockAuditService {
           any[TaxIdentifier],
           any[Option[AffinityGroup]],
           any[Boolean]
-        )(
+        )(using
           any[RequestHeader],
           any[CurrentUser],
           any[AuditData]
@@ -266,7 +266,7 @@ with MockAuditService {
           any[Arn],
           any[Instant]
         )
-        verify(mockCheckRelationshipsService, times(0)).checkForRelationshipAgencyLevel(any[Arn], any[EnrolmentKey])(
+        verify(mockCheckRelationshipsService, times(0)).checkForRelationshipAgencyLevel(any[Arn], any[EnrolmentKey])(using
           any[RequestHeader]()
         )
         verify(mockDeleteRelationshipsService, times(0)).deleteRelationship(
@@ -275,7 +275,7 @@ with MockAuditService {
           any[TaxIdentifier],
           any[Option[AffinityGroup]],
           any[Boolean]
-        )(
+        )(using
           any[RequestHeader],
           any[CurrentUser],
           any[AuditData]

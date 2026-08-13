@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.agentclientrelationships.controllers
 
+import org.mongodb.scala.ObservableFuture
+
 import play.api.http.Status.NOT_FOUND
 import play.api.http.Status.OK
 import play.api.http.Status.UNAUTHORIZED

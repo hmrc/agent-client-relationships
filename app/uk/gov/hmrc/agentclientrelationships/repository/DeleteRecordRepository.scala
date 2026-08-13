@@ -23,14 +23,14 @@ import org.mongodb.scala.model.Filters.lte
 import org.mongodb.scala.model.Updates.combine
 import org.mongodb.scala.model.Updates.inc
 import org.mongodb.scala.model.Updates.set
-import org.mongodb.scala.model._
+import org.mongodb.scala.model.*
 import play.api.libs.json.Json.format
-import play.api.libs.json._
+import play.api.libs.json.*
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.MongoLocalDateTimeFormat
 import uk.gov.hmrc.agentclientrelationships.repository.DeleteRecord.formats
-import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
+import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus.*
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.http.Authorization
@@ -72,10 +72,10 @@ case class DeleteRecord(
 
 object DeleteRecord {
 
-  implicit val dateReads: Reads[LocalDateTime] = MongoLocalDateTimeFormat.localDateTimeReads
-  implicit val dateWrites: Writes[LocalDateTime] = MongoLocalDateTimeFormat.localDateTimeWrites
+  given dateReads: Reads[LocalDateTime] = MongoLocalDateTimeFormat.localDateTimeReads
+  given dateWrites: Writes[LocalDateTime] = MongoLocalDateTimeFormat.localDateTimeWrites
 
-  implicit val hcWrites: OWrites[HeaderCarrier] =
+  given hcWrites: OWrites[HeaderCarrier] =
     new OWrites[HeaderCarrier] {
       override def writes(hc: HeaderCarrier): JsObject = JsObject(
         Seq(
@@ -86,9 +86,9 @@ object DeleteRecord {
       )
     }
 
-  import play.api.libs.functional.syntax._
+  import play.api.libs.functional.syntax.*
 
-  implicit val reads: Reads[HeaderCarrier] =
+  given reads: Reads[HeaderCarrier] =
     (
       (JsPath \ "authorization").readNullable[String].map(_.map(Authorization.apply)) and
         (JsPath \ "sessionId").readNullable[String].map(_.map(SessionId.apply)) and
@@ -106,12 +106,12 @@ object DeleteRecord {
         )
     )
 
-  implicit val formats: Format[DeleteRecord] = format[DeleteRecord]
+  given formats: Format[DeleteRecord] = format[DeleteRecord]
 
 }
 
 @Singleton
-class DeleteRecordRepository @Inject() (mongoComponent: MongoComponent)(implicit ec: ExecutionContext)
+class DeleteRecordRepository @Inject() (mongoComponent: MongoComponent)(using ec: ExecutionContext)
 extends PlayMongoRepository[DeleteRecord](
   mongoComponent = mongoComponent,
   collectionName = "delete-record",
@@ -146,7 +146,7 @@ with RequestAwareLogging {
     arn: Arn,
     enrolmentKey: EnrolmentKey,
     status: SyncStatus
-  )(implicit requestHeader: RequestHeader): Future[Done] = Mdc.preservingMdc {
+  )(using requestHeader: RequestHeader): Future[Done] = Mdc.preservingMdc {
     collection
       .updateOne(
         filter(arn, enrolmentKey),
@@ -165,7 +165,7 @@ with RequestAwareLogging {
     arn: Arn,
     enrolmentKey: EnrolmentKey,
     status: SyncStatus
-  )(implicit requestHeader: RequestHeader): Future[Done] = Mdc.preservingMdc {
+  )(using requestHeader: RequestHeader): Future[Done] = Mdc.preservingMdc {
     collection
       .updateOne(
         filter(arn, enrolmentKey),

@@ -25,6 +25,5 @@ case class CleanUpInvitationStatusRequest(
   service: String
 )
 
-object CleanUpInvitationStatusRequest {
-  implicit val jsonFormat: OFormat[CleanUpInvitationStatusRequest] = Json.format[CleanUpInvitationStatusRequest]
-}
+object CleanUpInvitationStatusRequest:
+  given jsonFormat: OFormat[CleanUpInvitationStatusRequest] = Json.format[CleanUpInvitationStatusRequest]

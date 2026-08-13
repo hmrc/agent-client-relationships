@@ -48,13 +48,14 @@ class StrideGetPartialAuthsController @Inject() (
   agentRecordService: AgentRecordService,
   cc: ControllerComponents,
   appConfig: AppConfig
-)(implicit val executionContext: ExecutionContext)
+)(using val executionContext: ExecutionContext)
 extends BackendController(cc)
 with AuthActions {
 
   val supportedServices: Seq[Service] = appConfig.supportedServicesWithoutPir
 
-  def getPartialAuths(nino: String): Action[AnyContent] = Action.async { implicit request =>
+  def getPartialAuths(nino: String): Action[AnyContent] = Action.async { request =>
+    given play.api.mvc.RequestHeader = request
     authorisedWithStride(appConfig.partialAuthStrideRole) { _ =>
       for {
         partialAuthsWithoutAgentName <- strideClientDetailsService.getPartialAuthsForNino(NinoWithoutSuffix(nino))

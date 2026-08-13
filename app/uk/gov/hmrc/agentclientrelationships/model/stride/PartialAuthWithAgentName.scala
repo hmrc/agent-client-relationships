@@ -28,6 +28,5 @@ case class PartialAuthWithAgentName(
   service: String
 )
 
-object PartialAuthWithAgentName {
-  implicit val writes: OWrites[PartialAuthWithAgentName] = Json.writes[PartialAuthWithAgentName]
-}
+object PartialAuthWithAgentName:
+  given writes: OWrites[PartialAuthWithAgentName] = Json.writes[PartialAuthWithAgentName]

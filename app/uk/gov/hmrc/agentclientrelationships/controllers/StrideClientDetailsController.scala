@@ -20,6 +20,7 @@ import play.api.libs.json.Json
 import play.api.mvc.Action
 import play.api.mvc.AnyContent
 import play.api.mvc.ControllerComponents
+import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.RelationshipFailureResponse
@@ -43,7 +44,7 @@ class StrideClientDetailsController @Inject() (
   strideClientDetailsService: StrideClientDetailsService,
   cc: ControllerComponents,
   appConfig: AppConfig
-)(implicit val executionContext: ExecutionContext)
+)(using val executionContext: ExecutionContext)
 extends BackendController(cc)
 with AuthActions {
 
@@ -54,7 +55,8 @@ with AuthActions {
     service: String,
     clientIdType: String,
     clientId: String
-  ): Action[AnyContent] = Action.async { implicit request =>
+  ): Action[AnyContent] = Action.async { request =>
+    given RequestHeader = request
     validationService
       .validateForEnrolmentKeyEither(
         service,
@@ -76,7 +78,8 @@ with AuthActions {
   }
 
   def getActiveRelationships: Action[ClientsRelationshipsRequest] =
-    Action.async(parse.json[ClientsRelationshipsRequest]) { implicit request =>
+    Action.async(parse.json[ClientsRelationshipsRequest]) { request =>
+      given RequestHeader = request
       authorisedWithStride(appConfig.oldAuthStrideRole, appConfig.newAuthStrideRole) { _ =>
         strideClientDetailsService
           .findAllActiveRelationship(request.body)
@@ -98,7 +101,8 @@ with AuthActions {
       }
     }
 
-  def getIrvRelationships(nino: String): Action[AnyContent] = Action.async { implicit request =>
+  def getIrvRelationships(nino: String): Action[AnyContent] = Action.async { request =>
+    given RequestHeader = request
     authorisedWithStride(appConfig.oldAuthStrideRole, appConfig.newAuthStrideRole) { _ =>
       strideClientDetailsService.findActiveIrvRelationships(nino).map {
         case Right(irvRelationships) => Ok(Json.toJson(irvRelationships))

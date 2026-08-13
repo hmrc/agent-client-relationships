@@ -25,6 +25,5 @@ case class IrvRelationships(
   agents: Seq[IrvAgent]
 )
 
-object IrvRelationships {
-  implicit val writes: OWrites[IrvRelationships] = Json.writes[IrvRelationships]
-}
+object IrvRelationships:
+  given writes: OWrites[IrvRelationships] = Json.writes[IrvRelationships]

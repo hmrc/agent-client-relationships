@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.agentclientrelationships.controllers
 
+import org.mongodb.scala.ObservableFuture
+
 import play.api.http.Status.UNPROCESSABLE_ENTITY
 import play.api.i18n.Lang
 import play.api.i18n.Langs
@@ -23,9 +25,9 @@ import play.api.i18n.MessagesApi
 import play.api.libs.json.JsValue
 import play.api.libs.json.Json
 import play.api.libs.json.Json.toJson
-import play.api.test.Helpers._
+import play.api.test.Helpers.*
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.model._
+import uk.gov.hmrc.agentclientrelationships.model.*
 import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiFailureResponse.ErrorBody
 import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiInvitationResponse
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentReferenceRecord
@@ -34,9 +36,9 @@ import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
 import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
 import uk.gov.hmrc.agentclientrelationships.services.AgentRecordService
 import uk.gov.hmrc.agentclientrelationships.services.InvitationLinkService
-import uk.gov.hmrc.agentclientrelationships.stubs._
+import uk.gov.hmrc.agentclientrelationships.stubs.*
 import uk.gov.hmrc.agentclientrelationships.support.TestData
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service._
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.*
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.SuspensionDetails
 import uk.gov.hmrc.auth.core.AuthConnector
@@ -65,11 +67,11 @@ with TestData {
 
   val authConnector: AuthConnector = app.injector.instanceOf[AuthConnector]
 
-  implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
-  implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
+  given appConfig: AppConfig = app.injector.instanceOf[AppConfig]
+  given ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
   lazy val messagesApi: MessagesApi = app.injector.instanceOf[MessagesApi]
-  implicit val langs: Langs = app.injector.instanceOf[Langs]
-  implicit val lang: Lang = langs.availables.head
+  given langs: Langs = app.injector.instanceOf[Langs]
+  given lang: Lang = langs.availables.head
 
   val controller =
     new ApiGetInvitationController(

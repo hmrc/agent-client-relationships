@@ -38,7 +38,7 @@ with TestData {
     normalisedAgentNames = Seq(normalizedAgentName, "NormalisedAgentName2")
   )
 
-  implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
+  given ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
 
   val agentReferenceRepo: AgentReferenceRepository = app.injector.instanceOf[AgentReferenceRepository]
 

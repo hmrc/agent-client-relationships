@@ -36,9 +36,9 @@ trait MongoLockService {
   def recoveryLock[T](
     arn: Arn,
     enrolmentKey: EnrolmentKey
-  )(body: => Future[T])(implicit ec: ExecutionContext): Future[Option[T]]
+  )(body: => Future[T])(using ec: ExecutionContext): Future[Option[T]]
 
-  def schedulerLock[T](jobName: String)(body: => Future[T])(implicit
+  def schedulerLock[T](jobName: String)(body: => Future[T])(using
     ec: ExecutionContext,
     appConfig: AppConfig
   ): Future[Option[T]]
@@ -52,7 +52,7 @@ extends MongoLockService {
   def recoveryLock[T](
     arn: Arn,
     enrolmentKey: EnrolmentKey
-  )(body: => Future[T])(implicit ec: ExecutionContext): Future[Option[T]] = {
+  )(body: => Future[T])(using ec: ExecutionContext): Future[Option[T]] = {
     val recoveryLock = LockService(
       lockRepository,
       lockId = s"recovery-${arn.value}-${enrolmentKey.tag}",
@@ -63,7 +63,7 @@ extends MongoLockService {
     }
   }
 
-  def schedulerLock[T](jobName: String)(body: => Future[T])(implicit
+  def schedulerLock[T](jobName: String)(body: => Future[T])(using
     ec: ExecutionContext,
     appConfig: AppConfig
   ): Future[Option[T]] = {
@@ -77,7 +77,7 @@ extends MongoLockService {
     }
   }
 
-  def partialAuthLock[T](jobName: String)(body: => Future[T])(implicit
+  def partialAuthLock[T](jobName: String)(body: => Future[T])(using
     ec: ExecutionContext,
     appConfig: AppConfig
   ): Future[Option[T]] = {

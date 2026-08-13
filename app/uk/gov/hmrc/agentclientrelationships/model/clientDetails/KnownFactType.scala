@@ -30,6 +30,6 @@ extends Enumeration {
   val Email: KnownFactType = Value("Email")
   val Date: KnownFactType = Value("Date")
 
-  implicit val format: Format[KnownFactType.Value] = Json.formatEnum(this)
+  given format: Format[KnownFactType.Value] = Json.formatEnum(this)
 
 }

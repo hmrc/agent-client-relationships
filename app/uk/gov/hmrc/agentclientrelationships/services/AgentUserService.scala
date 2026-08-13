@@ -42,10 +42,10 @@ case class AgentUser(
 class AgentUserService @Inject() (
   es: EnrolmentStoreProxyConnector,
   ugs: UsersGroupsSearchConnector
-)(implicit val executionContext: ExecutionContext)
+)(using executionContext: ExecutionContext)
 extends RequestAwareLogging {
 
-  def getAgentAdminAndSetAuditData(arn: Arn)(implicit
+  def getAgentAdminAndSetAuditData(arn: Arn)(using
     request: RequestHeader,
     auditData: AuditData
   ): Future[Either[String, AgentUser]] =

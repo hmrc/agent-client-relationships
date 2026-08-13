@@ -23,10 +23,11 @@ import uk.gov.hmrc.agentclientrelationships.support.EmailScheduler
 
 import java.time.Clock
 import java.time.ZoneId
+import scala.annotation.unused
 
 class Module(
-  environment: Environment,
-  configuration: Configuration
+  @unused environment: Environment,
+  @unused configuration: Configuration
 )
 extends AbstractModule {
 

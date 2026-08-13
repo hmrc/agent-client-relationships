@@ -20,17 +20,17 @@ import cats.data.EitherT
 import org.mongodb.scala.MongoException
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.connectors.HipConnector
 import uk.gov.hmrc.agentclientrelationships.model.Invitation
 import uk.gov.hmrc.agentclientrelationships.model.Rejected
 import uk.gov.hmrc.agentclientrelationships.model.TrackRequestsResult
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.ClientIdentifier.ClientId
-import uk.gov.hmrc.agentclientrelationships.model.identifiers._
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.*
 import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiFailureResponse.AlreadyCancelledInvalidInvitationStatus
 import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiFailureResponse.InvalidInvitationStatus
 import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiFailureResponse.InvitationNotFound
 import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiFailureResponse.NoPermissionOnAgency
-import uk.gov.hmrc.agentclientrelationships.model.invitation.CancelInvitationResponse._
+import uk.gov.hmrc.agentclientrelationships.model.invitation.CancelInvitationResponse.*
+import uk.gov.hmrc.agentclientrelationships.model.invitation.CancelInvitationResponse
 import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiFailureResponse
 import uk.gov.hmrc.agentclientrelationships.model.invitation.CreateInvitationRequest
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse
@@ -49,11 +49,10 @@ import scala.concurrent.Future
 @Singleton
 class InvitationService @Inject() (
   invitationsRepository: InvitationsRepository,
-  hipConnector: HipConnector,
   agentRecordService: AgentRecordService,
   emailService: EmailService,
   appConfig: AppConfig
-)(implicit ec: ExecutionContext)
+)(using ec: ExecutionContext)
 extends RequestAwareLogging {
 
   def trackRequests(
@@ -73,7 +72,7 @@ extends RequestAwareLogging {
   def createInvitation(
     arn: Arn,
     createInvitationInputData: CreateInvitationRequest
-  )(implicit request: RequestHeader): Future[Either[InvitationFailureResponse, Invitation]] = {
+  )(using request: RequestHeader): Future[Either[InvitationFailureResponse, Invitation]] = {
     val invitationT =
       for {
 
@@ -103,7 +102,7 @@ extends RequestAwareLogging {
 
   def findInvitation(invitationId: String): Future[Option[Invitation]] = invitationsRepository.findOneById(invitationId)
 
-  def rejectInvitation(invitationId: String)(implicit
+  def rejectInvitation(invitationId: String)(using
     request: RequestHeader
   ): Future[Invitation] =
     for {
@@ -114,10 +113,10 @@ extends RequestAwareLogging {
   def cancelInvitation(
     arn: Arn,
     invitationId: String
-  )(implicit ec: ExecutionContext): Future[Either[ApiFailureResponse, Unit]] = invitationsRepository.cancelByIdForAgent(arn.value, invitationId).map {
+  )(using ec: ExecutionContext): Future[Either[ApiFailureResponse, Unit]] = invitationsRepository.cancelByIdForAgent(arn.value, invitationId).map {
     case Success => Right(())
     case AlreadyCancelled => Left(AlreadyCancelledInvalidInvitationStatus)
-    case NotFound => Left(InvitationNotFound)
+    case CancelInvitationResponse.NotFound => Left(InvitationNotFound)
     case NoPermission => Left(NoPermissionOnAgency)
     case WrongInvitationStatus => Left(InvalidInvitationStatus)
   }
@@ -142,7 +141,7 @@ extends RequestAwareLogging {
   def findNonSuspendedClientInvitations(
     services: Seq[String],
     clientIds: Seq[String]
-  )(implicit request: RequestHeader): Future[Seq[Invitation]] = {
+  )(using request: RequestHeader): Future[Seq[Invitation]] = {
     def getSuspendedArns(arns: Seq[String]) = Future
       .sequence(
         arns.map { arn =>
@@ -199,7 +198,7 @@ extends RequestAwareLogging {
     clientName: String,
     clientType: Option[String],
     agentDetails: AgencyDetails
-  )(implicit request: RequestHeader): Future[Either[InvitationFailureResponse, Invitation]] = {
+  )(using request: RequestHeader): Future[Either[InvitationFailureResponse, Invitation]] = {
     val expiryDate = currentTime().plusSeconds(invitationExpiryDuration.toSeconds).toLocalDate
     (
       for {

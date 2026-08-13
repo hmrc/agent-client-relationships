@@ -45,7 +45,7 @@ object CitizenDetails {
 
   val citizenDateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("ddMMyyyy")
 
-  implicit val reads: Reads[CitizenDetails] =
+  given reads: Reads[CitizenDetails] =
     for {
       firstName <- (JsPath \ "name" \ "current" \ "firstName").readNullable[String]
       lastName <- (JsPath \ "name" \ "current" \ "lastName").readNullable[String]

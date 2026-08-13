@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.agentclientrelationships.controllers
 
+import org.mongodb.scala.ObservableFuture
+
 import com.github.tomakehurst.wiremock.client.WireMock.aResponse
 import com.github.tomakehurst.wiremock.client.WireMock.containing
 import com.github.tomakehurst.wiremock.client.WireMock.post
@@ -52,7 +54,6 @@ import uk.gov.hmrc.agentclientrelationships.testsupport.testdata.ItsaSuppTestDat
 import uk.gov.hmrc.agentclientrelationships.testsupport.testdata.ItsaTestData
 import uk.gov.hmrc.agentclientrelationships.testsupport.testdata.TaxRegimeTestData
 import uk.gov.hmrc.agentclientrelationships.testsupport.testdata.TestData
-import uk.gov.hmrc.agentclientrelationships.testsupport.testdata.VatTestData
 
 import java.time.Instant
 import java.time.LocalDate
@@ -71,7 +72,7 @@ with EmailStubs {
   val langs: Langs = app.injector.instanceOf[Langs]
   val lang: Lang = langs.availables.head
   val dateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("d MMMM uuuu", Locale.UK)
-  implicit val executionContext: ExecutionContext = app.injector.instanceOf[ExecutionContext]
+  given executionContext: ExecutionContext = app.injector.instanceOf[ExecutionContext]
 
   def getRequestPath(invitationId: String): String = s"/agent-client-relationships/authorisation-response/accept/$invitationId"
 

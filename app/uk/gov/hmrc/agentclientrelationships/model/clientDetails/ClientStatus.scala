@@ -28,6 +28,6 @@ extends Enumeration {
   val Deregistered: ClientStatus = Value("Deregistered")
   val Inactive: ClientStatus = Value("Inactive")
 
-  implicit val format: Format[ClientStatus.Value] = Json.formatEnum(this)
+  given format: Format[ClientStatus.Value] = Json.formatEnum(this)
 
 }

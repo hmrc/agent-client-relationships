@@ -36,7 +36,7 @@ trait TestData {
   )
 
   object TestBusinessAddress {
-    implicit val format: OFormat[TestBusinessAddress] = Json.format
+    given format: OFormat[TestBusinessAddress] = Json.format
   }
 
   case class TestAgencyDetails(
@@ -47,7 +47,7 @@ trait TestData {
   )
 
   object TestAgencyDetails {
-    implicit val format: OFormat[TestAgencyDetails] = Json.format
+    given format: OFormat[TestAgencyDetails] = Json.format
   }
 
   case class TestAgentDetailsDesResponse(
@@ -56,9 +56,8 @@ trait TestData {
     suspensionDetails: Option[SuspensionDetails]
   )
 
-  object TestAgentDetailsDesResponse {
-    implicit val format: Format[TestAgentDetailsDesResponse] = Json.format[TestAgentDetailsDesResponse]
-  }
+  object TestAgentDetailsDesResponse:
+    given format: Format[TestAgentDetailsDesResponse] = Json.format[TestAgentDetailsDesResponse]
 
   val suspensionDetails: SuspensionDetails = SuspensionDetails(suspensionStatus = false, None)
 

@@ -20,12 +20,12 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import play.api.http.Status
-import play.api.libs.json._
+import play.api.libs.json.*
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.util.RequestSupport.hc
 import uk.gov.hmrc.domain.AgentCode
-import uk.gov.hmrc.http.HttpReads.Implicits._
+import uk.gov.hmrc.http.HttpReads.Implicits.*
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.HttpErrorFunctions
 import uk.gov.hmrc.http.HttpResponse
@@ -41,15 +41,13 @@ case class GroupInfo(
   agentCode: Option[AgentCode]
 )
 
-object GroupInfo {
-  implicit val formats: Format[GroupInfo] = Json.format[GroupInfo]
-}
+object GroupInfo:
+  given formats: Format[GroupInfo] = Json.format[GroupInfo]
 
 case class CredentialRole(credentialRole: String)
 
-object CredentialRole {
-  implicit val formats: Format[CredentialRole] = Json.format
-}
+object CredentialRole:
+  given formats: Format[CredentialRole] = Json.format
 
 /** Cut down version of UserDetails from users-groups-search, with only the data we are interested in
   */
@@ -58,21 +56,20 @@ case class UserDetails(
   credentialRole: Option[String] = None
 )
 
-object UserDetails {
-  implicit val formats: Format[UserDetails] = Json.format
-}
+object UserDetails:
+  given formats: Format[UserDetails] = Json.format
 
 @Singleton
 class UsersGroupsSearchConnector @Inject() (
   httpClient: HttpClientV2,
   appConfig: AppConfig
-)(implicit
+)(using
   val ec: ExecutionContext
 )
 extends HttpErrorFunctions
 with RequestAwareLogging {
 
-  def getGroupUsers(groupId: String)(implicit rh: RequestHeader): Future[Seq[UserDetails]] = httpClient
+  def getGroupUsers(groupId: String)(using rh: RequestHeader): Future[Seq[UserDetails]] = httpClient
     .get(url"${appConfig.userGroupsSearchUrl}/users-groups-search/groups/$groupId/users")
     .execute[HttpResponse]
     .map { response =>
@@ -94,11 +91,11 @@ with RequestAwareLogging {
     }
 
   // TODO: move this transformation to the Service Layer
-  def getFirstGroupAdminUser(groupId: String)(implicit rh: RequestHeader): Future[Option[UserDetails]] = getGroupUsers(
+  def getFirstGroupAdminUser(groupId: String)(using rh: RequestHeader): Future[Option[UserDetails]] = getGroupUsers(
     groupId
   ).map(_.find(_.credentialRole.exists(role => role == "Admin" | role == "User")))
 
-  def getGroupInfo(groupId: String)(implicit rh: RequestHeader): Future[Option[GroupInfo]] = httpClient
+  def getGroupInfo(groupId: String)(using rh: RequestHeader): Future[Option[GroupInfo]] = httpClient
     .get(url"${appConfig.userGroupsSearchUrl}/users-groups-search/groups/$groupId")
     .execute[Option[GroupInfo]]
 

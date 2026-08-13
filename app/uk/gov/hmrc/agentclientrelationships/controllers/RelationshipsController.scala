@@ -16,9 +16,9 @@
 
 package uk.gov.hmrc.agentclientrelationships.controllers
 
-import cats.implicits._
+import cats.implicits.*
 import play.api.libs.json.Json
-import play.api.mvc._
+import play.api.mvc.*
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
@@ -44,7 +44,7 @@ class RelationshipsController @Inject() (
   checkOrchestratorService: CheckRelationshipsOrchestratorService,
   agentTerminationService: AgentTerminationService,
   override val controllerComponents: ControllerComponents
-)(implicit val executionContext: ExecutionContext)
+)(using val executionContext: ExecutionContext)
 extends BackendController(controllerComponents)
 with AuthActions
 with RequestAwareLogging {
@@ -57,7 +57,8 @@ with RequestAwareLogging {
     clientIdType: String,
     clientId: String,
     userId: Option[String]
-  ): Action[AnyContent] = Action.async { implicit request =>
+  ): Action[AnyContent] = Action.async { request =>
+    given Request[?] = request
     authorised() {
       checkOrchestratorService
         .checkForRelationship(
@@ -75,7 +76,8 @@ with RequestAwareLogging {
     }
   }
 
-  def terminateAgent(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
+  def terminateAgent(arn: Arn): Action[AnyContent] = Action.async { request =>
+    given Request[?] = request
     withBasicAuth(appConfig.expectedAuth) {
       agentTerminationService
         .terminateAgent(arn)

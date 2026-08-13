@@ -22,17 +22,15 @@ import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys.enrolmentDelegatedKe
 import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys.etmpRelationshipCreatedKey
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.audit.AuditService
-import uk.gov.hmrc.agentclientrelationships.connectors._
+import uk.gov.hmrc.agentclientrelationships.connectors.*
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
-import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
-import uk.gov.hmrc.agentclientrelationships.repository._
+import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus.*
+import uk.gov.hmrc.agentclientrelationships.repository.*
 import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
-import uk.gov.hmrc.agentclientrelationships.util.RequestSupport._
+import uk.gov.hmrc.agentclientrelationships.util.RequestSupport.given
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdIt
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdItSupp
 
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -50,7 +48,7 @@ class CreateRelationshipsService @Inject() (
   deleteRecordRepository: DeleteRecordRepository,
   agentUserService: AgentUserService,
   agentUserClientDetailsConnector: AgentUserClientDetailsConnector
-)(implicit ec: ExecutionContext)
+)(using ec: ExecutionContext)
 extends RequestAwareLogging {
 
   // noinspection ScalaStyle
@@ -60,7 +58,7 @@ extends RequestAwareLogging {
     oldReferences: Set[RelationshipReference],
     failIfAllocateAgentInESFails: Boolean,
     isCopyAcross: Boolean = false
-  )(implicit
+  )(using
     request: RequestHeader,
     auditData: AuditData = new AuditData()
   ): Future[Option[Done]] =
@@ -108,7 +106,7 @@ extends RequestAwareLogging {
     arn: Arn,
     enrolmentKey: EnrolmentKey,
     isCopyAcross: Boolean
-  )(implicit
+  )(using
     ec: ExecutionContext,
     request: RequestHeader,
     auditData: AuditData
@@ -154,7 +152,7 @@ extends RequestAwareLogging {
     arn: Arn,
     enrolmentKey: EnrolmentKey,
     isCopyAcross: Boolean
-  )(implicit
+  )(using
     ec: ExecutionContext,
     request: RequestHeader
   ): Future[Done] =
@@ -210,7 +208,7 @@ extends RequestAwareLogging {
     agentUser: AgentUser,
     failIfAllocateAgentInESFails: Boolean,
     isCopyAcross: Boolean
-  )(implicit
+  )(using
     request: RequestHeader,
     auditData: AuditData
   ): Future[Done] = {
@@ -261,7 +259,7 @@ extends RequestAwareLogging {
   def deallocatePreviousRelationship(
     newArn: Arn,
     enrolmentKey: EnrolmentKey
-  )(implicit request: RequestHeader): Future[Boolean] =
+  )(using request: RequestHeader): Future[Boolean] =
     for {
       existingAgents <- es.getDelegatedGroupIdsFor(enrolmentKey)
       deallocateResult <- Future.sequence(
@@ -325,7 +323,7 @@ extends RequestAwareLogging {
       )
     } yield deallocateResult.contains(true)
 
-  private def retrieveAgentUser(arn: Arn)(implicit
+  private def retrieveAgentUser(arn: Arn)(using
     ec: ExecutionContext,
     request: RequestHeader,
     auditData: AuditData
@@ -341,7 +339,7 @@ extends RequestAwareLogging {
     relationshipCopyRecord: RelationshipCopyRecord,
     arn: Arn,
     enrolmentKey: EnrolmentKey
-  )(implicit
+  )(using
     request: RequestHeader,
     auditData: AuditData
   ): Future[Option[Done]] =

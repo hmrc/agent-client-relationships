@@ -39,7 +39,7 @@ trait MockClientDetailsService {
   )(
     response: Either[ClientDetailsFailureResponse, ClientDetailsResponse]
   ): OngoingStubbing[Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]]] = when(
-    mockClientDetailsService.findClientDetails(eqs(service), eqs(clientId))(any[RequestHeader])
+    mockClientDetailsService.findClientDetails(eqs(service), eqs(clientId))(using any[RequestHeader])
   ).thenReturn(Future.successful(response))
 
 }

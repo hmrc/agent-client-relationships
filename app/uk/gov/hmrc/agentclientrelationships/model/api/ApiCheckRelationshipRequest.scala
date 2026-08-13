@@ -25,6 +25,5 @@ case class ApiCheckRelationshipRequest(
   knownFact: String
 )
 
-object ApiCheckRelationshipRequest {
-  implicit val format: Format[ApiCheckRelationshipRequest] = Json.format[ApiCheckRelationshipRequest]
-}
+object ApiCheckRelationshipRequest:
+  given format: Format[ApiCheckRelationshipRequest] = Json.format[ApiCheckRelationshipRequest]

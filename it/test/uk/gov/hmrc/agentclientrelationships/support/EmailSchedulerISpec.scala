@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.agentclientrelationships.support
 
+import org.mongodb.scala.ObservableFuture
+
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.stream.Materializer
 import org.apache.pekko.testkit.TestKit
@@ -28,7 +30,7 @@ import play.api.test.Helpers.await
 import play.api.test.Helpers.defaultAwaitTimeout
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.controllers.BaseISpec
-import uk.gov.hmrc.agentclientrelationships.model._
+import uk.gov.hmrc.agentclientrelationships.model.*
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Vat
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Vrn
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
@@ -56,9 +58,9 @@ with EmailStubs {
   val invitationsRepository: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
   val emailService: EmailService = app.injector.instanceOf[EmailService]
   val mongoLockService: MongoLockService = app.injector.instanceOf[MongoLockService]
-  implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
-  implicit val mat: Materializer = app.injector.instanceOf[Materializer]
-  implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
+  given ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
+  given mat: Materializer = app.injector.instanceOf[Materializer]
+  given appConfig: AppConfig = app.injector.instanceOf[AppConfig]
 
   val timeout: Span = scaled(Span(30, Seconds))
   val interval: Span = scaled(Span(2, Seconds))

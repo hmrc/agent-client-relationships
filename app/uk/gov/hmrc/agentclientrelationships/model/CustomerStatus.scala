@@ -25,6 +25,5 @@ case class CustomerStatus(
   hasExistingRelationships: Boolean
 )
 
-object CustomerStatus {
-  implicit val formats: OFormat[CustomerStatus] = Json.format[CustomerStatus]
-}
+object CustomerStatus:
+  given formats: OFormat[CustomerStatus] = Json.format[CustomerStatus]

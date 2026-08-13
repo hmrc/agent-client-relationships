@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.model
 
-import play.api.libs.json._
+import play.api.libs.json.*
 import uk.gov.hmrc.crypto.json.JsonEncryption.stringEncrypterDecrypter
 import uk.gov.hmrc.crypto.Decrypter
 import uk.gov.hmrc.crypto.Encrypter
@@ -30,31 +30,30 @@ case class TrackRequestsResult(
   totalResults: Int
 )
 
-object TrackRequestsResult {
-  implicit val format: Format[TrackRequestsResult] = Json.format[TrackRequestsResult]
-}
+object TrackRequestsResult:
+  given format: Format[TrackRequestsResult] = Json.format[TrackRequestsResult]
 
 case class MongoClientNames(clientNames: Seq[String])
 object MongoClientNames {
 
-  def mongoFormat(implicit
+  def mongoFormat(using
     crypto: Encrypter
       with Decrypter
   ): Format[MongoClientNames] = {
-    implicit val cryptoFormat: Format[String] = stringEncrypterDecrypter
+    given cryptoFormat: Format[String] = stringEncrypterDecrypter
     Json.format[MongoClientNames]
   }
-  implicit val format: Format[MongoClientNames] = Json.format[MongoClientNames]
+  given format: Format[MongoClientNames] = Json.format[MongoClientNames]
 
 }
 case class MongoAvailableFilters(availableFilters: Seq[String])
-object MongoAvailableFilters {
-  implicit val format: Format[MongoAvailableFilters] = Json.format[MongoAvailableFilters]
-}
+object MongoAvailableFilters:
+  given format: Format[MongoAvailableFilters] = Json.format[MongoAvailableFilters]
+
 case class MongoTotalResults(count: Int)
-object MongoTotalResults {
-  implicit val format: Format[MongoTotalResults] = Json.format[MongoTotalResults]
-}
+object MongoTotalResults:
+  given format: Format[MongoTotalResults] = Json.format[MongoTotalResults]
+
 case class MongoTrackRequestsResult(
   requests: Seq[Invitation] = Nil,
   clientNamesFacet: Seq[MongoClientNames] = Nil,
@@ -62,12 +61,12 @@ case class MongoTrackRequestsResult(
   totalResultsFacet: Seq[MongoTotalResults] = Nil
 )
 object MongoTrackRequestsResult {
-  def format(implicit
+  def format(using
     crypto: Encrypter
       with Decrypter
   ): Format[MongoTrackRequestsResult] = {
-    implicit val invitationFormat: Format[Invitation] = Invitation.mongoFormat
-    implicit val mongoClientNamesFormat: Format[MongoClientNames] = MongoClientNames.mongoFormat
+    given invitationFormat: Format[Invitation] = Invitation.mongoFormat
+    given mongoClientNamesFormat: Format[MongoClientNames] = MongoClientNames.mongoFormat
     Json.format[MongoTrackRequestsResult]
   }
 }

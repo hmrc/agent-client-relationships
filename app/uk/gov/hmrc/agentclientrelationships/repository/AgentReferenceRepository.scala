@@ -32,12 +32,12 @@ import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 import uk.gov.hmrc.mdc.Mdc
 
-import javax.inject._
+import javax.inject.*
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 @Singleton
-class AgentReferenceRepository @Inject() (mongo: MongoComponent)(implicit
+class AgentReferenceRepository @Inject() (mongo: MongoComponent)(using
   ec: ExecutionContext,
   @Named("aes")
   crypto: Encrypter
@@ -87,7 +87,7 @@ with RequestAwareLogging {
       }
   }
 
-  def delete(arn: Arn)(implicit request: RequestHeader): Future[Unit] = Mdc.preservingMdc {
+  def delete(arn: Arn)(using request: RequestHeader): Future[Unit] = Mdc.preservingMdc {
     collection
       .deleteOne(equal("arn", arn.value))
       .toFuture()

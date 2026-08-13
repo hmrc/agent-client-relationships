@@ -62,7 +62,7 @@ class RemoveAuthorisationController @Inject() (
   val authConnector: AuthConnector,
   val appConfig: AppConfig,
   cc: ControllerComponents
-)(implicit val executionContext: ExecutionContext)
+)(using val executionContext: ExecutionContext)
 extends BackendController(cc)
 with AuthActions {
 
@@ -71,7 +71,8 @@ with AuthActions {
   private val strideRoles = Seq(appConfig.oldAuthStrideRole, appConfig.newAuthStrideRole)
 
   def removeAuthorisation(arn: Arn): Action[RemoveAuthorisationRequest] =
-    Action.async(parse.json[RemoveAuthorisationRequest]) { implicit request =>
+    Action.async(parse.json[RemoveAuthorisationRequest]) { request =>
+      given play.api.mvc.RequestHeader = request
       for {
         enrolmentKey <- validationService.validateForEnrolmentKey(
           request.body.service,
@@ -88,7 +89,8 @@ with AuthActions {
             arn = Some(arn),
             clientId = enrolmentKeyForAuth.oneTaxIdentifier(),
             strideRoles = strideRoles
-          ) { implicit currentUser =>
+          ) { currentUser =>
+            given CurrentUser = currentUser
             removeAuthorisationForValidRequest(
               arn,
               refinedEnrolmentKey,
@@ -107,7 +109,7 @@ with AuthActions {
     arn: Arn,
     enrolmentKey: EnrolmentKey,
     suppliedClientId: TaxIdentifier
-  )(implicit
+  )(using
     request: RequestHeader,
     currentUser: CurrentUser
   ): Future[Option[Boolean]] =
@@ -119,7 +121,28 @@ with AuthActions {
             service.id,
             clientId.value
           )
-          .map { result: Boolean =>
+          .map {
+            (result: Boolean) =>
+              if (result) {
+                val userType = deleteService.determineUserTypeFromAG(currentUser.affinityGroup).getOrElse(endedByHMRC)
+                invitationService.deauthoriseInvitation(
+                  arn,
+                  service.id,
+                  clientId.value,
+                  userType
+                )
+                auditService.auditForPirTermination(arn, enrolmentKey)
+              }
+              Some(result)
+          }
+      case (service @ (MtdIt | MtdItSupp), clientId @ NinoWithoutSuffix(_)) => // Alt ITSA
+        partialAuthRepository.deauthorise(
+          service.id,
+          NinoWithoutSuffix(clientId.value),
+          arn,
+          Instant.now
+        ).map {
+          (result: Boolean) =>
             if (result) {
               val userType = deleteService.determineUserTypeFromAG(currentUser.affinityGroup).getOrElse(endedByHMRC)
               invitationService.deauthoriseInvitation(
@@ -128,32 +151,13 @@ with AuthActions {
                 clientId.value,
                 userType
               )
-              auditService.auditForPirTermination(arn, enrolmentKey)
+              auditService.sendTerminatePartialAuthAuditEvent(
+                arn.value,
+                enrolmentKey.service,
+                enrolmentKey.oneIdentifier().value
+              )
             }
             Some(result)
-          }
-      case (service @ (MtdIt | MtdItSupp), clientId @ NinoWithoutSuffix(_)) => // Alt ITSA
-        partialAuthRepository.deauthorise(
-          service.id,
-          NinoWithoutSuffix(clientId.value),
-          arn,
-          Instant.now
-        ).map { result: Boolean =>
-          if (result) {
-            val userType = deleteService.determineUserTypeFromAG(currentUser.affinityGroup).getOrElse(endedByHMRC)
-            invitationService.deauthoriseInvitation(
-              arn,
-              service.id,
-              clientId.value,
-              userType
-            )
-            auditService.sendTerminatePartialAuthAuditEvent(
-              arn.value,
-              enrolmentKey.service,
-              enrolmentKey.oneIdentifier().value
-            )
-          }
-          Some(result)
         }
       case _ => // Handles invitation deauth and auditing on its own
         deleteService

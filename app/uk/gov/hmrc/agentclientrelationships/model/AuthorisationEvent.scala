@@ -28,12 +28,10 @@ case class AuthorisationEvent(
   eventType: InvitationStatus
 )
 
-object AuthorisationEvent {
-  implicit val formats: OFormat[AuthorisationEvent] = Json.format[AuthorisationEvent]
-}
+object AuthorisationEvent:
+  given formats: OFormat[AuthorisationEvent] = Json.format[AuthorisationEvent]
 
 case class AuthorisationEventsResponse(authorisationEvents: Seq[AuthorisationEvent])
 
-object AuthorisationEventsResponse {
-  implicit val formats: OFormat[AuthorisationEventsResponse] = Json.format[AuthorisationEventsResponse]
-}
+object AuthorisationEventsResponse:
+  given formats: OFormat[AuthorisationEventsResponse] = Json.format[AuthorisationEventsResponse]

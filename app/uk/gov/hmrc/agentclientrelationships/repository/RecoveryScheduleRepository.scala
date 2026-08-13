@@ -18,10 +18,10 @@ package uk.gov.hmrc.agentclientrelationships.repository
 
 import org.mongodb.scala.model.Indexes.ascending
 import org.mongodb.scala.model.Updates.set
-import org.mongodb.scala.model._
+import org.mongodb.scala.model.*
 import play.api.Logging
 import play.api.libs.json.Json.format
-import play.api.libs.json._
+import play.api.libs.json.*
 import uk.gov.hmrc.agentclientrelationships.model.MongoLocalDateTimeFormat
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
@@ -43,13 +43,13 @@ case class RecoveryRecord(
 
 object RecoveryRecord {
 
-  implicit val localDateTimeFormat: Format[LocalDateTime] = MongoLocalDateTimeFormat.localDateTimeFormat
-  implicit val formats: Format[RecoveryRecord] = format[RecoveryRecord]
+  given localDateTimeFormat: Format[LocalDateTime] = MongoLocalDateTimeFormat.localDateTimeFormat
+  given formats: Format[RecoveryRecord] = format[RecoveryRecord]
 
 }
 
 @Singleton
-class RecoveryScheduleRepository @Inject() (mongoComponent: MongoComponent)(implicit ec: ExecutionContext)
+class RecoveryScheduleRepository @Inject() (mongoComponent: MongoComponent)(using ec: ExecutionContext)
 extends PlayMongoRepository[RecoveryRecord](
   mongoComponent = mongoComponent,
   collectionName = "recovery-schedule",

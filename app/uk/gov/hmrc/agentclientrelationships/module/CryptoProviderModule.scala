@@ -44,7 +44,7 @@ extends Module {
   override def bindings(
     environment: Environment,
     configuration: Configuration
-  ): Seq[Binding[_]] = Seq(
+  ): Seq[Binding[?]] = Seq(
     bind[
       Encrypter
         with Decrypter

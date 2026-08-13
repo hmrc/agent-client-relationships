@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.agentclientrelationships.model.identifiers
 
+import scala.Conversion
+
 import play.api.libs.json.Format
 import uk.gov.hmrc.domain.SimpleObjectReads
 import uk.gov.hmrc.domain.SimpleObjectWrites
@@ -176,12 +178,12 @@ object Service {
 
   val reads = new SimpleObjectReads[Service]("id", Service.apply)
   val writes = new SimpleObjectWrites[Service](_.id)
-  implicit val format: Format[Service] = Format(reads, writes)
+  given format: Format[Service] = Format(reads, writes)
 
 }
 
 sealed abstract class ClientIdType[+T <: TaxIdentifier](
-  val clazz: Class[_],
+  val clazz: Class[?],
   val id: String,
   val enrolmentId: String,
   val createUnderlying: String => T
@@ -317,11 +319,15 @@ object ClientIdentifier {
   def apply(
     value: String,
     typeId: String
-  ): ClientId = ClientIdType.supportedTypes
-    .find(_.id == typeId)
-    .getOrElse(throw new IllegalArgumentException("Invalid Client Id Type: " + typeId))
-    .createUnderlying(value.replaceAll("\\s", ""))
+  ): ClientId = {
+    val underlying = ClientIdType.supportedTypes
+      .find(_.id == typeId)
+      .getOrElse(throw new IllegalArgumentException("Invalid Client Id Type: " + typeId))
+      .createUnderlying(value.replaceAll("\\s", ""))
+    ClientIdentifier(underlying)
+  }
 
-  implicit def wrap[T <: TaxIdentifier](taxId: T): ClientIdentifier[T] = ClientIdentifier(taxId)
+  given [T <: TaxIdentifier]: Conversion[T, ClientIdentifier[T]] with
+    def apply(taxId: T): ClientIdentifier[T] = ClientIdentifier(taxId)
 
 }

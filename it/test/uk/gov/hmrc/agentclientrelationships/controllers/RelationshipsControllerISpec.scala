@@ -32,10 +32,12 @@
 
 package uk.gov.hmrc.agentclientrelationships.controllers
 
+import org.mongodb.scala.ObservableFuture
+
 import org.mongodb.scala.model.Filters
 import play.api.mvc.RequestHeader
 import play.api.test.FakeRequest
-import play.api.test.Helpers._
+import play.api.test.Helpers.*
 import uk.gov.hmrc.agentclientrelationships.model.DeletionCount
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.TerminationResponse
@@ -122,7 +124,7 @@ with HipStub {
   }
 
   "sanitising a CBC enrolment key" should {
-    implicit val request: RequestHeader = FakeRequest()
+    given request: RequestHeader = FakeRequest()
     "work for a HMRC-CBC-ORG enrolment key with a UTR stored in the enrolment store" in {
       val validationService = app.injector.instanceOf[ValidationService]
       givenCbcUkExistsInES(cbcId, utr.value)

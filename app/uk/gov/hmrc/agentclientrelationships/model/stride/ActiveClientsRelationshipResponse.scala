@@ -30,13 +30,12 @@ case class ActiveClientRelationship(
 
 object ActiveClientRelationship {
 
-  implicit val activeRelationshipformat: OFormat[ActiveRelationship] = Json.format[ActiveRelationship]
-  implicit val format: OFormat[ActiveClientRelationship] = Json.format[ActiveClientRelationship]
+  given activeRelationshipformat: OFormat[ActiveRelationship] = Json.format[ActiveRelationship]
+  given format: OFormat[ActiveClientRelationship] = Json.format[ActiveClientRelationship]
 
 }
 
 case class ActiveClientsRelationshipResponse(activeClientRelationships: Seq[ActiveClientRelationship])
 
-object ActiveClientsRelationshipResponse {
-  implicit val format: OFormat[ActiveClientsRelationshipResponse] = Json.format[ActiveClientsRelationshipResponse]
-}
+object ActiveClientsRelationshipResponse:
+  given format: OFormat[ActiveClientsRelationshipResponse] = Json.format[ActiveClientsRelationshipResponse]

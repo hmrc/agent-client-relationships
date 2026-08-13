@@ -32,7 +32,7 @@ extends MongoLockService {
   override def recoveryLock[T](
     arn: Arn,
     enrolmentKey: EnrolmentKey
-  )(body: => Future[T])(implicit ec: ExecutionContext): Future[Option[T]] =
+  )(body: => Future[T])(using ec: ExecutionContext): Future[Option[T]] =
     if (locked.contains((arn, enrolmentKey)))
       Future.successful(None)
     else {
@@ -45,7 +45,7 @@ extends MongoLockService {
         }
     }
 
-  override def schedulerLock[T](jobName: String)(body: => Future[T])(implicit
+  override def schedulerLock[T](jobName: String)(body: => Future[T])(using
     ec: ExecutionContext,
     appConfig: AppConfig
   ): Future[Option[T]] = body

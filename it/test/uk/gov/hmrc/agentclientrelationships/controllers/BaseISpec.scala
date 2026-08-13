@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.agentclientrelationships.controllers
 
+import org.mongodb.scala.ObservableFuture
+
 import com.google.inject.AbstractModule
 import org.mongodb.scala.bson.BsonDocument
 import org.scalatest.concurrent.IntegrationPatience
@@ -27,16 +29,15 @@ import play.api.libs.json.JsValue
 import play.api.libs.ws.WSClient
 import play.api.mvc.RequestHeader
 import play.api.test.FakeRequest
-import play.api.test.Helpers._
-import play.utils.UriEncoding
+import play.api.test.Helpers.*
 import uk.gov.hmrc.agentclientrelationships.connectors.helpers.CorrelationIdGenerator
-import uk.gov.hmrc.agentclientrelationships.model.identifiers._
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.*
 import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey => LocalEnrolmentKey}
-import uk.gov.hmrc.agentclientrelationships.repository._
+import uk.gov.hmrc.agentclientrelationships.repository.*
 import uk.gov.hmrc.agentclientrelationships.services.MongoLockService
 import uk.gov.hmrc.agentclientrelationships.services.MongoLockServiceImpl
-import uk.gov.hmrc.agentclientrelationships.stubs._
-import uk.gov.hmrc.agentclientrelationships.support._
+import uk.gov.hmrc.agentclientrelationships.stubs.*
+import uk.gov.hmrc.agentclientrelationships.support.*
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.auth.core.PlayAuthConnector
 import uk.gov.hmrc.domain.TaxIdentifier
@@ -67,7 +68,7 @@ with AgentServicesAccountStubs
 with IntegrationPatience {
 
   lazy val mockAuthConnector: AuthConnector = mock[PlayAuthConnector]
-  override implicit lazy val app: Application = appBuilder.build()
+  override given app: Application = appBuilder.build()
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -82,7 +83,7 @@ with IntegrationPatience {
 
   object FakeCorrelationIdGenerator
   extends CorrelationIdGenerator {
-    override def makeCorrelationId()(implicit requestHeader: RequestHeader): String = "testCorrelationId"
+    override def makeCorrelationId()(using requestHeader: RequestHeader): String = "testCorrelationId"
   }
 
   lazy val moduleWithOverrides: AbstractModule =
@@ -132,8 +133,8 @@ with IntegrationPatience {
     .configure(additionalConfig)
     .overrides(additionalOverrides)
 
-  implicit lazy val ws: WSClient = app.injector.instanceOf[WSClient]
-  implicit val request: RequestHeader = FakeRequest()
+  given ws: WSClient = app.injector.instanceOf[WSClient]
+  given request: RequestHeader = FakeRequest()
 
   def relationshipCopyRecordRepository: RelationshipCopyRecordRepository = app.injector.instanceOf[RelationshipCopyRecordRepository]
   def deleteRecordRepository: DeleteRecordRepository = new DeleteRecordRepository(mongoComponent)

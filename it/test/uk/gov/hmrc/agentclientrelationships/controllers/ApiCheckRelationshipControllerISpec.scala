@@ -20,9 +20,9 @@ import play.api.http.Status.NOT_FOUND
 import play.api.libs.json.Json.toJson
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.api.ApiCheckRelationshipRequest
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service._
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.*
 import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiFailureResponse.ErrorBody
-import uk.gov.hmrc.agentclientrelationships.stubs._
+import uk.gov.hmrc.agentclientrelationships.stubs.*
 import uk.gov.hmrc.agentclientrelationships.support.TestData
 
 class ApiCheckRelationshipControllerISpec

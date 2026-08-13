@@ -48,7 +48,7 @@ class ItsaDeauthAndCleanupService @Inject() (
   deleteRelationshipsService: DeleteRelationshipsService,
   invitationsRepository: InvitationsRepository,
   auditService: AuditService
-)(implicit ec: ExecutionContext) {
+)(using ec: ExecutionContext) {
 
   def deleteSameAgentRelationship(
     service: String,
@@ -56,7 +56,7 @@ class ItsaDeauthAndCleanupService @Inject() (
     optMtdItId: Option[String],
     nino: String,
     timestamp: Instant = Instant.now()
-  )(implicit
+  )(using
     request: RequestHeader,
     currentUser: CurrentUser
   ): Future[Boolean] =
@@ -78,7 +78,7 @@ class ItsaDeauthAndCleanupService @Inject() (
           )
           _ =
             if (altItsa) {
-              implicit val auditData: AuditData = new AuditData()
+              given auditData: AuditData = new AuditData()
               auditData.set(howPartialAuthTerminatedKey, agentRoleChange)
               auditService.sendTerminatePartialAuthAuditEvent(
                 arn,
@@ -93,7 +93,7 @@ class ItsaDeauthAndCleanupService @Inject() (
                 .checkForRelationshipAgencyLevel(Arn(arn), EnrolmentKey(serviceToCheck, MtdItId(mtdItId)))
                 .flatMap {
                   case (true, _) =>
-                    implicit val auditData: AuditData = new AuditData()
+                    given auditData: AuditData = new AuditData()
                     auditData.set(howRelationshipTerminatedKey, agentRoleChange)
                     deleteRelationshipsService
                       .deleteRelationship(

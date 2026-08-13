@@ -16,12 +16,14 @@
 
 package uk.gov.hmrc.agentclientrelationships.repository
 
+import org.mongodb.scala.ObservableFuture
+
 import com.mongodb.MongoWriteException
 import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.Indexes
 import play.api.test.Helpers.await
 import play.api.test.Helpers.defaultAwaitTimeout
-import uk.gov.hmrc.agentclientrelationships.model._
+import uk.gov.hmrc.agentclientrelationships.model.*
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDIT
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDITSUPP
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDVAT
@@ -111,7 +113,7 @@ extends RepositoryISpec[Invitation] {
           Some("personal")
         )
       )
-      await(repository.collection.countDocuments().toFuture()) shouldBe 2
+      await(repository.collection.countDocuments().toFuture()).head shouldBe 2
     }
 
     "fail to create a Pending invitation when one exists for the same agent and suppliedClientId" in {

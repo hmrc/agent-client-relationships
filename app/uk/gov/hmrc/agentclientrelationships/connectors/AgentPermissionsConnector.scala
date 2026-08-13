@@ -23,7 +23,7 @@ import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.util.RequestSupport.hc
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
-import uk.gov.hmrc.http.HttpReads.Implicits._
+import uk.gov.hmrc.http.HttpReads.Implicits.*
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.HttpResponse
 import uk.gov.hmrc.http.StringContextOps
@@ -38,13 +38,13 @@ import scala.concurrent.Future
 class AgentPermissionsConnector @Inject() (
   httpClient: HttpClientV2,
   appConfig: AppConfig
-)(implicit val ec: ExecutionContext)
+)(using ec: ExecutionContext)
 extends RequestAwareLogging {
 
   def isClientUnassigned(
     arn: Arn,
     enrolmentKey: EnrolmentKey
-  )(implicit rh: RequestHeader): Future[Boolean] = {
+  )(using rh: RequestHeader): Future[Boolean] = {
     val url = url"${appConfig.agentPermissionsUrl}/agent-permissions/arn/${arn.value}/client/${enrolmentKey.tag}/groups"
     httpClient
       .get(url)

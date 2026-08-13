@@ -33,7 +33,7 @@ object PptRef {
       case _ => false
     }
 
-  implicit val reads: SimpleObjectReads[PptRef] = new SimpleObjectReads[PptRef]("value", PptRef.apply)
-  implicit val writes: SimpleObjectWrites[PptRef] = new SimpleObjectWrites[PptRef](_.value)
+  given reads: SimpleObjectReads[PptRef] = new SimpleObjectReads[PptRef]("value", PptRef.apply)
+  given writes: SimpleObjectWrites[PptRef] = new SimpleObjectWrites[PptRef](_.value)
 
 }

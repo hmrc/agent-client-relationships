@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.agentclientrelationships.controllers
 
+import org.mongodb.scala.ObservableFuture
+
 import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers.await
@@ -38,8 +40,8 @@ class InvitationInfoControllerISpec
 extends BaseISpec
 with TestData {
 
-  implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
-  implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
+  given appConfig: AppConfig = app.injector.instanceOf[AppConfig]
+  given ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
 
   val testDate: LocalDate = LocalDate.now()
   val testTime: Instant = testDate.atStartOfDay(ZoneId.systemDefault()).toInstant

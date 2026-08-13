@@ -18,12 +18,12 @@ package uk.gov.hmrc.agentclientrelationships.services
 
 import org.mockito.ArgumentMatchers.any
 import org.mockito.ArgumentMatchers.{eq => equ}
-import org.mockito.Mockito._
+import org.mockito.Mockito.*
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.freespec.AnyFreeSpecLike
 import org.scalatest.matchers.should.Matchers
-import uk.gov.hmrc.agentclientrelationships.connectors._
+import uk.gov.hmrc.agentclientrelationships.connectors.*
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.UserId
 import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
@@ -33,7 +33,7 @@ import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Enrolment
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Identifier
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Vrn
-import uk.gov.hmrc.domain._
+import uk.gov.hmrc.domain.*
 import play.api.mvc.RequestHeader
 import play.api.test.FakeRequest
 
@@ -66,23 +66,23 @@ with ResettingMockitoSugar {
   private val mockHipConnector = mock[HipConnector]
   private val mockAgentFiConnector = mock[AgentFiRelationshipConnector]
 
-  implicit val request: RequestHeader = FakeRequest()
+  given request: RequestHeader = FakeRequest()
 
   "checkForRelationship (user level)" - {
     "when relationship exists between client and agent" - {
       "should return 200 (even if the client is not assigned to the user in EACD) when the client is unallocated (not in any access groups)" in {
         val es = mock[EnrolmentStoreProxyConnector]
-        when(es.getDelegatedGroupIdsFor(equ(enrolmentKey))(any[RequestHeader])).thenReturn(
+        when(es.getDelegatedGroupIdsFor(equ(enrolmentKey))(using any[RequestHeader])).thenReturn(
           Future.successful(Set(groupId))
         )
-        when(es.getEnrolmentsAssignedToUser(any[String], any[Option[String]])(any[RequestHeader])).thenReturn(
+        when(es.getEnrolmentsAssignedToUser(any[String], any[Option[String]])(using any[RequestHeader])).thenReturn(
           Future.successful(Seq.empty)
         )
-        when(es.getPrincipalGroupIdFor(equ(arn))(any[RequestHeader])).thenReturn(Future.successful(groupId))
+        when(es.getPrincipalGroupIdFor(equ(arn))(using any[RequestHeader])).thenReturn(Future.successful(groupId))
         val ap = resettingMock[AgentPermissionsConnector]
-        when(ap.isClientUnassigned(equ(arn), equ(enrolmentKey))(any[RequestHeader])).thenReturn(Future.successful(true))
+        when(ap.isClientUnassigned(equ(arn), equ(enrolmentKey))(using any[RequestHeader])).thenReturn(Future.successful(true))
         val gs = mock[UsersGroupsSearchConnector]
-        when(gs.getGroupUsers(any[String])(any[RequestHeader])).thenReturn(
+        when(gs.getGroupUsers(any[String])(using any[RequestHeader])).thenReturn(
           Future.successful(Seq(UserDetails(userId = Some(userId.value))))
         )
 
@@ -106,19 +106,19 @@ with ResettingMockitoSugar {
       }
       "should return 404 if the client is in at least an access groups but the user has not been assigned the client" in {
         val es = mock[EnrolmentStoreProxyConnector]
-        when(es.getDelegatedGroupIdsFor(equ(enrolmentKey))(any[RequestHeader])).thenReturn(
+        when(es.getDelegatedGroupIdsFor(equ(enrolmentKey))(using any[RequestHeader])).thenReturn(
           Future.successful(Set(groupId))
         )
-        when(es.getEnrolmentsAssignedToUser(any[String], any[Option[String]])(any[RequestHeader])).thenReturn(
+        when(es.getEnrolmentsAssignedToUser(any[String], any[Option[String]])(using any[RequestHeader])).thenReturn(
           Future.successful(Seq.empty)
         )
-        when(es.getPrincipalGroupIdFor(equ(arn))(any[RequestHeader])).thenReturn(Future.successful(groupId))
+        when(es.getPrincipalGroupIdFor(equ(arn))(using any[RequestHeader])).thenReturn(Future.successful(groupId))
         val ap = resettingMock[AgentPermissionsConnector]
-        when(ap.isClientUnassigned(equ(arn), equ(enrolmentKey))(any[RequestHeader])).thenReturn(
+        when(ap.isClientUnassigned(equ(arn), equ(enrolmentKey))(using any[RequestHeader])).thenReturn(
           Future.successful(false)
         )
         val gs = mock[UsersGroupsSearchConnector]
-        when(gs.getGroupUsers(any[String])(any[RequestHeader])).thenReturn(
+        when(gs.getGroupUsers(any[String])(using any[RequestHeader])).thenReturn(
           Future.successful(Seq(UserDetails(userId = Some(userId.value))))
         )
 
@@ -142,19 +142,19 @@ with ResettingMockitoSugar {
       }
       "should return 200 if the client is in at least an access groups and the user has been assigned the client" in {
         val es = mock[EnrolmentStoreProxyConnector]
-        when(es.getDelegatedGroupIdsFor(equ(enrolmentKey))(any[RequestHeader])).thenReturn(
+        when(es.getDelegatedGroupIdsFor(equ(enrolmentKey))(using any[RequestHeader])).thenReturn(
           Future.successful(Set(groupId))
         )
-        when(es.getEnrolmentsAssignedToUser(any[String], any[Option[String]])(any[RequestHeader])).thenReturn(
+        when(es.getEnrolmentsAssignedToUser(any[String], any[Option[String]])(using any[RequestHeader])).thenReturn(
           Future.successful(Seq(enrolment))
         )
-        when(es.getPrincipalGroupIdFor(equ(arn))(any[RequestHeader])).thenReturn(Future.successful(groupId))
+        when(es.getPrincipalGroupIdFor(equ(arn))(using any[RequestHeader])).thenReturn(Future.successful(groupId))
         val ap = resettingMock[AgentPermissionsConnector]
-        when(ap.isClientUnassigned(equ(arn), equ(enrolmentKey))(any[RequestHeader])).thenReturn(
+        when(ap.isClientUnassigned(equ(arn), equ(enrolmentKey))(using any[RequestHeader])).thenReturn(
           Future.successful(false)
         )
         val gs = mock[UsersGroupsSearchConnector]
-        when(gs.getGroupUsers(any[String])(any[RequestHeader])).thenReturn(
+        when(gs.getGroupUsers(any[String])(using any[RequestHeader])).thenReturn(
           Future.successful(Seq(UserDetails(userId = Some(userId.value))))
         )
 
@@ -180,13 +180,13 @@ with ResettingMockitoSugar {
     "when relationship does not exist between client and agent" - {
       "should return 404" in {
         val es = mock[EnrolmentStoreProxyConnector]
-        when(es.getDelegatedGroupIdsFor(equ(enrolmentKey))(any[RequestHeader])).thenReturn(
+        when(es.getDelegatedGroupIdsFor(equ(enrolmentKey))(using any[RequestHeader])).thenReturn(
           Future.successful(Set.empty[String])
         )
-        when(es.getPrincipalGroupIdFor(equ(arn))(any[RequestHeader])).thenReturn(Future.successful(groupId))
+        when(es.getPrincipalGroupIdFor(equ(arn))(using any[RequestHeader])).thenReturn(Future.successful(groupId))
         val ap = mock[AgentPermissionsConnector]
         val gs = mock[UsersGroupsSearchConnector]
-        when(gs.getGroupUsers(any[String])(any[RequestHeader])).thenReturn(
+        when(gs.getGroupUsers(any[String])(using any[RequestHeader])).thenReturn(
           Future.successful(Seq(UserDetails(userId = Some(userId.value))))
         )
 
@@ -212,17 +212,17 @@ with ResettingMockitoSugar {
     "when user does not belong to the agent's group" - {
       "should return 404" in {
         val es = mock[EnrolmentStoreProxyConnector]
-        when(es.getDelegatedGroupIdsFor(equ(enrolmentKey))(any[RequestHeader])).thenReturn(
+        when(es.getDelegatedGroupIdsFor(equ(enrolmentKey))(using any[RequestHeader])).thenReturn(
           Future.successful(Set(groupId))
         )
-        when(es.getEnrolmentsAssignedToUser(any[String], any[Option[String]])(any[RequestHeader])).thenReturn(
+        when(es.getEnrolmentsAssignedToUser(any[String], any[Option[String]])(using any[RequestHeader])).thenReturn(
           Future.successful(Seq.empty)
         )
-        when(es.getPrincipalGroupIdFor(equ(arn))(any[RequestHeader])).thenReturn(Future.successful(groupId))
+        when(es.getPrincipalGroupIdFor(equ(arn))(using any[RequestHeader])).thenReturn(Future.successful(groupId))
         val ap = resettingMock[AgentPermissionsConnector]
-        when(ap.isClientUnassigned(equ(arn), equ(enrolmentKey))(any[RequestHeader])).thenReturn(Future.successful(true))
+        when(ap.isClientUnassigned(equ(arn), equ(enrolmentKey))(using any[RequestHeader])).thenReturn(Future.successful(true))
         val gs = mock[UsersGroupsSearchConnector]
-        when(gs.getGroupUsers(any[String])(any[RequestHeader])).thenReturn(
+        when(gs.getGroupUsers(any[String])(using any[RequestHeader])).thenReturn(
           Future.successful(Seq(UserDetails(userId = Some("someOtherUserId"))))
         )
 
@@ -251,13 +251,13 @@ with ResettingMockitoSugar {
     "when relationship exists between client and agent" - {
       "should return 200" in {
         val es = mock[EnrolmentStoreProxyConnector]
-        when(es.getDelegatedGroupIdsFor(equ(enrolmentKey))(any[RequestHeader])).thenReturn(
+        when(es.getDelegatedGroupIdsFor(equ(enrolmentKey))(using any[RequestHeader])).thenReturn(
           Future.successful(Set(groupId))
         )
-        when(es.getPrincipalGroupIdFor(equ(arn))(any[RequestHeader])).thenReturn(Future.successful(groupId))
+        when(es.getPrincipalGroupIdFor(equ(arn))(using any[RequestHeader])).thenReturn(Future.successful(groupId))
         val ap = resettingMock[AgentPermissionsConnector]
         val gs = mock[UsersGroupsSearchConnector]
-        when(gs.getGroupUsers(any[String])(any[RequestHeader])).thenReturn(
+        when(gs.getGroupUsers(any[String])(using any[RequestHeader])).thenReturn(
           Future.successful(Seq(UserDetails(userId = Some(userId.value))))
         )
 
@@ -283,13 +283,13 @@ with ResettingMockitoSugar {
     "when relationship does not exist between client and agent" - {
       "should return 404" in {
         val es = mock[EnrolmentStoreProxyConnector]
-        when(es.getDelegatedGroupIdsFor(equ(enrolmentKey))(any[RequestHeader])).thenReturn(
+        when(es.getDelegatedGroupIdsFor(equ(enrolmentKey))(using any[RequestHeader])).thenReturn(
           Future.successful(Set.empty[String])
         )
-        when(es.getPrincipalGroupIdFor(equ(arn))(any[RequestHeader])).thenReturn(Future.successful(groupId))
+        when(es.getPrincipalGroupIdFor(equ(arn))(using any[RequestHeader])).thenReturn(Future.successful(groupId))
         val ap = mock[AgentPermissionsConnector]
         val gs = mock[UsersGroupsSearchConnector]
-        when(gs.getGroupUsers(any[String])(any[RequestHeader])).thenReturn(
+        when(gs.getGroupUsers(any[String])(using any[RequestHeader])).thenReturn(
           Future.successful(Seq(UserDetails(userId = Some(userId.value))))
         )
 

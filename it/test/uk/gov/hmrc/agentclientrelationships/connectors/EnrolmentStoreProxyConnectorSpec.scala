@@ -22,7 +22,7 @@ import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.mvc.RequestHeader
 import play.api.test.FakeRequest
-import play.api.test.Helpers._
+import play.api.test.Helpers.*
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.stubs.DataStreamStub
@@ -31,9 +31,9 @@ import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 import uk.gov.hmrc.agentclientrelationships.support.WireMockSupport
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdIt
-import uk.gov.hmrc.agentclientrelationships.model.identifiers._
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.*
 import uk.gov.hmrc.domain.AgentCode
-import uk.gov.hmrc.http._
+import uk.gov.hmrc.http.*
 import uk.gov.hmrc.http.client.HttpClientV2
 
 import scala.concurrent.ExecutionContext
@@ -46,7 +46,7 @@ with EnrolmentStoreProxyStubs
 with DataStreamStub
 with MockitoSugar {
 
-  override implicit lazy val app: Application = appBuilder.build()
+  override given app: Application = appBuilder.build()
 
   protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder().configure(
     "microservice.services.enrolment-store-proxy.port" -> wireMockPort,
@@ -63,17 +63,17 @@ with MockitoSugar {
     "agent.cache.enabled" -> true
   )
 
-  implicit val request: RequestHeader = FakeRequest()
-  implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
+  given request: RequestHeader = FakeRequest()
+  given ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
 
   val httpClient: HttpClientV2 = app.injector.instanceOf[HttpClientV2]
-  implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
+  given appConfig: AppConfig = app.injector.instanceOf[AppConfig]
 
   val connector =
     new EnrolmentStoreProxyConnector(
       httpClient,
       appConfig
-    )(ec)
+    )
 
   "EnrolmentStoreProxy" should {
 

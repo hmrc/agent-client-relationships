@@ -38,7 +38,7 @@ with Matchers {
         "clientId",
         "service",
         LocalDate.parse("2001-01-01").atStartOfDay()
-      )(prefix)
+      )(using prefix)
 
   "create" should "add prefix to start of identifier" in {
     invWithoutPrefix('A').value.head shouldBe 'A'
@@ -65,7 +65,7 @@ with Matchers {
     val clientId = "clientId"
     val service = "service"
     val time = LocalDate.parse("2001-01-01").atStartOfDay()
-    implicit val prefix = 'A'
+    given prefix: Char = 'A'
 
     val invA =
       InvitationId.create(
@@ -108,7 +108,7 @@ with Matchers {
         clientId,
         service,
         LocalDate.parse("1999-01-01").atStartOfDay()
-      )('Z').value
+      )(using 'Z').value
 
     Set(
       invA,

@@ -16,14 +16,12 @@
 
 package uk.gov.hmrc.agentclientrelationships.model.invitationLink
 
-import play.api.libs.json._
+import play.api.libs.json.*
 
 case class CreateLinkResponse(
   uid: String,
   normalizedAgentName: String
 )
 
-object CreateLinkResponse {
-
-  implicit val format: OFormat[CreateLinkResponse] = Json.format[CreateLinkResponse]
-}
+object CreateLinkResponse:
+  given format: OFormat[CreateLinkResponse] = Json.format[CreateLinkResponse]

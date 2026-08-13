@@ -16,9 +16,11 @@
 
 package uk.gov.hmrc.agentclientrelationships.repository
 
+import org.mongodb.scala.ObservableFuture
+
 import org.apache.pekko.Done
 import org.mongodb.scala.model.Filters
-import play.api.test.Helpers._
+import play.api.test.Helpers.*
 import uk.gov.hmrc.agentclientrelationships.controllers.BaseISpec
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 
@@ -113,7 +115,6 @@ extends BaseISpec {
     }
 
     "backfill an ITSA copy record when one does not already exist" in {
-      val before = now
 
       await(repo.backfillItsaCopyRecord(mtdItEnrolmentKey, arn)) shouldBe Done
 

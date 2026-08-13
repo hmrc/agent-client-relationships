@@ -21,7 +21,7 @@ import org.apache.pekko.actor.ActorSystem
 import org.mockito.ArgumentCaptor
 import org.mockito.ArgumentMatchers.any
 import org.mockito.ArgumentMatchers.{eq => eqs}
-import org.mockito.Mockito._
+import org.mockito.Mockito.*
 import org.mockito.stubbing.OngoingStubbing
 import org.scalatest.BeforeAndAfterEach
 import play.api.ConfigLoader
@@ -29,17 +29,17 @@ import play.api.Configuration
 import play.api.mvc.AnyContentAsEmpty
 import play.api.mvc.RequestHeader
 import play.api.test.FakeRequest
-import play.api.test.Helpers._
+import play.api.test.Helpers.*
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.audit.AuditService
 import uk.gov.hmrc.agentclientrelationships.auth.CurrentUser
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.connectors._
+import uk.gov.hmrc.agentclientrelationships.connectors.*
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.PartialAuthRelationship
 import uk.gov.hmrc.agentclientrelationships.model.RegistrationRelationshipResponse
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.SaRef
-import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
+import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus.*
 import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _, _}
 import uk.gov.hmrc.agentclientrelationships.support.ResettingMockitoSugar
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
@@ -180,7 +180,7 @@ with ResettingMockitoSugar {
         sendCreateRelationshipAuditEvent()()
         deleteSameAgentOtherItsaService()
 
-        val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(request, auditData)
+        val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(using request, auditData)
 
         await(check) shouldBe FoundAndCopied
 
@@ -205,7 +205,7 @@ with ResettingMockitoSugar {
 
           val maybeCheck: Option[CheckAndCopyResult] = await(
             lockService.recoveryLock(arn, mtdItEnrolmentKey) {
-              relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(request, auditData)
+              relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(using request, auditData)
             }
           )
 
@@ -228,7 +228,7 @@ with ResettingMockitoSugar {
           partialAuthDoesNotExist()
           cesaRelationshipDoesNotExist()
 
-          val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(request, auditData)
+          val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(using request, auditData)
           await(check) shouldBe NotFound
 
           verifyEtmpRecordNotCreated()
@@ -241,10 +241,10 @@ with ResettingMockitoSugar {
           val record = defaultRecord.copy(syncToETMPStatus = Some(Success), syncToESStatus = status)
           when(deleteRecordRepository.create(any[DeleteRecord])).thenReturn(Future.successful(Done))
           when(deleteRecordRepository.remove(any[Arn], any[EnrolmentKey])).thenReturn(Future.successful(1))
-          when(agentUserService.getAgentAdminAndSetAuditData(any[Arn])(any[RequestHeader], any[AuditData])).thenReturn(
+          when(agentUserService.getAgentAdminAndSetAuditData(any[Arn])(using any[RequestHeader], any[AuditData])).thenReturn(
             Future.successful(agentUserForAsAgent)
           )
-          when(agentUserService.getAgentAdminAndSetAuditData(any[Arn])(any[RequestHeader], any[AuditData])).thenReturn(
+          when(agentUserService.getAgentAdminAndSetAuditData(any[Arn])(using any[RequestHeader], any[AuditData])).thenReturn(
             Future.successful(agentUserForAsAgent)
           )
           sendCreateRelationshipAuditEvent()()
@@ -260,7 +260,7 @@ with ResettingMockitoSugar {
           cesaRelationshipExists()
           relationshipWillBeCreated(mtdItEnrolmentKey)
 
-          val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(request, auditData)
+          val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(using request, auditData)
 
           await(check) shouldBe FoundAndCopied
 
@@ -286,7 +286,7 @@ with ResettingMockitoSugar {
 
           val maybeCheck = await(
             lockService.recoveryLock(arn, mtdItEnrolmentKey) {
-              relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(request, auditData)
+              relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(using request, auditData)
             }
           )
 
@@ -310,7 +310,7 @@ with ResettingMockitoSugar {
           partialAuthDoesNotExist()
           cesaRelationshipDoesNotExist()
 
-          val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(request, auditData)
+          val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(using request, auditData)
           await(check) shouldBe NotFound
 
           verifyEsRecordNotCreated()
@@ -334,7 +334,7 @@ with ResettingMockitoSugar {
           sendCreateRelationshipAuditEvent()()
           deleteSameAgentOtherItsaService()
 
-          val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(request, auditData)
+          val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(using request, auditData)
 
           await(check) shouldBe FoundAndCopied
 
@@ -361,7 +361,7 @@ with ResettingMockitoSugar {
           partialAuthDoesNotExist()
           cesaRelationshipDoesNotExist()
 
-          val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(request, auditData)
+          val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(using request, auditData)
           await(check) shouldBe NotFound
 
           verifyEsRecordNotCreated()
@@ -375,7 +375,7 @@ with ResettingMockitoSugar {
       ninoExists()
       partialAuthExists(HMRCMTDITSUPP)
 
-      val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(request, auditData)
+      val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(using request, auditData)
       await(check) shouldBe NotFound
 
       verifyEsRecordNotCreated()
@@ -389,7 +389,7 @@ with ResettingMockitoSugar {
       partialAuthDoesNotExist()
       mappingServiceUnavailable()
 
-      val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(request, auditData)
+      val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(using request, auditData)
 
       an[UpstreamErrorResponse] should be thrownBy await(check)
       verifyEsRecordNotCreated()
@@ -407,7 +407,7 @@ with ResettingMockitoSugar {
       cesaRelationshipExists()
       relationshipWillBeCreated(mtdItEnrolmentKey)
 
-      val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(request, auditData)
+      val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(using request, auditData)
 
       val checkAndCopyResult = await(check)
       checkAndCopyResult shouldBe AlreadyCopiedDidNotCheck
@@ -431,7 +431,7 @@ with ResettingMockitoSugar {
         cesaRelationshipExists()
         relationshipWillBeCreated(mtdItEnrolmentKey)
 
-        val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(request, auditData)
+        val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(using request, auditData)
 
         val checkAndCopyResult = await(check)
         checkAndCopyResult shouldBe AlreadyCopiedDidNotCheck
@@ -451,7 +451,7 @@ with ResettingMockitoSugar {
 
         val check = await(
           lockService.recoveryLock(arn, mtdItEnrolmentKey) {
-            relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(request, auditData)
+            relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(using request, auditData)
           }
         )
 
@@ -476,7 +476,7 @@ with ResettingMockitoSugar {
       sendCreateRelationshipAuditEvent()()
       deleteSameAgentOtherItsaService()
 
-      val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(request, auditData)
+      val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(using request, auditData)
       await(check) shouldBe AltItsaCreateRelationshipSuccess(HMRCMTDIT)
     }
 
@@ -492,7 +492,7 @@ with ResettingMockitoSugar {
       sendCreateRelationshipAuditEvent()()
       deleteSameAgentOtherItsaService()
 
-      val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItSuppEnrolmentKey)(request, auditData)
+      val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItSuppEnrolmentKey)(using request, auditData)
       await(check) shouldBe AltItsaCreateRelationshipSuccess(HMRCMTDITSUPP)
     }
   }
@@ -502,7 +502,7 @@ with ResettingMockitoSugar {
       val auditData = new AuditData()
 
       mappingServiceUnavailable()
-      val check = relationshipsService.lookupCesaForOldRelationship(arn, NinoWithoutSuffix(nino.value))(request, auditData)
+      val check = relationshipsService.lookupCesaForOldRelationship(arn, NinoWithoutSuffix(nino.value))(using request, auditData)
 
       an[UpstreamErrorResponse] should be thrownBy await(check)
       verifyEsRecordNotCreated()
@@ -545,7 +545,7 @@ with ResettingMockitoSugar {
           appConfig
         )
 
-      val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(request, auditData)
+      val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(using request, auditData)
 
       await(check) shouldBe CopyRelationshipNotEnabled
 
@@ -590,7 +590,7 @@ with ResettingMockitoSugar {
           appConfig
         )
 
-      val check = relationshipsService.checkForOldRelationshipAndCopy(arn, vatEnrolmentKey)(request, auditData)
+      val check = relationshipsService.checkForOldRelationshipAndCopy(arn, vatEnrolmentKey)(using request, auditData)
 
       await(check) shouldBe CheckAndCopyNotImplemented
 
@@ -606,17 +606,17 @@ with ResettingMockitoSugar {
   }
 
   private def cesaRelationshipDoesNotExist(): OngoingStubbing[Future[Seq[SaAgentReference]]] = {
-    when(hipConnector.getNinoFor(eqs(mtdItId))(any[RequestHeader]())).thenReturn(Future successful Some(NinoWithoutSuffix(nino.value)))
-    when(des.getClientSaAgentSaReferences(eqs(NinoWithoutSuffix(nino.value)))(any[RequestHeader]())).thenReturn(Future successful Seq())
-    when(mapping.getSaAgentReferencesFor(eqs(arn))(any[RequestHeader]())).thenReturn(Future successful Seq())
+    when(hipConnector.getNinoFor(eqs(mtdItId))(using any[RequestHeader]())).thenReturn(Future successful Some(NinoWithoutSuffix(nino.value)))
+    when(des.getClientSaAgentSaReferences(eqs(NinoWithoutSuffix(nino.value)))(using any[RequestHeader]())).thenReturn(Future successful Seq())
+    when(mapping.getSaAgentReferencesFor(eqs(arn))(using any[RequestHeader]())).thenReturn(Future successful Seq())
   }
 
   private def mappingServiceUnavailable(): OngoingStubbing[Future[Seq[SaAgentReference]]] = {
-    when(hipConnector.getNinoFor(eqs(mtdItId))(any[RequestHeader]())).thenReturn(Future successful Some(NinoWithoutSuffix(nino.value)))
-    when(des.getClientSaAgentSaReferences(eqs(NinoWithoutSuffix(nino.value)))(any[RequestHeader]())).thenReturn(
+    when(hipConnector.getNinoFor(eqs(mtdItId))(using any[RequestHeader]())).thenReturn(Future successful Some(NinoWithoutSuffix(nino.value)))
+    when(des.getClientSaAgentSaReferences(eqs(NinoWithoutSuffix(nino.value)))(using any[RequestHeader]())).thenReturn(
       Future successful Seq(saAgentRef)
     )
-    when(mapping.getSaAgentReferencesFor(eqs(arn))(any[RequestHeader]())).thenReturn(
+    when(mapping.getSaAgentReferencesFor(eqs(arn))(using any[RequestHeader]())).thenReturn(
       Future failed
         UpstreamErrorResponse(
           "Error, no response",
@@ -627,7 +627,7 @@ with ResettingMockitoSugar {
   }
 
   private def ninoExists(): OngoingStubbing[Future[Option[NinoWithoutSuffix]]] = when(
-    hipConnector.getNinoFor(eqs(mtdItId))(any[RequestHeader]())
+    hipConnector.getNinoFor(eqs(mtdItId))(using any[RequestHeader]())
   ).thenReturn(Future successful Some(testNino))
 
   private def partialAuthExists(service: String): OngoingStubbing[Future[Option[PartialAuthRelationship]]] = when(
@@ -668,37 +668,37 @@ with ResettingMockitoSugar {
   ).thenReturn(Future.successful(None))
 
   private def cesaRelationshipExists(): OngoingStubbing[Future[Seq[SaAgentReference]]] = {
-    when(hipConnector.getNinoFor(eqs(mtdItId))(any[RequestHeader]())).thenReturn(Future successful Some(testNino))
-    when(des.getClientSaAgentSaReferences(eqs(testNino))(any[RequestHeader]())).thenReturn(
+    when(hipConnector.getNinoFor(eqs(mtdItId))(using any[RequestHeader]())).thenReturn(Future successful Some(testNino))
+    when(des.getClientSaAgentSaReferences(eqs(testNino))(using any[RequestHeader]())).thenReturn(
       Future successful Seq(saAgentRef)
     )
-    when(mapping.getSaAgentReferencesFor(eqs(arn))(any[RequestHeader]())).thenReturn(Future successful Seq(saAgentRef))
+    when(mapping.getSaAgentReferencesFor(eqs(arn))(using any[RequestHeader]())).thenReturn(Future successful Seq(saAgentRef))
   }
 
   private def adminUserExistsForArn(): OngoingStubbing[Future[Either[String, AgentUser]]] = when(
-    agentUserService.getAgentAdminAndSetAuditData(eqs(arn))(any[RequestHeader](), any[AuditData])
+    agentUserService.getAgentAdminAndSetAuditData(eqs(arn))(using any[RequestHeader](), any[AuditData])
   ).thenReturn(Future.successful(agentUserForAsAgent))
 
   private def arnExistsForGroupId(): OngoingStubbing[Future[Option[Arn]]] = {
-    when(es.getAgentReferenceNumberFor(eqs("foo"))(any[RequestHeader]())).thenReturn(
+    when(es.getAgentReferenceNumberFor(eqs("foo"))(using any[RequestHeader]())).thenReturn(
       Future.successful(Some(Arn("fooArn")))
     )
-    when(es.getAgentReferenceNumberFor(eqs("bar"))(any[RequestHeader]())).thenReturn(
+    when(es.getAgentReferenceNumberFor(eqs("bar"))(using any[RequestHeader]())).thenReturn(
       Future.successful(Some(Arn("barArn")))
     )
   }
 
   private def previousRelationshipWillBeRemoved(enrolmentKey: EnrolmentKey): OngoingStubbing[Future[Done]] = {
-    when(es.getDelegatedGroupIdsFor(eqs(enrolmentKey))(any[RequestHeader]())).thenReturn(Future.successful(Set("foo")))
-    when(es.getAgentReferenceNumberFor(eqs("foo"))(any[RequestHeader]())).thenReturn(Future.successful(Some(arn)))
+    when(es.getDelegatedGroupIdsFor(eqs(enrolmentKey))(using any[RequestHeader]())).thenReturn(Future.successful(Set("foo")))
+    when(es.getAgentReferenceNumberFor(eqs("foo"))(using any[RequestHeader]())).thenReturn(Future.successful(Some(arn)))
     when(deleteRecordRepository.create(any[DeleteRecord])).thenReturn(Future.successful(Done))
-    when(es.deallocateEnrolmentFromAgent(eqs("foo"), eqs(enrolmentKey))(any[RequestHeader]())).thenReturn(
+    when(es.deallocateEnrolmentFromAgent(eqs("foo"), eqs(enrolmentKey))(using any[RequestHeader]())).thenReturn(
       Future.successful(Done)
     )
   }
 
   private def relationshipWillBeCreated(enrolmentKey: EnrolmentKey): OngoingStubbing[Future[Unit]] = {
-    when(hipConnector.createAgentRelationship(eqs(enrolmentKey), eqs(arn))(any[RequestHeader]())).thenReturn(
+    when(hipConnector.createAgentRelationship(eqs(enrolmentKey), eqs(arn))(using any[RequestHeader]())).thenReturn(
       Future.successful(Some(RegistrationRelationshipResponse("processing date")))
     )
     when(
@@ -707,13 +707,13 @@ with ResettingMockitoSugar {
         eqs(agentUserId),
         eqs(enrolmentKey),
         eqs(agentCodeForAsAgent)
-      )(any[RequestHeader]())
+      )(using any[RequestHeader]())
     ).thenReturn(Future.successful(Done))
-    when(aucdConnector.cacheRefresh(eqs(arn))(any[RequestHeader]())).thenReturn(Future successful ())
+    when(aucdConnector.cacheRefresh(eqs(arn))(using any[RequestHeader]())).thenReturn(Future successful ())
   }
 
   private def sendCreateRelationshipAuditEvent()(): OngoingStubbing[Future[Unit]] = when(
-    auditService.sendCreateRelationshipAuditEvent()(any[RequestHeader](), any[AuditData])
+    auditService.sendCreateRelationshipAuditEvent()(using any[RequestHeader](), any[AuditData])
   ).thenReturn(Future.successful(()))
 
   private def deleteSameAgentOtherItsaService(): OngoingStubbing[Future[Boolean]] = when(
@@ -723,14 +723,14 @@ with ResettingMockitoSugar {
       eqs(Some(mtdItId.value)),
       eqs(testNino.value),
       any[Instant]
-    )(any[RequestHeader](), any[CurrentUser])
+    )(using any[RequestHeader](), any[CurrentUser])
   ).thenReturn(Future.successful(true))
 
   def verifyEtmpRecordCreated(): Future[Option[RegistrationRelationshipResponse]] =
-    verify(hipConnector).createAgentRelationship(eqs(mtdItEnrolmentKey), eqs(arn))(any[RequestHeader]())
+    verify(hipConnector).createAgentRelationship(eqs(mtdItEnrolmentKey), eqs(arn))(using any[RequestHeader]())
 
   def verifyEtmpRecordNotCreated(): Future[Option[RegistrationRelationshipResponse]] =
-    verify(hipConnector, never()).createAgentRelationship(eqs(mtdItEnrolmentKey), eqs(arn))(any[RequestHeader]())
+    verify(hipConnector, never()).createAgentRelationship(eqs(mtdItEnrolmentKey), eqs(arn))(using any[RequestHeader]())
 
   def verifyEsRecordCreated(): Future[Done] =
     verify(es).allocateEnrolmentToAgent(
@@ -738,7 +738,7 @@ with ResettingMockitoSugar {
       eqs(agentUserId),
       eqs(mtdItEnrolmentKey),
       eqs(agentCodeForAsAgent)
-    )(any[RequestHeader]())
+    )(using any[RequestHeader]())
 
   def verifyEsRecordNotCreated(): Future[Done] =
     verify(es, never()).allocateEnrolmentToAgent(
@@ -746,11 +746,11 @@ with ResettingMockitoSugar {
       eqs(agentGroupId),
       eqs(mtdItEnrolmentKey),
       eqs(agentCodeForAsAgent)
-    )(any[RequestHeader]())
+    )(using any[RequestHeader]())
 
   def verifyAuditEventSent(): Map[String, Any] = {
     val auditDataCaptor = ArgumentCaptor.forClass(classOf[AuditData])
-    verify(auditService).sendCheckCesaAndPartialAuthAuditEvent()(any[RequestHeader](), auditDataCaptor.capture())
+    verify(auditService).sendCheckCesaAndPartialAuthAuditEvent()(using any[RequestHeader](), auditDataCaptor.capture())
     val auditData: AuditData = auditDataCaptor.getValue
     val auditDetails = auditData.getDetails
     auditDetails("saAgentRef") shouldBe saAgentRef.value

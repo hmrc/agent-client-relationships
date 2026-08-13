@@ -16,8 +16,8 @@
 
 package uk.gov.hmrc.agentclientrelationships.model
 
-import play.api.libs.functional.syntax._
-import play.api.libs.json._
+import play.api.libs.functional.syntax.*
+import play.api.libs.json.*
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 
 import java.time.LocalDate
@@ -31,9 +31,9 @@ case class ActiveRelationship(
 
 object ActiveRelationship {
 
-  implicit val activeRelationshipWrites: OWrites[ActiveRelationship] = Json.writes[ActiveRelationship]
+  given activeRelationshipWrites: OWrites[ActiveRelationship] = Json.writes[ActiveRelationship]
 
-  implicit val reads: Reads[ActiveRelationship] =
+  given reads: Reads[ActiveRelationship] =
     (
       (JsPath \ "agentReferenceNumber").read[Arn] and
         (JsPath \ "dateTo").readNullable[LocalDate] and
@@ -55,6 +55,5 @@ object ActiveRelationship {
 
 case class ActiveRelationshipResponse(relationship: Seq[ActiveRelationship])
 
-object ActiveRelationshipResponse {
-  implicit val activeRelationshipResponse: OFormat[ActiveRelationshipResponse] = Json.format[ActiveRelationshipResponse]
-}
+object ActiveRelationshipResponse:
+  given activeRelationshipResponse: OFormat[ActiveRelationshipResponse] = Json.format[ActiveRelationshipResponse]

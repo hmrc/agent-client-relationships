@@ -17,13 +17,13 @@
 package uk.gov.hmrc.agentclientrelationships.services
 
 import cats.data.EitherT
-import cats.implicits._
+import cats.implicits.*
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.connectors._
-import uk.gov.hmrc.agentclientrelationships.model._
+import uk.gov.hmrc.agentclientrelationships.connectors.*
+import uk.gov.hmrc.agentclientrelationships.model.*
 import uk.gov.hmrc.agentclientrelationships.model.stride.ClientRelationship
-import uk.gov.hmrc.agentclientrelationships.model.identifiers._
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.*
 import uk.gov.hmrc.domain.TaxIdentifier
 import play.api.mvc.RequestHeader
 
@@ -36,13 +36,13 @@ import scala.concurrent.Future
 class FindRelationshipsService @Inject() (
   hipConnector: HipConnector,
   appConfig: AppConfig
-)(implicit executionContext: ExecutionContext)
+)(using executionContext: ExecutionContext)
 extends RequestAwareLogging {
 
   def getItsaRelationshipForClient(
     nino: NinoWithoutSuffix,
     service: Service
-  )(implicit request: RequestHeader): Future[Option[ActiveRelationship]] =
+  )(using request: RequestHeader): Future[Option[ActiveRelationship]] =
     for {
       mtdItId <- hipConnector.getMtdIdFor(nino)
       relationships <-
@@ -54,7 +54,7 @@ extends RequestAwareLogging {
   def getAllActiveItsaRelationshipForClient(
     nino: NinoWithoutSuffix,
     activeOnly: Boolean
-  )(implicit request: RequestHeader): Future[Either[RelationshipFailureResponse, Seq[ClientRelationship]]] =
+  )(using request: RequestHeader): Future[Either[RelationshipFailureResponse, Seq[ClientRelationship]]] =
     (
       for {
         mtdItId <- EitherT.fromOptionF(
@@ -68,7 +68,7 @@ extends RequestAwareLogging {
   def getActiveRelationshipsForClient(
     taxIdentifier: TaxIdentifier,
     service: Service
-  )(implicit request: RequestHeader): Future[Option[ActiveRelationship]] =
+  )(using request: RequestHeader): Future[Option[ActiveRelationship]] =
     // If the tax id type is among one of the supported ones...
     if (
       appConfig.supportedServicesWithoutPir
@@ -84,7 +84,7 @@ extends RequestAwareLogging {
   def getAllRelationshipsForClient(
     taxIdentifier: TaxIdentifier,
     activeOnly: Boolean
-  )(implicit request: RequestHeader): Future[Either[RelationshipFailureResponse, Seq[ClientRelationship]]] =
+  )(using request: RequestHeader): Future[Either[RelationshipFailureResponse, Seq[ClientRelationship]]] =
     // If the tax id type is among one of the supported ones...
     if (
       appConfig.supportedServicesWithoutPir
@@ -115,7 +115,7 @@ extends RequestAwareLogging {
 
   def getActiveRelationshipsForClient(
     identifiers: Map[Service, TaxIdentifier]
-  )(implicit request: RequestHeader): Future[Map[Service, Seq[Arn]]] = Future
+  )(using request: RequestHeader): Future[Map[Service, Seq[Arn]]] = Future
     .traverse(appConfig.supportedServicesWithoutPir) { service =>
       identifiers.get(service).map(eiv => service.supportedClientIdType.createUnderlying(eiv.value)) match {
         case Some(taxId) => getActiveRelationshipsForClient(taxId, service).map(_.map(r => (service, r.arn)))

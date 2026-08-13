@@ -29,7 +29,7 @@ case class PptSubscriptionDetails(
 )
 
 object PptSubscriptionDetails {
-  implicit val reads: Reads[PptSubscriptionDetails] = { json =>
+  given reads: Reads[PptSubscriptionDetails] = { json =>
     val dateOfApplication = (json \ "legalEntityDetails" \ "dateOfApplication").as[LocalDate]
     val deregistrationDate = (json \ "changeOfCircumstanceDetails" \ "deregistrationDetails" \ "deregistrationDate")
       .asOpt[LocalDate]

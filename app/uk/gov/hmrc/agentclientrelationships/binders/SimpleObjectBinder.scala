@@ -18,10 +18,12 @@ package uk.gov.hmrc.agentclientrelationships.binders
 
 import play.api.mvc.PathBindable
 
+import scala.reflect.ClassTag
+
 class SimpleObjectBinder[T](
   bind: String => T,
   unbind: T => String
-)(implicit m: Manifest[T])
+)(using m: ClassTag[T])
 extends PathBindable[T] {
 
   override def bind(
@@ -30,7 +32,7 @@ extends PathBindable[T] {
   ): Either[String, T] =
     try Right(bind(value))
     catch {
-      case e: Throwable => Left(s"Cannot parse parameter '$key' with value '$value' as '${m.runtimeClass.getSimpleName}'")
+      case _: Throwable => Left(s"Cannot parse parameter '$key' with value '$value' as '${m.runtimeClass.getSimpleName}'")
     }
 
   def unbind(

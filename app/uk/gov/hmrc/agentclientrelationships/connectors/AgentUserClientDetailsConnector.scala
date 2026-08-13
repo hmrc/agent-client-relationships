@@ -21,9 +21,9 @@ import play.api.http.Status.NOT_FOUND
 import play.api.http.Status.NO_CONTENT
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.util.RequestSupport._
+import uk.gov.hmrc.agentclientrelationships.util.RequestSupport.given
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
-import uk.gov.hmrc.http.HttpReads.Implicits._
+import uk.gov.hmrc.http.HttpReads.Implicits.*
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.HttpResponse
 import uk.gov.hmrc.http.StringContextOps
@@ -37,13 +37,13 @@ import scala.concurrent.Future
 class AgentUserClientDetailsConnector @Inject() (
   httpClient: HttpClientV2,
   appConfig: AppConfig
-)(implicit val ec: ExecutionContext)
+)(using ec: ExecutionContext)
 extends RequestAwareLogging {
 
   val baseUrl = appConfig.agentUserClientDetailsUrl
 
   // update the cache in Granular Permissions (returns 404 if no cache currently in use)
-  def cacheRefresh(arn: Arn)(implicit requestHeader: RequestHeader): Future[Unit] = {
+  def cacheRefresh(arn: Arn)(using requestHeader: RequestHeader): Future[Unit] = {
     val url = url"$baseUrl/agent-user-client-details/arn/${arn.value}/cache-refresh"
     httpClient
       .get(url)

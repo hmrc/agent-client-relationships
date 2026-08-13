@@ -21,19 +21,19 @@ import org.mongodb.scala.bson.BsonValue
 import org.mongodb.scala.bson.conversions
 import org.mongodb.scala.model.Accumulators.addToSet
 import org.mongodb.scala.model.Aggregates.facet
-import org.mongodb.scala.model.Filters._
+import org.mongodb.scala.model.Filters.*
 import org.mongodb.scala.model.Updates.combine
 import org.mongodb.scala.model.Updates.set
-import org.mongodb.scala.model._
+import org.mongodb.scala.model.*
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.model._
+import uk.gov.hmrc.agentclientrelationships.model.*
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.ClientIdentifier.ClientId
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 import uk.gov.hmrc.agentclientrelationships.model.invitation.CancelInvitationResponse
-import uk.gov.hmrc.agentclientrelationships.model.invitation.CancelInvitationResponse._
-import uk.gov.hmrc.agentclientrelationships.repository.FieldKeys._
+import uk.gov.hmrc.agentclientrelationships.model.invitation.CancelInvitationResponse.*
+import uk.gov.hmrc.agentclientrelationships.repository.FieldKeys.*
 import uk.gov.hmrc.agentclientrelationships.util.CryptoUtil.encryptedString
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.crypto.Decrypter
@@ -74,7 +74,7 @@ object FieldKeys {
 class InvitationsRepository @Inject() (
   mongoComponent: MongoComponent,
   appConfig: AppConfig
-)(implicit
+)(using
   ec: ExecutionContext,
   @Named("aes")
   crypto: Encrypter

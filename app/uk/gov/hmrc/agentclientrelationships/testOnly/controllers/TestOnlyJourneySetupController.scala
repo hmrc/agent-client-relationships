@@ -21,7 +21,6 @@ import play.api.libs.json.JsValue
 import play.api.libs.json.Json
 import play.api.mvc.Action
 import play.api.mvc.ControllerComponents
-import play.api.mvc.Request
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.invitation.CreateInvitationRequest
 import uk.gov.hmrc.agentclientrelationships.services.InvitationService
@@ -37,14 +36,14 @@ class TestOnlyJourneySetupController @Inject() (
   controllerComponents: ControllerComponents,
   invitationService: InvitationService,
   val authConnector: AuthConnector
-)(implicit ec: ExecutionContext)
+)(using ec: ExecutionContext)
 extends BackendController(controllerComponents)
 with AuthorisedFunctions {
 
   case class JourneySetupRequest(invitations: Seq[JourneySetupItem])
 
   object JourneySetupRequest {
-    implicit val format: Format[JourneySetupRequest] = Json.format[JourneySetupRequest]
+    given format: Format[JourneySetupRequest] = Json.format[JourneySetupRequest]
   }
 
   case class JourneySetupItem(
@@ -57,10 +56,11 @@ with AuthorisedFunctions {
   )
 
   object JourneySetupItem {
-    implicit val format: Format[JourneySetupItem] = Json.format[JourneySetupItem]
+    given format: Format[JourneySetupItem] = Json.format[JourneySetupItem]
   }
 
-  def createData: Action[JsValue] = Action(parse.json).async { implicit request: Request[JsValue] =>
+  def createData: Action[JsValue] = Action(parse.json).async { request =>
+    given play.api.mvc.RequestHeader = request
     val setupRequest = request.body.as[JourneySetupRequest]
 
     Future.sequence(

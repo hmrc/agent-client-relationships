@@ -25,6 +25,5 @@ case class ClientTaxAgentsData(
   authorisationEvents: AuthorisationEventsResponse
 )
 
-object ClientTaxAgentsData {
-  implicit val formats: OFormat[ClientTaxAgentsData] = Json.format[ClientTaxAgentsData]
-}
+object ClientTaxAgentsData:
+  given formats: OFormat[ClientTaxAgentsData] = Json.format[ClientTaxAgentsData]

@@ -19,23 +19,24 @@ package uk.gov.hmrc.agentclientrelationships.connectors
 import cats.data.EitherT
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import play.api.http.Status
-import play.api.libs.json._
+import play.api.libs.json.*
+import play.api.libs.ws.JsonBodyWritables.writeableOf_JsValue
 import play.api.mvc.RequestHeader
 import play.utils.UriEncoding
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.helpers.HipHeaders
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
-import uk.gov.hmrc.agentclientrelationships.model._
+import uk.gov.hmrc.agentclientrelationships.model.*
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsFailureResponse
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsNotFound
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ErrorRetrievingClientDetails
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa.ItsaBusinessDetails
 import uk.gov.hmrc.agentclientrelationships.model.stride.ClientRelationship
-import uk.gov.hmrc.agentclientrelationships.util.RequestSupport._
+import uk.gov.hmrc.agentclientrelationships.util.RequestSupport.given
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDITSUPP
-import uk.gov.hmrc.agentclientrelationships.model.identifiers._
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.*
 import uk.gov.hmrc.domain.TaxIdentifier
-import uk.gov.hmrc.http.HttpReads.Implicits._
+import uk.gov.hmrc.http.HttpReads.Implicits.*
 import uk.gov.hmrc.http.HttpResponse
 import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.http.client.HttpClientV2
@@ -55,7 +56,7 @@ class HipConnector @Inject() (
   httpClient: HttpClientV2,
   headers: HipHeaders,
   appConfig: AppConfig
-)(implicit
+)(using
   val ec: ExecutionContext
 )
 extends RequestAwareLogging {
@@ -66,7 +67,7 @@ extends RequestAwareLogging {
   def createAgentRelationship(
     enrolmentKey: EnrolmentKey,
     arn: Arn
-  )(implicit request: RequestHeader): Future[Option[RegistrationRelationshipResponse]] = {
+  )(using request: RequestHeader): Future[Option[RegistrationRelationshipResponse]] = {
 
     val url = new URL(s"$baseUrl/etmp/RESTAdapter/rosm/agent-relationship")
     val isExclusiveAgent = getIsExclusiveAgent(enrolmentKey.service)
@@ -77,7 +78,6 @@ extends RequestAwareLogging {
     )
 
     postWithHipHeaders(
-      "CreateAgentRelationship",
       url,
       requestBody,
       () => headers.makeSubscriptionHeaders()
@@ -100,7 +100,7 @@ extends RequestAwareLogging {
   def deleteAgentRelationship(
     enrolmentKey: EnrolmentKey,
     arn: Arn
-  )(implicit request: RequestHeader): Future[Option[RegistrationRelationshipResponse]] = {
+  )(using request: RequestHeader): Future[Option[RegistrationRelationshipResponse]] = {
 
     val url = new URL(s"$baseUrl/etmp/RESTAdapter/rosm/agent-relationship")
     val isExclusiveAgent = getIsExclusiveAgent(enrolmentKey.service)
@@ -111,7 +111,6 @@ extends RequestAwareLogging {
     )
 
     postWithHipHeaders(
-      "DeleteAgentRelationship",
       url,
       requestBody,
       () => headers.makeSubscriptionHeaders()
@@ -128,7 +127,7 @@ extends RequestAwareLogging {
   def getActiveClientRelationships(
     taxIdentifier: TaxIdentifier,
     service: Service
-  )(implicit request: RequestHeader): Future[Option[ActiveRelationship]] = {
+  )(using request: RequestHeader): Future[Option[ActiveRelationship]] = {
     val authProfile = getAuthProfile(service.id)
     val url = relationshipHipUrl(
       taxIdentifier = taxIdentifier,
@@ -136,10 +135,9 @@ extends RequestAwareLogging {
       activeOnly = true
     )
 
-    implicit val reads: Reads[ActiveRelationship] = ActiveRelationship.hipReads
+    given reads: Reads[ActiveRelationship] = ActiveRelationship.hipReads
 
     getWithHipHeaders(
-      s"GetActiveClientRelationships",
       url,
       () => headers.makeSubscriptionHeaders()
     ).map {
@@ -161,18 +159,17 @@ extends RequestAwareLogging {
   def getAllRelationships(
     taxIdentifier: TaxIdentifier,
     activeOnly: Boolean
-  )(implicit request: RequestHeader): Future[Either[RelationshipFailureResponse, Seq[ClientRelationship]]] = {
+  )(using request: RequestHeader): Future[Either[RelationshipFailureResponse, Seq[ClientRelationship]]] = {
     val url = relationshipHipUrl(
       taxIdentifier = taxIdentifier,
       None,
       activeOnly = activeOnly
     )
 
-    implicit val reads: Reads[ClientRelationship] = ClientRelationship.hipReads
+    given reads: Reads[ClientRelationship] = ClientRelationship.hipReads
 
     EitherT(
       getWithHipHeaders(
-        s"GetAllActiveClientRelationships",
         url,
         () => headers.makeSubscriptionHeaders()
       )
@@ -197,12 +194,11 @@ extends RequestAwareLogging {
   }
 
   // API#5266 https://admin.tax.service.gov.uk/integration-hub/apis/details/e54e8843-c146-4551-a499-c93ecac4c6fd#Endpoints
-  def getNinoFor(mtdId: MtdItId)(implicit request: RequestHeader): Future[Option[NinoWithoutSuffix]] = {
+  def getNinoFor(mtdId: MtdItId)(using request: RequestHeader): Future[Option[NinoWithoutSuffix]] = {
     val encodedMtdId = UriEncoding.encodePathSegment(mtdId.value, "UTF-8")
     val url = new URL(s"$baseUrl/etmp/RESTAdapter/itsa/taxpayer/business-details?mtdReference=$encodedMtdId")
 
     getWithHipHeaders(
-      s"GetBusinessDetailsByMtdId",
       url,
       () => headers.makeSubscriptionBusinessDetailsHeaders()
     ).map {
@@ -221,12 +217,11 @@ extends RequestAwareLogging {
   }
 
   // API#5266 https://admin.tax.service.gov.uk/integration-hub/apis/details/e54e8843-c146-4551-a499-c93ecac4c6fd#Endpoints
-  def getMtdIdFor(nino: NinoWithoutSuffix)(implicit request: RequestHeader): Future[Option[MtdItId]] = {
+  def getMtdIdFor(nino: NinoWithoutSuffix)(using request: RequestHeader): Future[Option[MtdItId]] = {
     val encodedNino = UriEncoding.encodePathSegment(nino.value, "UTF-8")
     val url = new URL(s"$baseUrl/etmp/RESTAdapter/itsa/taxpayer/business-details?nino=$encodedNino")
 
     getWithHipHeaders(
-      s"GetBusinessDetailsByNino",
       url,
       () => headers.makeSubscriptionBusinessDetailsHeaders()
     ).map {
@@ -245,14 +240,13 @@ extends RequestAwareLogging {
   }
 
   // API#5266 https://admin.tax.service.gov.uk/integration-hub/apis/details/e54e8843-c146-4551-a499-c93ecac4c6fd#Endpoints
-  def getItsaBusinessDetails(nino: NinoWithoutSuffix)(implicit
+  def getItsaBusinessDetails(nino: NinoWithoutSuffix)(using
     request: RequestHeader
   ): Future[Either[ClientDetailsFailureResponse, ItsaBusinessDetails]] = {
     val encodedNino = UriEncoding.encodePathSegment(nino.value, "UTF-8")
     val url = new URL(s"$baseUrl/etmp/RESTAdapter/itsa/taxpayer/business-details?nino=$encodedNino")
 
     getWithHipHeaders(
-      s"ConsumedAPI-IF-GetBusinessDetails-GET",
       url,
       () => headers.makeSubscriptionBusinessDetailsHeaders()
     ).map {
@@ -286,26 +280,28 @@ extends RequestAwareLogging {
   }
 
   private def getWithHipHeaders(
-    apiName: String,
     url: URL,
     getHeaders: () => Seq[(String, String)]
-  )(implicit request: RequestHeader): Future[Either[UpstreamErrorResponse, HttpResponse]] = httpClient
-    .get(url)
-    .setHeader(getHeaders(): _*)
-    .execute[Either[UpstreamErrorResponse, HttpResponse]]
+  )(using request: RequestHeader): Future[Either[UpstreamErrorResponse, HttpResponse]] = {
+    httpClient
+      .get(url)
+      .setHeader(getHeaders(): _*)
+      .execute[Either[UpstreamErrorResponse, HttpResponse]]
+  }
 
   private def postWithHipHeaders(
-    apiName: String,
     url: URL,
     body: JsValue,
     getHeaders: () => Seq[(String, String)]
-  )(implicit
+  )(using
     request: RequestHeader
-  ): Future[Either[UpstreamErrorResponse, HttpResponse]] = httpClient
-    .post(url)
-    .setHeader(getHeaders(): _*)
-    .withBody(body)
-    .execute[Either[UpstreamErrorResponse, HttpResponse]]
+  ): Future[Either[UpstreamErrorResponse, HttpResponse]] = {
+    httpClient
+      .post(url)
+      .setHeader(getHeaders(): _*)
+      .withBody(body)
+      .execute[Either[UpstreamErrorResponse, HttpResponse]]
+  }
 
   private[connectors] def isActive(r: ActiveRelationship): Boolean =
     r.dateTo match {

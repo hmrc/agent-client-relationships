@@ -32,25 +32,25 @@ import uk.gov.hmrc.mongo.CurrentTimestampSupport
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mdc.Mdc
 
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.util.Success
 
 trait Cache[T] {
-  def apply(key: String)(body: => Future[T])(implicit request: RequestHeader): Future[T]
+  def apply(key: String)(body: => Future[T])(using request: RequestHeader): Future[T]
 }
 
 class DoNotCache[T]
 extends Cache[T] {
-  def apply(key: String)(body: => Future[T])(implicit request: RequestHeader): Future[T] = body
+  def apply(key: String)(body: => Future[T])(using request: RequestHeader): Future[T] = body
 }
 
 @Singleton
 class CacheRepositoryFactory @Inject() (
   mongoComponent: MongoComponent,
   configuration: Configuration
-)(implicit ec: ExecutionContext) {
+)(using ec: ExecutionContext) {
   def apply(
     collectionName: String,
     ttlConfigKey: String
@@ -68,7 +68,7 @@ class MongoCache[T] @Inject() (
   cacheRepositoryFactory: CacheRepositoryFactory,
   collectionName: String,
   ttlConfigKey: String
-)(implicit
+)(using
   reads: Reads[T],
   writes: Writes[T],
   executionContext: ExecutionContext
@@ -78,7 +78,7 @@ with Cache[T] {
 
   private lazy val cacheRepository: MongoCacheRepository[String] = cacheRepositoryFactory(collectionName, ttlConfigKey)
 
-  def apply(cacheId: String)(body: => Future[T])(implicit request: RequestHeader): Future[T] = {
+  def apply(cacheId: String)(body: => Future[T])(using request: RequestHeader): Future[T] = {
     val dataKey: DataKey[T] = DataKey[T](cacheId)
 
     Mdc.preservingMdc {
@@ -101,11 +101,11 @@ with Cache[T] {
 class AgentCacheProvider @Inject() (
   configuration: Configuration,
   cacheRepositoryFactory: CacheRepositoryFactory
-)(implicit
+)(using
   executionContext: ExecutionContext
 ) {
 
-  implicit val readsOptionalGroupInfo: Reads[Option[GroupInfo]] = _.validateOpt[GroupInfo]
+  given readsOptionalGroupInfo: Reads[Option[GroupInfo]] = _.validateOpt[GroupInfo]
 
   private val customerStatusExistingRelationshipsCacheEnabled: Boolean = configuration.underlying.getBoolean(
     "agent.customerStatusExistingRelationships.cache.enabled"
@@ -115,7 +115,7 @@ class AgentCacheProvider @Inject() (
     enabled: Boolean,
     collectionName: String,
     ttlConfigKey: String
-  )(implicit
+  )(using
     reads: Reads[T],
     writes: Writes[T]
   ): Cache[T] =

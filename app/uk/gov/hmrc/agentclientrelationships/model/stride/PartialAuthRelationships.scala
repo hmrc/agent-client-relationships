@@ -25,6 +25,5 @@ case class PartialAuthRelationships(
   partialAuths: Seq[PartialAuthWithAgentName]
 )
 
-object PartialAuthRelationships {
-  implicit val writes: OWrites[PartialAuthRelationships] = Json.writes[PartialAuthRelationships]
-}
+object PartialAuthRelationships:
+  given writes: OWrites[PartialAuthRelationships] = Json.writes[PartialAuthRelationships]

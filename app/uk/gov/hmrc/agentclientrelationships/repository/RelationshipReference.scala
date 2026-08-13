@@ -19,7 +19,7 @@ package uk.gov.hmrc.agentclientrelationships.repository
 import play.api.libs.json.JsValue
 import play.api.libs.json.Json
 import play.api.libs.json.Writes
-import play.api.libs.json._
+import play.api.libs.json.*
 import uk.gov.hmrc.domain.AgentCode
 import uk.gov.hmrc.domain.SaAgentReference
 import uk.gov.hmrc.domain.TaxIdentifier
@@ -35,7 +35,7 @@ object RelationshipReference {
 
   object SaRef {
 
-    implicit val saReads: Reads[SaRef] = (__ \ "saAgentReference").read[SaAgentReference].map(SaRef.apply)
+    given saReads: Reads[SaRef] = (__ \ "saAgentReference").read[SaAgentReference].map(SaRef.apply)
 
     val saWrites: Writes[SaRef] =
       new Writes[SaRef] {
@@ -49,7 +49,7 @@ object RelationshipReference {
 
   object VatRef {
 
-    implicit val vatReads: Reads[VatRef] = (__ \ "oldAgentCode").read[AgentCode].map(VatRef.apply)
+    given vatReads: Reads[VatRef] = (__ \ "oldAgentCode").read[AgentCode].map(VatRef.apply)
     val vatWrites: Writes[VatRef] =
       new Writes[VatRef] {
         override def writes(o: VatRef): JsValue = Json.obj("oldAgentCode" -> o.value)
@@ -57,10 +57,10 @@ object RelationshipReference {
 
   }
 
-  implicit val relationshipReferenceReads: Reads[RelationshipReference] =
+  given relationshipReferenceReads: Reads[RelationshipReference] =
     __.read[SaRef].map(x => x: RelationshipReference) orElse __.read[VatRef].map(x => x: RelationshipReference)
 
-  implicit val relationshipReferenceWrites: Writes[RelationshipReference] = Writes[RelationshipReference] {
+  given relationshipReferenceWrites: Writes[RelationshipReference] = Writes[RelationshipReference] {
     case saRef: SaRef => SaRef.saWrites.writes(saRef)
     case vatRef: VatRef => VatRef.vatWrites.writes(vatRef)
   }

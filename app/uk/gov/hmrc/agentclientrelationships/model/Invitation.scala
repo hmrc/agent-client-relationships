@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.model
 
-import play.api.libs.functional.syntax._
+import play.api.libs.functional.syntax.*
 import play.api.libs.json.Format
 import play.api.libs.json.Json
 import play.api.libs.json.__
@@ -54,14 +54,14 @@ case class Invitation(
 
 object Invitation {
 
-  implicit val format: Format[Invitation] = Json.format[Invitation]
+  given format: Format[Invitation] = Json.format[Invitation]
 
-  def mongoFormat(implicit
+  def mongoFormat(using
     crypto: Encrypter
       with Decrypter
   ): Format[Invitation] = {
-    implicit val mongoInstantFormat: Format[Instant] = MongoJavatimeFormats.instantFormat
-    implicit val mongoLocalDateFormat: Format[LocalDate] = MongoJavatimeFormats.localDateFormat
+    given mongoInstantFormat: Format[Instant] = MongoJavatimeFormats.instantFormat
+    given mongoLocalDateFormat: Format[LocalDate] = MongoJavatimeFormats.localDateFormat
     (
       (__ \ "invitationId").format[String] and
         (__ \ "arn").format[String] and
@@ -79,7 +79,31 @@ object Invitation {
         (__ \ "expiryDate").format[LocalDate] and
         (__ \ "created").format[Instant] and
         (__ \ "lastUpdated").format[Instant]
-    )(Invitation.apply, unlift(Invitation.unapply))
+    )(
+      Invitation.apply,
+      unlift((invitation: Invitation) =>
+        Some(
+          (
+            invitation.invitationId,
+            invitation.arn,
+            invitation.service,
+            invitation.suppliedClientId,
+            invitation.suppliedClientIdType,
+            invitation.clientName,
+            invitation.agencyName,
+            invitation.agencyEmail,
+            invitation.warningEmailSent,
+            invitation.expiredEmailSent,
+            invitation.status,
+            invitation.relationshipEndedBy,
+            invitation.clientType,
+            invitation.expiryDate,
+            invitation.created,
+            invitation.lastUpdated
+          )
+        )
+      )
+    )
   }
 
   // scalastyle:off parameter.number
@@ -98,7 +122,7 @@ object Invitation {
         arn,
         suppliedClientId.value,
         service.id
-      )(service.invitationIdPrefix)
+      )(using service.invitationIdPrefix)
       .value,
     arn,
     service.id,

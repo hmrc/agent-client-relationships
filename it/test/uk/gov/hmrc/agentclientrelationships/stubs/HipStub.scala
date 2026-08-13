@@ -16,11 +16,11 @@
 
 package uk.gov.hmrc.agentclientrelationships.stubs
 
-import com.github.tomakehurst.wiremock.client.WireMock._
+import com.github.tomakehurst.wiremock.client.WireMock.*
 import com.github.tomakehurst.wiremock.stubbing.StubMapping
 import org.scalatest.concurrent.Eventually.eventually
 import play.api.libs.json.Json
-import uk.gov.hmrc.agentclientrelationships.model.identifiers._
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.*
 import uk.gov.hmrc.domain.TaxIdentifier
 
 import java.time.LocalDate
@@ -430,7 +430,6 @@ trait HipStub {
 
   def verifyAllActiveRelationshipsViaClientCalled(
     taxIdentifier: TaxIdentifier,
-    arn: Arn,
     activeOnly: Boolean = true,
     count: Int = 1
   ): Unit = eventually {
@@ -666,7 +665,6 @@ trait HipStub {
   }
 
   def getAgentInactiveRelationshipsButActive(
-    encodedArn: String,
     agentArn: String,
     clientId: String
   ): StubMapping = stubFor(

@@ -51,7 +51,7 @@ trait MockValidationService {
       any[Option[String]],
       any[RelationshipSource],
       any[Option[Service]]
-    )(any[RequestHeader])
+    )(using any[RequestHeader])
   ).thenReturn(Future.successful(response))
 
 }

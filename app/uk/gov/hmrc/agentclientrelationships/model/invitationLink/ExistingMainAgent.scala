@@ -16,13 +16,12 @@
 
 package uk.gov.hmrc.agentclientrelationships.model.invitationLink
 
-import play.api.libs.json._
+import play.api.libs.json.*
 
 case class ExistingMainAgent(
   agencyName: String,
   sameAgent: Boolean
 )
 
-object ExistingMainAgent {
-  implicit val format: Format[ExistingMainAgent] = Json.format[ExistingMainAgent]
-}
+object ExistingMainAgent:
+  given format: Format[ExistingMainAgent] = Json.format[ExistingMainAgent]

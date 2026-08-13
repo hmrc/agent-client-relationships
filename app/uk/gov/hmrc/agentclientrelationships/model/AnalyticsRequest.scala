@@ -24,9 +24,8 @@ case class DimensionValue(
   value: String
 )
 
-object DimensionValue {
-  implicit val dimensionWrites: OWrites[DimensionValue] = Json.writes[DimensionValue]
-}
+object DimensionValue:
+  given dimensionWrites: OWrites[DimensionValue] = Json.writes[DimensionValue]
 
 case class Event(
   category: String,
@@ -35,9 +34,8 @@ case class Event(
   dimensions: Seq[DimensionValue]
 )
 
-object Event {
-  implicit val eventWrites: OWrites[Event] = Json.writes[Event]
-}
+object Event:
+  given eventWrites: OWrites[Event] = Json.writes[Event]
 
 case class AnalyticsRequest(
   gaClientId: Option[String],
@@ -45,6 +43,5 @@ case class AnalyticsRequest(
   events: List[Event]
 )
 
-object AnalyticsRequest {
-  implicit val analyticsWrites: OWrites[AnalyticsRequest] = Json.writes[AnalyticsRequest]
-}
+object AnalyticsRequest:
+  given analyticsWrites: OWrites[AnalyticsRequest] = Json.writes[AnalyticsRequest]

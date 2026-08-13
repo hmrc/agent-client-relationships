@@ -16,8 +16,8 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
-import cats.data._
-import cats.implicits._
+import cats.data.*
+import cats.implicits.*
 import javax.inject.Inject
 import javax.inject.Singleton
 import uk.gov.hmrc.agentclientrelationships.model.DeletionCount
@@ -33,7 +33,7 @@ import scala.concurrent.Future
 class AgentTerminationService @Inject() (
   deleteRecordRepository: DeleteRecordRepository,
   relationshipCopyRecordRepository: RelationshipCopyRecordRepository
-)(implicit ec: ExecutionContext) {
+)(using ec: ExecutionContext) {
 
   def terminateAgent(arn: Arn): EitherT[
     Future,

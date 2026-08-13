@@ -24,6 +24,5 @@ case class RemoveAuthorisationRequest(
   service: String
 )
 
-object RemoveAuthorisationRequest {
-  implicit val format: OFormat[RemoveAuthorisationRequest] = Json.format[RemoveAuthorisationRequest]
-}
+object RemoveAuthorisationRequest:
+  given format: OFormat[RemoveAuthorisationRequest] = Json.format[RemoveAuthorisationRequest]

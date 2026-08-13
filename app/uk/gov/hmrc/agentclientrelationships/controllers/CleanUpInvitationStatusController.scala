@@ -43,7 +43,7 @@ class CleanUpInvitationStatusController @Inject() (
   val appConfig: AppConfig,
   val authConnector: AuthConnector,
   cc: ControllerComponents
-)(implicit val executionContext: ExecutionContext)
+)(using val executionContext: ExecutionContext)
 extends BackendController(cc)
 with AuthActions
 with RequestAwareLogging {
@@ -52,7 +52,8 @@ with RequestAwareLogging {
   val apiSupportedServices: Seq[Service] = appConfig.apiSupportedServices
 
   def deauthoriseInvitation: Action[CleanUpInvitationStatusRequest] =
-    Action.async(parse.json[CleanUpInvitationStatusRequest]) { implicit request =>
+    Action.async(parse.json[CleanUpInvitationStatusRequest]) { request =>
+      given play.api.mvc.RequestHeader = request
       authorised() {
         val payload = request.body
 

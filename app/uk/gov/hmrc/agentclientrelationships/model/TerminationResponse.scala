@@ -25,12 +25,10 @@ case class DeletionCount(
   count: Int
 )
 
-object DeletionCount {
-  implicit val formats: OFormat[DeletionCount] = Json.format[DeletionCount]
-}
+object DeletionCount:
+  given formats: OFormat[DeletionCount] = Json.format[DeletionCount]
 
 case class TerminationResponse(counts: Seq[DeletionCount])
 
-object TerminationResponse {
-  implicit val formats: OFormat[TerminationResponse] = Json.format[TerminationResponse]
-}
+object TerminationResponse:
+  given formats: OFormat[TerminationResponse] = Json.format[TerminationResponse]

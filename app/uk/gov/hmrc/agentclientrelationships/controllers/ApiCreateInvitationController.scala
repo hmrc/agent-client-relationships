@@ -37,12 +37,12 @@ import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDIT
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDITSUPP
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdIt
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdItSupp
-import uk.gov.hmrc.agentclientrelationships.model.identifiers._
-import uk.gov.hmrc.agentclientrelationships.model.invitation._
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.*
+import uk.gov.hmrc.agentclientrelationships.model.invitation.*
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgencyDetails
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
 import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
-import uk.gov.hmrc.agentclientrelationships.services._
+import uk.gov.hmrc.agentclientrelationships.services.*
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
@@ -66,7 +66,7 @@ class ApiCreateInvitationController @Inject() (
   val authConnector: AuthConnector,
   val appConfig: AppConfig,
   cc: ControllerComponents
-)(implicit val executionContext: ExecutionContext)
+)(using val executionContext: ExecutionContext)
 extends BackendController(cc)
 with AuthActions {
 
@@ -75,7 +75,8 @@ with AuthActions {
   val apiSupportedServices: Seq[Service] = appConfig.apiSupportedServices
 
   def createInvitation(arn: Arn): Action[JsValue] =
-    Action.async(parse.json) { implicit request =>
+    Action.async(parse.json) { request =>
+      given play.api.mvc.RequestHeader = request
       authorised() {
         request.body
           .validate[ApiCreateInvitationRequest]
@@ -88,10 +89,7 @@ with AuthActions {
                 apiSupportedServices
               ).map { response =>
                 response.fold(
-                  {
-                    case apiErrorResults: ApiFailureResponse => apiErrorResults.getResult
-                    case _ => InternalServerError
-                  },
+                  _.getResult,
                   invitation => {
                     auditService.sendCreateInvitationAuditEvent(invitation)
                     Created(Json.toJson(CreateInvitationResponse(invitation.invitationId)))
@@ -106,7 +104,7 @@ with AuthActions {
     arn: Arn,
     apiCreateInvitationInputData: ApiCreateInvitationRequest,
     supportedServices: Seq[Service]
-  )(implicit
+  )(using
     request: RequestHeader
   ): Future[Either[ApiFailureResponse, Invitation]] = {
     val invitationT =
@@ -115,7 +113,7 @@ with AuthActions {
         // casting/parsing inputData
         suppliedClientId <- EitherT.fromEither[Future](apiCreateInvitationInputData.getSuppliedClientId(supportedServices))
         service <- EitherT.fromEither[Future](apiCreateInvitationInputData.getService(supportedServices))
-        clientId <- EitherT(getClientId(suppliedClientId, service))
+        _ <- EitherT(getClientId(suppliedClientId, service))
         clientType <- EitherT.fromEither[Future](apiCreateInvitationInputData.getClientType)
 
         _ <- EitherT(checkPendingInvitation(
@@ -176,7 +174,7 @@ with AuthActions {
     clientName: String,
     clientType: Option[String],
     agentDetails: AgencyDetails
-  )(implicit requestHeader: RequestHeader): Future[Either[ApiFailureResponse, Invitation]] = {
+  )(using requestHeader: RequestHeader): Future[Either[ApiFailureResponse, Invitation]] = {
     val expiryDate = currentTime().plusSeconds(invitationExpiryDuration.toSeconds).toLocalDate
     (for {
       invitation <- invitationsRepository.create(
@@ -200,7 +198,7 @@ with AuthActions {
   private def getClientId(
     suppliedClientId: ClientId,
     service: Service
-  )(implicit
+  )(using
     requestHeader: RequestHeader
   ): Future[Either[ApiFailureResponse, ClientId]] =
     (service, suppliedClientId.typeId) match {
@@ -263,7 +261,7 @@ with AuthActions {
     service: String,
     clientIdType: String,
     clientId: String
-  )(implicit
+  )(using
     requestHeader: RequestHeader
   ): Future[Either[ApiFailureResponse, Boolean]] = checkRelationshipsService
     .checkForRelationship(

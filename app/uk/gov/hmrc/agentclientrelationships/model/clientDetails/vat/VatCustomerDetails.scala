@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.model.clientDetails.vat
 
-import play.api.libs.functional.syntax._
+import play.api.libs.functional.syntax.*
 import play.api.libs.json.JsPath
 import play.api.libs.json.Json
 import play.api.libs.json.OWrites
@@ -50,7 +50,7 @@ object VatCustomerDetails {
 
   val pathPrefix: JsPath = JsPath \ "approvedInformation" \ "customerDetails"
 
-  implicit val reads: Reads[VatCustomerDetails] =
+  given reads: Reads[VatCustomerDetails] =
     for {
       orgName <- (pathPrefix \ "organisationName").readNullable[String]
       individual <- (pathPrefix \ "individual").readNullable[VatIndividual]
@@ -84,9 +84,9 @@ object VatIndividual {
     "0012" -> "Dame"
   )
 
-  implicit val writes: OWrites[VatIndividual] = Json.writes[VatIndividual]
+  given writes: OWrites[VatIndividual] = Json.writes[VatIndividual]
 
-  implicit val reads: Reads[VatIndividual] =
+  given reads: Reads[VatIndividual] =
     (
       (JsPath \ "title").readNullable[String].map(title => titles.get(title.getOrElse(""))) and
         (JsPath \ "firstName").readNullable[String] and

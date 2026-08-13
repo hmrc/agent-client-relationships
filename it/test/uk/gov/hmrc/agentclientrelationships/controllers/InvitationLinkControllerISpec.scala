@@ -68,8 +68,8 @@ with HipStub {
 
   val agentReferenceService: InvitationLinkService = app.injector.instanceOf[InvitationLinkService]
   val authConnector: AuthConnector = app.injector.instanceOf[AuthConnector]
-  implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
-  implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
+  given appConfig: AppConfig = app.injector.instanceOf[AppConfig]
+  given ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
 
   val itsaServiceKeys = Json.arr(
     "HMRC-MTD-IT",

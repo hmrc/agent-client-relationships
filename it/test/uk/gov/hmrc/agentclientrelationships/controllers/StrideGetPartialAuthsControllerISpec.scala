@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.agentclientrelationships.controllers
 
+import org.mongodb.scala.ObservableFuture
+
 import play.api.http.Status.BAD_GATEWAY
 import play.api.http.Status.INTERNAL_SERVER_ERROR
 import play.api.http.Status.OK

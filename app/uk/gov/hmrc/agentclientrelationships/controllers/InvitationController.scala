@@ -22,16 +22,16 @@ import play.api.libs.json.Json
 import play.api.mvc.Action
 import play.api.mvc.AnyContent
 import play.api.mvc.ControllerComponents
+import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.audit.AuditService
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Trust
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.TrustNT
-import uk.gov.hmrc.agentclientrelationships.model.identifiers._
-import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse._
-import uk.gov.hmrc.agentclientrelationships.model.invitation._
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.*
+import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.*
+import uk.gov.hmrc.agentclientrelationships.model.invitation.*
 import uk.gov.hmrc.agentclientrelationships.services.InvitationService
-import uk.gov.hmrc.agentclientrelationships.services.ValidationService
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.agentclientrelationships.model.Rejected
@@ -46,11 +46,10 @@ import scala.concurrent.Future
 class InvitationController @Inject() (
   invitationService: InvitationService,
   auditService: AuditService,
-  validationService: ValidationService,
   val authConnector: AuthConnector,
   val appConfig: AppConfig,
   cc: ControllerComponents
-)(implicit val executionContext: ExecutionContext)
+)(using val executionContext: ExecutionContext)
 extends BackendController(cc)
 with AuthActions {
 
@@ -59,7 +58,8 @@ with AuthActions {
   private val strideRoles = Seq(appConfig.oldAuthStrideRole, appConfig.newAuthStrideRole)
 
   def createInvitation(arn: Arn): Action[CreateInvitationRequest] =
-    Action.async(parse.json[CreateInvitationRequest]) { implicit request =>
+    Action.async(parse.json[CreateInvitationRequest]) { request =>
+      given RequestHeader = request
       authorised() {
         val createInvitationRequest = request.body
 
@@ -119,7 +119,8 @@ with AuthActions {
       }
     }
 
-  def rejectInvitation(invitationId: String): Action[AnyContent] = Action.async { implicit request =>
+  def rejectInvitation(invitationId: String): Action[AnyContent] = Action.async { request =>
+    given RequestHeader = request
     invitationService
       .findInvitation(invitationId)
       .flatMap {
@@ -159,7 +160,7 @@ with AuthActions {
   }
 
   def replaceUrnWithUtr(urn: String): Action[JsValue] =
-    Action.async(parse.json) { implicit request =>
+    Action.async(parse.json) { request =>
       val utr = (request.body \ "utr").as[String]
       invitationService
         .updateInvitation(
@@ -176,7 +177,8 @@ with AuthActions {
         }
     }
 
-  def cancelInvitation(invitationId: String): Action[AnyContent] = Action.async { implicit request =>
+  def cancelInvitation(invitationId: String): Action[AnyContent] = Action.async { request =>
+    given RequestHeader = request
     withAuthorisedAsAgent { authArn =>
       invitationService.cancelInvitation(authArn, invitationId).map {
         case Left(response) => response.getResult
