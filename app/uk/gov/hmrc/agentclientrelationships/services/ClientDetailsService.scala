@@ -722,8 +722,13 @@ extends RequestAwareLogging {
     "TOURS" -> Seq("ZZ")
   )
 
-  private def toCountryCode(country: String): Seq[String] = {
-    countryNameToCode.getOrElse(country.trim.toUpperCase, Seq("ZZ"))
+  private def toCountryCode(country: String)(implicit request: RequestHeader): Seq[String] = {
+    countryNameToCode.get(country.trim.toUpperCase) match {
+      case Some(countryCode) => countryCode
+      case None =>
+        logger.warn(s"Country name '$country' could not be mapped to ISO country code(s)")
+        Seq(country)
+    }
   }
 
 }
