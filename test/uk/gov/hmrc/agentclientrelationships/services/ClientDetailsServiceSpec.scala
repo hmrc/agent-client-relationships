@@ -221,8 +221,8 @@ extends UnitSpec {
               Future.successful(
                 Right(
                   ItsaDesignatoryDetails(
-                    Some("AA1 1AA"),
-                    Some("UNKNOWN LAND")
+                    None,
+                    Some("INVALID COUNTRY")
                   )
                 )
               )
@@ -260,7 +260,7 @@ extends UnitSpec {
               Future.successful(
                 Right(
                   ItsaDesignatoryDetails(
-                    Some("AA1 1AA"),
+                    None,
                     Some("ANTILLES (NETHERLANDS)")
                   )
                 )
@@ -305,7 +305,7 @@ extends UnitSpec {
               Future.successful(
                 Right(
                   ItsaDesignatoryDetails(
-                    Some("AA1 1AA"),
+                    None,
                     Some("ARMENIA")
                   )
                 )
