@@ -30,5 +30,9 @@ object KnowFactsFailure {
   extends KnowFactsFailure
   case object VatRegDateDoesNotMatch
   extends KnowFactsFailure
+  case object CountryCodeInvalid
+  extends KnowFactsFailure
+  case object CountryCodeDoesNotMatch
+  extends KnowFactsFailure
 
 }

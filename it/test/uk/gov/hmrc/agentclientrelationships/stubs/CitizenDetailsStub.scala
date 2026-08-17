@@ -108,7 +108,6 @@ trait CitizenDetailsStub {
           .withBody(
             Json.obj(
               "address" -> Json.obj(
-                "postcode" -> "AA1 1AA",
                 "country" -> "XX"
               )
             ).toString()
@@ -128,6 +127,23 @@ trait CitizenDetailsStub {
               "address" -> Json.obj(
                 "postcode" -> postcode,
                 "country" -> "GREAT BRITAIN"
+              )
+            ).toString()
+          )
+      )
+  )
+
+  def givenItsaDesignatoryDetailsReturnsCountry(
+    nino: NinoWithoutSuffix,
+    country: String
+  ): StubMapping = stubFor(
+    get(urlEqualTo(s"/citizen-details/${nino.anySuffixValue}/designatory-details"))
+      .willReturn(
+        aResponse()
+          .withBody(
+            Json.obj(
+              "address" -> Json.obj(
+                "country" -> country
               )
             ).toString()
           )

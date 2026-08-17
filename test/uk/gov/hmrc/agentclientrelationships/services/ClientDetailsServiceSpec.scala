@@ -200,7 +200,7 @@ extends UnitSpec {
             await(service.findClientDetails("HMRC-MTD-IT", "AA000001B")) shouldBe Right(resultModel)
           }
 
-          "return ZZ when a country cannot be mapped" in {
+          "return supplied country when a country cannot be mapped" in {
             when(mockAppConfig.overseasItsaEnabled).thenReturn(true)
             when(mockHipConnector.getMtdIdFor(eqTo(nino))(any[RequestHeader])).thenReturn(Future.successful(Some(MtdItId("XAIT00000000001"))))
 
@@ -232,7 +232,7 @@ extends UnitSpec {
               "John Rocks",
               None,
               isOverseas = Some(true),
-              Seq("ZZ"),
+              Seq("INVALID COUNTRY"),
               Some(CountryCode)
             )
 

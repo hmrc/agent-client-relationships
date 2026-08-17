@@ -930,24 +930,83 @@ with CitizenDetailsStub {
 
     }
 
-    s"return UNPROCESSABLE_ENTITY status and valid JSON INVALID_PAYLOAD when ITSA country is not valid" in {
-      val inputData: ApiCreateInvitationRequest = baseInvitationInputData
+    s"return 201 status and valid JSON when ITSA overseas invitation is created with a matching country code known fact" in {
+      val inputData: ApiCreateInvitationRequest = baseInvitationInputData.copy(knownFact = "AM")
+
+      givenClientHasNoRelationshipWithAnyAgentInCESA(nino = nino)
+      generateStandardStubForCreateInvitation()
+      givenDelegatedGroupIdsNotExistFor(EnrolmentKey(HMRCMTDIT, mtdItId))
+      givenDelegatedGroupIdsNotExistFor(EnrolmentKey(multiAgentServicesOtherService(HMRCMTDIT), mtdItId))
+      givenMtdItIdIsKnownFor(nino, mtdItId)
+      givenNinoIsKnownFor(mtdItId, nino)
+      givenCitizenDetailsExists(nino)
+      givenItsaDesignatoryDetailsReturnsCountry(nino, "ARMENIA")
+
+      val requestPath = s"/agent-client-relationships/api/${arn.value}/invitation"
+      val result = doAgentPostRequest(requestPath, Json.toJson(inputData).toString())
+      result.status shouldBe 201
+
+      val invitationSeq = invitationRepo.findAllForAgent(arn.value).futureValue
+      invitationSeq.size shouldBe 1
+
+      val invitation = invitationSeq.head
+      result.json shouldBe Json.obj("invitationId" -> invitation.invitationId)
+      invitation.status shouldBe Pending
+      invitation.suppliedClientId shouldBe inputData.suppliedClientId
+      invitation.service shouldBe inputData.service
+
+      verifyCreateInvitationAuditSent(requestPath, invitation)
+    }
+
+    s"return UNPROCESSABLE_ENTITY status and valid JSON CLIENT_REGISTRATION_NOT_FOUND when ITSA overseas invitation is submitted but no MTDITID is returned" in {
+      val inputData: ApiCreateInvitationRequest = baseInvitationInputData.copy(knownFact = "AM")
+
+      generateStandardStubForCreateInvitation()
+      givenDelegatedGroupIdsNotExistFor(EnrolmentKey(HMRCMTDIT, mtdItId))
+      givenDelegatedGroupIdsNotExistFor(EnrolmentKey(multiAgentServicesOtherService(HMRCMTDIT), mtdItId))
+      givenMtdItIdIsUnKnownFor(nino)
+      givenCitizenDetailsExists(nino)
+      givenItsaDesignatoryDetailsReturnsCountry(nino, "ARMENIA")
+
+      val expectedJson: JsValue = Json.toJson(toJson(ErrorBody("CLIENT_REGISTRATION_NOT_FOUND")))
+
+      val requestPath = s"/agent-client-relationships/api/${arn.value}/invitation"
+      val result = doAgentPostRequest(requestPath, Json.toJson(inputData).toString())
+      result.status shouldBe UNPROCESSABLE_ENTITY
+      result.json shouldBe expectedJson
+    }
+
+    s"return UNPROCESSABLE_ENTITY status and valid JSON COUNTRY_CODE_FORMAT_INVALID when ITSA overseas known fact is not a valid ISO country code format" in {
+      val inputData: ApiCreateInvitationRequest = baseInvitationInputData.copy(knownFact = "INVALID")
 
       generateStandardStubForCreateInvitation()
       givenDelegatedGroupIdsNotExistFor(EnrolmentKey(HMRCMTDIT, mtdItId))
       givenDelegatedGroupIdsNotExistFor(EnrolmentKey(multiAgentServicesOtherService(HMRCMTDIT), mtdItId))
       givenMtdItIdIsKnownFor(nino, mtdItId)
-      givenNinoIsKnownFor(mtdItId, nino) // TODO: Why is this needed when the HipConnector.getNinoFor() method is not used by the ApiCreateInvitationController at all ?!!
+      givenNinoIsKnownFor(mtdItId, nino)
       givenCitizenDetailsExists(nino)
-      givenItsaDesignatoryDetailsReturnsInvalidCountryCode(nino)
+      givenItsaDesignatoryDetailsReturnsCountry(nino, "ARMENIA")
 
-      val expectedJson: JsValue = Json.toJson(
-        toJson(
-          ErrorBody(
-            "INVALID_PAYLOAD"
-          )
-        )
-      )
+      val expectedJson: JsValue = Json.toJson(toJson(ErrorBody("COUNTRY_CODE_FORMAT_INVALID")))
+
+      val requestPath = s"/agent-client-relationships/api/${arn.value}/invitation"
+      val result = doAgentPostRequest(requestPath, Json.toJson(inputData).toString())
+      result.status shouldBe UNPROCESSABLE_ENTITY
+      result.json shouldBe expectedJson
+    }
+
+    s"return UNPROCESSABLE_ENTITY status and valid JSON COUNTRY_CODE_DOES_NOT_MATCH when ITSA overseas known fact does not match the client's country" in {
+      val inputData: ApiCreateInvitationRequest = baseInvitationInputData.copy(knownFact = "FR")
+
+      generateStandardStubForCreateInvitation()
+      givenDelegatedGroupIdsNotExistFor(EnrolmentKey(HMRCMTDIT, mtdItId))
+      givenDelegatedGroupIdsNotExistFor(EnrolmentKey(multiAgentServicesOtherService(HMRCMTDIT), mtdItId))
+      givenMtdItIdIsKnownFor(nino, mtdItId)
+      givenNinoIsKnownFor(mtdItId, nino)
+      givenCitizenDetailsExists(nino)
+      givenItsaDesignatoryDetailsReturnsCountry(nino, "ARMENIA")
+
+      val expectedJson: JsValue = Json.toJson(toJson(ErrorBody("COUNTRY_CODE_DOES_NOT_MATCH")))
 
       val requestPath = s"/agent-client-relationships/api/${arn.value}/invitation"
       val result = doAgentPostRequest(requestPath, Json.toJson(inputData).toString())
