@@ -285,6 +285,39 @@ extends RequestAwareLogging {
     }
   }
 
+  // API#5887 https://admin.tax.service.gov.uk/integration-hub/apis/details/8caef5ab-34a1-4c70-aa7e-c3346091d253#Endpoints
+  def trustsAndEstatesAgentKnownFactCheck(taxIdentifier: Either[Urn, Utr])(implicit
+    requestHeader: RequestHeader
+  ): Future[Either[ClientDetailsFailureResponse, String]] = {
+    val (idType, idValue) =
+      taxIdentifier match {
+        case Left(Urn(urn)) => "URN" -> UriEncoding.encodePathSegment(urn, "UTF-8")
+        case Right(Utr(utr)) => "UTR" -> UriEncoding.encodePathSegment(utr, "UTF-8")
+      }
+
+    getWithHipHeaders(
+      "Agent Known Fact Check",
+      new URL(s"$baseUrl/etmp/RESTAdapter/trustsandestates/agent-known-fact-check/$idType/$idValue"),
+      () => headers.makeSubscriptionHeaders()
+    ).map {
+      case Right(response) => Right((response.json \ "success" \ "trustDetails" \ "trustName").as[String])
+      case Left(errorResponse) =>
+        errorResponse.statusCode match {
+          case Status.NOT_FOUND => Left(ClientDetailsNotFound)
+          case status =>
+            logger.warn(
+              s"Unexpected error during 'trustsAndEstatesAgentKnownFactCheck', statusCode=$status message:${errorResponse.getMessage}"
+            )
+            Left(
+              ErrorRetrievingClientDetails(
+                status,
+                s"Unexpected error during 'trustsAndEstatesAgentKnownFactCheck', statusCode=$status message:${errorResponse.getMessage}"
+              )
+            )
+        }
+    }
+  }
+
   private def getWithHipHeaders(
     apiName: String,
     url: URL,

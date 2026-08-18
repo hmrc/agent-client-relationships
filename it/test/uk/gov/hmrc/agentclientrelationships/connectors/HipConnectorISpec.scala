@@ -39,7 +39,6 @@ import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdIt
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Pillar2
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Ppt
 import uk.gov.hmrc.agentclientrelationships.model.identifiers._
-import uk.gov.hmrc.agentclientrelationships.services.AgentCacheProvider
 import uk.gov.hmrc.agentclientrelationships.stubs.DataStreamStub
 import uk.gov.hmrc.agentclientrelationships.stubs.HipStub
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
@@ -649,6 +648,54 @@ with DataStreamStub {
       await(hipConnector.getItsaBusinessDetails(testNino)) should matchPattern {
         case Left(ErrorRetrievingClientDetails(INTERNAL_SERVER_ERROR, msg))
             if msg.startsWith("Unexpected error during 'getItsaBusinessDetails'") =>
+      }
+    }
+  }
+
+  ".trustsAndEstatesAgentKnownFactCheck" when {
+    "handling a URN" should {
+      "return () when receiving a 200 status" in {
+        givenAuditConnector()
+        givenTrustsAndEstatesAgentKnownFactCheckSucceeds(Left(urn))
+        await(hipConnector.trustsAndEstatesAgentKnownFactCheck(Left(urn))) shouldBe Right("Nelson James Trust")
+      }
+
+      "return an UpstreamErrorResponse when receiving a 404 status" in {
+        givenAuditConnector()
+        givenTrustsAndEstatesAgentKnownFactCheckFails(Left(urn), NOT_FOUND)
+        await(hipConnector.trustsAndEstatesAgentKnownFactCheck(Left(urn))) shouldBe Left(ClientDetailsNotFound)
+      }
+
+      "return an UpstreamErrorResponse when receiving an unexpected status" in {
+        givenAuditConnector()
+        givenTrustsAndEstatesAgentKnownFactCheckFails(Left(urn), INTERNAL_SERVER_ERROR)
+        await(hipConnector.trustsAndEstatesAgentKnownFactCheck(Left(urn))) should matchPattern {
+          case Left(ErrorRetrievingClientDetails(INTERNAL_SERVER_ERROR, msg))
+              if msg.startsWith("Unexpected error during 'trustsAndEstatesAgentKnownFactCheck'") =>
+        }
+      }
+    }
+
+    "handling a UTR" should {
+      "return () when receiving a 200 status" in {
+        givenAuditConnector()
+        givenTrustsAndEstatesAgentKnownFactCheckSucceeds(Right(utr))
+        await(hipConnector.trustsAndEstatesAgentKnownFactCheck(Right(utr))) shouldBe Right("Nelson James Trust")
+      }
+
+      "return an UpstreamErrorResponse when receiving a 404 status" in {
+        givenAuditConnector()
+        givenTrustsAndEstatesAgentKnownFactCheckFails(Right(utr), NOT_FOUND)
+        await(hipConnector.trustsAndEstatesAgentKnownFactCheck(Right(utr))) shouldBe Left(ClientDetailsNotFound)
+      }
+
+      "return an UpstreamErrorResponse when receiving an unexpected status" in {
+        givenAuditConnector()
+        givenTrustsAndEstatesAgentKnownFactCheckFails(Right(utr), INTERNAL_SERVER_ERROR)
+        await(hipConnector.trustsAndEstatesAgentKnownFactCheck(Right(utr))) should matchPattern {
+          case Left(ErrorRetrievingClientDetails(INTERNAL_SERVER_ERROR, msg))
+              if msg.startsWith("Unexpected error during 'trustsAndEstatesAgentKnownFactCheck'") =>
+        }
       }
     }
   }

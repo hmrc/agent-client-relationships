@@ -43,7 +43,10 @@ import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ppt.PptSubscript
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.vat.VatCustomerDetails
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.vat.VatIndividual
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Urn
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Utr
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
+import uk.gov.hmrc.domain.TaxIdentifier
 
 import java.time.LocalDate
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -850,6 +853,95 @@ extends UnitSpec {
 
           await(service.findClientDetails("HMRC-PILLAR2-ORG", "XAPLR2222222222")) shouldBe Left(ClientDetailsNotFound)
         }
+      }
+    }
+  }
+
+  ".findClientDetailsByTaxIdentifier" when {
+    "trusts-use-hip is enabled" should {
+      "return data for URNs from HIP" in {
+        val urn = Urn("XATRUST123456789")
+
+        when(mockAppConfig.trustsUseHip).thenReturn(true)
+        when(mockHipConnector.trustsAndEstatesAgentKnownFactCheck(eqTo(Left(urn)))(any[RequestHeader])).thenReturn(
+          Future.successful(Right("The Safety Trust"))
+        )
+
+        val resultModel = ClientDetailsResponse(
+          "The Safety Trust",
+          None,
+          isOverseas = None,
+          Seq(),
+          None
+        )
+
+        await(service.findClientDetailsByTaxIdentifier(urn)) shouldBe Right(resultModel)
+      }
+
+      "return data for UTRs from HIP" in {
+        val utr = Utr("1234567890")
+
+        when(mockAppConfig.trustsUseHip).thenReturn(true)
+        when(mockHipConnector.trustsAndEstatesAgentKnownFactCheck(eqTo(Right(utr)))(any[RequestHeader])).thenReturn(
+          Future.successful(Right("The Safety Trust"))
+        )
+
+        val resultModel = ClientDetailsResponse(
+          "The Safety Trust",
+          None,
+          isOverseas = None,
+          Seq(),
+          None
+        )
+
+        await(service.findClientDetailsByTaxIdentifier(utr)) shouldBe Right(resultModel)
+      }
+    }
+
+    "trusts-use-hip is disabled" should {
+      "return data for URNs from DES" in {
+        val urn = Urn("XATRUST123456789")
+
+        when(mockAppConfig.trustsUseHip).thenReturn(false)
+        when(mockClientDetailsConnector.getTrustName(eqTo[String]("XATRUST123456789"))(any[RequestHeader])).thenReturn(
+          Future.successful(Right("The Safety Trust"))
+        )
+
+        val resultModel = ClientDetailsResponse(
+          "The Safety Trust",
+          None,
+          isOverseas = None,
+          Seq(),
+          None
+        )
+
+        await(service.findClientDetailsByTaxIdentifier(urn)) shouldBe Right(resultModel)
+      }
+
+      "return data for UTRs from DES" in {
+        val utr = Urn("1234567890")
+
+        when(mockAppConfig.trustsUseHip).thenReturn(false)
+        when(mockClientDetailsConnector.getTrustName(eqTo[String]("1234567890"))(any[RequestHeader])).thenReturn(
+          Future.successful(Right("The Safety Trust"))
+        )
+
+        val resultModel = ClientDetailsResponse(
+          "The Safety Trust",
+          None,
+          isOverseas = None,
+          Seq(),
+          None
+        )
+
+        await(service.findClientDetailsByTaxIdentifier(utr)) shouldBe Right(resultModel)
+      }
+    }
+
+    "the tax identifier is not supported" should {
+      "return a ClientDetailsNotFound error" in {
+        val unknownIdentifier = new TaxIdentifier { override def value: String = "HMRC-UNKNOWN" }
+        await(service.findClientDetailsByTaxIdentifier(unknownIdentifier)) shouldBe Left(ClientDetailsNotFound)
       }
     }
   }
