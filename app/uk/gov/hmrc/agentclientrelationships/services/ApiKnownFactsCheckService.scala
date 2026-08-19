@@ -102,12 +102,11 @@ class ApiKnownFactsCheckService @Inject() (appConfig: AppConfig) {
     suppliedCountryCode: String,
     countryCode: Seq[String]
   ): Either[KnowFactsFailure, Unit] = {
-    val normalisedSupplied = suppliedCountryCode.trim.toUpperCase
 
-    if (!normalisedSupplied.matches("^[A-Z]{2}$")) {
+    if (!suppliedCountryCode.matches("^[A-Z]{2}$")) {
       Left(KnowFactsFailure.CountryCodeInvalid)
     }
-    else if (countryCode.contains(normalisedSupplied)) {
+    else if (countryCode.contains(suppliedCountryCode)) {
       Right(())
     }
     else {

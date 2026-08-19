@@ -105,7 +105,7 @@ extends RequestAwareLogging {
   def findClientDetails(
     service: String,
     clientId: String
-  )(implicit request: RequestHeader): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] =
+  )(implicit request: RequestHeader): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] = {
     service.toUpperCase match {
       case "HMRC-MTD-IT" | "HMRC-MTD-IT-SUPP" => getItsaClientDetails(clientId)
       case "HMRC-MTD-VAT" => getVatClientDetails(clientId)
@@ -116,6 +116,7 @@ extends RequestAwareLogging {
       case "HMRC-CBC-ORG" => getCbcClientDetails(clientId)
       case "HMRC-PILLAR2-ORG" => getPillar2ClientDetails(clientId)
     }
+  }
 
   private def makeItsaOverseasResponse(
     countryCodes: Seq[String],
