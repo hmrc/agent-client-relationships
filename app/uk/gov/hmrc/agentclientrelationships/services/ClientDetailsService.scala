@@ -48,7 +48,6 @@ class ClientDetailsService @Inject() (
 )(implicit ec: ExecutionContext)
 extends RequestAwareLogging {
 
-  // Country name -> ISO 3166-1 alpha-2 code(s), loaded from conf/country-codes.json on the classpath.
   private val countryNameToCode: Map[String, Seq[String]] = {
     val stream = getClass.getResourceAsStream("/country-codes.json")
     require(stream != null, "country-codes.json not found on the classpath")
@@ -60,7 +59,7 @@ extends RequestAwareLogging {
     countryNameToCode.get(country.trim.toUpperCase) match {
       case Some(countryCode) => countryCode
       case None =>
-        logger.warn(s"Country name '$country' could not be mapped to ISO country code(s)")
+        logger.warn(s"Country name '$country' could not be mapped to ISO country code(s)") // continue anyway as might be supplied by api
         Seq(country)
     }
   }
