@@ -120,7 +120,7 @@ with ResettingMockitoSugar {
   when(servicesConfig.getBoolean(eqs("features.copy-relationship.mtd-it"))).thenReturn(true)
   when(servicesConfig.getBoolean(eqs("agent.cache.enabled"))).thenReturn(false)
   when(servicesConfig.getString(any[String])).thenReturn("")
-  when(configuration.get[Seq[String]](eqs("internalServiceHostPatterns"))(any[ConfigLoader[Seq[String]]])).thenReturn(
+  when(configuration.get[Seq[String]](eqs("internalServiceHostPatterns"))(using any[ConfigLoader[Seq[String]]])).thenReturn(
     Seq(
       "^.*\\.service$",
       "^.*\\.mdtp$",

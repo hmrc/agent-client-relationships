@@ -41,7 +41,7 @@ class AgentReferenceRepository @Inject() (mongo: MongoComponent)(using
   ec: ExecutionContext,
   @Named("aes")
   crypto: Encrypter
-    with Decrypter
+    & Decrypter
 )
 extends PlayMongoRepository[AgentReferenceRecord](
   mongoComponent = mongo,

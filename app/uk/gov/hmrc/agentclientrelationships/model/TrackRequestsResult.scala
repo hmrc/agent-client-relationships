@@ -38,7 +38,7 @@ object MongoClientNames {
 
   def mongoFormat(using
     crypto: Encrypter
-      with Decrypter
+      & Decrypter
   ): Format[MongoClientNames] = {
     given cryptoFormat: Format[String] = stringEncrypterDecrypter
     Json.format[MongoClientNames]
@@ -63,7 +63,7 @@ case class MongoTrackRequestsResult(
 object MongoTrackRequestsResult {
   def format(using
     crypto: Encrypter
-      with Decrypter
+      & Decrypter
   ): Format[MongoTrackRequestsResult] = {
     given invitationFormat: Format[Invitation] = Invitation.mongoFormat
     given mongoClientNamesFormat: Format[MongoClientNames] = MongoClientNames.mongoFormat

@@ -333,7 +333,7 @@ extends RequestAwareLogging {
     createEvent(
       event,
       transactionName,
-      details: _*
+      details*
     )
   )
 
@@ -349,7 +349,7 @@ extends RequestAwareLogging {
         case _ => x.toString
       }
     val hc = RequestSupport.hc
-    val detail = hc.toAuditDetails(details.map(pair => pair._1 -> toString(pair._2)): _*)
+    val detail = hc.toAuditDetails(details.map(pair => pair._1 -> toString(pair._2))*)
     val tags = hc.toAuditTags(transactionName, request.path)
     DataEvent(
       auditSource = "agent-client-relationships",

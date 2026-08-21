@@ -38,7 +38,7 @@ import java.time.ZoneOffset
 
 trait RelationshipsControllerGenericBehaviours {
   this: RelationshipsBaseControllerISpec
-    with HipStub =>
+    & HipStub =>
 
   def relationshipsControllerISpec(
     serviceId: String,

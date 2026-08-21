@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.model
 
+import play.api.libs.json.Format
 import play.api.libs.json.JsObject
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
@@ -50,18 +51,18 @@ extends UnitSpec {
   )
 
   "PartialAuthModel" should {
-
+    given Format[PartialAuthRelationship] = PartialAuthRelationship.mongoFormat
     "read from JSON" when {
 
       "all fields are present" in {
-        testJsonResponse.as[PartialAuthRelationship](PartialAuthRelationship.mongoFormat) shouldBe activeTestModel
+        testJsonResponse.as[PartialAuthRelationship] shouldBe activeTestModel
       }
     }
 
     "write to JSON" when {
 
       "all fields are present" in {
-        Json.toJson(activeTestModel)(PartialAuthRelationship.mongoFormat) shouldBe testJsonResponse
+        Json.toJson(activeTestModel) shouldBe testJsonResponse
       }
     }
   }

@@ -58,7 +58,7 @@ object Invitation {
 
   def mongoFormat(using
     crypto: Encrypter
-      with Decrypter
+      & Decrypter
   ): Format[Invitation] = {
     given mongoInstantFormat: Format[Instant] = MongoJavatimeFormats.instantFormat
     given mongoLocalDateFormat: Format[LocalDate] = MongoJavatimeFormats.localDateFormat
@@ -66,11 +66,11 @@ object Invitation {
       (__ \ "invitationId").format[String] and
         (__ \ "arn").format[String] and
         (__ \ "service").format[String] and
-        (__ \ "suppliedClientId").format[String](stringEncrypterDecrypter) and
+        (__ \ "suppliedClientId").format[String](using stringEncrypterDecrypter) and
         (__ \ "suppliedClientIdType").format[String] and
-        (__ \ "clientName").format[String](stringEncrypterDecrypter) and
-        (__ \ "agencyName").format[String](stringEncrypterDecrypter) and
-        (__ \ "agencyEmail").format[String](stringEncrypterDecrypter) and
+        (__ \ "clientName").format[String](using stringEncrypterDecrypter) and
+        (__ \ "agencyName").format[String](using stringEncrypterDecrypter) and
+        (__ \ "agencyEmail").format[String](using stringEncrypterDecrypter) and
         (__ \ "warningEmailSent").format[Boolean] and
         (__ \ "expiredEmailSent").format[Boolean] and
         (__ \ "status").format[InvitationStatus] and

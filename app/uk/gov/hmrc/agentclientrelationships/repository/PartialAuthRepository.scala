@@ -50,7 +50,7 @@ class PartialAuthRepository @Inject() (mongoComponent: MongoComponent)(using
   ec: ExecutionContext,
   @Named("aes")
   crypto: Encrypter
-    with Decrypter
+    & Decrypter
 )
 extends PlayMongoRepository[PartialAuthRelationship](
   mongoComponent = mongoComponent,

@@ -47,7 +47,7 @@ object Http {
     headers: Seq[(String, String)] = Seq.empty
   )(using ws: WSClient): HttpResponse =
     perform(url) { request =>
-      request.addHttpHeaders(headers: _*).post(body)
+      request.addHttpHeaders(headers*).post(body)
     }
 
   def postEmpty(url: String)(using ws: WSClient): HttpResponse =
@@ -61,7 +61,7 @@ object Http {
     headers: Seq[(String, String)] = Seq.empty
   )(using ws: WSClient): HttpResponse =
     perform(url) { request =>
-      request.addHttpHeaders(headers: _*).put(body)
+      request.addHttpHeaders(headers*).put(body)
     }
 
   def putEmpty(url: String)(using ws: WSClient): HttpResponse =

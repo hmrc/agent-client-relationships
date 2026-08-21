@@ -110,7 +110,7 @@ with BeforeAndAfterEach {
       new TaskActor(
         recoveryRepo,
         2,
-        deleteRelationshipService.tryToResume(using new AuditData()).map(_ => ())(ec)
+        deleteRelationshipService.tryToResume(using new AuditData()).map(_ => ())(using ec)
       )
     )
   )
@@ -121,7 +121,7 @@ with BeforeAndAfterEach {
       new Runnable {
         def run = actorRef ! "uid"
       }
-    )(ec)
+    )
 
   "Recovery Scheduler" should {
 

@@ -798,7 +798,7 @@ extends UnitSpec {
 
     when(servicesConfig.getInt(eqs("recovery-timeout"))).thenReturn(100)
     when(servicesConfig.getString(any[String])).thenReturn("")
-    when(configuration.get[Seq[String]](eqs("internalServiceHostPatterns"))(any[ConfigLoader[Seq[String]]])).thenReturn(
+    when(configuration.get[Seq[String]](eqs("internalServiceHostPatterns"))(using any[ConfigLoader[Seq[String]]])).thenReturn(
       Seq(
         "^.*\\.service$",
         "^.*\\.mdtp$",

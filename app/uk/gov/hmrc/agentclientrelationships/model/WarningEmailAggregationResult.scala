@@ -30,7 +30,8 @@ case class WarningEmailAggregationResult(
 object WarningEmailAggregationResult:
   given reads(using
     crypto: Encrypter
-      with Decrypter
-  ): Reads[WarningEmailAggregationResult] = ((__ \ "_id").read[String] and (__ \ "invitations").read[Seq[Invitation]](Reads.seq(Invitation.mongoFormat))).apply(
-    WarningEmailAggregationResult.apply _
-  )
+      & Decrypter
+  ): Reads[WarningEmailAggregationResult] =
+    ((__ \ "_id").read[String] and (__ \ "invitations").read[Seq[Invitation]](using Reads.seq(using Invitation.mongoFormat))).apply(
+      WarningEmailAggregationResult.apply
+    )

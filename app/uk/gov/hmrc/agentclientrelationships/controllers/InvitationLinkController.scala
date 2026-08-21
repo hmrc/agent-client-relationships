@@ -129,7 +129,7 @@ with AuthActions {
                       .find(i => i.status.eq(Pending))
                       .getOrElse(
                         invitations
-                          .sorted(Ordering[Invitation](Ordering.by[Invitation, Instant](_.created).reverse))
+                          .sorted(using Ordering[Invitation](using Ordering.by[Invitation, Instant](_.created).reverse))
                           .head
                       )
                     for {

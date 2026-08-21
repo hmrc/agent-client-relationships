@@ -92,6 +92,6 @@ object VatIndividual {
         (JsPath \ "firstName").readNullable[String] and
         (JsPath \ "middleName").readNullable[String] and
         (JsPath \ "lastName").readNullable[String]
-    )(VatIndividual.apply _)
+    )(VatIndividual.apply)
 
 }

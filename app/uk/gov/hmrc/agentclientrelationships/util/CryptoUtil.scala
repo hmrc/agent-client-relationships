@@ -24,6 +24,6 @@ object CryptoUtil {
 
   def encryptedString(string: String)(using
     crypto: Encrypter
-      with Decrypter
+      & Decrypter
   ): String = crypto.encrypt(PlainText(string)).value
 }

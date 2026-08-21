@@ -112,7 +112,7 @@ extends RequestAwareLogging {
     val url = url"${appConfig.desUrl}/vat/customer/vrn/$vrn/information"
     httpClient
       .get(url)
-      .setHeader(desHeaders(appConfig.desToken): _*)
+      .setHeader(desHeaders(appConfig.desToken)*)
       .execute[HttpResponse]
       .map { response =>
         response.status match {
@@ -139,7 +139,7 @@ extends RequestAwareLogging {
         "URN"
     httpClient
       .get(url"${appConfig.ifsPlatformBaseUrl}/trusts/agent-known-fact-check/$identifierType/$trustTaxIdentifier")
-      .setHeader(ifHeaders(appConfig.ifsAPI1495Token): _*)
+      .setHeader(ifHeaders(appConfig.ifsAPI1495Token)*)
       .execute[HttpResponse]
       .map { response =>
         response.status match {
@@ -157,7 +157,7 @@ extends RequestAwareLogging {
     cgtRef: String
   )(using rh: RequestHeader): Future[Either[ClientDetailsFailureResponse, CgtSubscriptionDetails]] = httpClient
     .get(url"${appConfig.desUrl}/subscriptions/CGT/ZCGT/$cgtRef")
-    .setHeader(desHeaders(appConfig.desToken): _*)
+    .setHeader(desHeaders(appConfig.desToken)*)
     .execute[HttpResponse]
     .map { response =>
       response.status match {
@@ -175,7 +175,7 @@ extends RequestAwareLogging {
     pptRef: String
   )(using rh: RequestHeader): Future[Either[ClientDetailsFailureResponse, PptSubscriptionDetails]] = httpClient
     .get(url"${appConfig.ifsPlatformBaseUrl}/plastic-packaging-tax/subscriptions/PPT/$pptRef/display")
-    .setHeader(ifHeaders(appConfig.ifsAPI1712Token): _*)
+    .setHeader(ifHeaders(appConfig.ifsAPI1712Token)*)
     .execute[HttpResponse]
     .map { response =>
       response.status match {
@@ -215,7 +215,7 @@ extends RequestAwareLogging {
     httpClient
       .post(url"${appConfig.ifBaseUrl}/dac6/dct50d/v1")
       .withBody(Json.toJson(request))
-      .setHeader(httpHeaders: _*)
+      .setHeader(httpHeaders*)
       .execute[HttpResponse]
       .map { response =>
         response.status match {
@@ -235,7 +235,7 @@ extends RequestAwareLogging {
     val url = url"${appConfig.ifsPlatformBaseUrl}/pillar2/subscription/$plrId"
     httpClient
       .get(url)
-      .setHeader(ifHeaders(appConfig.ifsAPI2143Token): _*)
+      .setHeader(ifHeaders(appConfig.ifsAPI2143Token)*)
       .execute[HttpResponse]
       .map { response =>
         response.status match {

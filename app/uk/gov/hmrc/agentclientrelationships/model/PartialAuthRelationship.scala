@@ -43,14 +43,14 @@ object PartialAuthRelationship:
 
   def mongoFormat(using
     crypto: Encrypter
-      with Decrypter
+      & Decrypter
   ): Format[PartialAuthRelationship] =
     given mongoInstantFormat: Format[Instant] = MongoJavatimeFormats.instantFormat
     (
       (__ \ "created").format[Instant] and
         (__ \ "arn").format[String] and
         (__ \ "service").format[String] and
-        (__ \ "nino").format[String](stringEncrypterDecrypter) and
+        (__ \ "nino").format[String](using stringEncrypterDecrypter) and
         (__ \ "active").format[Boolean] and
         (__ \ "lastUpdated").format[Instant]
     )(

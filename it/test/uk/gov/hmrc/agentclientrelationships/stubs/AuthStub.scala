@@ -746,7 +746,7 @@ trait AuthStub {
                   "key" -> identifier.key,
                   "value" -> identifier.value
                 ))
-              }: _*
+              }*
             )
           )
         )

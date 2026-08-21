@@ -4,7 +4,7 @@ import uk.gov.hmrc.DefaultBuildSettings
 val appName = "agent-client-relationships"
 
 ThisBuild / majorVersion := 1
-ThisBuild / scalaVersion := "3.3.7"
+ThisBuild / scalaVersion := "3.7.4"
 
 val scalaCompilerOptions = Seq(
   "-Werror",

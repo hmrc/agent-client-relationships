@@ -78,7 +78,7 @@ class InvitationsRepository @Inject() (
   ec: ExecutionContext,
   @Named("aes")
   crypto: Encrypter
-    with Decrypter
+    & Decrypter
 )
 extends PlayMongoRepository[Invitation](
   mongoComponent = mongoComponent,
@@ -205,16 +205,16 @@ with RequestAwareLogging {
             Seq(
               arn.map(equal(arnKey, _)),
               if (services.nonEmpty)
-                Some(in(serviceKey, services: _*))
+                Some(in(serviceKey, services*))
               else
                 None,
               if (clientIds.nonEmpty) {
-                Some(in(suppliedClientIdKey, clientIds.map(getValidNinoWithoutSuffixOrClientId).map(encryptedString): _*))
+                Some(in(suppliedClientIdKey, clientIds.map(getValidNinoWithoutSuffixOrClientId).map(encryptedString)*))
               }
               else
                 None,
               status.map(a => equal("status", Codecs.toBson[InvitationStatus](a)))
-            ).flatten: _*
+            ).flatten*
           )
         )
         .toFuture()
@@ -232,7 +232,7 @@ with RequestAwareLogging {
       .find(
         and(
           equal(arnKey, arn),
-          in(serviceKey, services: _*)
+          in(serviceKey, services*)
         )
       )
       .toFuture()
@@ -247,10 +247,10 @@ with RequestAwareLogging {
       .find(
         and(
           equal(arnKey, arn),
-          in(serviceKey, services: _*),
+          in(serviceKey, services*),
           in(
             suppliedClientIdKey,
-            clientIds.map(_.replaceAll(" ", "")).map(getValidNinoWithoutSuffixOrClientId).map(encryptedString): _*
+            clientIds.map(_.replaceAll(" ", "")).map(getValidNinoWithoutSuffixOrClientId).map(encryptedString)*
           )
         )
       )
@@ -294,7 +294,7 @@ with RequestAwareLogging {
             optArn.map(a => equal(arnKey, a)),
             invitationIdToIgnore
               .map(id => notEqual(invitationIdKey, id))
-          ).flatten: _*
+          ).flatten*
         ),
         combine(
           set(statusKey, Codecs.toBson[InvitationStatus](DeAuthorised)),

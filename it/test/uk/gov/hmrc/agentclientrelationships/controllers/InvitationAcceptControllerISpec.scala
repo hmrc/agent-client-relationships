@@ -70,7 +70,7 @@ with EmailStubs {
   val partialAuthRepository: PartialAuthRepository = app.injector.instanceOf[PartialAuthRepository]
   val messagesApi: MessagesApi = app.injector.instanceOf[MessagesApi]
   val langs: Langs = app.injector.instanceOf[Langs]
-  val lang: Lang = langs.availables.head
+  given lang: Lang = langs.availables.head
   val dateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("d MMMM uuuu", Locale.UK)
   given executionContext: ExecutionContext = app.injector.instanceOf[ExecutionContext]
 
@@ -95,7 +95,7 @@ with EmailStubs {
       "agencyName" -> "testAgentName",
       "clientName" -> "Erling Haal",
       "expiryDate" -> LocalDate.now().format(dateFormatter),
-      "service" -> messagesApi(s"service.${regimeData.service.id}")(lang)
+      "service" -> messagesApi(s"service.${regimeData.service.id}")
     )
   )
 

@@ -285,7 +285,7 @@ extends RequestAwareLogging {
   )(using request: RequestHeader): Future[Either[UpstreamErrorResponse, HttpResponse]] = {
     httpClient
       .get(url)
-      .setHeader(getHeaders(): _*)
+      .setHeader(getHeaders()*)
       .execute[Either[UpstreamErrorResponse, HttpResponse]]
   }
 
@@ -298,7 +298,7 @@ extends RequestAwareLogging {
   ): Future[Either[UpstreamErrorResponse, HttpResponse]] = {
     httpClient
       .post(url)
-      .setHeader(getHeaders(): _*)
+      .setHeader(getHeaders()*)
       .withBody(body)
       .execute[Either[UpstreamErrorResponse, HttpResponse]]
   }

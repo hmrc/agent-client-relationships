@@ -40,7 +40,7 @@ object AgentReferenceRecord {
 
   def mongoFormat(using
     crypto: Encrypter
-      with Decrypter
+      & Decrypter
   ): Format[AgentReferenceRecord] =
     (
       (__ \ "uid").format[String] and

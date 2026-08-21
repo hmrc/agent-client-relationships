@@ -123,7 +123,7 @@ with Retries {
     env: String = desEnv
   )(using request: RequestHeader): Future[HttpResponse] = httpClient
     .get(url = url)
-    .setHeader(desHeaders(authToken, env): _*)
+    .setHeader(desHeaders(authToken, env)*)
     .execute[HttpResponse]
 
 }

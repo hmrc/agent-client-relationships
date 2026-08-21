@@ -53,7 +53,7 @@ import java.time.LocalDate
 
 trait RelationshipsControllerITSABehaviours {
   this: RelationshipsBaseControllerISpec
-    with HipStub =>
+    & HipStub =>
 
   // noinspection ScalaStyle
   def relationshipControllerITSASpecificBehaviours(): Unit = {

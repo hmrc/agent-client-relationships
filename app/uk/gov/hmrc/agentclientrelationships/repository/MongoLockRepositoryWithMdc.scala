@@ -34,7 +34,7 @@ class MongoLockRepositoryWithMdc @Inject() (
   mongoComponent: MongoComponent,
   timestampSupport: TimestampSupport
 )(using ec: ExecutionContext)
-extends MongoLockRepository(mongoComponent, timestampSupport)(ec) {
+extends MongoLockRepository(mongoComponent, timestampSupport)(using ec) {
 
   override def takeLock(
     lockId: String,

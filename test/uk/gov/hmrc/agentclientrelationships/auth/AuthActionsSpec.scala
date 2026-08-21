@@ -106,17 +106,6 @@ with Results {
 
   }
 
-  def mockAgentAuth(
-    affinityGroup: AffinityGroup = AffinityGroup.Agent,
-    enrolment: Set[Enrolment],
-    credentials: Credentials = Credentials("12345-GGUserId", "GovernmentGateway")
-  ): OngoingStubbing[Future[Enrolments ~ Option[AffinityGroup] ~ Option[Credentials]]] = when(
-    mockAuthConnector.authorise(
-      any[Predicate](),
-      any[Retrieval[Enrolments ~ Option[AffinityGroup] ~ Option[Credentials]]]()
-    )(any[HeaderCarrier](), any[ExecutionContext]())
-  ).thenReturn(Future successful new ~(new ~(Enrolments(enrolment), Some(affinityGroup)), Some(credentials)))
-
   def mockClientAuth(
     affinityGroup: AffinityGroup = AffinityGroup.Individual,
     enrolment: Set[Enrolment],
@@ -125,7 +114,7 @@ with Results {
     mockAuthConnector.authorise(
       any[Predicate](),
       any[Retrieval[Enrolments ~ Option[AffinityGroup] ~ Option[Credentials]]]()
-    )(any[HeaderCarrier](), any[ExecutionContext]())
+    )(using any[HeaderCarrier](), any[ExecutionContext]())
   ).thenReturn(Future successful new ~(new ~(Enrolments(enrolment), Some(affinityGroup)), Some(credentials)))
 
   def mockStrideAuth(
@@ -135,7 +124,7 @@ with Results {
     mockAuthConnector.authorise(
       any[Predicate](),
       any[Retrieval[Enrolments ~ Option[AffinityGroup] ~ Option[Credentials]]]()
-    )(any[HeaderCarrier](), any[ExecutionContext]())
+    )(using any[HeaderCarrier](), any[ExecutionContext]())
   ).thenReturn(
     Future successful
       new ~(
@@ -154,16 +143,6 @@ with Results {
         Some(credentials)
       )
   )
-
-  def mockClientAuthWithoutCredRetrieval(
-    affinityGroup: AffinityGroup = AffinityGroup.Individual,
-    enrolment: Set[Enrolment]
-  ): OngoingStubbing[Future[Enrolments ~ Option[AffinityGroup]]] = when(
-    mockAuthConnector.authorise(any[Predicate](), any[Retrieval[Enrolments ~ Option[AffinityGroup]]]())(
-      any[HeaderCarrier](),
-      any[ExecutionContext]()
-    )
-  ).thenReturn(Future successful new ~(Enrolments(enrolment), Some(affinityGroup)))
 
   val fakeRequest = FakeRequest("GET", "/path")
 
