@@ -286,6 +286,7 @@ extends UnitSpec {
 
           "return ClientDetailsNotFound when no MTD ID is found for overseas flow" in {
             when(mockAppConfig.overseasItsaEnabled).thenReturn(true)
+            when(mockAppConfig.overseasItsaBlockPartialAuth).thenReturn(true)
             when(mockHipConnector.getMtdIdFor(eqTo(nino))(any[RequestHeader])).thenReturn(Future.successful(None))
 
             when(mockClientDetailsConnector.getItsaCitizenDetails(eqTo(nino))(any[RequestHeader])).thenReturn(

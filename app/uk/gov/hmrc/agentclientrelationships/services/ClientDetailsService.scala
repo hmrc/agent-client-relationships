@@ -177,15 +177,23 @@ extends RequestAwareLogging {
                       case (Some(name), Some(_), Some(postcode), Some(country)) if isUk(country) =>
                         Future.successful(Right(makeItsaUkResponse(postcode = postcode, name = name)))
                       case (Some(name), Some(_), _, Some(country)) if appConfig.overseasItsaEnabled && !isUk(country) =>
-                        // feature switch, only call hip if - raise with gav and chris
-                        hipConnector.getMtdIdFor(NinoWithoutSuffix(nino)).map {
-                          case Some(_) =>
-                            Right(makeItsaOverseasResponse(
-                              countryCodes = toCountryCode(country),
-                              name = name,
-                              factType = CountryCode
-                            ))
-                          case None => Left(ClientDetailsNotFound)
+                        if (appConfig.overseasItsaBlockPartialAuth) {
+                          hipConnector.getMtdIdFor(NinoWithoutSuffix(nino)).map {
+                            case Some(_) =>
+                              Right(makeItsaOverseasResponse(
+                                countryCodes = toCountryCode(country),
+                                name = name,
+                                factType = CountryCode
+                              ))
+                            case None => Left(ClientDetailsNotFound)
+                          }
+                        }
+                        else {
+                          Future.successful(Right(makeItsaOverseasResponse(
+                            countryCodes = toCountryCode(country),
+                            name = name,
+                            factType = CountryCode
+                          )))
                         }
                       case (Some(_), Some(_), _, Some(country)) if !isUk(country) =>
                         // TODO REMOVE THIS CASE WHEN overseasItsaEnabled FEATURE SWITCH IS REMOVED
