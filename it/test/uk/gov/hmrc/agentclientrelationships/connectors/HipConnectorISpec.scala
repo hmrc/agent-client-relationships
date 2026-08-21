@@ -654,7 +654,7 @@ with DataStreamStub {
 
   ".trustsAndEstatesAgentKnownFactCheck" when {
     "handling a URN" should {
-      "return () when receiving a 200 status" in {
+      "return trust name when receiving a 200 status" in {
         givenAuditConnector()
         givenTrustsAndEstatesAgentKnownFactCheckSucceeds(Left(urn))
         await(hipConnector.trustsAndEstatesAgentKnownFactCheck(Left(urn))) shouldBe Right("Nelson James Trust")
@@ -677,7 +677,7 @@ with DataStreamStub {
     }
 
     "handling a UTR" should {
-      "return () when receiving a 200 status" in {
+      "return trust name when receiving a 200 status" in {
         givenAuditConnector()
         givenTrustsAndEstatesAgentKnownFactCheckSucceeds(Right(utr))
         await(hipConnector.trustsAndEstatesAgentKnownFactCheck(Right(utr))) shouldBe Right("Nelson James Trust")
