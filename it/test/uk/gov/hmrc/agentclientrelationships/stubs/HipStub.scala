@@ -1054,4 +1054,54 @@ trait HipStub {
       .willReturn(aResponse().withStatus(status))
   )
 
+  def givenTrustsAndEstatesAgentKnownFactCheckSucceeds(taxIdentifier: Either[Urn, Utr]): StubMapping = stubFor(
+    get(urlEqualTo(trustsAndEstatesKnownFactCheckUrl(taxIdentifier)))
+      .willReturn(
+        aResponse()
+          .withStatus(200)
+          .withBody(s"""
+                       |{
+                       |  "success": {
+                       |    "trustDetails": {
+                       |      "identifiers": {
+                       |        "utr": "1234567890",
+                       |        "urn": "XXTRUST80000001"
+                       |      },
+                       |      "trustName": "Nelson James Trust",
+                       |      "address": {
+                       |        "line1": "10 Enderson Road",
+                       |        "line2": "Cheapside",
+                       |        "line3": "Riverside",
+                       |        "line4": "Boston",
+                       |        "country": "GB",
+                       |        "postCode": "TF3 4ER"
+                       |      },
+                       |      "serviceName": "TERS"
+                       |    }
+                       |  }
+                       |}
+          """.stripMargin)
+      )
+  )
+
+  def givenTrustsAndEstatesAgentKnownFactCheckFails(
+    taxIdentifier: Either[Urn, Utr],
+    status: Int
+  ): StubMapping = stubFor(
+    get(urlEqualTo(trustsAndEstatesKnownFactCheckUrl(taxIdentifier)))
+      .willReturn(
+        aResponse()
+          .withStatus(status)
+      )
+  )
+
+  private def trustsAndEstatesKnownFactCheckUrl(taxIdentifier: Either[Urn, Utr]): String = {
+    val (idType, idValue) =
+      taxIdentifier match {
+        case Left(urn) => "URN" -> urn.value
+        case Right(utr) => "UTR" -> utr.value
+      }
+    s"/etmp/RESTAdapter/trustsandestates/agent-known-fact-check/$idType/$idValue"
+  }
+
 }

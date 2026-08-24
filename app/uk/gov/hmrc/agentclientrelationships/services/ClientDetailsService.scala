@@ -75,8 +75,8 @@ extends RequestAwareLogging {
     taxIdentifier match {
       case NinoWithoutSuffix(nino) => EitherT(getItsaClientDetails(nino)).orElse(EitherT(getIrvClientDetails(nino))).value
       case Vrn(vrn) => getVatClientDetails(vrn)
-      case Utr(utr) => getTrustClientDetails(utr)
-      case Urn(urn) => getTrustClientDetails(urn)
+      case utr: Utr => getTrustClientDetails(Right(utr))
+      case urn: Urn => getTrustClientDetails(Left(urn))
       case CgtRef(cgtRef) => getCgtClientDetails(cgtRef)
       case PptRef(pptRef) => getPptClientDetails(pptRef)
       case CbcId(cbcId) => getCbcClientDetails(cbcId)
@@ -91,7 +91,8 @@ extends RequestAwareLogging {
     service.toUpperCase match {
       case "HMRC-MTD-IT" | "HMRC-MTD-IT-SUPP" => getItsaClientDetails(clientId)
       case "HMRC-MTD-VAT" => getVatClientDetails(clientId)
-      case "HMRC-TERS-ORG" | "HMRC-TERSNT-ORG" => getTrustClientDetails(clientId)
+      case "HMRC-TERS-ORG" => getTrustClientDetails(Right(Utr(clientId)))
+      case "HMRC-TERSNT-ORG" => getTrustClientDetails(Left(Urn(clientId)))
       case "PERSONAL-INCOME-RECORD" => getIrvClientDetails(clientId)
       case "HMRC-CGT-PD" => getCgtClientDetails(clientId)
       case "HMRC-PPT-ORG" => getPptClientDetails(clientId)
@@ -234,23 +235,30 @@ extends RequestAwareLogging {
       case Left(err) => Left(err)
     }
 
-  private def getTrustClientDetails(trustTaxIdentifier: String)(using
+  private def getTrustClientDetails(trustTaxIdentifier: Either[Urn, Utr])(using
     request: RequestHeader
-  ): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] = clientDetailsConnector
-    .getTrustName(trustTaxIdentifier)
-    .map {
-      case Right(name) =>
-        Right(
-          ClientDetailsResponse(
-            name,
-            None,
-            None,
-            Seq(),
-            None
+  ): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] = {
+    val result =
+      if (appConfig.trustsUseHip)
+        hipConnector.trustsAndEstatesAgentKnownFactCheck(trustTaxIdentifier)
+      else
+        clientDetailsConnector.getTrustName(trustTaxIdentifier.merge.value)
+
+    result
+      .map {
+        case Right(name) =>
+          Right(
+            ClientDetailsResponse(
+              name,
+              None,
+              None,
+              Seq(),
+              None
+            )
           )
-        )
-      case Left(err) => Left(err)
-    }
+        case Left(err) => Left(err)
+      }
+  }
 
   private def getIrvClientDetails(nino: String)(using
     request: RequestHeader
