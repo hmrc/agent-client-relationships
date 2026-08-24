@@ -23,14 +23,14 @@ import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.ClientDetailsConnector
 import uk.gov.hmrc.agentclientrelationships.connectors.HipConnector
 import uk.gov.hmrc.agentclientrelationships.model.CitizenDetails
-import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientStatus._
-import uk.gov.hmrc.agentclientrelationships.model.clientDetails.KnownFactType._
-import uk.gov.hmrc.agentclientrelationships.model.clientDetails._
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientStatus.*
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.KnownFactType.*
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.*
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.cgt.CgtSubscriptionDetails
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.vat.VatCustomerDetails
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdIt
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdItSupp
-import uk.gov.hmrc.agentclientrelationships.model.identifiers._
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.*
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.domain.TaxIdentifier
 
@@ -45,7 +45,7 @@ class ClientDetailsService @Inject() (
   clientDetailsConnector: ClientDetailsConnector,
   hipConnector: HipConnector,
   appConfig: AppConfig
-)(implicit ec: ExecutionContext)
+)(using ec: ExecutionContext)
 extends RequestAwareLogging {
 
   private val countryNameToCode: Map[String, Seq[String]] = {
@@ -70,7 +70,7 @@ extends RequestAwareLogging {
   def expandClientId(
     service: Service,
     clientId: TaxIdentifier
-  )(implicit request: RequestHeader): Future[(TaxIdentifier, Option[TaxIdentifier])] =
+  )(using request: RequestHeader): Future[(TaxIdentifier, Option[TaxIdentifier])] =
     (service, clientId) match {
       case (MtdIt | MtdItSupp, nino @ NinoWithoutSuffix(_)) =>
         hipConnector.getMtdIdFor(nino).map {
@@ -88,12 +88,12 @@ extends RequestAwareLogging {
 
   def findClientDetailsByTaxIdentifier(
     taxIdentifier: TaxIdentifier
-  )(implicit request: RequestHeader): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] =
+  )(using request: RequestHeader): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] =
     taxIdentifier match {
       case NinoWithoutSuffix(nino) => EitherT(getItsaClientDetails(nino)).orElse(EitherT(getIrvClientDetails(nino))).value
       case Vrn(vrn) => getVatClientDetails(vrn)
-      case Utr(utr) => getTrustClientDetails(utr)
-      case Urn(urn) => getTrustClientDetails(urn)
+      case utr: Utr => getTrustClientDetails(Right(utr))
+      case urn: Urn => getTrustClientDetails(Left(urn))
       case CgtRef(cgtRef) => getCgtClientDetails(cgtRef)
       case PptRef(pptRef) => getPptClientDetails(pptRef)
       case CbcId(cbcId) => getCbcClientDetails(cbcId)
@@ -104,11 +104,12 @@ extends RequestAwareLogging {
   def findClientDetails(
     service: String,
     clientId: String
-  )(implicit request: RequestHeader): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] = {
+  )(using request: RequestHeader): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] =
     service.toUpperCase match {
       case "HMRC-MTD-IT" | "HMRC-MTD-IT-SUPP" => getItsaClientDetails(clientId)
       case "HMRC-MTD-VAT" => getVatClientDetails(clientId)
-      case "HMRC-TERS-ORG" | "HMRC-TERSNT-ORG" => getTrustClientDetails(clientId)
+      case "HMRC-TERS-ORG" => getTrustClientDetails(Right(Utr(clientId)))
+      case "HMRC-TERSNT-ORG" => getTrustClientDetails(Left(Urn(clientId)))
       case "PERSONAL-INCOME-RECORD" => getIrvClientDetails(clientId)
       case "HMRC-CGT-PD" => getCgtClientDetails(clientId)
       case "HMRC-PPT-ORG" => getPptClientDetails(clientId)
@@ -152,7 +153,7 @@ extends RequestAwareLogging {
   ).contains(countryName)
 
   // scalastyle:off cyclomatic.complexity
-  private def getItsaClientDetails(nino: String)(implicit request: RequestHeader): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] = {
+  private def getItsaClientDetails(nino: String)(using request: RequestHeader): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] = {
     for {
       itsaCitizenDetailsEither <- clientDetailsConnector.getItsaCitizenDetails(NinoWithoutSuffix(nino))
       finalResponse <-
@@ -219,7 +220,7 @@ extends RequestAwareLogging {
     } yield finalResponse
   }
 
-  private def getVatClientDetails(vrn: String)(implicit
+  private def getVatClientDetails(vrn: String)(using
     request: RequestHeader
   ): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] = clientDetailsConnector
     .getVatCustomerInfo(vrn)
@@ -265,25 +266,32 @@ extends RequestAwareLogging {
       case Left(err) => Left(err)
     }
 
-  private def getTrustClientDetails(trustTaxIdentifier: String)(implicit
+  private def getTrustClientDetails(trustTaxIdentifier: Either[Urn, Utr])(using
     request: RequestHeader
-  ): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] = clientDetailsConnector
-    .getTrustName(trustTaxIdentifier)
-    .map {
-      case Right(name) =>
-        Right(
-          ClientDetailsResponse(
-            name,
-            None,
-            None,
-            Seq(),
-            None
-          )
-        )
-      case Left(err) => Left(err)
-    }
+  ): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] = {
+    val result =
+      if (appConfig.trustsUseHip)
+        hipConnector.trustsAndEstatesAgentKnownFactCheck(trustTaxIdentifier)
+      else
+        clientDetailsConnector.getTrustName(trustTaxIdentifier.merge.value)
 
-  private def getIrvClientDetails(nino: String)(implicit
+    result
+      .map {
+        case Right(name) =>
+          Right(
+            ClientDetailsResponse(
+              name,
+              None,
+              None,
+              Seq(),
+              None
+            )
+          )
+        case Left(err) => Left(err)
+      }
+  }
+
+  private def getIrvClientDetails(nino: String)(using
     request: RequestHeader
   ): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] = clientDetailsConnector
     .getItsaCitizenDetails(NinoWithoutSuffix(nino))
@@ -317,7 +325,7 @@ extends RequestAwareLogging {
       case Left(err) => Left(err)
     }
 
-  private def getCgtClientDetails(cgtRef: String)(implicit
+  private def getCgtClientDetails(cgtRef: String)(using
     request: RequestHeader
   ): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] = clientDetailsConnector
     .getCgtSubscriptionDetails(cgtRef)
@@ -357,7 +365,7 @@ extends RequestAwareLogging {
       case Left(err) => Left(err)
     }
 
-  private def getPptClientDetails(pptRef: String)(implicit
+  private def getPptClientDetails(pptRef: String)(using
     request: RequestHeader
   ): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] = clientDetailsConnector
     .getPptSubscriptionDetails(pptRef)
@@ -381,7 +389,7 @@ extends RequestAwareLogging {
       case Left(err) => Left(err)
     }
 
-  private def getCbcClientDetails(cbcId: String)(implicit
+  private def getCbcClientDetails(cbcId: String)(using
     request: RequestHeader
   ): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] = clientDetailsConnector
     .getCbcSubscriptionDetails(cbcId)
@@ -405,7 +413,7 @@ extends RequestAwareLogging {
       case Left(err) => Left(err)
     }
 
-  private def getPillar2ClientDetails(plrId: String)(implicit
+  private def getPillar2ClientDetails(plrId: String)(using
     request: RequestHeader
   ): Future[Either[ClientDetailsFailureResponse, ClientDetailsResponse]] = clientDetailsConnector
     .getPillar2SubscriptionDetails(plrId)

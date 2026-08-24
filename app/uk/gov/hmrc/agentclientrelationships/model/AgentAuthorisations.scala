@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.model
 
-import play.api.libs.json._
+import play.api.libs.json.*
 
 case class AgentAuthorisations(
   agentName: String,
@@ -24,12 +24,10 @@ case class AgentAuthorisations(
   authorisations: Seq[Authorisation]
 )
 
-object AgentAuthorisations {
-  implicit val format: OFormat[AgentAuthorisations] = Json.format[AgentAuthorisations]
-}
+object AgentAuthorisations:
+  given format: OFormat[AgentAuthorisations] = Json.format[AgentAuthorisations]
 
 case class AgentsAuthorisationsResponse(agentsAuthorisations: Seq[AgentAuthorisations])
 
-object AgentsAuthorisationsResponse {
-  implicit val format: OFormat[AgentsAuthorisationsResponse] = Json.format[AgentsAuthorisationsResponse]
-}
+object AgentsAuthorisationsResponse:
+  given format: OFormat[AgentsAuthorisationsResponse] = Json.format[AgentsAuthorisationsResponse]

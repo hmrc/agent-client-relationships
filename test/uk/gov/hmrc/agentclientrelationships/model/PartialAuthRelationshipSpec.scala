@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.model
 
+import play.api.libs.json.Format
 import play.api.libs.json.JsObject
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
@@ -29,8 +30,7 @@ import java.time.Instant
 class PartialAuthRelationshipSpec
 extends UnitSpec {
 
-  implicit val crypto: Encrypter
-    with Decrypter = SymmetricCryptoFactory.aesCrypto("edkOOwt7uvzw1TXnFIN6aRVHkfWcgiOrbBvkEQvO65g=")
+  given crypto: (Encrypter & Decrypter) = SymmetricCryptoFactory.aesCrypto("edkOOwt7uvzw1TXnFIN6aRVHkfWcgiOrbBvkEQvO65g=")
 
   val activeTestModel: PartialAuthRelationship = PartialAuthRelationship(
     Instant.parse("2020-02-02T00:00:00.000Z"),
@@ -51,18 +51,18 @@ extends UnitSpec {
   )
 
   "PartialAuthModel" should {
-
+    given Format[PartialAuthRelationship] = PartialAuthRelationship.mongoFormat
     "read from JSON" when {
 
       "all fields are present" in {
-        testJsonResponse.as[PartialAuthRelationship](PartialAuthRelationship.mongoFormat) shouldBe activeTestModel
+        testJsonResponse.as[PartialAuthRelationship] shouldBe activeTestModel
       }
     }
 
     "write to JSON" when {
 
       "all fields are present" in {
-        Json.toJson(activeTestModel)(PartialAuthRelationship.mongoFormat) shouldBe testJsonResponse
+        Json.toJson(activeTestModel) shouldBe testJsonResponse
       }
     }
   }

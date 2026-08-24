@@ -42,7 +42,7 @@ class HipHeaders @Inject() (
   private val hip = "HIP"
   private val itsa = "ITSA"
 
-  def makeSubscriptionHeaders()(implicit requestHeader: RequestHeader): Seq[(String, String)] =
+  def makeSubscriptionHeaders()(using requestHeader: RequestHeader): Seq[(String, String)] =
     CommonHeaders() ++ Seq(
       (HeaderNames.AUTHORIZATION, s"Basic ${appConfig.hipAuthToken}"),
       (correlationIdHeader, correlationIdGenerator.makeCorrelationId()),
@@ -51,7 +51,7 @@ class HipHeaders @Inject() (
       (xTransmittingSystemHeader, hip)
     )
 
-  def makeSubscriptionBusinessDetailsHeaders()(implicit requestHeader: RequestHeader): Seq[(String, String)] =
+  def makeSubscriptionBusinessDetailsHeaders()(using requestHeader: RequestHeader): Seq[(String, String)] =
     CommonHeaders() ++ Seq(
       (HeaderNames.AUTHORIZATION, s"Basic ${appConfig.hipAuthToken}"),
       (correlationIdHeader, correlationIdGenerator.makeCorrelationId()),

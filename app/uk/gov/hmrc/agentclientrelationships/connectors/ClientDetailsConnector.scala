@@ -19,22 +19,23 @@ package uk.gov.hmrc.agentclientrelationships.connectors
 import play.api.http.Status.NOT_FOUND
 import play.api.http.Status.OK
 import play.api.libs.json.Json
+import play.api.libs.ws.JsonBodyWritables.writeableOf_JsValue
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.helpers.CommonHeaders
 import uk.gov.hmrc.agentclientrelationships.connectors.helpers.CorrelationIdGenerator
 import uk.gov.hmrc.agentclientrelationships.model.CitizenDetails
-import uk.gov.hmrc.agentclientrelationships.model.clientDetails._
-import uk.gov.hmrc.agentclientrelationships.model.clientDetails.cbc._
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.*
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.cbc.*
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.cgt.CgtSubscriptionDetails
-import uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa._
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa.*
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.pillar2.Pillar2Record
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ppt.PptSubscriptionDetails
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.vat.VatCustomerDetails
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.agentclientrelationships.util.RequestSupport.hc
-import uk.gov.hmrc.http.HttpReads.Implicits._
+import uk.gov.hmrc.http.HttpReads.Implicits.*
 import uk.gov.hmrc.http.HeaderNames
 import uk.gov.hmrc.http.HttpResponse
 import uk.gov.hmrc.http.StringContextOps
@@ -53,17 +54,17 @@ class ClientDetailsConnector @Inject() (
   appConfig: AppConfig,
   httpClient: HttpClientV2,
   correlationIdGenerator: CorrelationIdGenerator
-)(implicit val ec: ExecutionContext)
+)(using ec: ExecutionContext)
 extends RequestAwareLogging {
 
-  private def desHeaders(authToken: String)(implicit requestHeader: RequestHeader): Seq[(String, String)] =
+  private def desHeaders(authToken: String)(using requestHeader: RequestHeader): Seq[(String, String)] =
     CommonHeaders() ++ Seq(
       "Environment" -> appConfig.desEnv,
       "CorrelationId" -> correlationIdGenerator.makeCorrelationId(),
       HeaderNames.authorisation -> s"Bearer $authToken"
     )
 
-  private def ifHeaders(authToken: String)(implicit requestHeader: RequestHeader): Seq[(String, String)] =
+  private def ifHeaders(authToken: String)(using requestHeader: RequestHeader): Seq[(String, String)] =
     CommonHeaders() ++ Seq(
       "Environment" -> appConfig.ifsEnvironment,
       "CorrelationId" -> correlationIdGenerator.makeCorrelationId(),
@@ -72,7 +73,7 @@ extends RequestAwareLogging {
 
   def getItsaDesignatoryDetails(
     nino: NinoWithoutSuffix
-  )(implicit rh: RequestHeader): Future[Either[ClientDetailsFailureResponse, ItsaDesignatoryDetails]] = {
+  )(using rh: RequestHeader): Future[Either[ClientDetailsFailureResponse, ItsaDesignatoryDetails]] = {
     // Designatory details API requires a NINO with suffix but does not use it when calling backend systems
     val url = url"${appConfig.citizenDetailsBaseUrl}/citizen-details/${nino.anySuffixValue}/designatory-details"
     httpClient
@@ -91,7 +92,7 @@ extends RequestAwareLogging {
 
   def getItsaCitizenDetails(
     nino: NinoWithoutSuffix
-  )(implicit rh: RequestHeader): Future[Either[ClientDetailsFailureResponse, CitizenDetails]] = httpClient
+  )(using rh: RequestHeader): Future[Either[ClientDetailsFailureResponse, CitizenDetails]] = httpClient
     .get(url"${appConfig.citizenDetailsBaseUrl}/citizen-details/nino-no-suffix/${nino.value}")
     .execute[HttpResponse]
     .map { response =>
@@ -107,11 +108,11 @@ extends RequestAwareLogging {
 
   def getVatCustomerInfo(
     vrn: String
-  )(implicit rh: RequestHeader): Future[Either[ClientDetailsFailureResponse, VatCustomerDetails]] = {
+  )(using rh: RequestHeader): Future[Either[ClientDetailsFailureResponse, VatCustomerDetails]] = {
     val url = url"${appConfig.desUrl}/vat/customer/vrn/$vrn/information"
     httpClient
       .get(url)
-      .setHeader(desHeaders(appConfig.desToken): _*)
+      .setHeader(desHeaders(appConfig.desToken)*)
       .execute[HttpResponse]
       .map { response =>
         response.status match {
@@ -128,7 +129,7 @@ extends RequestAwareLogging {
   // API#1495 Agent Trust Known Facts
   def getTrustName(
     trustTaxIdentifier: String
-  )(implicit rh: RequestHeader): Future[Either[ClientDetailsFailureResponse, String]] = {
+  )(using rh: RequestHeader): Future[Either[ClientDetailsFailureResponse, String]] = {
 
     val utrPattern = "^\\d{10}$"
     val identifierType =
@@ -138,7 +139,7 @@ extends RequestAwareLogging {
         "URN"
     httpClient
       .get(url"${appConfig.ifsPlatformBaseUrl}/trusts/agent-known-fact-check/$identifierType/$trustTaxIdentifier")
-      .setHeader(ifHeaders(appConfig.ifsAPI1495Token): _*)
+      .setHeader(ifHeaders(appConfig.ifsAPI1495Token)*)
       .execute[HttpResponse]
       .map { response =>
         response.status match {
@@ -154,9 +155,9 @@ extends RequestAwareLogging {
 
   def getCgtSubscriptionDetails(
     cgtRef: String
-  )(implicit rh: RequestHeader): Future[Either[ClientDetailsFailureResponse, CgtSubscriptionDetails]] = httpClient
+  )(using rh: RequestHeader): Future[Either[ClientDetailsFailureResponse, CgtSubscriptionDetails]] = httpClient
     .get(url"${appConfig.desUrl}/subscriptions/CGT/ZCGT/$cgtRef")
-    .setHeader(desHeaders(appConfig.desToken): _*)
+    .setHeader(desHeaders(appConfig.desToken)*)
     .execute[HttpResponse]
     .map { response =>
       response.status match {
@@ -172,9 +173,9 @@ extends RequestAwareLogging {
   // API#1712 Get PPT Subscription Display
   def getPptSubscriptionDetails(
     pptRef: String
-  )(implicit rh: RequestHeader): Future[Either[ClientDetailsFailureResponse, PptSubscriptionDetails]] = httpClient
+  )(using rh: RequestHeader): Future[Either[ClientDetailsFailureResponse, PptSubscriptionDetails]] = httpClient
     .get(url"${appConfig.ifsPlatformBaseUrl}/plastic-packaging-tax/subscriptions/PPT/$pptRef/display")
-    .setHeader(ifHeaders(appConfig.ifsAPI1712Token): _*)
+    .setHeader(ifHeaders(appConfig.ifsAPI1712Token)*)
     .execute[HttpResponse]
     .map { response =>
       response.status match {
@@ -190,7 +191,7 @@ extends RequestAwareLogging {
   // DCT 50d
   def getCbcSubscriptionDetails(
     cbcId: String
-  )(implicit rh: RequestHeader): Future[Either[ClientDetailsFailureResponse, SimpleCbcSubscription]] = {
+  )(using rh: RequestHeader): Future[Either[ClientDetailsFailureResponse, SimpleCbcSubscription]] = {
     val conversationId = hc.sessionId.map(_.value.drop(8)).getOrElse(UUID.randomUUID().toString)
 
     val request = DisplaySubscriptionForCBCRequest(displaySubscriptionForCBCRequest =
@@ -214,7 +215,7 @@ extends RequestAwareLogging {
     httpClient
       .post(url"${appConfig.ifBaseUrl}/dac6/dct50d/v1")
       .withBody(Json.toJson(request))
-      .setHeader(httpHeaders: _*)
+      .setHeader(httpHeaders*)
       .execute[HttpResponse]
       .map { response =>
         response.status match {
@@ -230,11 +231,11 @@ extends RequestAwareLogging {
 
   def getPillar2SubscriptionDetails(
     plrId: String
-  )(implicit rh: RequestHeader): Future[Either[ClientDetailsFailureResponse, Pillar2Record]] = {
+  )(using rh: RequestHeader): Future[Either[ClientDetailsFailureResponse, Pillar2Record]] = {
     val url = url"${appConfig.ifsPlatformBaseUrl}/pillar2/subscription/$plrId"
     httpClient
       .get(url)
-      .setHeader(ifHeaders(appConfig.ifsAPI2143Token): _*)
+      .setHeader(ifHeaders(appConfig.ifsAPI2143Token)*)
       .execute[HttpResponse]
       .map { response =>
         response.status match {

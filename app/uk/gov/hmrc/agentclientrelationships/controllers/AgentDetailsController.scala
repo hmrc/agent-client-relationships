@@ -39,13 +39,14 @@ class AgentDetailsController @Inject() (
   val authConnector: AuthConnector,
   val appConfig: AppConfig,
   cc: ControllerComponents
-)(implicit val executionContext: ExecutionContext)
+)(using val executionContext: ExecutionContext)
 extends BackendController(cc)
 with AuthActions {
 
   val supportedServices: Seq[Service] = appConfig.supportedServicesWithoutPir
 
-  def getAgentDetails(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
+  def getAgentDetails(arn: Arn): Action[AnyContent] = Action.async { request =>
+    given play.api.mvc.RequestHeader = request
     withAuthorisedAsAgent { _ =>
       agentRecordService
         .getAgentRecordWithChecks(arn)

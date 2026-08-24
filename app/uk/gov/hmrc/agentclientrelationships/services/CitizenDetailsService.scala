@@ -30,6 +30,6 @@ class CitizenDetailsService @Inject() (
 
   def getCitizenDetails(
     nino: NinoWithoutSuffix
-  )(implicit rh: RequestHeader): Future[CitizenDetails] = citizenDetailsConnector.getCitizenDetails(nino)
+  )(using rh: RequestHeader): Future[CitizenDetails] = citizenDetailsConnector.getCitizenDetails(nino)
 
 }

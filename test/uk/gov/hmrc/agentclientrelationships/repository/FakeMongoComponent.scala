@@ -21,9 +21,8 @@ import org.scalatestplus.mockito.MockitoSugar.mock
 import uk.gov.hmrc.mongo.MongoComponent
 
 import scala.concurrent.duration.DurationInt
-import scala.util.chaining._
+import scala.util.chaining.*
 
-object FakeMongoComponent {
+object FakeMongoComponent:
   def make: MongoComponent = mock[MongoComponent]
     .tap(mock => when(mock.initTimeout).thenReturn(1.second))
-}

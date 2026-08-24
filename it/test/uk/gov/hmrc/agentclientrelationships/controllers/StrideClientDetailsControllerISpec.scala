@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.agentclientrelationships.controllers
 
+import org.mongodb.scala.ObservableFuture
+
 import play.api.libs.json.Json
 import play.api.mvc.AnyContentAsEmpty
 import play.api.test.FakeRequest
@@ -26,15 +28,16 @@ import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ActiveMainAgent
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsStrideResponse
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Cbc
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.CbcNonUk
-import uk.gov.hmrc.agentclientrelationships.model.identifiers._
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.*
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgencyDetails
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentDetailsDesResponse
-import uk.gov.hmrc.agentclientrelationships.model.stride._
+import uk.gov.hmrc.agentclientrelationships.model.stride.*
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
 import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
 import uk.gov.hmrc.agentclientrelationships.stubs.AfiRelationshipStub
 import uk.gov.hmrc.agentclientrelationships.stubs.CitizenDetailsStub
 import uk.gov.hmrc.agentclientrelationships.stubs.HipStub
+import uk.gov.hmrc.agentclientrelationships.stubs.IfStubs
 
 import java.time.Instant
 import java.time.LocalDate
@@ -619,11 +622,15 @@ with AfiRelationshipStub {
               givenAgentRecord(arn, testAgentRecord)
             case UtrType.id =>
               getAllActiveRelationshipsViaClient(taxIdentifier, arn)
-              givenTrustDetailsExist(taxIdentifier.value, UtrType.id.toUpperCase)
+              // double stub for both sides of 'trusts-use-hip' feature
+              IfStubs.givenTrustDetailsExist(taxIdentifier.value, UtrType.id.toUpperCase)
+              HipStub.givenTrustsAndEstatesAgentKnownFactCheckSucceeds(Right(Utr(taxIdentifier.value)))
               givenAgentRecord(arn, testAgentRecord)
             case UrnType.id =>
               getAllActiveRelationshipsViaClient(taxIdentifier, arn)
-              givenTrustDetailsExist(taxIdentifier.value, UrnType.id.toUpperCase)
+              // double stub for both sides of 'trusts-use-hip' feature
+              IfStubs.givenTrustDetailsExist(taxIdentifier.value, UrnType.id.toUpperCase)
+              HipStub.givenTrustsAndEstatesAgentKnownFactCheckSucceeds(Left(Urn(taxIdentifier.value)))
               givenAgentRecord(arn, testAgentRecord)
             case CgtRefType.id =>
               getAllActiveRelationshipsViaClient(taxIdentifier, arn)

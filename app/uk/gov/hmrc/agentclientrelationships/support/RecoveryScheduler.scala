@@ -32,7 +32,7 @@ import java.time.ZoneOffset
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.util.Random
@@ -43,7 +43,7 @@ class RecoveryScheduler @Inject() (
   deleteRelationshipsService: DeleteRelationshipsService,
   actorSystem: ActorSystem,
   appConfig: AppConfig
-)(implicit ec: ExecutionContext)
+)(using ec: ExecutionContext)
 extends Logging {
 
   val recoveryInterval = appConfig.recoveryInterval
@@ -69,7 +69,7 @@ extends Logging {
   else
     logger.warn("Recovery job scheduler not enabled.")
 
-  def recover: Future[Unit] = deleteRelationshipsService.tryToResume(new AuditData).map(_ => ())
+  def recover: Future[Unit] = deleteRelationshipsService.tryToResume(using new AuditData).map(_ => ())
 
 }
 
@@ -77,7 +77,7 @@ class TaskActor(
   recoveryScheduleRepository: RecoveryScheduleRepository,
   recoveryInterval: Int,
   recover: => Future[Unit]
-)(implicit ec: ExecutionContext)
+)(using ec: ExecutionContext)
 extends Actor
 with Logging {
 

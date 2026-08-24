@@ -62,7 +62,7 @@ extends DeleteRecordRepository(FakeMongoComponent.make) {
     arn: Arn,
     enrolmentKey: EnrolmentKey,
     status: SyncStatus
-  )(implicit requestHeader: RequestHeader): Future[Done] = {
+  )(using requestHeader: RequestHeader): Future[Done] = {
     val maybeValue: Option[DeleteRecord] = data.get((arn, enrolmentKey))
     Future.successful(
       if (maybeValue.isDefined) {
@@ -79,7 +79,7 @@ extends DeleteRecordRepository(FakeMongoComponent.make) {
     arn: Arn,
     enrolmentKey: EnrolmentKey,
     status: SyncStatus
-  )(implicit requestHeader: RequestHeader): Future[Done] = {
+  )(using requestHeader: RequestHeader): Future[Done] = {
     val maybeValue: Option[DeleteRecord] = data.get((arn, enrolmentKey))
     Future.successful(
       if (maybeValue.isDefined) {

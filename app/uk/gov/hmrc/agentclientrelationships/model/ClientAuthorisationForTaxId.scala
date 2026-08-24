@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.model
 
-import play.api.libs.json._
+import play.api.libs.json.*
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 
@@ -31,6 +31,5 @@ case class ClientAuthorisationForTaxId(
   isActive: Boolean
 )
 
-object ClientAuthorisationForTaxId {
-  implicit val format: OFormat[ClientAuthorisationForTaxId] = Json.format[ClientAuthorisationForTaxId]
-}
+object ClientAuthorisationForTaxId:
+  given format: OFormat[ClientAuthorisationForTaxId] = Json.format[ClientAuthorisationForTaxId]

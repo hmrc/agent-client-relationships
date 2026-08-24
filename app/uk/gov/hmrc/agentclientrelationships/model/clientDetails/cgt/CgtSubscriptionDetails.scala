@@ -28,7 +28,7 @@ case class CgtSubscriptionDetails(
 
 object CgtSubscriptionDetails {
 
-  implicit val reads: Reads[CgtSubscriptionDetails] = { json =>
+  given reads: Reads[CgtSubscriptionDetails] = { json =>
     val basePath = json \ "subscriptionDetails"
     val typeOfPerson = (basePath \ "typeOfPersonDetails" \ "typeOfPerson").as[String]
     val postcode = (basePath \ "addressDetails" \ "postalCode").asOpt[String]

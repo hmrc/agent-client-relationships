@@ -21,9 +21,9 @@ import play.api.mvc.ControllerComponents
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.api.ApiCheckRelationshipRequest
-import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiFailureResponse._
-import uk.gov.hmrc.agentclientrelationships.services._
-import uk.gov.hmrc.agentclientrelationships.model.identifiers._
+import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiFailureResponse.*
+import uk.gov.hmrc.agentclientrelationships.services.*
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.*
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
@@ -41,7 +41,7 @@ class ApiCheckRelationshipController @Inject() (
   val authConnector: AuthConnector,
   val appConfig: AppConfig,
   cc: ControllerComponents
-)(implicit val executionContext: ExecutionContext)
+)(using val executionContext: ExecutionContext)
 extends BackendController(cc)
 with AuthActions {
 
@@ -49,7 +49,8 @@ with AuthActions {
 
   // scalastyle:off cyclomatic.complexity
   def checkRelationship(arn: Arn): Action[ApiCheckRelationshipRequest] =
-    Action.async(parse.json[ApiCheckRelationshipRequest]) { implicit request =>
+    Action.async(parse.json[ApiCheckRelationshipRequest]) { request =>
+      given play.api.mvc.RequestHeader = request
       authorised() {
         agentRecordService.getNonSuspendedAgentRecord(arn).flatMap {
           case None => Future.successful(AgentSuspended.getResult)

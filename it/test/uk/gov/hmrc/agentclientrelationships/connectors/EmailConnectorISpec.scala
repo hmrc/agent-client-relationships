@@ -19,7 +19,7 @@ package uk.gov.hmrc.agentclientrelationships.connectors
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
-import play.api.test.Helpers._
+import play.api.test.Helpers.*
 import uk.gov.hmrc.agentclientrelationships.model.EmailInformation
 import uk.gov.hmrc.agentclientrelationships.stubs.DataStreamStub
 import uk.gov.hmrc.agentclientrelationships.stubs.EmailStubs
@@ -46,7 +46,7 @@ with DataStreamStub {
 
   val connector: EmailConnector = app.injector.instanceOf[EmailConnector]
 
-  implicit val request: RequestHeader = FakeRequest()
+  given request: RequestHeader = FakeRequest()
 
   "sendEmail" should {
     val emailInfo = EmailInformation(

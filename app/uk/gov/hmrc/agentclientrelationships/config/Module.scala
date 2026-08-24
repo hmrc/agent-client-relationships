@@ -17,17 +17,12 @@
 package uk.gov.hmrc.agentclientrelationships.config
 
 import com.google.inject.AbstractModule
-import play.api.Configuration
-import play.api.Environment
 import uk.gov.hmrc.agentclientrelationships.support.EmailScheduler
 
 import java.time.Clock
 import java.time.ZoneId
 
-class Module(
-  environment: Environment,
-  configuration: Configuration
-)
+class Module
 extends AbstractModule {
 
   override def configure(): Unit = {

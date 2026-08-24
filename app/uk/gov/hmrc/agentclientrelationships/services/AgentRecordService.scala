@@ -30,17 +30,17 @@ import scala.concurrent.Future
 @Singleton
 class AgentRecordService @Inject() (
   agentServicesAccountConnector: AgentServicesAccountConnector
-)(implicit
+)(using
   ec: ExecutionContext
 ) {
 
-  def getNonSuspendedAgentRecord(arn: Arn)(implicit rh: RequestHeader): Future[Option[AgentDetailsDesResponse]] = getAgentRecordWithChecks(arn)
+  def getNonSuspendedAgentRecord(arn: Arn)(using rh: RequestHeader): Future[Option[AgentDetailsDesResponse]] = getAgentRecordWithChecks(arn)
     .map {
       case AgentDetailsDesResponse(_, Some(SuspensionDetails(true, _))) => None
       case agentRecord => Some(agentRecord)
     }
 
-  def getAgentRecordWithChecks(arn: Arn)(implicit rh: RequestHeader): Future[AgentDetailsDesResponse] = {
+  def getAgentRecordWithChecks(arn: Arn)(using rh: RequestHeader): Future[AgentDetailsDesResponse] = {
     agentServicesAccountConnector.getAgentRecordWithChecks(arn)
   }
 

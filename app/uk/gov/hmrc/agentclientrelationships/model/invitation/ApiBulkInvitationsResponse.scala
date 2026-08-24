@@ -35,7 +35,7 @@ case class ApiBulkInvitationResponse(
 
 object ApiBulkInvitationResponse {
 
-  implicit val format: Format[ApiBulkInvitationResponse] = Json.format[ApiBulkInvitationResponse]
+  given format: Format[ApiBulkInvitationResponse] = Json.format[ApiBulkInvitationResponse]
 
   def createApiBulkInvitationResponse(invitation: Invitation): ApiBulkInvitationResponse = ApiBulkInvitationResponse(
     created = invitation.created,
@@ -56,7 +56,7 @@ case class ApiBulkInvitationsResponse(
 
 object ApiBulkInvitationsResponse {
 
-  implicit val format: Format[ApiBulkInvitationsResponse] = Json.format[ApiBulkInvitationsResponse]
+  given format: Format[ApiBulkInvitationsResponse] = Json.format[ApiBulkInvitationsResponse]
 
   def createApiBulkInvitationsResponse(
     invitations: Seq[Invitation],

@@ -64,7 +64,7 @@ extends RelationshipCopyRecordRepository(FakeMongoComponent.make) {
     arn: Arn,
     enrolmentKey: EnrolmentKey,
     status: SyncStatus
-  )(implicit requestHeader: RequestHeader): Future[Done] = {
+  )(using requestHeader: RequestHeader): Future[Done] = {
     val maybeValue: Option[RelationshipCopyRecord] = data.get((arn, enrolmentKey))
     Future.successful(
       if (maybeValue.isDefined) {
@@ -82,7 +82,7 @@ extends RelationshipCopyRecordRepository(FakeMongoComponent.make) {
     arn: Arn,
     enrolmentKey: EnrolmentKey,
     status: SyncStatus
-  )(implicit requestHeader: RequestHeader): Future[Done] = {
+  )(using requestHeader: RequestHeader): Future[Done] = {
     val maybeValue: Option[RelationshipCopyRecord] = data.get((arn, enrolmentKey))
     Future.successful(
       if (maybeValue.isDefined) {

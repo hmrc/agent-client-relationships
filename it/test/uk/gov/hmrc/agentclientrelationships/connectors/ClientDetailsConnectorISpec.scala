@@ -37,7 +37,6 @@ import uk.gov.hmrc.agentclientrelationships.model.clientDetails.vat.VatCustomerD
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.vat.VatIndividual
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
 import uk.gov.hmrc.agentclientrelationships.stubs.CitizenDetailsStub
-import uk.gov.hmrc.agentclientrelationships.stubs.ClientDetailsStub
 import uk.gov.hmrc.agentclientrelationships.stubs.DataStreamStub
 import uk.gov.hmrc.agentclientrelationships.stubs.DesStubs
 import uk.gov.hmrc.agentclientrelationships.stubs.HipStub
@@ -70,7 +69,7 @@ with CitizenDetailsStub {
     "features.overseas-itsa-enabled" -> true
   )
 
-  implicit val request: RequestHeader = FakeRequest()
+  given request: RequestHeader = FakeRequest()
 
   val connector: ClientDetailsConnector = app.injector.instanceOf[ClientDetailsConnector]
   val hipConnector: HipConnector = app.injector.instanceOf[HipConnector]

@@ -24,6 +24,5 @@ case class ValidateInvitationRequest(
   serviceKeys: Seq[String]
 )
 
-object ValidateInvitationRequest {
-  implicit val reads: Reads[ValidateInvitationRequest] = Json.reads[ValidateInvitationRequest]
-}
+object ValidateInvitationRequest:
+  given reads: Reads[ValidateInvitationRequest] = Json.reads[ValidateInvitationRequest]

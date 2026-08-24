@@ -26,6 +26,5 @@ case class AuthorisationRequestInfo(
   agentLink: CreateLinkResponse
 )
 
-object AuthorisationRequestInfo {
-  implicit val format: Format[AuthorisationRequestInfo] = Json.format[AuthorisationRequestInfo]
-}
+object AuthorisationRequestInfo:
+  given format: Format[AuthorisationRequestInfo] = Json.format[AuthorisationRequestInfo]

@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.agentclientrelationships.testOnly.controllers
 
+import org.mongodb.scala.ObservableFuture
+
 import play.api.libs.json.Json
 import play.api.test.Helpers.await
 import play.api.test.Helpers.defaultAwaitTimeout

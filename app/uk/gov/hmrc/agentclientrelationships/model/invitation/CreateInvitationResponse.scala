@@ -16,11 +16,10 @@
 
 package uk.gov.hmrc.agentclientrelationships.model.invitation
 
-import play.api.libs.json._
+import play.api.libs.json.*
 
 case class CreateInvitationResponse(invitationId: String)
 
-object CreateInvitationResponse {
+object CreateInvitationResponse:
 
-  implicit val format: OFormat[CreateInvitationResponse] = Json.format[CreateInvitationResponse]
-}
+  given format: OFormat[CreateInvitationResponse] = Json.format[CreateInvitationResponse]

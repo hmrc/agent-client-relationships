@@ -20,10 +20,11 @@ import play.api.Logger
 import play.api.mvc.Action
 import play.api.mvc.AnyContent
 import play.api.mvc.ControllerComponents
-import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys._
+import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys.*
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.audit.AuditService
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
+import uk.gov.hmrc.agentclientrelationships.auth.CurrentUser
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.ClientIdType
@@ -34,7 +35,7 @@ import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.Invitation
 import uk.gov.hmrc.agentclientrelationships.model.PartialAuth
 import uk.gov.hmrc.agentclientrelationships.model.Pending
-import uk.gov.hmrc.agentclientrelationships.services._
+import uk.gov.hmrc.agentclientrelationships.services.*
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
@@ -55,7 +56,7 @@ class InvitationAcceptController @Inject() (
   val authConnector: AuthConnector,
   val appConfig: AppConfig,
   cc: ControllerComponents
-)(implicit val executionContext: ExecutionContext)
+)(using val executionContext: ExecutionContext)
 extends BackendController(cc)
 with AuthActions
 with RequestAwareLogging {
@@ -65,7 +66,8 @@ with RequestAwareLogging {
   private val strideRoles = Seq(appConfig.oldAuthStrideRole, appConfig.newAuthStrideRole)
 
   // scalastyle:off method.length
-  def accept(invitationId: String): Action[AnyContent] = Action.async { implicit request =>
+  def accept(invitationId: String): Action[AnyContent] = Action.async { request =>
+    given play.api.mvc.RequestHeader = request
     invitationService
       .findInvitation(invitationId)
       .flatMap {
@@ -85,8 +87,9 @@ with RequestAwareLogging {
                 None,
                 enrolmentKeyForAuth.oneTaxIdentifier(),
                 strideRoles
-              ) { implicit currentUser =>
-                implicit val auditData: AuditData = prepareAuditData(invitation, refinedEnrolmentKey)
+              ) { currentUser =>
+                given CurrentUser = currentUser
+                given auditData: AuditData = prepareAuditData(invitation, refinedEnrolmentKey)
 
                 invitation.status match {
                   case model.Accepted | PartialAuth => Future.successful(NoContent)

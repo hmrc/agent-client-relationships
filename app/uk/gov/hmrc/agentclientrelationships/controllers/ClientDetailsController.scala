@@ -17,11 +17,11 @@
 package uk.gov.hmrc.agentclientrelationships.controllers
 
 import play.api.libs.json.Json
-import play.api.mvc._
+import play.api.mvc.*
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.Pending
-import uk.gov.hmrc.agentclientrelationships.model.clientDetails._
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.*
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCCBCNONUKORG
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCCBCORG
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDIT
@@ -32,7 +32,7 @@ import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
 import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
 import uk.gov.hmrc.agentclientrelationships.services.CheckRelationshipResult.relationshipNotFoundAlreadyCopied
-import uk.gov.hmrc.agentclientrelationships.services._
+import uk.gov.hmrc.agentclientrelationships.services.*
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
@@ -51,7 +51,7 @@ class ClientDetailsController @Inject() (
   val authConnector: AuthConnector,
   cc: ControllerComponents,
   appConfig: AppConfig
-)(implicit val executionContext: ExecutionContext)
+)(using val executionContext: ExecutionContext)
 extends BackendController(cc)
 with AuthActions {
 
@@ -72,7 +72,8 @@ with AuthActions {
   def findClientDetails(
     service: String,
     clientId: String
-  ): Action[AnyContent] = Action.async { implicit request =>
+  ): Action[AnyContent] = Action.async { request =>
+    given play.api.mvc.RequestHeader = request
     withAuthorisedAsAgent { arn =>
       clientDetailsService
         .findClientDetails(service, clientId)
@@ -143,7 +144,7 @@ with AuthActions {
     service: String,
     clientIdType: String,
     clientId: String
-  )(implicit request: RequestHeader): Future[(Option[String], Boolean, Boolean)] = checkRelationshipsService
+  )(using request: RequestHeader): Future[(Option[String], Boolean, Boolean)] = checkRelationshipsService
     .checkForRelationship(
       arn,
       service,

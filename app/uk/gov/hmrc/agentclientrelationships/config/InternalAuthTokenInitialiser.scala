@@ -20,6 +20,7 @@ import org.apache.pekko.Done
 import play.api.Logging
 import play.api.http.Status.CREATED
 import play.api.libs.json.Json
+import play.api.libs.ws.JsonBodyWritables.writeableOf_JsValue
 import uk.gov.hmrc.http.HttpReads.Implicits.readRaw
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.HeaderCarrier
@@ -40,11 +41,12 @@ import scala.concurrent.Future
 class InternalAuthTokenInitialiser @Inject() (
   appConfig: AppConfig,
   httpClient: HttpClientV2
-)(implicit
+)(using
   ec: ExecutionContext
 )
 extends Logging {
 
+  given HeaderCarrier()
   Await.result(
     {
       logger.info("Auth token initialising ...")
@@ -73,7 +75,7 @@ extends Logging {
   private def createClientAuthToken(): Future[Done] = {
     logger.info("Creating auth token...")
     httpClient
-      .post(url"${appConfig.internalAuthBaseUrl}/test-only/token")(HeaderCarrier())
+      .post(url"${appConfig.internalAuthBaseUrl}/test-only/token")
       .withBody(
         Json.obj(
           "token" -> appConfig.internalAuthToken,
@@ -109,7 +111,7 @@ extends Logging {
   private def isAuthTokenValid: Future[Boolean] = {
     logger.info("Checking auth token")
     httpClient
-      .get(url"${appConfig.internalAuthBaseUrl}/test-only/token")(HeaderCarrier())
+      .get(url"${appConfig.internalAuthBaseUrl}/test-only/token")
       .setHeader("Authorization" -> appConfig.internalAuthToken)
       .execute
       .map(_.status == 200)

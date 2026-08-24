@@ -34,8 +34,8 @@ object Arn {
       case _ => false
     }
 
-  implicit val arnReads: SimpleObjectReads[Arn] = new SimpleObjectReads[Arn]("value", Arn.apply)
-  implicit val arnWrites: SimpleObjectWrites[Arn] = new SimpleObjectWrites[Arn](_.value)
+  given arnReads: SimpleObjectReads[Arn] = new SimpleObjectReads[Arn]("value", Arn.apply)
+  given arnWrites: SimpleObjectWrites[Arn] = new SimpleObjectWrites[Arn](_.value)
 
 }
 

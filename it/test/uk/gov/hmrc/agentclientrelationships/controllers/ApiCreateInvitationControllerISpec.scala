@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.agentclientrelationships.controllers
 
+import org.mongodb.scala.ObservableFuture
+
 import play.api.http.Status.UNPROCESSABLE_ENTITY
 import play.api.i18n.Lang
 import play.api.i18n.Langs
@@ -23,11 +25,11 @@ import play.api.i18n.MessagesApi
 import play.api.libs.json.JsValue
 import play.api.libs.json.Json
 import play.api.libs.json.Json.toJson
-import play.api.test.Helpers._
+import play.api.test.Helpers.*
 import uk.gov.hmrc.agentclientrelationships.audit.AuditService
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.HipConnector
-import uk.gov.hmrc.agentclientrelationships.model._
+import uk.gov.hmrc.agentclientrelationships.model.*
 import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiCreateInvitationRequest
 import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiFailureResponse.ErrorBody
 import uk.gov.hmrc.agentclientrelationships.repository.AgentReferenceRepository
@@ -37,9 +39,9 @@ import uk.gov.hmrc.agentclientrelationships.services.AgentRecordService
 import uk.gov.hmrc.agentclientrelationships.services.ApiKnownFactsCheckService
 import uk.gov.hmrc.agentclientrelationships.services.CheckRelationshipsOrchestratorService
 import uk.gov.hmrc.agentclientrelationships.services.ClientDetailsService
-import uk.gov.hmrc.agentclientrelationships.stubs._
+import uk.gov.hmrc.agentclientrelationships.stubs.*
 import uk.gov.hmrc.agentclientrelationships.support.TestData
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service._
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.*
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.SuspensionDetails
 import uk.gov.hmrc.auth.core.AuthConnector
@@ -71,11 +73,11 @@ with CitizenDetailsStub {
   val partialAuthRepository: PartialAuthRepository = app.injector.instanceOf[PartialAuthRepository]
   val agentReferenceRepo: AgentReferenceRepository = app.injector.instanceOf[AgentReferenceRepository]
 
-  implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
-  implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
+  given appConfig: AppConfig = app.injector.instanceOf[AppConfig]
+  given ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
   lazy val messagesApi: MessagesApi = app.injector.instanceOf[MessagesApi]
-  implicit val langs: Langs = app.injector.instanceOf[Langs]
-  implicit val lang: Lang = langs.availables.head
+  given langs: Langs = app.injector.instanceOf[Langs]
+  given lang: Lang = langs.availables.head
 
   val controller =
     new ApiCreateInvitationController(
@@ -330,7 +332,6 @@ with CitizenDetailsStub {
       givenClientHasNoRelationshipWithAnyAgentInCESA(nino = nino)
       val inputData: ApiCreateInvitationRequest = baseInvitationInputData
 
-      val clientId = mtdItId.value
       invitationRepo.collection.insertOne(itsaInvitation.copy(status = Rejected)).toFuture().futureValue
       generateStandardStubForCreateInvitation()
 
@@ -412,7 +413,6 @@ with CitizenDetailsStub {
       val inputData: ApiCreateInvitationRequest = baseInvitationInputData
 
       val taxIdentifier = mtdItId
-      val clientId = mtdItId.value
 
       getActiveRelationshipsViaClient(taxIdentifier, arn)
 
@@ -455,7 +455,6 @@ with CitizenDetailsStub {
       val inputData: ApiCreateInvitationRequest = baseInvitationInputData.copy(service = HMRCMTDITSUPP)
 
       val taxIdentifier = mtdItId
-      val clientId = mtdItId.value
 
       getActiveRelationshipsViaClient(taxIdentifier, arn)
 
@@ -569,8 +568,6 @@ with CitizenDetailsStub {
     s"return 201 status and valid JSON when invitation is created for Alt Itsa - client mtdItId exists and PartialAuth for Alt Itsa Supp relationship exists" in {
       val inputData: ApiCreateInvitationRequest = baseInvitationInputData
 
-      val clientId = mtdItId.value
-
       generateStandardStubForCreateInvitation()
       givenDelegatedGroupIdsNotExistFor(EnrolmentKey(HMRCMTDIT, mtdItId))
       givenDelegatedGroupIdsNotExistFor(EnrolmentKey(multiAgentServicesOtherService(HMRCMTDIT), mtdItId))
@@ -613,8 +610,6 @@ with CitizenDetailsStub {
 
     s"return 201 status and valid JSON when invitation is created for Alt Itsa Supp - client mtdItId exists and PartialAuth for Alt Itsa Main relationship exists" in {
       val inputData: ApiCreateInvitationRequest = baseInvitationInputData.copy(service = HMRCMTDITSUPP)
-
-      val clientId = mtdItId.value
 
       generateStandardStubForCreateInvitation()
       givenDelegatedGroupIdsNotExistFor(EnrolmentKey(HMRCMTDITSUPP, mtdItId))

@@ -119,6 +119,7 @@ class AppConfig @Inject() (
     "inactive-relationships-client.record-start-date"
   )
   val overseasItsaEnabled: Boolean = servicesConfig.getBoolean("features.overseas-itsa-enabled")
+  val trustsUseHip: Boolean = servicesConfig.getBoolean("features.trusts-use-hip")
 
   val overseasItsaBlockPartialAuth: Boolean = servicesConfig.getBoolean("features.overseas-itsa-block-partial-auth")
 

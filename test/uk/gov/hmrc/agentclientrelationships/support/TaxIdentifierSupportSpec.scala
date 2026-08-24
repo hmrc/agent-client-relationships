@@ -16,8 +16,8 @@
 
 package uk.gov.hmrc.agentclientrelationships.support
 
-import uk.gov.hmrc.agentclientrelationships.model.identifiers._
-import uk.gov.hmrc.agentclientrelationships.support.TaxIdentifierSupport._
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.*
+import uk.gov.hmrc.agentclientrelationships.support.TaxIdentifierSupport.*
 
 class TaxIdentifierSupportSpec
 extends UnitSpec {

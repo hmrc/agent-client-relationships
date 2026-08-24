@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.controllers
 
-import play.api.test.Helpers._
+import play.api.test.Helpers.*
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.CbcId
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
@@ -38,7 +38,7 @@ import java.time.ZoneOffset
 
 trait RelationshipsControllerGenericBehaviours {
   this: RelationshipsBaseControllerISpec
-    with HipStub =>
+    & HipStub =>
 
   def relationshipsControllerISpec(
     serviceId: String,
@@ -107,7 +107,7 @@ trait RelationshipsControllerGenericBehaviours {
       "return 200 when relationship exists in es" in {
         givenPrincipalAgentUser(arn, "foo")
         givenGroupInfo("foo", "bar")
-        givenAgentIsAllocatedAndAssignedToClient(enrolmentKey, "bar")
+        givenAgentIsAllocatedAndAssignedToClient(enrolmentKey)
         givenAdminUser("foo", "any")
         givenUserIsSubscribedAgent(arn, withThisGroupId = "foo")
         extraSetup(serviceId, clientIdType)
@@ -123,7 +123,7 @@ trait RelationshipsControllerGenericBehaviours {
         givenNinoIsUnknownFor(mtdItId)
         givenPrincipalGroupIdNotExistsFor(agentEnrolmentKey(arn))
         givenGroupInfo("foo", "bar")
-        givenAgentIsAllocatedAndAssignedToClient(enrolmentKey, "bar")
+        givenAgentIsAllocatedAndAssignedToClient(enrolmentKey)
         givenDelegatedGroupIdsNotExistFor(EnrolmentKey(s"$serviceId~$clientIdType~${clientId.value}"))
         givenPrincipalGroupIdNotExistsFor(agentEnrolmentKey(arn))
         givenUserIsSubscribedAgent(arn, withThisGroupId = "foo")
@@ -136,7 +136,7 @@ trait RelationshipsControllerGenericBehaviours {
       "return 404 when delete is pending" in {
         givenPrincipalAgentUser(arn, "foo")
         givenGroupInfo("foo", "bar")
-        givenAgentIsAllocatedAndAssignedToClient(enrolmentKey, "bar")
+        givenAgentIsAllocatedAndAssignedToClient(enrolmentKey)
         givenAdminUser("foo", "any")
         givenEnrolmentDeallocationFailsWith(404)("foo", enrolmentKey)
         givenUserIsSubscribedAgent(arn, withThisGroupId = "foo")

@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.stubs
 
-import com.github.tomakehurst.wiremock.client.WireMock._
+import com.github.tomakehurst.wiremock.client.WireMock.*
 import com.github.tomakehurst.wiremock.matching.MatchResult
 import com.github.tomakehurst.wiremock.matching.UrlPattern
 import com.github.tomakehurst.wiremock.stubbing.StubMapping
@@ -27,7 +27,7 @@ import org.scalatest.time.Span
 import play.api.http.Status
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
-import uk.gov.hmrc.agentclientrelationships.model.identifiers._
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.*
 import uk.gov.hmrc.domain.TaxIdentifier
 
 object EnrolmentStoreProxyStubs
@@ -35,7 +35,7 @@ extends EnrolmentStoreProxyStubs
 trait EnrolmentStoreProxyStubs
 extends Eventually {
 
-  private implicit val patience: PatienceConfig = PatienceConfig(scaled(Span(2, Seconds)), scaled(Span(50, Millis)))
+  private given patience: PatienceConfig = PatienceConfig(scaled(Span(2, Seconds)), scaled(Span(50, Millis)))
 
   private val esBaseUrl = s"/enrolment-store-proxy/enrolment-store"
   private val teBaseUrl = s"/tax-enrolments"

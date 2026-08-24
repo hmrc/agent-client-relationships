@@ -26,7 +26,7 @@ case class ItsaDesignatoryDetails(
 
 object ItsaDesignatoryDetails {
 
-  implicit val reads: Reads[ItsaDesignatoryDetails] =
+  given reads: Reads[ItsaDesignatoryDetails] =
     for {
       postCode <- (JsPath \ "address" \ "postcode").readNullable[String]
       country <- (JsPath \ "address" \ "country").readNullable[String]

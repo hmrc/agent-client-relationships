@@ -29,7 +29,7 @@ case class ItsaBusinessDetails(
 
 object ItsaBusinessDetails {
 
-  implicit val reads: Reads[ItsaBusinessDetails] =
+  given reads: Reads[ItsaBusinessDetails] =
     for {
       name <- (JsPath \ "tradingName").read[String]
       postcode <- (JsPath \ "businessAddressDetails" \ "postalCode").readNullable[String]

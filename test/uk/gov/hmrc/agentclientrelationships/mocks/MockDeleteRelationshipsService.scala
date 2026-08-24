@@ -49,7 +49,7 @@ trait MockDeleteRelationshipsService {
       eqs(suppliedClientId),
       eqs(affinityGroup),
       any[Boolean]
-    )(
+    )(using
       any[RequestHeader],
       any[CurrentUser],
       any[AuditData]

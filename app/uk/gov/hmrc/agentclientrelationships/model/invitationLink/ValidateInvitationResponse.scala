@@ -32,6 +32,5 @@ case class ValidateInvitationResponse(
   clientType: Option[String]
 )
 
-object ValidateInvitationResponse {
-  implicit val writes: OWrites[ValidateInvitationResponse] = Json.writes[ValidateInvitationResponse]
-}
+object ValidateInvitationResponse:
+  given writes: OWrites[ValidateInvitationResponse] = Json.writes[ValidateInvitationResponse]

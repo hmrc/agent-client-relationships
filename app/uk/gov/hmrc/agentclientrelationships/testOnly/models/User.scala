@@ -27,6 +27,5 @@ case class User(
   assignedPrincipalEnrolments: Seq[EnrolmentKey]
 )
 
-object User {
-  implicit val format: OFormat[User] = Json.format[User]
-}
+object User:
+  given format: OFormat[User] = Json.format[User]

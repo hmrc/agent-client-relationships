@@ -25,7 +25,7 @@ import org.scalatest.time.Span
 import org.scalatestplus.mockito.MockitoSugar
 import play.api.mvc.RequestHeader
 import play.api.test.FakeRequest
-import play.api.test.Helpers._
+import play.api.test.Helpers.*
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
@@ -43,7 +43,7 @@ extends UnitSpec
 with MockitoSugar
 with Eventually {
 
-  implicit val patience: PatienceConfig = PatienceConfig(
+  given patience: PatienceConfig = PatienceConfig(
     timeout = scaled(Span(500, Millis)),
     interval = scaled(Span(200, Millis))
   )
@@ -73,11 +73,11 @@ with Eventually {
       auditData.set("enrolmentDelegated", true)
       auditData.set("howRelationshipCreated", "CopyExistingCESARelationship")
 
-      await(service.sendCreateRelationshipAuditEvent()(request, auditData))
+      await(service.sendCreateRelationshipAuditEvent()(using request, auditData))
 
       eventually {
         val captor = ArgumentCaptor.forClass(classOf[DataEvent])
-        verify(mockConnector).sendEvent(captor.capture())(any[HeaderCarrier], any[ExecutionContext])
+        verify(mockConnector).sendEvent(captor.capture())(using any[HeaderCarrier], any[ExecutionContext])
         captor.getValue.asInstanceOf[DataEvent] shouldBe an[DataEvent]
         val sentEvent = captor.getValue.asInstanceOf[DataEvent]
 
@@ -117,11 +117,11 @@ with Eventually {
       auditData.set("nino", NinoWithoutSuffix("KS969148D").value)
       auditData.set("cesaRelationship", true)
 
-      await(service.sendCheckCesaAndPartialAuthAuditEvent()(request, auditData))
+      await(service.sendCheckCesaAndPartialAuthAuditEvent()(using request, auditData))
 
       eventually {
         val captor = ArgumentCaptor.forClass(classOf[DataEvent])
-        verify(mockConnector).sendEvent(captor.capture())(any[HeaderCarrier], any[ExecutionContext])
+        verify(mockConnector).sendEvent(captor.capture())(using any[HeaderCarrier], any[ExecutionContext])
         captor.getValue.asInstanceOf[DataEvent] shouldBe an[DataEvent]
         val sentEvent = captor.getValue.asInstanceOf[DataEvent]
 

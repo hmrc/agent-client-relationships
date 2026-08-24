@@ -33,8 +33,8 @@ import scala.concurrent.duration.Duration
 class MongoLockRepositoryWithMdc @Inject() (
   mongoComponent: MongoComponent,
   timestampSupport: TimestampSupport
-)(implicit ec: ExecutionContext)
-extends MongoLockRepository(mongoComponent, timestampSupport)(ec) {
+)(using ec: ExecutionContext)
+extends MongoLockRepository(mongoComponent, timestampSupport)(using ec) {
 
   override def takeLock(
     lockId: String,

@@ -18,7 +18,7 @@ package uk.gov.hmrc.agentclientrelationships.model.identifiers
 
 import play.api.libs.json.Json
 import play.api.libs.json.OFormat
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service._
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.*
 
 case class SuspensionDetails(
   suspensionStatus: Boolean,
@@ -90,7 +90,7 @@ object SuspensionDetails {
 
   lazy val validSuspensionRegimes: Set[String] = serviceToRegime.view.filterKeys(suspendableServices.contains(_)).values.toSet
 
-  implicit val formats: OFormat[SuspensionDetails] = Json.format
+  given formats: OFormat[SuspensionDetails] = Json.format
 
   val notSuspended: SuspensionDetails = SuspensionDetails(suspensionStatus = false, None)
 

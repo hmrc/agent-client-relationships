@@ -16,11 +16,11 @@
 
 package uk.gov.hmrc.agentclientrelationships.stubs
 
-import com.github.tomakehurst.wiremock.client.WireMock._
+import com.github.tomakehurst.wiremock.client.WireMock.*
 import com.github.tomakehurst.wiremock.stubbing.StubMapping
 import org.scalatest.concurrent.Eventually.eventually
 import play.api.libs.json.Json
-import uk.gov.hmrc.agentclientrelationships.model.identifiers._
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.*
 import uk.gov.hmrc.domain.TaxIdentifier
 
 import java.time.LocalDate
@@ -430,7 +430,6 @@ trait HipStub {
 
   def verifyAllActiveRelationshipsViaClientCalled(
     taxIdentifier: TaxIdentifier,
-    arn: Arn,
     activeOnly: Boolean = true,
     count: Int = 1
   ): Unit = eventually {
@@ -666,7 +665,6 @@ trait HipStub {
   }
 
   def getAgentInactiveRelationshipsButActive(
-    encodedArn: String,
     agentArn: String,
     clientId: String
   ): StubMapping = stubFor(
@@ -1055,5 +1053,55 @@ trait HipStub {
     get(urlEqualTo(s"/etmp/RESTAdapter/itsa/taxpayer/business-details?nino=${nino.value}"))
       .willReturn(aResponse().withStatus(status))
   )
+
+  def givenTrustsAndEstatesAgentKnownFactCheckSucceeds(taxIdentifier: Either[Urn, Utr]): StubMapping = stubFor(
+    get(urlEqualTo(trustsAndEstatesKnownFactCheckUrl(taxIdentifier)))
+      .willReturn(
+        aResponse()
+          .withStatus(200)
+          .withBody(s"""
+                       |{
+                       |  "success": {
+                       |    "trustDetails": {
+                       |      "identifiers": {
+                       |        "utr": "1234567890",
+                       |        "urn": "XXTRUST80000001"
+                       |      },
+                       |      "trustName": "Nelson James Trust",
+                       |      "address": {
+                       |        "line1": "10 Enderson Road",
+                       |        "line2": "Cheapside",
+                       |        "line3": "Riverside",
+                       |        "line4": "Boston",
+                       |        "country": "GB",
+                       |        "postCode": "TF3 4ER"
+                       |      },
+                       |      "serviceName": "TERS"
+                       |    }
+                       |  }
+                       |}
+          """.stripMargin)
+      )
+  )
+
+  def givenTrustsAndEstatesAgentKnownFactCheckFails(
+    taxIdentifier: Either[Urn, Utr],
+    status: Int
+  ): StubMapping = stubFor(
+    get(urlEqualTo(trustsAndEstatesKnownFactCheckUrl(taxIdentifier)))
+      .willReturn(
+        aResponse()
+          .withStatus(status)
+      )
+  )
+
+  private def trustsAndEstatesKnownFactCheckUrl(taxIdentifier: Either[Urn, Utr]): String = {
+    val (idType, idValue) =
+      taxIdentifier match {
+        case Left(urn) => "URN" -> urn.value
+        case Right(utr) => "UTR" -> utr.value
+      }
+    s"/etmp/RESTAdapter/trustsandestates/agent-known-fact-check/$idType/$idValue"
+  }
 
 }

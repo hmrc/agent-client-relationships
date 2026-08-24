@@ -21,7 +21,7 @@ import play.api.libs.json.OFormat
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.ClientIdentifier.ClientId
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.ClientIdentifier
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
-import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse._
+import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.*
 
 import scala.util.Try
 
@@ -69,7 +69,5 @@ case class CreateInvitationRequest(
 
 }
 
-object CreateInvitationRequest {
-  implicit val format: OFormat[CreateInvitationRequest] = Json.format[CreateInvitationRequest]
-
-}
+object CreateInvitationRequest:
+  given format: OFormat[CreateInvitationRequest] = Json.format[CreateInvitationRequest]

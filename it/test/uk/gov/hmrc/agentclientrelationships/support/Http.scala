@@ -22,11 +22,13 @@ import play.api.libs.ws.EmptyBody
 import play.api.libs.ws.WSClient
 import play.api.libs.ws.WSRequest
 import play.api.libs.ws.WSResponse
+import play.api.libs.ws.WSBodyWritables.writeableOf_String
+import play.api.libs.ws.WSBodyWritables.writeableOf_WsBody
 import uk.gov.hmrc.http.HttpResponse
 import uk.gov.hmrc.play.http.ws.WSHttpResponse
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 import scala.concurrent.Await
 import scala.concurrent.Future
 import scala.language.postfixOps
@@ -34,7 +36,7 @@ object Http {
 
   private val authHeader = "Authorization" -> "Bearer 123"
 
-  def get(url: String)(implicit ws: WSClient): HttpResponse =
+  def get(url: String)(using ws: WSClient): HttpResponse =
     perform(url) { request =>
       request.get()
     }
@@ -43,12 +45,12 @@ object Http {
     url: String,
     body: String,
     headers: Seq[(String, String)] = Seq.empty
-  )(implicit ws: WSClient): HttpResponse =
+  )(using ws: WSClient): HttpResponse =
     perform(url) { request =>
-      request.addHttpHeaders(headers: _*).post(body)
+      request.addHttpHeaders(headers*).post(body)
     }
 
-  def postEmpty(url: String)(implicit ws: WSClient): HttpResponse =
+  def postEmpty(url: String)(using ws: WSClient): HttpResponse =
     perform(url) { request =>
       request.post(EmptyBody)
     }
@@ -57,22 +59,23 @@ object Http {
     url: String,
     body: String,
     headers: Seq[(String, String)] = Seq.empty
-  )(implicit ws: WSClient): HttpResponse =
+  )(using ws: WSClient): HttpResponse =
     perform(url) { request =>
-      request.addHttpHeaders(headers: _*).put(body)
+      request.addHttpHeaders(headers*).put(body)
     }
 
-  def putEmpty(url: String)(implicit ws: WSClient): HttpResponse =
+  def putEmpty(url: String)(using ws: WSClient): HttpResponse =
     perform(url) { request =>
       request.put(EmptyBody)
     }
 
-  def delete(url: String)(implicit ws: WSClient): HttpResponse =
+  def delete(url: String)(using ws: WSClient): HttpResponse =
     perform(url) { request =>
       request.delete()
     }
 
-  private def perform(url: String)(fun: WSRequest => Future[WSResponse])(implicit ws: WSClient): HttpResponse = await(
+  @scala.annotation.nowarn("cat=deprecation")
+  private def perform(url: String)(fun: WSRequest => Future[WSResponse])(using ws: WSClient): HttpResponse = await(
     fun(ws.url(url).withHttpHeaders(authHeader).withRequestTimeout(20000 milliseconds)).map(WSHttpResponse.apply)
   )
 
@@ -87,20 +90,20 @@ class Resource(
 
   private def url() = s"http://localhost:$port$path"
 
-  def get()(implicit ws: WSClient): HttpResponse = Http.get(url())
+  def get()(using ws: WSClient): HttpResponse = Http.get(url())
 
-  def postAsJson(body: String)(implicit ws: WSClient): HttpResponse = Http
+  def postAsJson(body: String)(using ws: WSClient): HttpResponse = Http
     .post(
       url(),
       body,
       Seq(HeaderNames.CONTENT_TYPE -> MimeTypes.JSON)
     )
 
-  def postEmpty()(implicit ws: WSClient): HttpResponse = Http.postEmpty(url())
+  def postEmpty()(using ws: WSClient): HttpResponse = Http.postEmpty(url())
 
-  def putEmpty()(implicit ws: WSClient): HttpResponse = Http.putEmpty(url())
+  def putEmpty()(using ws: WSClient): HttpResponse = Http.putEmpty(url())
 
-  def putAsJson(body: String)(implicit ws: WSClient): HttpResponse = Http
+  def putAsJson(body: String)(using ws: WSClient): HttpResponse = Http
     .put(
       url(),
       body,

@@ -16,8 +16,8 @@
 
 package uk.gov.hmrc.agentclientrelationships.model.invitationLink
 
-import play.api.libs.functional.syntax._
-import play.api.libs.json._
+import play.api.libs.functional.syntax.*
+import play.api.libs.json.*
 
 case class AgencyDetails(
   agencyName: String,
@@ -34,12 +34,12 @@ object AgencyDetails {
 
   private val reads: Reads[AgencyDetails] =
     (
-      (__ \ "agencyName").read(optionalReads("Agency name")).orElse(Reads.pure("")) and
-        (__ \ "agencyEmail").read(optionalReads("Agency email")).orElse(Reads.pure(""))
-    )(AgencyDetails.apply _)
+      (__ \ "agencyName").read(using optionalReads("Agency name")).orElse(Reads.pure("")) and
+        (__ \ "agencyEmail").read(using optionalReads("Agency email")).orElse(Reads.pure(""))
+    )(AgencyDetails.apply)
 
   private val writes: Writes[AgencyDetails] = Json.writes[AgencyDetails]
 
-  implicit val agencyDetailsFormat: Format[AgencyDetails] = Format(reads, writes)
+  given agencyDetailsFormat: Format[AgencyDetails] = Format(reads, writes)
 
 }

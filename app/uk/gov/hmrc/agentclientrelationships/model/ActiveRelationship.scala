@@ -16,8 +16,8 @@
 
 package uk.gov.hmrc.agentclientrelationships.model
 
-import play.api.libs.functional.syntax._
-import play.api.libs.json._
+import play.api.libs.functional.syntax.*
+import play.api.libs.json.*
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 
 import java.time.LocalDate
@@ -31,17 +31,17 @@ case class ActiveRelationship(
 
 object ActiveRelationship {
 
-  implicit val activeRelationshipWrites: OWrites[ActiveRelationship] = Json.writes[ActiveRelationship]
+  given activeRelationshipWrites: OWrites[ActiveRelationship] = Json.writes[ActiveRelationship]
 
-  implicit val reads: Reads[ActiveRelationship] =
+  given reads: Reads[ActiveRelationship] =
     (
       (JsPath \ "agentReferenceNumber").read[Arn] and
         (JsPath \ "dateTo").readNullable[LocalDate] and
         (JsPath \ "dateFrom").readNullable[LocalDate]
-    )(ActiveRelationship.apply _)
+    )(ActiveRelationship.apply)
 
   val hipReads: Reads[ActiveRelationship] = ((__ \ "arn").read[Arn] and (__ \ "dateTo").readNullable[LocalDate] and (__ \ "dateFrom").readNullable[LocalDate])(
-    ActiveRelationship.apply _
+    ActiveRelationship.apply
   )
 
   val irvReads: Reads[ActiveRelationship] =
@@ -49,12 +49,11 @@ object ActiveRelationship {
       (__ \ "arn").read[Arn] and
         (__ \ "endDate").readNullable[LocalDateTime].map(optDate => optDate.map(_.toLocalDate)) and
         (__ \ "startDate").readNullable[LocalDateTime].map(optDate => optDate.map(_.toLocalDate))
-    )(ActiveRelationship.apply _)
+    )(ActiveRelationship.apply)
 
 }
 
 case class ActiveRelationshipResponse(relationship: Seq[ActiveRelationship])
 
-object ActiveRelationshipResponse {
-  implicit val activeRelationshipResponse: OFormat[ActiveRelationshipResponse] = Json.format[ActiveRelationshipResponse]
-}
+object ActiveRelationshipResponse:
+  given activeRelationshipResponse: OFormat[ActiveRelationshipResponse] = Json.format[ActiveRelationshipResponse]

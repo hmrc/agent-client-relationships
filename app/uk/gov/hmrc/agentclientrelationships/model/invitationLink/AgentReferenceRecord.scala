@@ -36,18 +36,25 @@ case class AgentReferenceRecord(
 
 object AgentReferenceRecord {
 
-  implicit val formats: Format[AgentReferenceRecord] = Json.format[AgentReferenceRecord]
+  given formats: Format[AgentReferenceRecord] = Json.format[AgentReferenceRecord]
 
-  def mongoFormat(implicit
+  def mongoFormat(using
     crypto: Encrypter
-      with Decrypter
+      & Decrypter
   ): Format[AgentReferenceRecord] =
     (
       (__ \ "uid").format[String] and
         (__ \ "arn").format[Arn] and {
-          implicit val cryptoFormat: Format[String] = stringEncrypterDecrypter
+          given cryptoFormat: Format[String] = stringEncrypterDecrypter
           (__ \ "normalisedAgentNames").format[Seq[String]]
         }
-    )(AgentReferenceRecord.apply, unlift(AgentReferenceRecord.unapply))
+    )(
+      AgentReferenceRecord.apply,
+      unlift((record: AgentReferenceRecord) =>
+        Some(
+          (record.uid, record.arn, record.normalisedAgentNames)
+        )
+      )
+    )
 
 }

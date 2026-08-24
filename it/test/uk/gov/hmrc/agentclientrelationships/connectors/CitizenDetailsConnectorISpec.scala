@@ -47,7 +47,7 @@ with CitizenDetailsStub {
     "auditing.consumer.baseUri.port" -> wireMockPort
   )
 
-  implicit val request: RequestHeader = FakeRequest()
+  given request: RequestHeader = FakeRequest()
 
   val connector: CitizenDetailsConnector = app.injector.instanceOf[CitizenDetailsConnector]
   val testNino: NinoWithoutSuffix = NinoWithoutSuffix("AA000001")

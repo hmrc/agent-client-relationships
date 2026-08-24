@@ -21,13 +21,13 @@ import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.helpers.CommonHeaders
 import uk.gov.hmrc.agentclientrelationships.connectors.helpers.CorrelationIdGenerator
-import uk.gov.hmrc.agentclientrelationships.model._
+import uk.gov.hmrc.agentclientrelationships.model.*
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
-import uk.gov.hmrc.agentclientrelationships.util.RequestSupport._
+import uk.gov.hmrc.agentclientrelationships.util.RequestSupport.given
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.domain.SaAgentReference
-import uk.gov.hmrc.http.HttpReads.Implicits._
+import uk.gov.hmrc.http.HttpReads.Implicits.*
 import uk.gov.hmrc.http.HeaderNames
 import uk.gov.hmrc.http.HttpResponse
 import uk.gov.hmrc.http.Retries
@@ -51,7 +51,7 @@ class DesConnector @Inject() (
   appConfig: AppConfig,
   val configuration: Config,
   val actorSystem: ActorSystem
-)(implicit
+)(using
   val ec: ExecutionContext
 )
 extends RequestAwareLogging
@@ -67,7 +67,7 @@ with Retries {
     case e: UpstreamErrorResponse if e.statusCode >= 500 || e.statusCode == 429 => true // Retry on server errors and rate limiting
   }
 
-  def getClientSaAgentSaReferences(nino: NinoWithoutSuffix)(implicit request: RequestHeader): Future[Seq[SaAgentReference]] = {
+  def getClientSaAgentSaReferences(nino: NinoWithoutSuffix)(using request: RequestHeader): Future[Seq[SaAgentReference]] = {
     val otherSuffixVariants = Nino.validSuffixes :+ ""
     val otherNinoVariants = otherSuffixVariants.map(suffix => NinoWithoutSuffix(nino.value + suffix)).filterNot(_.rawEquals(nino))
     val ninoVariants = nino +: otherNinoVariants
@@ -110,7 +110,7 @@ with Retries {
   def desHeaders(
     authToken: String,
     env: String
-  )(implicit requestHeader: RequestHeader): Seq[(String, String)] =
+  )(using requestHeader: RequestHeader): Seq[(String, String)] =
     CommonHeaders() ++ Seq(
       Environment -> env,
       HeaderNames.authorisation -> s"Bearer $authToken",
@@ -121,9 +121,9 @@ with Retries {
     url: URL,
     authToken: String = desAuthToken,
     env: String = desEnv
-  )(implicit request: RequestHeader): Future[HttpResponse] = httpClient
+  )(using request: RequestHeader): Future[HttpResponse] = httpClient
     .get(url = url)
-    .setHeader(desHeaders(authToken, env): _*)
+    .setHeader(desHeaders(authToken, env)*)
     .execute[HttpResponse]
 
 }

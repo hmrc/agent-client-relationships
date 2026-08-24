@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.model.transitional
 
-import play.api.libs.json._
+import play.api.libs.json.*
 import uk.gov.hmrc.agentclientrelationships.model.InvitationStatus
 
 import java.time.Instant
@@ -29,7 +29,7 @@ case class StatusChangeEvent(
 )
 
 object StatusChangeEvent {
-  implicit val statusChangeEventFormat: Format[StatusChangeEvent] =
+  given statusChangeEventFormat: Format[StatusChangeEvent] =
     new Format[StatusChangeEvent] {
       override def reads(json: JsValue): JsResult[StatusChangeEvent] = {
         val time = Instant.ofEpochMilli((json \ "time").as[Long]).atZone(ZoneOffset.UTC).toLocalDateTime

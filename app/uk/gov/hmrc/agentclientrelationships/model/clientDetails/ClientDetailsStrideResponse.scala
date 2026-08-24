@@ -26,9 +26,8 @@ case class ActiveMainAgent(
   service: String
 )
 
-object ActiveMainAgent {
-  implicit val format: Format[ActiveMainAgent] = Json.format[ActiveMainAgent]
-}
+object ActiveMainAgent:
+  given format: Format[ActiveMainAgent] = Json.format[ActiveMainAgent]
 
 case class ClientDetailsStrideResponse(
   clientName: String,
@@ -36,6 +35,5 @@ case class ClientDetailsStrideResponse(
   activeMainAgent: Option[ActiveMainAgent]
 )
 
-object ClientDetailsStrideResponse {
-  implicit val format: Format[ClientDetailsStrideResponse] = Json.format[ClientDetailsStrideResponse]
-}
+object ClientDetailsStrideResponse:
+  given format: Format[ClientDetailsStrideResponse] = Json.format[ClientDetailsStrideResponse]

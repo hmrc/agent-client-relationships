@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.connectors
 
-import com.github.tomakehurst.wiremock.client.WireMock._
+import com.github.tomakehurst.wiremock.client.WireMock.*
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.http.Status.INTERNAL_SERVER_ERROR
@@ -24,7 +24,7 @@ import play.api.http.Status.NOT_FOUND
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.mvc.RequestHeader
 import play.api.test.FakeRequest
-import play.api.test.Helpers._
+import play.api.test.Helpers.*
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.helpers.HipHeaders
 import uk.gov.hmrc.agentclientrelationships.model.ActiveRelationship
@@ -38,8 +38,7 @@ import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Cbc
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdIt
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Pillar2
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Ppt
-import uk.gov.hmrc.agentclientrelationships.model.identifiers._
-import uk.gov.hmrc.agentclientrelationships.services.AgentCacheProvider
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.*
 import uk.gov.hmrc.agentclientrelationships.stubs.DataStreamStub
 import uk.gov.hmrc.agentclientrelationships.stubs.HipStub
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
@@ -59,11 +58,11 @@ with WireMockSupport
 with HipStub
 with DataStreamStub {
 
-  override implicit lazy val app: Application = appBuilder.build()
+  override given app: Application = appBuilder.build()
 
   val httpClient: HttpClientV2 = app.injector.instanceOf[HttpClientV2]
   val hipHeaders: HipHeaders = app.injector.instanceOf[HipHeaders]
-  implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
+  given appConfig: AppConfig = app.injector.instanceOf[AppConfig]
 
   val testNino = NinoWithoutSuffix("AA000001")
 
@@ -86,14 +85,14 @@ with DataStreamStub {
     "microservice.services.hip.authorization-token" -> "token"
   )
 
-  implicit val ec: ExecutionContextExecutor = ExecutionContext.global
-  implicit val request: RequestHeader = FakeRequest()
+  given ec: ExecutionContextExecutor = ExecutionContext.global
+  given request: RequestHeader = FakeRequest()
   val hipConnector =
     new HipConnector(
       httpClient,
       hipHeaders,
       appConfig
-    )(ec)
+    )
 
   val mtdItId: MtdItId = MtdItId("ABCDEF123456789")
   val vrn: Vrn = Vrn("101747641")
@@ -649,6 +648,54 @@ with DataStreamStub {
       await(hipConnector.getItsaBusinessDetails(testNino)) should matchPattern {
         case Left(ErrorRetrievingClientDetails(INTERNAL_SERVER_ERROR, msg))
             if msg.startsWith("Unexpected error during 'getItsaBusinessDetails'") =>
+      }
+    }
+  }
+
+  ".trustsAndEstatesAgentKnownFactCheck" when {
+    "handling a URN" should {
+      "return trust name when receiving a 200 status" in {
+        givenAuditConnector()
+        givenTrustsAndEstatesAgentKnownFactCheckSucceeds(Left(urn))
+        await(hipConnector.trustsAndEstatesAgentKnownFactCheck(Left(urn))) shouldBe Right("Nelson James Trust")
+      }
+
+      "return an UpstreamErrorResponse when receiving a 404 status" in {
+        givenAuditConnector()
+        givenTrustsAndEstatesAgentKnownFactCheckFails(Left(urn), NOT_FOUND)
+        await(hipConnector.trustsAndEstatesAgentKnownFactCheck(Left(urn))) shouldBe Left(ClientDetailsNotFound)
+      }
+
+      "return an UpstreamErrorResponse when receiving an unexpected status" in {
+        givenAuditConnector()
+        givenTrustsAndEstatesAgentKnownFactCheckFails(Left(urn), INTERNAL_SERVER_ERROR)
+        await(hipConnector.trustsAndEstatesAgentKnownFactCheck(Left(urn))) should matchPattern {
+          case Left(ErrorRetrievingClientDetails(INTERNAL_SERVER_ERROR, msg))
+              if msg.startsWith("Unexpected error during 'trustsAndEstatesAgentKnownFactCheck'") =>
+        }
+      }
+    }
+
+    "handling a UTR" should {
+      "return trust name when receiving a 200 status" in {
+        givenAuditConnector()
+        givenTrustsAndEstatesAgentKnownFactCheckSucceeds(Right(utr))
+        await(hipConnector.trustsAndEstatesAgentKnownFactCheck(Right(utr))) shouldBe Right("Nelson James Trust")
+      }
+
+      "return an UpstreamErrorResponse when receiving a 404 status" in {
+        givenAuditConnector()
+        givenTrustsAndEstatesAgentKnownFactCheckFails(Right(utr), NOT_FOUND)
+        await(hipConnector.trustsAndEstatesAgentKnownFactCheck(Right(utr))) shouldBe Left(ClientDetailsNotFound)
+      }
+
+      "return an UpstreamErrorResponse when receiving an unexpected status" in {
+        givenAuditConnector()
+        givenTrustsAndEstatesAgentKnownFactCheckFails(Right(utr), INTERNAL_SERVER_ERROR)
+        await(hipConnector.trustsAndEstatesAgentKnownFactCheck(Right(utr))) should matchPattern {
+          case Left(ErrorRetrievingClientDetails(INTERNAL_SERVER_ERROR, msg))
+              if msg.startsWith("Unexpected error during 'trustsAndEstatesAgentKnownFactCheck'") =>
+        }
       }
     }
   }

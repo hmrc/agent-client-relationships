@@ -21,7 +21,7 @@ import uk.gov.hmrc.agentclientrelationships.stubs.HipStub
 
 trait RelationshipsControllerITSASUPP {
   this: RelationshipsBaseControllerISpec
-    with HipStub =>
+    & HipStub =>
 
   def relationshipControllerITSASUPPBehaviours(): Unit = {
     val requestPath: String = s"/agent-client-relationships/agent/${arn.value}/service/HMRC-MTD-IT-SUPP/client/MTDITID/${mtdItId.value}"

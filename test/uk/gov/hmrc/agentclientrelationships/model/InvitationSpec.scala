@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.model
 
+import play.api.libs.json.Format
 import play.api.libs.json.JsObject
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
@@ -32,8 +33,7 @@ import java.time.LocalDate
 class InvitationSpec
 extends UnitSpec {
 
-  implicit val crypto: Encrypter
-    with Decrypter = SymmetricCryptoFactory.aesCrypto("edkOOwt7uvzw1TXnFIN6aRVHkfWcgiOrbBvkEQvO65g=")
+  given crypto: (Encrypter & Decrypter) = SymmetricCryptoFactory.aesCrypto("edkOOwt7uvzw1TXnFIN6aRVHkfWcgiOrbBvkEQvO65g=")
 
   val fullModel: Invitation = Invitation(
     "123",
@@ -75,23 +75,24 @@ extends UnitSpec {
 
   val optionalJson: JsObject = fullJson.-("relationshipEndedBy").-("clientType")
   val optionalModel: Invitation = fullModel.copy(relationshipEndedBy = None, clientType = None)
+  given Format[Invitation] = Invitation.mongoFormat
 
   "Invitation" should {
     "read from JSON" when {
       "all optional fields are present" in {
-        fullJson.as[Invitation](Invitation.mongoFormat) shouldBe fullModel
+        fullJson.as[Invitation] shouldBe fullModel
       }
       "all optional fields are missing" in {
-        optionalJson.as[Invitation](Invitation.mongoFormat) shouldBe optionalModel
+        optionalJson.as[Invitation] shouldBe optionalModel
       }
     }
 
     "write to JSON" when {
       "all optional fields are present" in {
-        Json.toJson(fullModel)(Invitation.mongoFormat) shouldBe fullJson
+        Json.toJson(fullModel) shouldBe fullJson
       }
       "all optional fields are missing" in {
-        Json.toJson(optionalModel)(Invitation.mongoFormat) shouldBe optionalJson
+        Json.toJson(optionalModel) shouldBe optionalJson
       }
     }
   }

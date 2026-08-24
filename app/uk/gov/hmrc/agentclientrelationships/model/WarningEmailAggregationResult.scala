@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.model
 
-import play.api.libs.functional.syntax._
+import play.api.libs.functional.syntax.*
 import play.api.libs.json.Reads
 import play.api.libs.json.__
 import uk.gov.hmrc.crypto.Decrypter
@@ -27,11 +27,11 @@ case class WarningEmailAggregationResult(
   invitations: Seq[Invitation]
 )
 
-object WarningEmailAggregationResult {
-  implicit def reads(implicit
+object WarningEmailAggregationResult:
+  given reads(using
     crypto: Encrypter
-      with Decrypter
-  ): Reads[WarningEmailAggregationResult] = ((__ \ "_id").read[String] and (__ \ "invitations").read[Seq[Invitation]](Reads.seq(Invitation.mongoFormat))).apply(
-    WarningEmailAggregationResult.apply _
-  )
-}
+      & Decrypter
+  ): Reads[WarningEmailAggregationResult] =
+    ((__ \ "_id").read[String] and (__ \ "invitations").read[Seq[Invitation]](using Reads.seq(using Invitation.mongoFormat))).apply(
+      WarningEmailAggregationResult.apply
+    )

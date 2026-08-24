@@ -24,7 +24,7 @@ import uk.gov.hmrc.http.HeaderNames
 import uk.gov.hmrc.http.StringContextOps
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.agentclientrelationships.util.RequestSupport.hc
-import uk.gov.hmrc.http.HttpReads.Implicits._
+import uk.gov.hmrc.http.HttpReads.Implicits.*
 
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -32,7 +32,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 @Singleton
-class AgentServicesAccountConnector @Inject() (httpClient: HttpClientV2)(implicit
+class AgentServicesAccountConnector @Inject() (httpClient: HttpClientV2)(using
   ec: ExecutionContext,
   appConfig: AppConfig
 ) {
@@ -40,7 +40,7 @@ class AgentServicesAccountConnector @Inject() (httpClient: HttpClientV2)(implici
   // agent-services-account uses internal auth to support unauthenticated frontend client journey start requests
   private def acrHeaders: (String, String) = HeaderNames.authorisation -> appConfig.internalAuthToken
 
-  def getAgentRecordWithChecks(arn: Arn)(implicit rh: RequestHeader): Future[AgentDetailsDesResponse] = httpClient
+  def getAgentRecordWithChecks(arn: Arn)(using rh: RequestHeader): Future[AgentDetailsDesResponse] = httpClient
     .get(url"${appConfig.agentServicesAccountBaseUrl}/agent-services-account/agent-record-with-checks/arn/${arn.value}")
     .setHeader(acrHeaders)
     .execute[AgentDetailsDesResponse]

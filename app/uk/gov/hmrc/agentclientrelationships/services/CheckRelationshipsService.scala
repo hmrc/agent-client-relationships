@@ -17,7 +17,7 @@
 package uk.gov.hmrc.agentclientrelationships.services
 
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
-import uk.gov.hmrc.agentclientrelationships.connectors._
+import uk.gov.hmrc.agentclientrelationships.connectors.*
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.ExistingMainAgent
 import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey => LocalEnrolmentKey}
 import uk.gov.hmrc.agentclientrelationships.model.Invitation
@@ -47,14 +47,14 @@ class CheckRelationshipsService @Inject() (
   groupSearch: UsersGroupsSearchConnector,
   partialAuthRepository: PartialAuthRepository,
   agentFiRelationshipConnector: AgentFiRelationshipConnector
-)(implicit executionContext: ExecutionContext)
+)(using executionContext: ExecutionContext)
 extends RequestAwareLogging {
 
   def checkForRelationship(
     arn: Arn,
     userId: Option[UserId],
     enrolmentKey: LocalEnrolmentKey
-  )(implicit request: RequestHeader): Future[Boolean] =
+  )(using request: RequestHeader): Future[Boolean] =
     userId match {
       case None => checkForRelationshipAgencyLevel(arn, enrolmentKey).map(_._1)
       case Some(userId) =>
@@ -68,7 +68,7 @@ extends RequestAwareLogging {
   def checkForRelationshipAgencyLevel(
     arn: Arn,
     enrolmentKey: LocalEnrolmentKey
-  )(implicit request: RequestHeader): Future[(Boolean, String)] =
+  )(using request: RequestHeader): Future[(Boolean, String)] =
     for {
       groupId <- es.getPrincipalGroupIdFor(arn)
       allocatedGroupIds <- es.getDelegatedGroupIdsFor(enrolmentKey)
@@ -79,7 +79,7 @@ extends RequestAwareLogging {
     arn: Arn,
     userId: UserId,
     enrolmentKey: LocalEnrolmentKey
-  )(implicit request: RequestHeader): Future[Boolean] =
+  )(using request: RequestHeader): Future[Boolean] =
     // 1. Check that the agency with the given Arn has a relationship with the client.
     checkForRelationshipAgencyLevel(arn, enrolmentKey).flatMap {
       case (false, _) =>
@@ -118,7 +118,7 @@ extends RequestAwareLogging {
 
   private def getArnForDelegatedEnrolmentKey(
     enrolKey: LocalEnrolmentKey
-  )(implicit request: RequestHeader): Future[Option[Arn]] =
+  )(using request: RequestHeader): Future[Option[Arn]] =
     for {
       maybeGroupId <- es.getDelegatedGroupIdsFor(enrolKey)
       maybeArn <-
@@ -130,7 +130,7 @@ extends RequestAwareLogging {
 
   private def findMainAgentForNino(
     invitation: Invitation
-  )(implicit request: RequestHeader): Future[Option[ExistingMainAgent]] = partialAuthRepository
+  )(using request: RequestHeader): Future[Option[ExistingMainAgent]] = partialAuthRepository
     .findMainAgent(invitation.suppliedClientId)
     .flatMap {
       case Some(p) =>
@@ -155,14 +155,14 @@ extends RequestAwareLogging {
   private def returnExistingMainAgentFromArn(
     arn: String,
     sameAgent: Boolean
-  )(implicit request: RequestHeader): Future[Some[ExistingMainAgent]] = agentRecordService
+  )(using request: RequestHeader): Future[Some[ExistingMainAgent]] = agentRecordService
     .getAgentRecordWithChecks(Arn(arn))
     .map(agent => Some(ExistingMainAgent(agencyName = agent.agencyDetails.agencyName, sameAgent = sameAgent)))
 
   def findCurrentMainAgent(
     invitation: Invitation,
     enrolment: Option[LocalEnrolmentKey]
-  )(implicit request: RequestHeader): Future[Option[ExistingMainAgent]] =
+  )(using request: RequestHeader): Future[Option[ExistingMainAgent]] =
     invitation.service match {
       case HMRCMTDIT | HMRCMTDITSUPP => findMainAgentForNino(invitation)
       case HMRCPIR =>

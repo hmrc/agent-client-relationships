@@ -39,14 +39,14 @@ trait MockFindRelationshipsService {
     nino: NinoWithoutSuffix,
     service: Service
   )(response: Future[Option[ActiveRelationship]]): OngoingStubbing[Future[Option[ActiveRelationship]]] = when(
-    mockFindRelationshipService.getItsaRelationshipForClient(eqs(nino), eqs(service))(any[RequestHeader])
+    mockFindRelationshipService.getItsaRelationshipForClient(eqs(nino), eqs(service))(using any[RequestHeader])
   ).thenReturn(response)
 
   def mockGetActiveRelationshipsForClient(
     taxId: TaxIdentifier,
     service: Service
   )(response: Future[Option[ActiveRelationship]]): OngoingStubbing[Future[Option[ActiveRelationship]]] = when(
-    mockFindRelationshipService.getActiveRelationshipsForClient(eqs(taxId), eqs(service))(any[RequestHeader])
+    mockFindRelationshipService.getActiveRelationshipsForClient(eqs(taxId), eqs(service))(using any[RequestHeader])
   ).thenReturn(response)
 
 }

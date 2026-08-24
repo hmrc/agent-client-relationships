@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.model
 
-import play.api.libs.json._
+import play.api.libs.json.*
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.ClientIdType
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.ClientIdentifier
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Identifier
@@ -96,12 +96,12 @@ object EnrolmentKey {
       None
   }
 
-  implicit val writes: Writes[EnrolmentKey] =
+  given writes: Writes[EnrolmentKey] =
     new Writes[EnrolmentKey] {
       override def writes(ek: EnrolmentKey): JsValue = JsString(ek.toString)
     }
 
-  implicit val reads: Reads[EnrolmentKey] =
+  given reads: Reads[EnrolmentKey] =
     new Reads[EnrolmentKey] {
       override def reads(json: JsValue): JsResult[EnrolmentKey] =
         json match {

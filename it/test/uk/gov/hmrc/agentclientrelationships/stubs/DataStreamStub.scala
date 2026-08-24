@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.stubs
 
-import com.github.tomakehurst.wiremock.client.WireMock._
+import com.github.tomakehurst.wiremock.client.WireMock.*
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.Millis
 import org.scalatest.time.Seconds
@@ -33,7 +33,7 @@ extends DataStreamStub
 trait DataStreamStub
 extends Eventually {
 
-  private implicit val patience: PatienceConfig = PatienceConfig(scaled(Span(1, Seconds)), scaled(Span(50, Millis)))
+  private given patience: PatienceConfig = PatienceConfig(scaled(Span(1, Seconds)), scaled(Span(50, Millis)))
 
   def verifyCreateInvitationAuditSent(
     requestPath: String,

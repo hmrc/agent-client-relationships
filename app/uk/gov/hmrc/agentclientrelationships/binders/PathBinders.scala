@@ -17,19 +17,19 @@
 package uk.gov.hmrc.agentclientrelationships.binders
 
 import uk.gov.hmrc.agentclientrelationships.model.UserId
-import uk.gov.hmrc.agentclientrelationships.model.identifiers._
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.*
 
 // scalafmt: { binPack.parentConstructors = Always }
 object PathBinders {
 
-  implicit object ArnBinder extends SimpleObjectBinder[Arn](Arn.apply, _.value)
-  implicit object MtdItIdBinder extends SimpleObjectBinder[MtdItId](MtdItId.apply, _.value)
-  implicit object NinoBinder extends SimpleObjectBinder[NinoWithoutSuffix](NinoWithoutSuffix.apply, _.value)
-  implicit object VrnBinder extends SimpleObjectBinder[Vrn](Vrn.apply, _.value)
-  implicit object UtrBinder extends SimpleObjectBinder[Utr](Utr.apply, _.value)
-  implicit object PptRefBinder extends SimpleObjectBinder[PptRef](PptRef.apply, _.value)
-  implicit object CbcIdBinder extends SimpleObjectBinder[CbcId](CbcId.apply, _.value)
-  implicit object PlrIdBinder extends SimpleObjectBinder[PlrId](PlrId.apply, _.value)
-  implicit object UserIdBinder extends SimpleObjectBinder[UserId](UserId.apply, _.value)
+  given ArnBinder: SimpleObjectBinder[Arn] = new SimpleObjectBinder[Arn](Arn.apply, _.value)
+  given MtdItIdBinder: SimpleObjectBinder[MtdItId] = new SimpleObjectBinder[MtdItId](MtdItId.apply, _.value)
+  given NinoBinder: SimpleObjectBinder[NinoWithoutSuffix] = new SimpleObjectBinder[NinoWithoutSuffix](NinoWithoutSuffix.apply, _.value)
+  given VrnBinder: SimpleObjectBinder[Vrn] = new SimpleObjectBinder[Vrn](Vrn.apply, _.value)
+  given UtrBinder: SimpleObjectBinder[Utr] = new SimpleObjectBinder[Utr](Utr.apply, _.value)
+  given PptRefBinder: SimpleObjectBinder[PptRef] = new SimpleObjectBinder[PptRef](PptRef.apply, _.value)
+  given CbcIdBinder: SimpleObjectBinder[CbcId] = new SimpleObjectBinder[CbcId](CbcId.apply, _.value)
+  given PlrIdBinder: SimpleObjectBinder[PlrId] = new SimpleObjectBinder[PlrId](PlrId.apply, _.value)
+  given UserIdBinder: SimpleObjectBinder[UserId] = new SimpleObjectBinder[UserId](UserId.apply, _.value)
 
 }

@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.model.clientDetails.cbc
 
-import play.api.libs.json._
+import play.api.libs.json.*
 
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
@@ -32,7 +32,7 @@ case class SimpleCbcSubscription(
 }
 
 object SimpleCbcSubscription {
-  implicit val reads: Reads[SimpleCbcSubscription] = { json =>
+  given reads: Reads[SimpleCbcSubscription] = { json =>
     val isGBUser = (json \ "displaySubscriptionForCBCResponse" \ "responseDetail" \ "isGBUser").as[Boolean]
     val tradingName = (json \ "displaySubscriptionForCBCResponse" \ "responseDetail" \ "tradingName").asOpt[String]
     val primaryContact = (json \ "displaySubscriptionForCBCResponse" \ "responseDetail" \ "primaryContact").as[Seq[
@@ -77,9 +77,8 @@ object SimpleCbcSubscription {
 
 case class DisplaySubscriptionForCBCRequest(displaySubscriptionForCBCRequest: DisplaySubscriptionDetails)
 
-object DisplaySubscriptionForCBCRequest {
-  implicit val writes: Writes[DisplaySubscriptionForCBCRequest] = Json.writes[DisplaySubscriptionForCBCRequest]
-}
+object DisplaySubscriptionForCBCRequest:
+  given writes: Writes[DisplaySubscriptionForCBCRequest] = Json.writes[DisplaySubscriptionForCBCRequest]
 
 //-----------------------------------------------------------------------------
 
@@ -88,9 +87,8 @@ case class DisplaySubscriptionDetails(
   requestDetail: ReadSubscriptionRequestDetail
 )
 
-object DisplaySubscriptionDetails {
-  implicit val writes: Writes[DisplaySubscriptionDetails] = Json.writes[DisplaySubscriptionDetails]
-}
+object DisplaySubscriptionDetails:
+  given writes: Writes[DisplaySubscriptionDetails] = Json.writes[DisplaySubscriptionDetails]
 
 //-----------------------------------------------------------------------------
 
@@ -107,7 +105,7 @@ object RequestCommonForSubscription {
   // Format: ISO 8601 YYYY-MM-DDTHH:mm:ssZ e.g. 2020-09-23T16:12:11Zs
   private val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'")
 
-  implicit val writes: Writes[RequestCommonForSubscription] = Json.writes[RequestCommonForSubscription]
+  given writes: Writes[RequestCommonForSubscription] = Json.writes[RequestCommonForSubscription]
 
   def apply(): RequestCommonForSubscription = {
     // Generate a 32 chars UUID without hyphens
@@ -131,9 +129,8 @@ case class ReadSubscriptionRequestDetail(
   IDNumber: String
 )
 
-object ReadSubscriptionRequestDetail {
-  implicit val writes: Writes[ReadSubscriptionRequestDetail] = Json.writes[ReadSubscriptionRequestDetail]
-}
+object ReadSubscriptionRequestDetail:
+  given writes: Writes[ReadSubscriptionRequestDetail] = Json.writes[ReadSubscriptionRequestDetail]
 
 //-----------------------------------------------------------------------------
 
@@ -143,18 +140,17 @@ case class CbcIndividual(
 ) {
   def name: String = s"$firstName $lastName"
 }
-object CbcIndividual {
-  implicit val reads: Reads[CbcIndividual] = Json.reads[CbcIndividual]
-}
+object CbcIndividual:
+  given reads: Reads[CbcIndividual] = Json.reads[CbcIndividual]
+
 case class CbcOrganisation(organisationName: String)
-object CbcOrganisation {
-  implicit val reads: Reads[CbcOrganisation] = Json.reads[CbcOrganisation]
-}
+object CbcOrganisation:
+  given reads: Reads[CbcOrganisation] = Json.reads[CbcOrganisation]
+
 case class CbcContact(
   email: String,
   individual: Option[CbcIndividual],
   organisation: Option[CbcOrganisation]
 )
-object CbcContact {
-  implicit val reads: Reads[CbcContact] = Json.reads[CbcContact]
-}
+object CbcContact:
+  given reads: Reads[CbcContact] = Json.reads[CbcContact]

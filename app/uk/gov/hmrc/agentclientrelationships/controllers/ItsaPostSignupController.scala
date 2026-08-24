@@ -48,20 +48,21 @@ class ItsaPostSignupController @Inject() (
   val authConnector: AuthConnector,
   val appConfig: AppConfig,
   cc: ControllerComponents
-)(implicit val executionContext: ExecutionContext)
+)(using val executionContext: ExecutionContext)
 extends BackendController(cc)
 with AuthActions
 with RequestAwareLogging {
 
   val supportedServices: Seq[Service] = appConfig.supportedServices
 
-  def itsaPostSignupCreateRelationship(nino: NinoWithoutSuffix): Action[AnyContent] = Action.async { implicit request =>
+  def itsaPostSignupCreateRelationship(nino: NinoWithoutSuffix): Action[AnyContent] = Action.async { request =>
+    given play.api.mvc.RequestHeader = request
     withAuthorisedAsAgent { arn =>
       hipConnector
         .getMtdIdFor(nino)
         .flatMap {
           case Some(mtdItId) =>
-            implicit val auditData: AuditData = new AuditData()
+            given auditData: AuditData = new AuditData()
             checkAndCopyRelationshipsService
               .tryCreateITSARelationshipFromPartialAuthOrCopyAcross(
                 arn,

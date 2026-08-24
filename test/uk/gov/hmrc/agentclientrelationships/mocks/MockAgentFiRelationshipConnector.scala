@@ -46,14 +46,14 @@ trait MockAgentFiRelationshipConnector {
       eqs(service),
       eqs(clientId),
       any[LocalDateTime]
-    )(any[RequestHeader])
+    )(using any[RequestHeader])
   ).thenReturn(Future.successful(Done))
 
   def mockFindRelationshipForClient(clientId: String)(response: Either[
     RelationshipFailureResponse,
     Seq[ClientRelationship]
   ]): OngoingStubbing[Future[Either[RelationshipFailureResponse, Seq[ClientRelationship]]]] = when(
-    mockAgentFiRelationshipConnector.findIrvActiveRelationshipForClient(eqs(clientId))(any[RequestHeader])
+    mockAgentFiRelationshipConnector.findIrvActiveRelationshipForClient(eqs(clientId))(using any[RequestHeader])
   ).thenReturn(Future.successful(response))
 
 }

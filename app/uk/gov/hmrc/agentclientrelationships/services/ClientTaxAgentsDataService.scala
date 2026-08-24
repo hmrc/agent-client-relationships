@@ -17,12 +17,12 @@
 package uk.gov.hmrc.agentclientrelationships.services
 
 import cats.data.EitherT
-import cats.implicits._
+import cats.implicits.*
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.AgentFiRelationshipConnector
 import uk.gov.hmrc.agentclientrelationships.connectors.HipConnector
-import uk.gov.hmrc.agentclientrelationships.model._
+import uk.gov.hmrc.agentclientrelationships.model.*
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
@@ -50,7 +50,7 @@ class ClientTaxAgentsDataService @Inject() (
   findRelationshipsService: FindRelationshipsService,
   partialAuthRepository: PartialAuthRepository,
   hipConnector: HipConnector
-)(implicit
+)(using
   ec: ExecutionContext,
   appConfig: AppConfig
 ) {
@@ -59,7 +59,7 @@ class ClientTaxAgentsDataService @Inject() (
 
   def getClientTaxAgentsData(
     authResponse: EnrolmentsWithNino
-  )(implicit request: RequestHeader): Future[Either[RelationshipFailureResponse, ClientTaxAgentsData]] = {
+  )(using request: RequestHeader): Future[Either[RelationshipFailureResponse, ClientTaxAgentsData]] = {
     val clientIds: Seq[String] = authResponse.getIdentifierMap(supportedServices).values.toSeq.map(_.value)
     val identifiers: Map[String, TaxIdentifier] = authResponse.getIdentifierKeyMap(supportedServices)
     val nino: Option[String] = authResponse.getNino
@@ -107,7 +107,7 @@ class ClientTaxAgentsDataService @Inject() (
   private def getAuthorisationEvent(
     invitations: Seq[Invitation],
     clientAuthorisations: Seq[ClientAuthorisationForTaxId]
-  )(implicit
+  )(using
     request: RequestHeader,
     ec: ExecutionContext
   ): EitherT[
@@ -223,7 +223,7 @@ class ClientTaxAgentsDataService @Inject() (
       case _ => EitherT.right[RelationshipFailureResponse](Future.successful(Seq.empty[ClientAuthorisationForTaxId]))
     }
 
-  private def getAllAuthorisationsForAllServices(identifiers: Map[String, TaxIdentifier])(implicit
+  private def getAllAuthorisationsForAllServices(identifiers: Map[String, TaxIdentifier])(using
     request: RequestHeader
   ): EitherT[
     Future,
@@ -242,7 +242,7 @@ class ClientTaxAgentsDataService @Inject() (
   private def findAllRelationshipForTaxId(
     taxIdentifier: TaxIdentifier,
     service: Service
-  )(implicit
+  )(using
     request: RequestHeader
   ): EitherT[
     Future,
@@ -296,7 +296,7 @@ class ClientTaxAgentsDataService @Inject() (
         }
     }
 
-  private def recoverNotFoundRelationship(relationshipFailureResponse: RelationshipFailureResponse)(implicit
+  private def recoverNotFoundRelationship(relationshipFailureResponse: RelationshipFailureResponse)(using
     ec: ExecutionContext
   ): EitherT[
     Future,
@@ -310,7 +310,7 @@ class ClientTaxAgentsDataService @Inject() (
 
     }
 
-  private def getAgentDateForRelationships(relationshipsWithAuthProfile: Seq[ClientAuthorisationForTaxId])(implicit
+  private def getAgentDateForRelationships(relationshipsWithAuthProfile: Seq[ClientAuthorisationForTaxId])(using
     request: RequestHeader,
     ec: ExecutionContext
   ): EitherT[
@@ -344,7 +344,7 @@ class ClientTaxAgentsDataService @Inject() (
   private def getAuthorisations(
     relationships: Seq[ClientAuthorisationForTaxId],
     agentName: String
-  )(implicit
+  )(using
     ec: ExecutionContext
   ): EitherT[
     Future,
@@ -376,7 +376,7 @@ class ClientTaxAgentsDataService @Inject() (
       invitations <- EitherT.right[RelationshipFailureResponse](invitationsRepository.findAllBy(clientIds = clientIds))
     } yield invitations
 
-  private def getAgentDataForInvitation(invitations: Seq[Invitation])(implicit
+  private def getAgentDataForInvitation(invitations: Seq[Invitation])(using
     request: RequestHeader,
     ec: ExecutionContext
   ): EitherT[
@@ -411,7 +411,7 @@ class ClientTaxAgentsDataService @Inject() (
   }
 
   // TODO WG - that is called multiple time ofr same ARN
-  private def findAgentDetailsByArn(arn: Arn)(implicit
+  private def findAgentDetailsByArn(arn: Arn)(using
     request: RequestHeader,
     ec: ExecutionContext
   ): EitherT[

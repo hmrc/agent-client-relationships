@@ -36,17 +36,17 @@ trait MockAgentAssuranceService {
   def mockGetAgentRecord(
     arn: Arn
   )(response: AgentDetailsDesResponse): OngoingStubbing[Future[AgentDetailsDesResponse]] = when(
-    mockAgentRecordService.getAgentRecordWithChecks(eqs(arn))(any[RequestHeader])
+    mockAgentRecordService.getAgentRecordWithChecks(eqs(arn))(using any[RequestHeader])
   ).thenReturn(Future.successful(response))
 
   def mockGetNonSuspendedAgentRecord(
     arn: Arn
   )(response: Option[AgentDetailsDesResponse]): OngoingStubbing[Future[Option[AgentDetailsDesResponse]]] = when(
-    mockAgentRecordService.getNonSuspendedAgentRecord(eqs(arn))(any[RequestHeader])
+    mockAgentRecordService.getNonSuspendedAgentRecord(eqs(arn))(using any[RequestHeader])
   ).thenReturn(Future.successful(response))
 
   def mockFailedGetAgentRecord(arn: Arn): OngoingStubbing[Future[AgentDetailsDesResponse]] = when(
-    mockAgentRecordService.getAgentRecordWithChecks(eqs(arn))(any[RequestHeader])
+    mockAgentRecordService.getAgentRecordWithChecks(eqs(arn))(using any[RequestHeader])
   ).thenReturn(Future.failed(new Exception("something went wrong")))
 
 }

@@ -27,6 +27,5 @@ case class SetRelationshipEndedPayload(
   endedBy: Option[String]
 )
 
-object SetRelationshipEndedPayload {
-  implicit val jsonFormat: OFormat[SetRelationshipEndedPayload] = Json.format[SetRelationshipEndedPayload]
-}
+object SetRelationshipEndedPayload:
+  given jsonFormat: OFormat[SetRelationshipEndedPayload] = Json.format[SetRelationshipEndedPayload]

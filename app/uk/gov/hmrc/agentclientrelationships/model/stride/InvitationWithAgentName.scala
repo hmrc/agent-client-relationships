@@ -43,7 +43,7 @@ case class InvitationWithAgentName(
 
 object InvitationWithAgentName {
 
-  implicit val formats: OFormat[InvitationWithAgentName] = Json.format[InvitationWithAgentName]
+  given formats: OFormat[InvitationWithAgentName] = Json.format[InvitationWithAgentName]
 
   def fromInvitationAndAgentRecord(
     invitation: Invitation,
