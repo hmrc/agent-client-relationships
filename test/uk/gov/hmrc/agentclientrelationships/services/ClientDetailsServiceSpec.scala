@@ -166,9 +166,9 @@ extends UnitSpec {
 
           "return a ClientDetailsResponse with the mapped country code" in {
             when(mockAppConfig.overseasItsaEnabled).thenReturn(true)
-            when(mockHipConnector.getMtdIdFor(eqTo(nino))(any[RequestHeader])).thenReturn(Future.successful(Some(MtdItId("XAIT00000000001"))))
+            when(mockHipConnector.getMtdIdFor(eqTo(nino))(using any[RequestHeader])).thenReturn(Future.successful(Some(MtdItId("XAIT00000000001"))))
 
-            when(mockClientDetailsConnector.getItsaCitizenDetails(eqTo(nino))(any[RequestHeader])).thenReturn(
+            when(mockClientDetailsConnector.getItsaCitizenDetails(eqTo(nino))(using any[RequestHeader])).thenReturn(
               Future.successful(
                 Right(
                   CitizenDetails(
@@ -181,7 +181,7 @@ extends UnitSpec {
               )
             )
 
-            when(mockClientDetailsConnector.getItsaDesignatoryDetails(eqTo(nino))(any[RequestHeader])).thenReturn(
+            when(mockClientDetailsConnector.getItsaDesignatoryDetails(eqTo(nino))(using any[RequestHeader])).thenReturn(
               Future.successful(
                 Right(
                   ItsaDesignatoryDetails(
@@ -205,9 +205,9 @@ extends UnitSpec {
 
           "return supplied country when a country cannot be mapped" in {
             when(mockAppConfig.overseasItsaEnabled).thenReturn(true)
-            when(mockHipConnector.getMtdIdFor(eqTo(nino))(any[RequestHeader])).thenReturn(Future.successful(Some(MtdItId("XAIT00000000001"))))
+            when(mockHipConnector.getMtdIdFor(eqTo(nino))(using any[RequestHeader])).thenReturn(Future.successful(Some(MtdItId("XAIT00000000001"))))
 
-            when(mockClientDetailsConnector.getItsaCitizenDetails(eqTo(nino))(any[RequestHeader])).thenReturn(
+            when(mockClientDetailsConnector.getItsaCitizenDetails(eqTo(nino))(using any[RequestHeader])).thenReturn(
               Future.successful(
                 Right(
                   CitizenDetails(
@@ -220,7 +220,7 @@ extends UnitSpec {
               )
             )
 
-            when(mockClientDetailsConnector.getItsaDesignatoryDetails(eqTo(nino))(any[RequestHeader])).thenReturn(
+            when(mockClientDetailsConnector.getItsaDesignatoryDetails(eqTo(nino))(using any[RequestHeader])).thenReturn(
               Future.successful(
                 Right(
                   ItsaDesignatoryDetails(
@@ -244,9 +244,9 @@ extends UnitSpec {
 
           "return all relevant country codes when a historical country maps to multiple codes" in {
             when(mockAppConfig.overseasItsaEnabled).thenReturn(true)
-            when(mockHipConnector.getMtdIdFor(eqTo(nino))(any[RequestHeader])).thenReturn(Future.successful(Some(MtdItId("XAIT00000000001"))))
+            when(mockHipConnector.getMtdIdFor(eqTo(nino))(using any[RequestHeader])).thenReturn(Future.successful(Some(MtdItId("XAIT00000000001"))))
 
-            when(mockClientDetailsConnector.getItsaCitizenDetails(eqTo(nino))(any[RequestHeader])).thenReturn(
+            when(mockClientDetailsConnector.getItsaCitizenDetails(eqTo(nino))(using any[RequestHeader])).thenReturn(
               Future.successful(
                 Right(
                   CitizenDetails(
@@ -259,7 +259,7 @@ extends UnitSpec {
               )
             )
 
-            when(mockClientDetailsConnector.getItsaDesignatoryDetails(eqTo(nino))(any[RequestHeader])).thenReturn(
+            when(mockClientDetailsConnector.getItsaDesignatoryDetails(eqTo(nino))(using any[RequestHeader])).thenReturn(
               Future.successful(
                 Right(
                   ItsaDesignatoryDetails(
@@ -290,9 +290,9 @@ extends UnitSpec {
           "return ClientDetailsNotFound when no MTD ID is found for overseas flow" in {
             when(mockAppConfig.overseasItsaEnabled).thenReturn(true)
             when(mockAppConfig.overseasItsaBlockPartialAuth).thenReturn(true)
-            when(mockHipConnector.getMtdIdFor(eqTo(nino))(any[RequestHeader])).thenReturn(Future.successful(None))
+            when(mockHipConnector.getMtdIdFor(eqTo(nino))(using any[RequestHeader])).thenReturn(Future.successful(None))
 
-            when(mockClientDetailsConnector.getItsaCitizenDetails(eqTo(nino))(any[RequestHeader])).thenReturn(
+            when(mockClientDetailsConnector.getItsaCitizenDetails(eqTo(nino))(using any[RequestHeader])).thenReturn(
               Future.successful(
                 Right(
                   CitizenDetails(
@@ -305,7 +305,7 @@ extends UnitSpec {
               )
             )
 
-            when(mockClientDetailsConnector.getItsaDesignatoryDetails(eqTo(nino))(any[RequestHeader])).thenReturn(
+            when(mockClientDetailsConnector.getItsaDesignatoryDetails(eqTo(nino))(using any[RequestHeader])).thenReturn(
               Future.successful(
                 Right(
                   ItsaDesignatoryDetails(

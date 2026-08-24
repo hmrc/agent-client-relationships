@@ -116,7 +116,6 @@ extends RequestAwareLogging {
       case "HMRC-CBC-ORG" => getCbcClientDetails(clientId)
       case "HMRC-PILLAR2-ORG" => getPillar2ClientDetails(clientId)
     }
-  }
 
   private def makeItsaOverseasResponse(
     countryCodes: Seq[String],
