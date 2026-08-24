@@ -121,6 +121,8 @@ class AppConfig @Inject() (
   val overseasItsaEnabled: Boolean = servicesConfig.getBoolean("features.overseas-itsa-enabled")
   val trustsUseHip: Boolean = servicesConfig.getBoolean("features.trusts-use-hip")
 
+  val overseasItsaBlockPartialAuth: Boolean = servicesConfig.getBoolean("features.overseas-itsa-block-partial-auth")
+
   val supportedServices: Seq[Service] = Service.supportedServices
 
   // Note: Personal Income Record is not handled through agent-client-relationships for many of the endpoints

@@ -83,6 +83,16 @@ object ApiFailureResponse {
     def getResult: Result = UnprocessableEntity(toJson(ErrorBody("VAT_REG_DATE_DOES_NOT_MATCH")))
   }
 
+  case object CountryCodeInvalid
+  extends ApiFailureResponse {
+    def getResult: Result = UnprocessableEntity(toJson(ErrorBody("COUNTRY_CODE_FORMAT_INVALID")))
+  }
+
+  case object CountryCodeDoesNotMatch
+  extends ApiFailureResponse {
+    def getResult: Result = UnprocessableEntity(toJson(ErrorBody("COUNTRY_CODE_DOES_NOT_MATCH")))
+  }
+
   case object VatClientInsolvent
   extends ApiFailureResponse {
     def getResult: Result = UnprocessableEntity(toJson(ErrorBody("VAT_CLIENT_INSOLVENT")))

@@ -17,6 +17,7 @@
 package uk.gov.hmrc.agentclientrelationships.services
 
 import cats.data.EitherT
+import play.api.libs.json.Json
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.ClientDetailsConnector
@@ -46,6 +47,22 @@ class ClientDetailsService @Inject() (
   appConfig: AppConfig
 )(using ec: ExecutionContext)
 extends RequestAwareLogging {
+
+  private val countryNameToCode: Map[String, Seq[String]] = {
+    val stream = getClass.getResourceAsStream("/country-codes.json")
+    require(stream != null, "country-codes.json not found on the classpath")
+    try Json.parse(stream).as[Map[String, Seq[String]]]
+    finally stream.close()
+  }
+
+  private def toCountryCode(country: String)(implicit request: RequestHeader): Seq[String] = {
+    countryNameToCode.get(country.trim.toUpperCase) match {
+      case Some(countryCode) => countryCode
+      case None =>
+        logger.warn(s"Country name '$country' could not be mapped to ISO country code(s)") // continue anyway as might be supplied by api
+        Seq(country)
+    }
+  }
 
   // Expands either of the ITSA clientIds to both NINO and MTDITID where possible
   // NINO is mandatory as we treat it as a primary ITSA identifier, it is the 'suppliedClientId' as this is the only one ever manually input by users
@@ -101,14 +118,14 @@ extends RequestAwareLogging {
     }
 
   private def makeItsaOverseasResponse(
-    country: String,
+    countryCodes: Seq[String],
     name: String,
     factType: KnownFactType
   ): ClientDetailsResponse = ClientDetailsResponse(
     name = name,
     status = None,
     isOverseas = Some(true),
-    knownFacts = Seq(country),
+    knownFacts = countryCodes,
     knownFactType = Some(factType)
   )
 
@@ -159,11 +176,24 @@ extends RequestAwareLogging {
                       case (Some(name), Some(_), Some(postcode), Some(country)) if isUk(country) =>
                         Future.successful(Right(makeItsaUkResponse(postcode = postcode, name = name)))
                       case (Some(name), Some(_), _, Some(country)) if appConfig.overseasItsaEnabled && !isUk(country) =>
-                        Future.successful(Right(makeItsaOverseasResponse(
-                          country = country,
-                          name = name,
-                          factType = Country
-                        )))
+                        if (appConfig.overseasItsaBlockPartialAuth) {
+                          hipConnector.getMtdIdFor(NinoWithoutSuffix(nino)).map {
+                            case Some(_) =>
+                              Right(makeItsaOverseasResponse(
+                                countryCodes = toCountryCode(country),
+                                name = name,
+                                factType = CountryCode
+                              ))
+                            case None => Left(ClientDetailsNotFound)
+                          }
+                        }
+                        else {
+                          Future.successful(Right(makeItsaOverseasResponse(
+                            countryCodes = toCountryCode(country),
+                            name = name,
+                            factType = CountryCode
+                          )))
+                        }
                       case (Some(_), Some(_), _, Some(country)) if !isUk(country) =>
                         // TODO REMOVE THIS CASE WHEN overseasItsaEnabled FEATURE SWITCH IS REMOVED
                         Future.successful(Left(ClientDetailsNotFound))

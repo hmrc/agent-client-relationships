@@ -47,6 +47,7 @@ class ApiKnownFactsCheckService @Inject() (appConfig: AppConfig) {
               clientDetailsResponse.isOverseas.getOrElse(false)
             )
           case KnownFactType.Date => checkDate(knownFact, clientDetailsResponse.knownFacts.head)
+          case KnownFactType.CountryCode => checkCountryCode(knownFact, clientDetailsResponse.knownFacts)
           case _ => Left(KnowFactsFailure.UnsupportedKnowFacts)
         }
       case None => Left(KnowFactsFailure.UnsupportedKnowFacts)
@@ -96,5 +97,21 @@ class ApiKnownFactsCheckService @Inject() (appConfig: AppConfig) {
           Left(KnowFactsFailure.PostcodeFormatInvalid)
         }
     }
+
+  private def checkCountryCode(
+    suppliedCountryCode: String,
+    countryCode: Seq[String]
+  ): Either[KnowFactsFailure, Unit] = {
+
+    if (!suppliedCountryCode.matches("^[A-Z]{2}$")) {
+      Left(KnowFactsFailure.CountryCodeInvalid)
+    }
+    else if (countryCode.contains(suppliedCountryCode)) {
+      Right(())
+    }
+    else {
+      Left(KnowFactsFailure.CountryCodeDoesNotMatch)
+    }
+  }
 
 }

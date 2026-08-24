@@ -143,6 +143,8 @@ with AuthActions {
             case KnowFactsFailure.VatRegDateFormatInvalid => ApiFailureResponse.VatRegDateFormatInvalid
             case KnowFactsFailure.PostcodeDoesNotMatch => ApiFailureResponse.PostcodeDoesNotMatch
             case KnowFactsFailure.VatRegDateDoesNotMatch => ApiFailureResponse.VatRegDateDoesNotMatch
+            case KnowFactsFailure.CountryCodeInvalid => ApiFailureResponse.CountryCodeInvalid
+            case KnowFactsFailure.CountryCodeDoesNotMatch => ApiFailureResponse.CountryCodeDoesNotMatch
           }
 
         _ <- EitherT(getExistingRelationship(

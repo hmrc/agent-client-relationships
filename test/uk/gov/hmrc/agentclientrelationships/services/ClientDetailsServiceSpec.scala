@@ -42,6 +42,7 @@ import uk.gov.hmrc.agentclientrelationships.model.clientDetails.pillar2.Pillar2R
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ppt.PptSubscriptionDetails
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.vat.VatCustomerDetails
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.vat.VatIndividual
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Urn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Utr
@@ -157,6 +158,165 @@ extends UnitSpec {
             )
 
             await(service.findClientDetails("HMRC-MTD-IT", "AA000001B")) shouldBe Right(resultModel)
+          }
+
+        }
+
+        "all the expected details are returned for an overseas client" should {
+
+          "return a ClientDetailsResponse with the mapped country code" in {
+            when(mockAppConfig.overseasItsaEnabled).thenReturn(true)
+            when(mockHipConnector.getMtdIdFor(eqTo(nino))(using any[RequestHeader])).thenReturn(Future.successful(Some(MtdItId("XAIT00000000001"))))
+
+            when(mockClientDetailsConnector.getItsaCitizenDetails(eqTo(nino))(using any[RequestHeader])).thenReturn(
+              Future.successful(
+                Right(
+                  CitizenDetails(
+                    Some("John"),
+                    Some("Rocks"),
+                    None,
+                    Some("11223344")
+                  )
+                )
+              )
+            )
+
+            when(mockClientDetailsConnector.getItsaDesignatoryDetails(eqTo(nino))(using any[RequestHeader])).thenReturn(
+              Future.successful(
+                Right(
+                  ItsaDesignatoryDetails(
+                    Some("AA1 1AA"),
+                    Some("ARMENIA")
+                  )
+                )
+              )
+            )
+
+            val resultModel = ClientDetailsResponse(
+              "John Rocks",
+              None,
+              isOverseas = Some(true),
+              Seq("AM"),
+              Some(CountryCode)
+            )
+
+            await(service.findClientDetails("HMRC-MTD-IT", "AA000001B")) shouldBe Right(resultModel)
+          }
+
+          "return supplied country when a country cannot be mapped" in {
+            when(mockAppConfig.overseasItsaEnabled).thenReturn(true)
+            when(mockHipConnector.getMtdIdFor(eqTo(nino))(using any[RequestHeader])).thenReturn(Future.successful(Some(MtdItId("XAIT00000000001"))))
+
+            when(mockClientDetailsConnector.getItsaCitizenDetails(eqTo(nino))(using any[RequestHeader])).thenReturn(
+              Future.successful(
+                Right(
+                  CitizenDetails(
+                    Some("John"),
+                    Some("Rocks"),
+                    None,
+                    Some("11223344")
+                  )
+                )
+              )
+            )
+
+            when(mockClientDetailsConnector.getItsaDesignatoryDetails(eqTo(nino))(using any[RequestHeader])).thenReturn(
+              Future.successful(
+                Right(
+                  ItsaDesignatoryDetails(
+                    None,
+                    Some("INVALID COUNTRY")
+                  )
+                )
+              )
+            )
+
+            val resultModel = ClientDetailsResponse(
+              "John Rocks",
+              None,
+              isOverseas = Some(true),
+              Seq("INVALID COUNTRY"),
+              Some(CountryCode)
+            )
+
+            await(service.findClientDetails("HMRC-MTD-IT", "AA000001B")) shouldBe Right(resultModel)
+          }
+
+          "return all relevant country codes when a historical country maps to multiple codes" in {
+            when(mockAppConfig.overseasItsaEnabled).thenReturn(true)
+            when(mockHipConnector.getMtdIdFor(eqTo(nino))(using any[RequestHeader])).thenReturn(Future.successful(Some(MtdItId("XAIT00000000001"))))
+
+            when(mockClientDetailsConnector.getItsaCitizenDetails(eqTo(nino))(using any[RequestHeader])).thenReturn(
+              Future.successful(
+                Right(
+                  CitizenDetails(
+                    Some("John"),
+                    Some("Rocks"),
+                    None,
+                    Some("11223344")
+                  )
+                )
+              )
+            )
+
+            when(mockClientDetailsConnector.getItsaDesignatoryDetails(eqTo(nino))(using any[RequestHeader])).thenReturn(
+              Future.successful(
+                Right(
+                  ItsaDesignatoryDetails(
+                    None,
+                    Some("ANTILLES (NETHERLANDS)")
+                  )
+                )
+              )
+            )
+
+            val resultModel = ClientDetailsResponse(
+              "John Rocks",
+              None,
+              isOverseas = Some(true),
+              Seq(
+                "AN",
+                "CW",
+                "SX",
+                "BQ",
+                "AW"
+              ),
+              Some(CountryCode)
+            )
+
+            await(service.findClientDetails("HMRC-MTD-IT", "AA000001B")) shouldBe Right(resultModel)
+          }
+
+          "return ClientDetailsNotFound when no MTD ID is found for overseas flow" in {
+            when(mockAppConfig.overseasItsaEnabled).thenReturn(true)
+            when(mockAppConfig.overseasItsaBlockPartialAuth).thenReturn(true)
+            when(mockHipConnector.getMtdIdFor(eqTo(nino))(using any[RequestHeader])).thenReturn(Future.successful(None))
+
+            when(mockClientDetailsConnector.getItsaCitizenDetails(eqTo(nino))(using any[RequestHeader])).thenReturn(
+              Future.successful(
+                Right(
+                  CitizenDetails(
+                    Some("John"),
+                    Some("Rocks"),
+                    None,
+                    Some("11223344")
+                  )
+                )
+              )
+            )
+
+            when(mockClientDetailsConnector.getItsaDesignatoryDetails(eqTo(nino))(using any[RequestHeader])).thenReturn(
+              Future.successful(
+                Right(
+                  ItsaDesignatoryDetails(
+                    None,
+                    Some("ARMENIA")
+                  )
+                )
+              )
+            )
+
+            await(service.findClientDetails("HMRC-MTD-IT", "AA000001B")) shouldBe Left(ClientDetailsNotFound)
           }
 
         }
