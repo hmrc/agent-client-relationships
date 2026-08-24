@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.agentclientrelationships.controllers
 
+import org.mongodb.scala.ObservableFuture
+
 import play.api.libs.json.Json
 import play.api.mvc.AnyContentAsEmpty
 import play.api.test.FakeRequest
@@ -26,10 +28,10 @@ import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ActiveMainAgent
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsStrideResponse
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Cbc
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.CbcNonUk
-import uk.gov.hmrc.agentclientrelationships.model.identifiers._
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.*
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgencyDetails
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentDetailsDesResponse
-import uk.gov.hmrc.agentclientrelationships.model.stride._
+import uk.gov.hmrc.agentclientrelationships.model.stride.*
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
 import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
 import uk.gov.hmrc.agentclientrelationships.stubs.AfiRelationshipStub

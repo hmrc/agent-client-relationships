@@ -16,8 +16,8 @@
 
 package uk.gov.hmrc.agentclientrelationships.model.stride
 
-import play.api.libs.functional.syntax._
-import play.api.libs.json._
+import play.api.libs.functional.syntax.*
+import play.api.libs.json.*
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 
@@ -36,7 +36,7 @@ object RelationshipSource {
   case object AcrPartialAuthRepo
   extends RelationshipSource
 
-  implicit val writes: Writes[RelationshipSource] = Writes {
+  given writes: Writes[RelationshipSource] = Writes {
     case HipOrIfApi => JsString("HipOrIfApi")
     case AfrRelationshipRepo => JsString("AfrRelationshipRepo")
     case AcrPartialAuthRepo => JsString("AcrPartialAuthRepo")
@@ -56,9 +56,9 @@ case class ClientRelationship(
 
 object ClientRelationship {
 
-  implicit val clientRelationshipWrites: OWrites[ClientRelationship] = Json.writes[ClientRelationship]
+  given clientRelationshipWrites: OWrites[ClientRelationship] = Json.writes[ClientRelationship]
 
-  implicit val ifReads: Reads[ClientRelationship] =
+  given ifReads: Reads[ClientRelationship] =
     (
       (JsPath \ "agentReferenceNumber").read[Arn] and
         (JsPath \ "dateTo").readNullable[LocalDate] and
@@ -139,8 +139,7 @@ object ClientRelationship {
 
 case class ClientRelationshipResponse(relationship: Seq[ClientRelationship])
 
-object ClientRelationshipResponse {
-  implicit val clientRelationshipResponseFormat: OFormat[ClientRelationshipResponse] = Json.format[
+object ClientRelationshipResponse:
+  given clientRelationshipResponseFormat: OFormat[ClientRelationshipResponse] = Json.format[
     ClientRelationshipResponse
   ]
-}

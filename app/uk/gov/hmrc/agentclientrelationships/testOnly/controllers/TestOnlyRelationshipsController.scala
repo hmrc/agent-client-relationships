@@ -19,12 +19,13 @@ package uk.gov.hmrc.agentclientrelationships.testOnly.controllers
 import play.api.mvc.Action
 import play.api.mvc.AnyContent
 import play.api.mvc.ControllerComponents
+import play.api.mvc.Result
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.auth.CurrentUser
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoType
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service._
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.*
 import uk.gov.hmrc.agentclientrelationships.services.InvitationAcceptService
 import uk.gov.hmrc.agentclientrelationships.services.CheckAndCopyRelationshipsService
 import uk.gov.hmrc.agentclientrelationships.services.CreateRelationshipLocked
@@ -42,13 +43,14 @@ class TestOnlyRelationshipsController @Inject() (
   controllerComponents: ControllerComponents,
   validationService: ValidationService,
   authorisationAcceptService: InvitationAcceptService
-)(implicit ec: ExecutionContext)
+)(using ec: ExecutionContext)
 extends BackendController(controllerComponents) {
 
   def cleanCopyStatusRecord(
     arn: Arn,
     mtdItId: MtdItId
-  ): Action[AnyContent] = Action.async { implicit request =>
+  ): Action[AnyContent] = Action.async { request =>
+    given play.api.mvc.RequestHeader = request
     checkOldAndCopyService
       .cleanCopyStatusRecord(arn, mtdItId)
       .map(_ => NoContent)
@@ -60,15 +62,16 @@ extends BackendController(controllerComponents) {
     service: String,
     clientIdType: String,
     clientId: String
-  ): Action[AnyContent] = Action.async { implicit request =>
+  ): Action[AnyContent] = Action.async { request =>
+    given play.api.mvc.RequestHeader = request
     validationService.validateForEnrolmentKeyEither(
       service,
       clientId,
       Some(clientIdType)
     ).flatMap {
       case Right(enrolmentKey) =>
-        implicit val auditData: AuditData = new AuditData()
-        implicit val currentUser: CurrentUser = new CurrentUser(None, None) // Only needed for audits, pointless for test endpoint
+        given auditData: AuditData = new AuditData()
+        given currentUser: CurrentUser = new CurrentUser(None, None) // Only needed for audits, pointless for test endpoint
         authorisationAcceptService.createRelationship(
           arn = arn,
           suppliedClientId = "", // This only gets used to deauth existing partial auth for a normal ITSA user, not very relevant for a test endpoint
@@ -76,9 +79,9 @@ extends BackendController(controllerComponents) {
           isAltItsa = Seq(MtdIt.id, MtdItSupp.id).contains(enrolmentKey.service) && enrolmentKey.oneIdentifier().key == NinoType.enrolmentId,
           timestamp = Instant.now()
         )
-          .map(_ => Created)
-          .recover { case CreateRelationshipLocked => Locked }
-      case Left(error) => Future.successful(BadRequest(error))
+          .map(_ => Created: Result)
+          .recover { case CreateRelationshipLocked => Locked: Result }
+      case Left(error) => Future.successful[Result](BadRequest(error))
     }
   }
 

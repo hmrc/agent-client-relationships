@@ -16,9 +16,4 @@
 
 package uk.gov.hmrc.agentclientrelationships.stubs
 
-import com.github.tomakehurst.wiremock.client.WireMock._
-import com.github.tomakehurst.wiremock.stubbing.StubMapping
-import play.api.libs.json.Json
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
-
 trait ClientDetailsStub {}

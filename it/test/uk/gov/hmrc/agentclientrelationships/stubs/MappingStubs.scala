@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.stubs
 
-import com.github.tomakehurst.wiremock.client.WireMock._
+import com.github.tomakehurst.wiremock.client.WireMock.*
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.domain.SaAgentReference
 

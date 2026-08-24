@@ -37,7 +37,7 @@ case class ApiInvitationResponse(
 
 object ApiInvitationResponse {
 
-  implicit val format: Format[ApiInvitationResponse] = Json.format[ApiInvitationResponse]
+  given format: Format[ApiInvitationResponse] = Json.format[ApiInvitationResponse]
 
   def createApiInvitationResponse(
     invitation: Invitation,

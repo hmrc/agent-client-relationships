@@ -25,12 +25,10 @@ case class AgentInvitations(
   invitations: Seq[Invitation]
 )
 
-object AgentInvitations {
-  implicit val formats: OFormat[AgentInvitations] = Json.format[AgentInvitations]
-}
+object AgentInvitations:
+  given formats: OFormat[AgentInvitations] = Json.format[AgentInvitations]
 
 case class AgentsInvitationsResponse(agentsInvitations: Seq[AgentInvitations])
 
-object AgentsInvitationsResponse {
-  implicit val formats: OFormat[AgentsInvitationsResponse] = Json.format[AgentsInvitationsResponse]
-}
+object AgentsInvitationsResponse:
+  given formats: OFormat[AgentsInvitationsResponse] = Json.format[AgentsInvitationsResponse]

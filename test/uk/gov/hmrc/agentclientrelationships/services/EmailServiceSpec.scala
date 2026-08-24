@@ -43,8 +43,8 @@ with ResettingMockitoSugar {
   val mockEmailConnector: EmailConnector = resettingMock[EmailConnector]
   lazy val messagesApi: MessagesApi = stubControllerComponents().messagesApi
   val langs: Langs = stubControllerComponents().langs
-  implicit val lang: Lang = langs.availables.head
-  implicit val request: RequestHeader = FakeRequest()
+  given lang: Lang = langs.availables.head
+  given request: RequestHeader = FakeRequest()
 
   val service =
     new EmailService(
@@ -82,7 +82,7 @@ with ResettingMockitoSugar {
       val invitations = Seq(invitation, invitation.copy(invitationId = "2", suppliedClientId = "2"))
 
       service.sendWarningEmail(invitations)
-      verify(mockEmailConnector).sendEmail(eqTo(expectedEmailInfoModel))(any[RequestHeader]())
+      verify(mockEmailConnector).sendEmail(eqTo(expectedEmailInfoModel))(using any[RequestHeader]())
     }
 
     "send the correct model to the connector when there is one invitation" in {
@@ -98,7 +98,7 @@ with ResettingMockitoSugar {
       )
 
       service.sendWarningEmail(Seq(invitation))
-      verify(mockEmailConnector).sendEmail(eqTo(expectedEmailInfoModel))(any[RequestHeader]())
+      verify(mockEmailConnector).sendEmail(eqTo(expectedEmailInfoModel))(using any[RequestHeader]())
     }
   }
 
@@ -133,7 +133,7 @@ with ResettingMockitoSugar {
           )
 
           service.sendExpiredEmail(invitation.copy(service = serviceKey))
-          verify(mockEmailConnector).sendEmail(eqTo(expectedEmailInfoModel))(any[RequestHeader]())
+          verify(mockEmailConnector).sendEmail(eqTo(expectedEmailInfoModel))(using any[RequestHeader]())
         }
       }
   }

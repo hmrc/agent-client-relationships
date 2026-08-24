@@ -17,11 +17,10 @@
 package uk.gov.hmrc.agentclientrelationships.model.invitation
 
 import play.api.libs.json.Json.toJson
-import play.api.libs.json.JsValue
 import play.api.libs.json.Json
 import play.api.libs.json.Writes
 import play.api.mvc.Result
-import play.api.mvc.Results._
+import play.api.mvc.Results.*
 sealed trait ApiFailureResponse {
   def getResult: Result
 }
@@ -33,9 +32,9 @@ object ApiFailureResponse {
     invitationId: Option[String] = None
   )
 
-  implicit val errorBodyWrites: Writes[ErrorBody] =
-    new Writes[ErrorBody] {
-      override def writes(body: ErrorBody): JsValue = body.invitationId
+  given errorBodyWrites: Writes[ErrorBody] =
+    (body: ErrorBody) =>
+      body.invitationId
         .map(id =>
           Json.obj(
             "code" -> body.code,
@@ -43,7 +42,6 @@ object ApiFailureResponse {
           )
         )
         .getOrElse(Json.obj("code" -> body.code))
-    }
 
   case object UnsupportedService
   extends ApiFailureResponse {

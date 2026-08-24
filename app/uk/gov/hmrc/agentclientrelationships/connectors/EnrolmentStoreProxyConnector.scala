@@ -22,17 +22,18 @@ import play.api.http.Status
 import play.api.libs.json.Format
 import play.api.libs.json.JsObject
 import play.api.libs.json.Json
+import play.api.libs.ws.JsonBodyWritables.writeableOf_JsValue
 import play.api.libs.json.OWrites
 import play.api.mvc.RequestHeader
 import sttp.model.Uri.UriContext
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
-import uk.gov.hmrc.agentclientrelationships.support.TaxIdentifierSupport._
+import uk.gov.hmrc.agentclientrelationships.support.TaxIdentifierSupport.*
 import uk.gov.hmrc.agentclientrelationships.util.RequestSupport.hc
-import uk.gov.hmrc.agentclientrelationships.model.identifiers._
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.*
 import uk.gov.hmrc.domain.AgentCode
-import uk.gov.hmrc.http.HttpReads.Implicits._
+import uk.gov.hmrc.http.HttpReads.Implicits.*
 import uk.gov.hmrc.http.HttpResponse
 import uk.gov.hmrc.http.StringContextOps
 import uk.gov.hmrc.http.UpstreamErrorResponse
@@ -48,19 +49,17 @@ case class ES8Request(
   userId: String,
   `type`: String
 )
-object ES8Request {
-  implicit val writes: OWrites[ES8Request] = Json.writes[ES8Request]
-}
+object ES8Request:
+  given writes: OWrites[ES8Request] = Json.writes[ES8Request]
 
 case class ES2Response(enrolments: Seq[Enrolment])
-object ES2Response {
-  implicit val format: Format[ES2Response] = Json.format[ES2Response]
-}
+object ES2Response:
+  given format: Format[ES2Response] = Json.format[ES2Response]
 
 case class ES19Request(friendlyName: String)
-object ES19Request {
-  implicit val format: Format[ES19Request] = Json.format[ES19Request]
-}
+object ES19Request:
+  given format: Format[ES19Request] = Json.format[ES19Request]
+
 // Note: knownFacts accepts identifier or verifier (key/value object), but we only need by identifier
 case class ES20Request(
   service: String,
@@ -68,7 +67,7 @@ case class ES20Request(
 )
 object ES20Request {
 
-  implicit val format: Format[ES20Request] = Json.format[ES20Request]
+  given format: Format[ES20Request] = Json.format[ES20Request]
   def forCbcId(cbcId: String): ES20Request = ES20Request("HMRC-CBC-ORG", Seq(Identifier("cbcId", cbcId)))
 
 }
@@ -77,7 +76,7 @@ object ES20Request {
 class EnrolmentStoreProxyConnector @Inject() (
   httpClient: HttpClientV2,
   appConfig: AppConfig
-)(implicit val ec: ExecutionContext)
+)(using ec: ExecutionContext)
 extends RequestAwareLogging {
 
   val espBaseUrl = appConfig.enrolmentStoreProxyUrl
@@ -85,7 +84,7 @@ extends RequestAwareLogging {
 
   // ES1 - principal
   // TODO: Replace String with a dedicated type for GroupId to improve readability and make the method's purpose clearer
-  def getPrincipalGroupIdFor(arn: Arn)(implicit request: RequestHeader): Future[String] = {
+  def getPrincipalGroupIdFor(arn: Arn)(using request: RequestHeader): Future[String] = {
     val enrolmentKey = EnrolmentKey(s"HMRC-AS-AGENT~AgentReferenceNumber~${arn.value}")
     httpClient
       .get(url"$espBaseUrl/enrolment-store-proxy/enrolment-store/enrolments/$enrolmentKey/groups?type=principal")
@@ -114,7 +113,7 @@ extends RequestAwareLogging {
   }
 
   // ES1 - delegated
-  def getDelegatedGroupIdsFor(enrolmentKey: EnrolmentKey)(implicit request: RequestHeader): Future[Set[String]] = httpClient
+  def getDelegatedGroupIdsFor(enrolmentKey: EnrolmentKey)(using request: RequestHeader): Future[Set[String]] = httpClient
     .get(url"$espBaseUrl/enrolment-store-proxy/enrolment-store/enrolments/$enrolmentKey/groups?type=delegated")
     .execute[HttpResponse]
     .map { response =>
@@ -135,7 +134,7 @@ extends RequestAwareLogging {
   def getEnrolmentsAssignedToUser(
     userId: String,
     service: Option[String]
-  )(implicit request: RequestHeader): Future[Seq[Enrolment]] = {
+  )(using request: RequestHeader): Future[Seq[Enrolment]] = {
 
     val url: URL =
       uri"$espBaseUrl/enrolment-store-proxy/enrolment-store/users/$userId/enrolments"
@@ -168,7 +167,7 @@ extends RequestAwareLogging {
   }
 
   // ES3 - Query Enrolments allocated to a Group
-  def getAgentReferenceNumberFor(groupId: String)(implicit request: RequestHeader): Future[Option[Arn]] = httpClient
+  def getAgentReferenceNumberFor(groupId: String)(using request: RequestHeader): Future[Option[Arn]] = httpClient
     .get(
       url"$espBaseUrl/enrolment-store-proxy/enrolment-store/groups/$groupId/enrolments?type=principal"
     )
@@ -198,7 +197,7 @@ extends RequestAwareLogging {
     userId: String,
     enrolmentKey: EnrolmentKey,
     agentCode: AgentCode
-  )(implicit request: RequestHeader): Future[Done] = {
+  )(using request: RequestHeader): Future[Done] = {
     val url = url"$teBaseUrl/tax-enrolments/groups/$groupId/enrolments/$enrolmentKey?legacy-agentCode=${agentCode.value}"
     httpClient
       .post(url)
@@ -221,7 +220,7 @@ extends RequestAwareLogging {
   def deallocateEnrolmentFromAgent(
     groupId: String,
     enrolmentKey: EnrolmentKey
-  )(implicit request: RequestHeader): Future[Done] = {
+  )(using request: RequestHeader): Future[Done] = {
     val url = url"$teBaseUrl/tax-enrolments/groups/$groupId/enrolments/${enrolmentKey.tag}"
     httpClient
       .delete(url)
@@ -244,7 +243,7 @@ extends RequestAwareLogging {
     groupId: String,
     enrolmentKey: String,
     friendlyName: String
-  )(implicit request: RequestHeader): Future[Unit] = httpClient
+  )(using request: RequestHeader): Future[Unit] = httpClient
     .put(
       url"$espBaseUrl/enrolment-store-proxy/enrolment-store/groups/$groupId/enrolments/$enrolmentKey/friendly_name"
     )
@@ -266,7 +265,7 @@ extends RequestAwareLogging {
   def queryKnownFacts(
     service: Service,
     knownFacts: Seq[Identifier]
-  )(implicit request: RequestHeader): Future[Option[Seq[Identifier]]] = httpClient
+  )(using request: RequestHeader): Future[Option[Seq[Identifier]]] = httpClient
     .post(url"$espBaseUrl/enrolment-store-proxy/enrolment-store/enrolments")
     .withBody(Json.toJson(ES20Request(service.id, knownFacts)))
     .execute[HttpResponse]

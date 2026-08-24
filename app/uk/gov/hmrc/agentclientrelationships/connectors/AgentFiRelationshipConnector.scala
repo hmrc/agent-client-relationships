@@ -22,19 +22,20 @@ import play.api.http.Status.NOT_FOUND
 import play.api.http.Status.OK
 import play.api.libs.json.Json
 import play.api.libs.json.Reads
+import play.api.libs.ws.JsonBodyWritables.writeableOf_JsValue
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.ActiveRelationship
 import uk.gov.hmrc.agentclientrelationships.model.InactiveRelationship
 import uk.gov.hmrc.agentclientrelationships.model.RelationshipFailureResponse
 import uk.gov.hmrc.agentclientrelationships.model.stride.ClientRelationship
-import uk.gov.hmrc.agentclientrelationships.util.RequestSupport._
+import uk.gov.hmrc.agentclientrelationships.util.RequestSupport.given
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.http.HttpResponse
 import uk.gov.hmrc.http.StringContextOps
 import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.http.client.HttpClientV2
-import uk.gov.hmrc.http.HttpReads.Implicits._
+import uk.gov.hmrc.http.HttpReads.Implicits.*
 
 import java.net.URL
 import java.time.LocalDateTime
@@ -47,7 +48,7 @@ import scala.concurrent.Future
 class AgentFiRelationshipConnector @Inject() (
   appConfig: AppConfig,
   httpClient: HttpClientV2
-)(implicit val ec: ExecutionContext) {
+)(using ec: ExecutionContext) {
 
   private def afiRelationshipUrl(
     arn: Arn,
@@ -59,8 +60,8 @@ class AgentFiRelationshipConnector @Inject() (
     arn: Arn,
     service: String,
     clientId: String
-  )(implicit rh: RequestHeader): Future[Option[ActiveRelationship]] = {
-    implicit val reads: Reads[ActiveRelationship] = ActiveRelationship.irvReads
+  )(using rh: RequestHeader): Future[Option[ActiveRelationship]] = {
+    given reads: Reads[ActiveRelationship] = ActiveRelationship.irvReads
     httpClient
       .get(
         afiRelationshipUrl(
@@ -73,8 +74,8 @@ class AgentFiRelationshipConnector @Inject() (
       .map(_.flatMap(_.headOption))
   }
 
-  def getInactiveRelationships(implicit rh: RequestHeader): Future[Seq[InactiveRelationship]] = {
-    implicit val reads: Reads[InactiveRelationship] = InactiveRelationship.irvReads
+  def getInactiveRelationships(using rh: RequestHeader): Future[Seq[InactiveRelationship]] = {
+    given reads: Reads[InactiveRelationship] = InactiveRelationship.irvReads
     httpClient
       .get(url"${appConfig.agentFiRelationshipBaseUrl}/agent-fi-relationship/relationships/inactive")
       .execute[Option[Seq[InactiveRelationship]]]
@@ -86,7 +87,7 @@ class AgentFiRelationshipConnector @Inject() (
     service: String,
     clientId: String,
     acceptedDate: LocalDateTime
-  )(implicit rh: RequestHeader): Future[Done] = {
+  )(using rh: RequestHeader): Future[Done] = {
     val body = Json.obj("startDate" -> acceptedDate.toString)
     httpClient
       .put(
@@ -111,7 +112,7 @@ class AgentFiRelationshipConnector @Inject() (
     arn: Arn,
     service: String,
     clientId: String
-  )(implicit
+  )(using
     rh: RequestHeader
   ): Future[Boolean] = httpClient
     .delete(
@@ -130,8 +131,8 @@ class AgentFiRelationshipConnector @Inject() (
       }
     }
 
-  def findIrvActiveRelationshipForClient(clientId: String)(implicit rh: RequestHeader): Future[Either[RelationshipFailureResponse, Seq[ClientRelationship]]] = {
-    implicit val reads: Reads[ClientRelationship] = ClientRelationship.irvReads(IsActive = true)
+  def findIrvActiveRelationshipForClient(clientId: String)(using rh: RequestHeader): Future[Either[RelationshipFailureResponse, Seq[ClientRelationship]]] = {
+    given reads: Reads[ClientRelationship] = ClientRelationship.irvReads(IsActive = true)
     httpClient
       .get(url"${appConfig.agentFiRelationshipBaseUrl}/agent-fi-relationship/relationships/service/PERSONAL-INCOME-RECORD/clientId/$clientId")
       .execute[HttpResponse]
@@ -151,10 +152,10 @@ class AgentFiRelationshipConnector @Inject() (
       }
   }
 
-  def findIrvInactiveRelationshipForClient(implicit
+  def findIrvInactiveRelationshipForClient(using
     rh: RequestHeader
   ): Future[Either[RelationshipFailureResponse, Seq[ClientRelationship]]] = {
-    implicit val reads: Reads[ClientRelationship] = ClientRelationship.irvReads(IsActive = false)
+    given reads: Reads[ClientRelationship] = ClientRelationship.irvReads(IsActive = false)
     httpClient
       .get(url"${appConfig.agentFiRelationshipBaseUrl}/agent-fi-relationship/relationships/inactive")
       .execute[HttpResponse]

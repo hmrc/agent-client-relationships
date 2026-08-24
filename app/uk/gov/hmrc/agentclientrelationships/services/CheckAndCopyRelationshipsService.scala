@@ -18,12 +18,12 @@ package uk.gov.hmrc.agentclientrelationships.services
 
 import org.apache.pekko.Done
 import play.api.mvc.RequestHeader
-import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys._
+import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys.*
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.audit.AuditService
 import uk.gov.hmrc.agentclientrelationships.auth.CurrentUser
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.connectors._
+import uk.gov.hmrc.agentclientrelationships.connectors.*
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDIT
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDITSUPP
@@ -106,7 +106,7 @@ class CheckAndCopyRelationshipsService @Inject() (
   itsaDeauthAndCleanupService: ItsaDeauthAndCleanupService,
   val auditService: AuditService,
   val appConfig: AppConfig
-)(implicit ec: ExecutionContext)
+)(using ec: ExecutionContext)
 extends RequestAwareLogging {
 
   private val copyMtdItRelationshipFlag = appConfig.copyMtdItRelationshipFlag
@@ -114,7 +114,7 @@ extends RequestAwareLogging {
   def checkForOldRelationshipAndCopy(
     arn: Arn,
     enrolmentKey: EnrolmentKey
-  )(implicit
+  )(using
     request: RequestHeader,
     auditData: AuditData
   ): Future[CheckAndCopyResult] = {
@@ -146,7 +146,7 @@ extends RequestAwareLogging {
     arn: Arn,
     mtdItId: MtdItId,
     nino: Option[NinoWithoutSuffix]
-  )(implicit
+  )(using
     request: RequestHeader,
     auditData: AuditData,
     currentUser: CurrentUser
@@ -206,9 +206,8 @@ extends RequestAwareLogging {
   private def endPartialAuth(
     arn: Arn,
     service: String,
-    nino: Option[NinoWithoutSuffix],
-    mtdItId: MtdItId
-  )(implicit request: RequestHeader): Future[Boolean] =
+    nino: Option[NinoWithoutSuffix]
+  )(using request: RequestHeader): Future[Boolean] = {
     nino.fold(Future.successful(false))(ni =>
       partialAuthRepo
         .deleteActivePartialAuth(
@@ -230,11 +229,12 @@ extends RequestAwareLogging {
           }
         }
     )
+  }
 
   private def findPartialAuth(
     arn: Arn,
     nino: Option[NinoWithoutSuffix]
-  )(implicit auditData: AuditData): Future[Option[String]] =
+  )(using auditData: AuditData): Future[Option[String]] =
     nino.fold[Future[Option[String]]](Future.successful(None)) { ni =>
       auditData.set(ninoKey, ni)
       partialAuthRepo.findActiveForAgent(ni, arn).map(_.map(_.service))
@@ -244,7 +244,7 @@ extends RequestAwareLogging {
     service: String,
     arn: Arn,
     mtdItId: MtdItId
-  )(implicit
+  )(using
     request: RequestHeader,
     auditData: AuditData
   ): Future[Option[Done]] = {
@@ -264,7 +264,7 @@ extends RequestAwareLogging {
     mtdItId: MtdItId,
     mService: Option[String],
     mNino: Option[NinoWithoutSuffix]
-  )(implicit
+  )(using
     request: RequestHeader,
     auditData: AuditData
   ): Future[CheckAndCopyResult] = {
@@ -273,7 +273,7 @@ extends RequestAwareLogging {
     auditData.set(clientIdTypeKey, "mtditid")
     auditData.set(arnKey, s"${arn.value}")
 
-    implicit val currentUser: CurrentUser = CurrentUser(credentials = None, affinityGroup = Some(Agent))
+    given currentUser: CurrentUser = CurrentUser(credentials = None, affinityGroup = Some(Agent))
 
     for {
       mNino <- mNino.fold(hipConnector.getNinoFor(mtdItId))(ni => Future.successful(Some(ni)))
@@ -291,8 +291,7 @@ extends RequestAwareLogging {
                   _ <- endPartialAuth(
                     arn,
                     partialAuth,
-                    mNino,
-                    mtdItId
+                    mNino
                   )
                   _ <- itsaDeauthAndCleanupService.deleteSameAgentRelationship(
                     partialAuth,
@@ -338,7 +337,7 @@ extends RequestAwareLogging {
     maybeRelationshipCopyRecord: Option[RelationshipCopyRecord],
     arn: Arn,
     enrolmentKey: EnrolmentKey
-  )(implicit
+  )(using
     request: RequestHeader,
     auditData: AuditData
   ): Future[Option[Done]] =
@@ -362,7 +361,7 @@ extends RequestAwareLogging {
   def lookupCesaForOldRelationship(
     arn: Arn,
     nino: NinoWithoutSuffix
-  )(implicit
+  )(using
     request: RequestHeader,
     auditData: AuditData = new AuditData()
   ): Future[(Set[SaAgentReference], Seq[SaAgentReference])] = {
@@ -385,7 +384,7 @@ extends RequestAwareLogging {
   def hasPartialAuthOrLegacyRelationshipInCesa(
     arn: Arn,
     nino: NinoWithoutSuffix
-  )(implicit
+  )(using
     ec: ExecutionContext,
     request: RequestHeader,
     auditData: AuditData
@@ -403,7 +402,7 @@ extends RequestAwareLogging {
       Future successful true
   }
 
-  def intersection[A](referenceIds: Seq[A])(mappingServiceCall: => Future[Seq[A]])(implicit request: RequestHeader): Future[Set[A]] = {
+  def intersection[A](referenceIds: Seq[A])(mappingServiceCall: => Future[Seq[A]])(using request: RequestHeader): Future[Set[A]] = {
     val referenceIdSet = referenceIds.toSet
 
     if (referenceIdSet.isEmpty) {
@@ -427,7 +426,7 @@ extends RequestAwareLogging {
   def cleanCopyStatusRecord(
     arn: Arn,
     mtdItId: MtdItId
-  )(implicit requestHeader: RequestHeader): Future[Unit] = relationshipCopyRepository
+  )(using requestHeader: RequestHeader): Future[Unit] = relationshipCopyRepository
     .remove(arn, EnrolmentKey(Service.MtdIt, mtdItId))
     .flatMap { n =>
       if (n == 0)

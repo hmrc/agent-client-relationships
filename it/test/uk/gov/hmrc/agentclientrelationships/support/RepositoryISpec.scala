@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.agentclientrelationships.support
 
+import org.mongodb.scala.ObservableFuture
+
 import org.mongodb.scala.bson.BsonDocument
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
@@ -34,8 +36,8 @@ with Matchers
 with GuiceOneAppPerSuite
 with DefaultPlayMongoRepositorySupport[T] {
 
-  implicit val request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
-  implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
+  given request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
+  given ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
 
   override lazy val app: Application = new GuiceApplicationBuilder()
     .configure("mongodb.uri" -> mongoUri, "fieldLevelEncryption.enable" -> true)

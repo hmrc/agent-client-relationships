@@ -25,11 +25,11 @@ import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.Invitation
-import uk.gov.hmrc.agentclientrelationships.model.invitation._
+import uk.gov.hmrc.agentclientrelationships.model.invitation.*
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
 import uk.gov.hmrc.agentclientrelationships.services.AgentRecordService
 import uk.gov.hmrc.agentclientrelationships.services.InvitationLinkService
-import uk.gov.hmrc.agentclientrelationships.model.identifiers._
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.*
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
@@ -46,7 +46,7 @@ class ApiGetInvitationController @Inject() (
   val appConfig: AppConfig,
   cc: ControllerComponents,
   val authConnector: AuthConnector
-)(implicit val executionContext: ExecutionContext)
+)(using val executionContext: ExecutionContext)
 extends BackendController(cc)
 with AuthActions {
 
@@ -57,7 +57,8 @@ with AuthActions {
   def getInvitation(
     arn: Arn,
     invitationId: String
-  ): Action[AnyContent] = Action.async { implicit request =>
+  ): Action[AnyContent] = Action.async { request =>
+    given RequestHeader = request
     authorised() {
       findInvitationForAgent(
         arn,
@@ -74,7 +75,7 @@ with AuthActions {
     arn: Arn,
     invitationId: String,
     supportedServices: Seq[Service]
-  )(implicit
+  )(using
     request: RequestHeader
   ): Future[Either[ApiFailureResponse, ApiInvitationResponse]] =
     (for {

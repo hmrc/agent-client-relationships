@@ -19,18 +19,17 @@ package uk.gov.hmrc.agentclientrelationships.repository
 import org.apache.pekko.Done
 import org.mongodb.scala.MongoWriteException
 import org.mongodb.scala.model.Indexes.ascending
-import org.mongodb.scala.model._
+import org.mongodb.scala.model.*
 import play.api.libs.json.Json.format
-import play.api.libs.json._
+import play.api.libs.json.*
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.MongoLocalDateTimeFormat
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdIt
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdItSupp
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipCopyRecord.formats
-import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
+import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus.*
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.mdc.Mdc
 import uk.gov.hmrc.mongo.MongoComponent
@@ -64,13 +63,13 @@ case class RelationshipCopyRecord(
 
 object RelationshipCopyRecord {
 
-  implicit val localDateTimeFormat: Format[LocalDateTime] = MongoLocalDateTimeFormat.localDateTimeFormat
-  implicit val formats: OFormat[RelationshipCopyRecord] = format[RelationshipCopyRecord]
+  given localDateTimeFormat: Format[LocalDateTime] = MongoLocalDateTimeFormat.localDateTimeFormat
+  given formats: OFormat[RelationshipCopyRecord] = format[RelationshipCopyRecord]
 
 }
 
 @Singleton
-class RelationshipCopyRecordRepository @Inject() (mongoComponent: MongoComponent)(implicit ec: ExecutionContext)
+class RelationshipCopyRecordRepository @Inject() (mongoComponent: MongoComponent)(using ec: ExecutionContext)
 extends PlayMongoRepository[RelationshipCopyRecord](
   mongoComponent = mongoComponent,
   collectionName = "relationship-copy-record",
@@ -110,7 +109,7 @@ with RequestAwareLogging {
     arn: Arn,
     enrolmentKey: EnrolmentKey,
     status: SyncStatus
-  )(implicit requestHeader: RequestHeader): Future[Done] = Mdc.preservingMdc {
+  )(using requestHeader: RequestHeader): Future[Done] = Mdc.preservingMdc {
     collection
       .updateMany(filter(arn, enrolmentKey), Updates.set("syncToETMPStatus", status.toString))
       .toFuture()
@@ -125,7 +124,7 @@ with RequestAwareLogging {
     arn: Arn,
     enrolmentKey: EnrolmentKey,
     status: SyncStatus
-  )(implicit requestHeader: RequestHeader): Future[Done] = Mdc.preservingMdc {
+  )(using requestHeader: RequestHeader): Future[Done] = Mdc.preservingMdc {
     collection
       .updateMany(filter(arn, enrolmentKey), Updates.set("syncToESStatus", status.toString))
       .toFuture()
@@ -169,7 +168,7 @@ with RequestAwareLogging {
   def backfillItsaCopyRecord(
     enrolmentKey: EnrolmentKey,
     arn: Arn
-  )(implicit requestHeader: RequestHeader): Future[Done] = Mdc.preservingMdc {
+  )(using requestHeader: RequestHeader): Future[Done] = Mdc.preservingMdc {
     if (Seq(MtdIt.enrolmentKey, MtdItSupp.enrolmentKey).contains(enrolmentKey.service))
       findBy(arn, enrolmentKey).flatMap {
         case Some(record) if record.syncToESStatus.contains(Success) && record.syncToETMPStatus.contains(Success) => Future.successful(Done)

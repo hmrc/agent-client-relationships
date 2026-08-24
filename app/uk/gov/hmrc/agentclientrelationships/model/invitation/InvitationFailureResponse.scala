@@ -17,7 +17,6 @@
 package uk.gov.hmrc.agentclientrelationships.model.invitation
 
 import play.api.libs.json.Json.toJson
-import play.api.libs.json.JsValue
 import play.api.libs.json.Json
 import play.api.libs.json.Writes
 import play.api.mvc.Result
@@ -39,10 +38,7 @@ object InvitationFailureResponse {
     message: String
   )
 
-  implicit val errorBodyWrites: Writes[ErrorBody] =
-    new Writes[ErrorBody] {
-      override def writes(body: ErrorBody): JsValue = Json.obj("code" -> body.code, "message" -> body.message)
-    }
+  given errorBodyWrites: Writes[ErrorBody] = (body: ErrorBody) => Json.obj("code" -> body.code, "message" -> body.message)
 
   case object UnsupportedService
   extends InvitationFailureResponse {

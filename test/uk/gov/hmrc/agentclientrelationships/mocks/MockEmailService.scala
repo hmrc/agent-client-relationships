@@ -36,7 +36,7 @@ trait MockEmailService {
     invitation: Invitation,
     isAltItsa: Boolean = false
   )(response: Boolean = true): OngoingStubbing[Future[Boolean]] = when(
-    mockEmailService.sendAcceptedEmail(eqs(invitation), eqs(isAltItsa))(any[RequestHeader])
+    mockEmailService.sendAcceptedEmail(eqs(invitation), eqs(isAltItsa))(using any[RequestHeader])
   ).thenReturn(Future.successful(response))
 
 }

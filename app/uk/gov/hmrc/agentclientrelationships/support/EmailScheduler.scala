@@ -43,7 +43,7 @@ class EmailScheduler @Inject() (
   emailService: EmailService,
   invitationsRepository: InvitationsRepository,
   mongoLockService: MongoLockService
-)(implicit
+)(using
   ec: ExecutionContext,
   mat: Materializer,
   appConfig: AppConfig
@@ -103,7 +103,7 @@ class WarningEmailActor(
   invitationsRepository: InvitationsRepository,
   emailService: EmailService,
   mongoLockService: MongoLockService
-)(implicit
+)(using
   ec: ExecutionContext,
   mat: Materializer,
   appConfig: AppConfig
@@ -119,7 +119,7 @@ with Logging {
         .throttle(10, 1.second)
         .runForeach { aggregationResult =>
           emailService
-            .sendWarningEmail(aggregationResult.invitations)(RequestSupport.thereIsNoRequest)
+            .sendWarningEmail(aggregationResult.invitations)(using RequestSupport.thereIsNoRequest)
             .map {
               case true =>
                 aggregationResult.invitations
@@ -139,7 +139,7 @@ class ExpiredEmailActor(
   invitationsRepository: InvitationsRepository,
   emailService: EmailService,
   mongoLockService: MongoLockService
-)(implicit
+)(using
   ec: ExecutionContext,
   mat: Materializer,
   appConfig: AppConfig
@@ -157,7 +157,7 @@ with Logging {
           invitationsRepository.updateStatus(invitation.invitationId, Expired)
 
           emailService
-            .sendExpiredEmail(invitation)(NoRequest)
+            .sendExpiredEmail(invitation)(using NoRequest)
             .map {
               case true => invitationsRepository.updateExpiredEmailSent(invitation.invitationId)
               case false =>

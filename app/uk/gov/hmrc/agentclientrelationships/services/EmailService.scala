@@ -39,9 +39,9 @@ extends RequestAwareLogging {
   // TODO: Currently, the language defaults to English by selecting the first available language.
   // Update the implementation to allow the frontend to specify the desired language for sending emails.
   // Ensure the language preference is passed and properly handled to select the appropriate language.
-  implicit val lang: Lang = langs.availables.head
+  given lang: Lang = langs.availables.head
 
-  def sendWarningEmail(invitations: Seq[Invitation])(implicit request: RequestHeader): Future[Boolean] = {
+  def sendWarningEmail(invitations: Seq[Invitation])(using request: RequestHeader): Future[Boolean] = {
     val numberOfInvitations = invitations.size
     val templateId =
       if (invitations.size > 1)
@@ -62,20 +62,20 @@ extends RequestAwareLogging {
     )
   }
 
-  def sendExpiredEmail(invitation: Invitation)(implicit request: RequestHeader): Future[Boolean] = emailConnector
+  def sendExpiredEmail(invitation: Invitation)(using request: RequestHeader): Future[Boolean] = emailConnector
     .sendEmail(emailInformation("client_expired_authorisation_request", invitation))
 
   def sendAcceptedEmail(
     invitation: Invitation,
     isAltItsa: Boolean
-  )(implicit request: RequestHeader): Future[Boolean] = emailConnector
+  )(using request: RequestHeader): Future[Boolean] = emailConnector
     .sendEmail(emailInformation(
       "client_accepted_authorisation_request",
       invitation,
       isAltItsa
     ))
 
-  def sendRejectedEmail(invitation: Invitation)(implicit request: RequestHeader): Future[Boolean] = emailConnector
+  def sendRejectedEmail(invitation: Invitation)(using request: RequestHeader): Future[Boolean] = emailConnector
     .sendEmail(emailInformation("client_rejected_authorisation_request", invitation))
 
   private def emailInformation(

@@ -23,7 +23,7 @@ object CommonHeaders {
   private val xSessionIdHeader = "X-Session-ID"
   private val xRequestIdHeader = "X-Request-ID"
 
-  def apply()(implicit requestHeader: RequestHeader): Seq[(String, String)] = {
+  def apply()(using requestHeader: RequestHeader): Seq[(String, String)] = {
     val maybeSessionId = requestHeader.headers.get(xSessionIdHeader).map(xSessionIdHeader -> _)
     val maybeRequestId = requestHeader.headers.get(xRequestIdHeader).map(xRequestIdHeader -> _)
 

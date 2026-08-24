@@ -45,7 +45,7 @@ import uk.gov.hmrc.agentclientrelationships.stubs.DesStubs
 import uk.gov.hmrc.agentclientrelationships.stubs.EnrolmentStoreProxyStubs
 import uk.gov.hmrc.agentclientrelationships.stubs.HipStub
 import uk.gov.hmrc.agentclientrelationships.stubs.IfStubs
-import uk.gov.hmrc.agentclientrelationships.testsupport.testdata.TestData._
+import uk.gov.hmrc.agentclientrelationships.testsupport.testdata.TestData.*
 import uk.gov.hmrc.domain.TaxIdentifier
 
 object TestData {

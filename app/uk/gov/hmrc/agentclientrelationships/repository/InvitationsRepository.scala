@@ -21,19 +21,19 @@ import org.mongodb.scala.bson.BsonValue
 import org.mongodb.scala.bson.conversions
 import org.mongodb.scala.model.Accumulators.addToSet
 import org.mongodb.scala.model.Aggregates.facet
-import org.mongodb.scala.model.Filters._
+import org.mongodb.scala.model.Filters.*
 import org.mongodb.scala.model.Updates.combine
 import org.mongodb.scala.model.Updates.set
-import org.mongodb.scala.model._
+import org.mongodb.scala.model.*
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.model._
+import uk.gov.hmrc.agentclientrelationships.model.*
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.ClientIdentifier.ClientId
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 import uk.gov.hmrc.agentclientrelationships.model.invitation.CancelInvitationResponse
-import uk.gov.hmrc.agentclientrelationships.model.invitation.CancelInvitationResponse._
-import uk.gov.hmrc.agentclientrelationships.repository.FieldKeys._
+import uk.gov.hmrc.agentclientrelationships.model.invitation.CancelInvitationResponse.*
+import uk.gov.hmrc.agentclientrelationships.repository.FieldKeys.*
 import uk.gov.hmrc.agentclientrelationships.util.CryptoUtil.encryptedString
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.crypto.Decrypter
@@ -74,11 +74,11 @@ object FieldKeys {
 class InvitationsRepository @Inject() (
   mongoComponent: MongoComponent,
   appConfig: AppConfig
-)(implicit
+)(using
   ec: ExecutionContext,
   @Named("aes")
   crypto: Encrypter
-    with Decrypter
+    & Decrypter
 )
 extends PlayMongoRepository[Invitation](
   mongoComponent = mongoComponent,
@@ -205,16 +205,16 @@ with RequestAwareLogging {
             Seq(
               arn.map(equal(arnKey, _)),
               if (services.nonEmpty)
-                Some(in(serviceKey, services: _*))
+                Some(in(serviceKey, services*))
               else
                 None,
               if (clientIds.nonEmpty) {
-                Some(in(suppliedClientIdKey, clientIds.map(getValidNinoWithoutSuffixOrClientId).map(encryptedString): _*))
+                Some(in(suppliedClientIdKey, clientIds.map(getValidNinoWithoutSuffixOrClientId).map(encryptedString)*))
               }
               else
                 None,
               status.map(a => equal("status", Codecs.toBson[InvitationStatus](a)))
-            ).flatten: _*
+            ).flatten*
           )
         )
         .toFuture()
@@ -232,7 +232,7 @@ with RequestAwareLogging {
       .find(
         and(
           equal(arnKey, arn),
-          in(serviceKey, services: _*)
+          in(serviceKey, services*)
         )
       )
       .toFuture()
@@ -247,10 +247,10 @@ with RequestAwareLogging {
       .find(
         and(
           equal(arnKey, arn),
-          in(serviceKey, services: _*),
+          in(serviceKey, services*),
           in(
             suppliedClientIdKey,
-            clientIds.map(_.replaceAll(" ", "")).map(getValidNinoWithoutSuffixOrClientId).map(encryptedString): _*
+            clientIds.map(_.replaceAll(" ", "")).map(getValidNinoWithoutSuffixOrClientId).map(encryptedString)*
           )
         )
       )
@@ -294,7 +294,7 @@ with RequestAwareLogging {
             optArn.map(a => equal(arnKey, a)),
             invitationIdToIgnore
               .map(id => notEqual(invitationIdKey, id))
-          ).flatten: _*
+          ).flatten*
         ),
         combine(
           set(statusKey, Codecs.toBson[InvitationStatus](DeAuthorised)),

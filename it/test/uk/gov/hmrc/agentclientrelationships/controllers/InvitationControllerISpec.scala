@@ -23,14 +23,14 @@ import play.api.i18n.MessagesApi
 import play.api.libs.json.Json
 import play.api.libs.json.Json.toJson
 import play.api.test.FakeRequest
-import play.api.test.Helpers._
+import play.api.test.Helpers.*
 import uk.gov.hmrc.agentclientrelationships.audit.AuditService
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.connectors.AgentFiRelationshipConnector
 import uk.gov.hmrc.agentclientrelationships.connectors.EnrolmentStoreProxyConnector
-import uk.gov.hmrc.agentclientrelationships.model._
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service._
-import uk.gov.hmrc.agentclientrelationships.model.identifiers._
+import uk.gov.hmrc.agentclientrelationships.model.*
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.*
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.*
 import uk.gov.hmrc.agentclientrelationships.model.invitation.ApiFailureResponse.{ErrorBody => AFRErrorBody}
 import uk.gov.hmrc.agentclientrelationships.model.invitation.CreateInvitationRequest
 import uk.gov.hmrc.agentclientrelationships.model.invitation.InvitationFailureResponse.{ErrorBody => IFRErrorBody}
@@ -39,7 +39,7 @@ import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
 import uk.gov.hmrc.agentclientrelationships.services.DeleteRelationshipsService
 import uk.gov.hmrc.agentclientrelationships.services.InvitationService
 import uk.gov.hmrc.agentclientrelationships.services.ValidationService
-import uk.gov.hmrc.agentclientrelationships.stubs._
+import uk.gov.hmrc.agentclientrelationships.stubs.*
 import uk.gov.hmrc.agentclientrelationships.support.TestData
 import uk.gov.hmrc.auth.core.AuthConnector
 
@@ -61,20 +61,19 @@ with TestData {
   val validationService: ValidationService = app.injector.instanceOf[ValidationService]
   val auditService: AuditService = app.injector.instanceOf[AuditService]
   val authConnector: AuthConnector = app.injector.instanceOf[AuthConnector]
-  implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
-  implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
+  given appConfig: AppConfig = app.injector.instanceOf[AppConfig]
+  given ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
   val es: EnrolmentStoreProxyConnector = app.injector.instanceOf[EnrolmentStoreProxyConnector]
   val deleteRelationshipService: DeleteRelationshipsService = app.injector.instanceOf[DeleteRelationshipsService]
   val agentFiRelationshipConnector: AgentFiRelationshipConnector = app.injector.instanceOf[AgentFiRelationshipConnector]
   lazy val messagesApi: MessagesApi = app.injector.instanceOf[MessagesApi]
-  implicit val langs: Langs = app.injector.instanceOf[Langs]
-  implicit val lang: Lang = langs.availables.head
+  given langs: Langs = app.injector.instanceOf[Langs]
+  given lang: Lang = langs.availables.head
 
   val controller =
     new InvitationController(
       invitationService,
       auditService,
-      validationService,
       authConnector,
       appConfig,
       stubControllerComponents()
@@ -166,17 +165,6 @@ with TestData {
       .foreach(taxService =>
         s"return 201 status and valid JSON when invitation is created for $taxService" in {
           val inputData: CreateInvitationRequest = allServices(taxService)
-
-          val clientId =
-            if (taxService == HMRCMTDIT || taxService == HMRCMTDITSUPP)
-              mtdItId.value
-            else
-              inputData.clientId
-          val clientIdType =
-            if (taxService == HMRCMTDIT || taxService == HMRCMTDITSUPP)
-              MtdItIdType.id
-            else
-              inputData.suppliedClientIdType
 
           givenAuditConnector()
 

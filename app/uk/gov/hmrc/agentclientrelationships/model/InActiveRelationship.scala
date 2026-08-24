@@ -17,8 +17,8 @@
 package uk.gov.hmrc.agentclientrelationships.model
 
 import play.api.libs.functional.syntax.toFunctionalBuilderOps
-import play.api.libs.json._
-import uk.gov.hmrc.agentclientrelationships.model.identifiers._
+import play.api.libs.json.*
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.*
 
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -34,9 +34,9 @@ case class InactiveRelationship(
 
 object InactiveRelationship {
 
-  implicit val inActiveRelationshipWrites: OWrites[InactiveRelationship] = Json.writes[InactiveRelationship]
+  given inActiveRelationshipWrites: OWrites[InactiveRelationship] = Json.writes[InactiveRelationship]
 
-  implicit val reads: Reads[InactiveRelationship] =
+  given reads: Reads[InactiveRelationship] =
     new Reads[InactiveRelationship] {
       override def reads(json: JsValue): JsResult[InactiveRelationship] = {
         val arn = (json \ "agentReferenceNumber").as[Arn]
@@ -135,8 +135,7 @@ object InactiveRelationship {
 
 case class InactiveRelationshipResponse(relationship: Seq[InactiveRelationship])
 
-object InactiveRelationshipResponse {
-  implicit val inActiveRelationshipResponse: OFormat[InactiveRelationshipResponse] = Json.format[
+object InactiveRelationshipResponse:
+  given inActiveRelationshipResponse: OFormat[InactiveRelationshipResponse] = Json.format[
     InactiveRelationshipResponse
   ]
-}

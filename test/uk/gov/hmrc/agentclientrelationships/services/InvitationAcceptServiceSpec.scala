@@ -27,8 +27,8 @@ import play.api.test.Helpers.await
 import play.api.test.Helpers.defaultAwaitTimeout
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.auth.CurrentUser
-import uk.gov.hmrc.agentclientrelationships.mocks._
-import uk.gov.hmrc.agentclientrelationships.model._
+import uk.gov.hmrc.agentclientrelationships.mocks.*
+import uk.gov.hmrc.agentclientrelationships.model.*
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdIt
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdItSupp
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.PersonalIncomeRecord
@@ -71,10 +71,10 @@ with MockAuditService {
     auditService = mockAuditService
   )
 
-  implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
-  implicit val request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
-  implicit val auditData: AuditData = new AuditData
-  implicit val currentUser: CurrentUser = CurrentUser(
+  given ec: ExecutionContext = ExecutionContext.Implicits.global
+  given request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
+  given auditData: AuditData = new AuditData
+  given currentUser: CurrentUser = CurrentUser(
     credentials = Some(Credentials("GG-00001", "GovernmentGateway")),
     affinityGroup = None
   )
@@ -248,7 +248,7 @@ with MockAuditService {
                 any[String],
                 any[Instant]
               )
-              verify(mockEmailService, times(1)).sendAcceptedEmail(any[Invitation], any[Boolean])(any[RequestHeader])
+              verify(mockEmailService, times(1)).sendAcceptedEmail(any[Invitation], any[Boolean])(using any[RequestHeader])
             }
           }
         }
@@ -289,7 +289,7 @@ with MockAuditService {
                 any[String],
                 any[Instant]
               )
-              verify(mockEmailService, times(1)).sendAcceptedEmail(any[Invitation], any[Boolean])(any[RequestHeader])
+              verify(mockEmailService, times(1)).sendAcceptedEmail(any[Invitation], any[Boolean])(using any[RequestHeader])
             }
           }
         }
@@ -340,7 +340,7 @@ with MockAuditService {
                     any[String],
                     any[Instant]
                   )
-                  verify(mockEmailService, times(1)).sendAcceptedEmail(any[Invitation], any[Boolean])(any[RequestHeader])
+                  verify(mockEmailService, times(1)).sendAcceptedEmail(any[Invitation], any[Boolean])(using any[RequestHeader])
                 }
               }
             }
@@ -370,7 +370,7 @@ with MockAuditService {
 
                 // Verifying non blocking side effects actually happen
                 verifySideEffectsOccur { _ =>
-                  verify(mockEmailService, times(1)).sendAcceptedEmail(any[Invitation], any[Boolean])(any[RequestHeader])
+                  verify(mockEmailService, times(1)).sendAcceptedEmail(any[Invitation], any[Boolean])(using any[RequestHeader])
                 }
               }
             }
@@ -427,7 +427,7 @@ with MockAuditService {
                     any[String],
                     any[Instant]
                   )
-                  verify(mockEmailService, times(1)).sendAcceptedEmail(any[Invitation], any[Boolean])(any[RequestHeader])
+                  verify(mockEmailService, times(1)).sendAcceptedEmail(any[Invitation], any[Boolean])(using any[RequestHeader])
                 }
               }
             }
@@ -461,7 +461,7 @@ with MockAuditService {
 
                 // Verifying non blocking side effects actually happen
                 verifySideEffectsOccur { _ =>
-                  verify(mockEmailService, times(1)).sendAcceptedEmail(any[Invitation], any[Boolean])(any[RequestHeader])
+                  verify(mockEmailService, times(1)).sendAcceptedEmail(any[Invitation], any[Boolean])(using any[RequestHeader])
                 }
               }
             }

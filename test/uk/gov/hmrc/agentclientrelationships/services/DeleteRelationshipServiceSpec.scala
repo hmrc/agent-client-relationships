@@ -19,7 +19,7 @@ package uk.gov.hmrc.agentclientrelationships.services
 import org.apache.pekko.Done
 import org.mockito.ArgumentMatchers.any
 import org.mockito.ArgumentMatchers.{eq => eqs}
-import org.mockito.Mockito._
+import org.mockito.Mockito.*
 import org.mockito.stubbing.OngoingStubbing
 import org.scalatestplus.mockito.MockitoSugar.mock
 import play.api.ConfigLoader
@@ -28,12 +28,12 @@ import play.api.mvc.AnyContentAsEmpty
 import play.api.mvc.Request
 import play.api.mvc.RequestHeader
 import play.api.test.FakeRequest
-import play.api.test.Helpers._
+import play.api.test.Helpers.*
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.audit.AuditService
 import uk.gov.hmrc.agentclientrelationships.auth.CurrentUser
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.connectors._
+import uk.gov.hmrc.agentclientrelationships.connectors.*
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.RegistrationRelationshipResponse
 import uk.gov.hmrc.agentclientrelationships.model.UserId
@@ -44,12 +44,12 @@ import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 import uk.gov.hmrc.agentclientrelationships.repository.DeleteRecord
 import uk.gov.hmrc.agentclientrelationships.repository.FakeDeleteRecordRepository
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipCopyRecordRepository
-import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
+import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus.*
 import uk.gov.hmrc.agentclientrelationships.support.NoRequest
 import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 import uk.gov.hmrc.auth.core.retrieve.Credentials
-import uk.gov.hmrc.domain._
+import uk.gov.hmrc.domain.*
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
 import java.time.Instant
@@ -61,9 +61,9 @@ import scala.concurrent.Future
 class DeleteRelationshipServiceSpec
 extends UnitSpec {
 
-  implicit val request: RequestHeader = FakeRequest()
-  implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
-  implicit val testAuditData: AuditData = new AuditData
+  given request: RequestHeader = FakeRequest()
+  given ec: ExecutionContext = ExecutionContext.Implicits.global
+  given testAuditData: AuditData = new AuditData
 
   def now: LocalDateTime = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime
 
@@ -92,8 +92,8 @@ extends UnitSpec {
         givenSetRelationshipEndedSucceeds
         givenAucdCacheRefresh
 
-        implicit val request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
-        implicit val currentUser: CurrentUser = CurrentUser(
+        given request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
+        given currentUser: CurrentUser = CurrentUser(
           credentials = Some(Credentials("GG-00001", "GovernmentGateway")),
           affinityGroup = None
         )
@@ -118,8 +118,8 @@ extends UnitSpec {
         givenSetRelationshipEndedSucceeds
         givenAucdCacheRefresh
 
-        implicit val request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
-        implicit val currentUser: CurrentUser = CurrentUser(
+        given request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
+        given currentUser: CurrentUser = CurrentUser(
           credentials = Some(Credentials("GG-00001", "GovernmentGateway")),
           affinityGroup = None
         )
@@ -144,8 +144,8 @@ extends UnitSpec {
         givenSetRelationshipEndedSucceeds
         givenAucdCacheRefresh
 
-        implicit val request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
-        implicit val currentUser: CurrentUser = CurrentUser(
+        given request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
+        given currentUser: CurrentUser = CurrentUser(
           credentials = Some(Credentials("GG-00001", "GovernmentGateway")),
           affinityGroup = None
         )
@@ -169,8 +169,8 @@ extends UnitSpec {
         givenAgentExists
         givenESDeAllocationFails
 
-        implicit val request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
-        implicit val currentUser: CurrentUser = CurrentUser(
+        given request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
+        given currentUser: CurrentUser = CurrentUser(
           credentials = Some(Credentials("GG-00001", "GovernmentGateway")),
           affinityGroup = None
         )
@@ -216,8 +216,8 @@ extends UnitSpec {
         givenETMPDeAuthFails
         givenAucdCacheRefresh
 
-        implicit val request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
-        implicit val currentUser: CurrentUser = CurrentUser(
+        given request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
+        given currentUser: CurrentUser = CurrentUser(
           credentials = Some(Credentials("GG-00001", "GovernmentGateway")),
           affinityGroup = None
         )
@@ -264,8 +264,8 @@ extends UnitSpec {
         givenSetRelationshipEndedSucceeds
         givenAucdCacheRefresh
 
-        implicit val request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
-        implicit val currentUser: CurrentUser = CurrentUser(
+        given request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
+        given currentUser: CurrentUser = CurrentUser(
           credentials = Some(Credentials("GG-00001", "GovernmentGateway")),
           affinityGroup = None
         )
@@ -289,8 +289,8 @@ extends UnitSpec {
         givenSetRelationshipEndedSucceeds
         givenAucdCacheRefresh
 
-        implicit val request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
-        implicit val currentUser: CurrentUser = CurrentUser(
+        given request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
+        given currentUser: CurrentUser = CurrentUser(
           credentials = Some(Credentials("GG-00001", "GovernmentGateway")),
           affinityGroup = None
         )
@@ -313,8 +313,8 @@ extends UnitSpec {
         givenSetRelationshipEndedSucceeds
         givenAucdCacheRefresh
 
-        implicit val request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
-        implicit val currentUser: CurrentUser = CurrentUser(
+        given request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
+        given currentUser: CurrentUser = CurrentUser(
           credentials = Some(Credentials("GG-00001", "GovernmentGateway")),
           affinityGroup = None
         )
@@ -347,8 +347,8 @@ extends UnitSpec {
         givenSetRelationshipEndedSucceeds
         givenAucdCacheRefresh
 
-        implicit val request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
-        implicit val currentUser: CurrentUser = CurrentUser(
+        given request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
+        given currentUser: CurrentUser = CurrentUser(
           credentials = Some(Credentials("GG-00001", "GovernmentGateway")),
           affinityGroup = None
         )
@@ -376,8 +376,8 @@ extends UnitSpec {
         givenSetRelationshipEndedFails
         givenAucdCacheRefresh
 
-        implicit val request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
-        implicit val currentUser: CurrentUser = CurrentUser(
+        given request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
+        given currentUser: CurrentUser = CurrentUser(
           credentials = Some(Credentials("GG-00001", "GovernmentGateway")),
           affinityGroup = None
         )
@@ -603,7 +603,7 @@ extends UnitSpec {
   }
 
   "checkDeleteRecordAndEventuallyResume" should {
-    implicit val request: Request[_] = NoRequest
+    given request: Request[?] = NoRequest
     "return true if there is no pending delete record" in
       new TestFixture {
         val result: Boolean = await(underTest.checkDeleteRecordAndEventuallyResume(arn, mtdItEnrolmentKey))
@@ -728,7 +728,7 @@ extends UnitSpec {
         givenETMPDeAuthSucceeds
         givenSetRelationshipEndedSucceeds
 
-        val result: Boolean = await(underTest.tryToResume(testAuditData))
+        val result: Boolean = await(underTest.tryToResume(using testAuditData))
 
         result shouldBe true
         await(repo.findBy(arn, mtdItEnrolmentKey)) shouldBe None
@@ -773,7 +773,7 @@ extends UnitSpec {
         givenSetRelationshipEndedSucceeds
         givenAucdCacheRefresh
 
-        val result: Boolean = await(underTest.tryToResume(testAuditData))
+        val result: Boolean = await(underTest.tryToResume(using testAuditData))
 
         result shouldBe true
         await(repo.findBy(arn, mtdItEnrolmentKey)) shouldBe None
@@ -798,7 +798,7 @@ extends UnitSpec {
 
     when(servicesConfig.getInt(eqs("recovery-timeout"))).thenReturn(100)
     when(servicesConfig.getString(any[String])).thenReturn("")
-    when(configuration.get[Seq[String]](eqs("internalServiceHostPatterns"))(any[ConfigLoader[Seq[String]]])).thenReturn(
+    when(configuration.get[Seq[String]](eqs("internalServiceHostPatterns"))(using any[ConfigLoader[Seq[String]]])).thenReturn(
       Seq(
         "^.*\\.service$",
         "^.*\\.mdtp$",
@@ -819,14 +819,14 @@ extends UnitSpec {
         auditService,
         invitationService,
         appConfig
-      )(ec)
+      )
 
     def givenAgentExists: OngoingStubbing[Future[String]] = when(
-      es.getPrincipalGroupIdFor(eqs[Arn](arn))(any[RequestHeader])
+      es.getPrincipalGroupIdFor(eqs[Arn](arn))(using any[RequestHeader])
     ).thenReturn(Future.successful(agentGroupId))
 
     def givenAgentDoesNotExist: OngoingStubbing[Future[String]] = when(
-      es.getPrincipalGroupIdFor(eqs[Arn](arn))(any[RequestHeader])
+      es.getPrincipalGroupIdFor(eqs[Arn](arn))(using any[RequestHeader])
     ).thenReturn(Future.failed(RelationshipNotFound("UNKNOWN_ARN")))
 
     def givenRelationshipBetweenAgentAndClientExists: OngoingStubbing[Future[Boolean]] = when(
@@ -834,7 +834,7 @@ extends UnitSpec {
         eqs(arn),
         any[Option[UserId]],
         eqs(mtdItEnrolmentKey)
-      )(any[RequestHeader])
+      )(using any[RequestHeader])
     ).thenReturn(Future.successful(true))
 
     def givenRelationshipBetweenAgentAndClientDoesNotExist: OngoingStubbing[Future[Boolean]] = when(
@@ -842,33 +842,33 @@ extends UnitSpec {
         eqs(arn),
         any[Option[UserId]],
         eqs(mtdItEnrolmentKey)
-      )(any[RequestHeader])
+      )(using any[RequestHeader])
     ).thenReturn(Future.successful(false))
 
     def givenETMPDeAuthSucceeds: OngoingStubbing[Future[Option[RegistrationRelationshipResponse]]] = when(
-      hipConnector.deleteAgentRelationship(eqs(mtdItEnrolmentKey), eqs(arn))(any[RequestHeader])
+      hipConnector.deleteAgentRelationship(eqs(mtdItEnrolmentKey), eqs(arn))(using any[RequestHeader])
     ).thenReturn(Future.successful(Some(RegistrationRelationshipResponse(now.toLocalDate.toString))))
 
     def givenETMPDeAuthFails: OngoingStubbing[Future[Option[RegistrationRelationshipResponse]]] = when(
-      hipConnector.deleteAgentRelationship(eqs(mtdItEnrolmentKey), eqs(arn))(any[RequestHeader])
+      hipConnector.deleteAgentRelationship(eqs(mtdItEnrolmentKey), eqs(arn))(using any[RequestHeader])
     ).thenReturn(Future.failed(new Exception))
 
     val noRelationshipFoundErrorMessage = """{"errors":{"processingDate":"2020-01-01T11:11:11Z","code":"014","text":"No active relationship found"}}"""
 
     def givenETMPDeAuthNoRelationshipFound: OngoingStubbing[Future[Option[RegistrationRelationshipResponse]]] = when(
-      hipConnector.deleteAgentRelationship(eqs(mtdItEnrolmentKey), eqs(arn))(any[RequestHeader])
+      hipConnector.deleteAgentRelationship(eqs(mtdItEnrolmentKey), eqs(arn))(using any[RequestHeader])
     ).thenReturn(Future.successful(None))
 
     def givenESDeAllocationSucceeds: OngoingStubbing[Future[Done]] = when(
-      es.deallocateEnrolmentFromAgent(eqs(agentGroupId), eqs(mtdItEnrolmentKey))(any[RequestHeader])
+      es.deallocateEnrolmentFromAgent(eqs(agentGroupId), eqs(mtdItEnrolmentKey))(using any[RequestHeader])
     ).thenReturn(Future.successful(Done))
 
     def givenESDeAllocationFails: OngoingStubbing[Future[Done]] = when(
-      es.deallocateEnrolmentFromAgent(eqs(agentGroupId), eqs(mtdItEnrolmentKey))(any[RequestHeader])
+      es.deallocateEnrolmentFromAgent(eqs(agentGroupId), eqs(mtdItEnrolmentKey))(using any[RequestHeader])
     ).thenReturn(Future.failed(new Exception))
 
     def givenESDeAllocationFailsWith(ex: Exception): OngoingStubbing[Future[Done]] = when(
-      es.deallocateEnrolmentFromAgent(eqs(agentGroupId), eqs(mtdItEnrolmentKey))(any[RequestHeader])
+      es.deallocateEnrolmentFromAgent(eqs(agentGroupId), eqs(mtdItEnrolmentKey))(using any[RequestHeader])
     ).thenReturn(Future.failed(ex))
 
     def givenSetRelationshipEndedSucceeds: OngoingStubbing[Future[Boolean]] = when(
@@ -890,18 +890,20 @@ extends UnitSpec {
     ).thenReturn(Future.successful(false))
 
     def givenAucdCacheRefresh: OngoingStubbing[Future[Unit]] = when(
-      aucdConnector.cacheRefresh(eqs(arn))(any[RequestHeader])
+      aucdConnector.cacheRefresh(eqs(arn))(using any[RequestHeader])
     ).thenReturn(Future.successful(()))
 
-    def verifyESDeAllocateHasBeenPerformed: Future[Done] = verify(es, times(1)).deallocateEnrolmentFromAgent(any[String], any[EnrolmentKey])(any[RequestHeader])
+    def verifyESDeAllocateHasBeenPerformed: Future[Done] =
+      verify(es, times(1)).deallocateEnrolmentFromAgent(any[String], any[EnrolmentKey])(using any[RequestHeader])
 
-    def verifyESDeAllocateHasNOTBeenPerformed: Future[Done] = verify(es, never).deallocateEnrolmentFromAgent(any[String], any[EnrolmentKey])(any[RequestHeader])
+    def verifyESDeAllocateHasNOTBeenPerformed: Future[Done] =
+      verify(es, never).deallocateEnrolmentFromAgent(any[String], any[EnrolmentKey])(using any[RequestHeader])
 
     def verifyETMPDeAuthorisationHasBeenPerformed: Future[Option[RegistrationRelationshipResponse]] =
-      verify(hipConnector, times(1)).deleteAgentRelationship(any[EnrolmentKey], any[Arn])(any[RequestHeader])
+      verify(hipConnector, times(1)).deleteAgentRelationship(any[EnrolmentKey], any[Arn])(using any[RequestHeader])
 
     def verifyETMPDeAuthorisationHasNOTBeenPerformed: Future[Option[RegistrationRelationshipResponse]] =
-      verify(hipConnector, never).deleteAgentRelationship(any[EnrolmentKey], any[Arn])(any[RequestHeader])
+      verify(hipConnector, never).deleteAgentRelationship(any[EnrolmentKey], any[Arn])(using any[RequestHeader])
 
   }
 

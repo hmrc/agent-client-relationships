@@ -18,12 +18,12 @@ package uk.gov.hmrc.agentclientrelationships.services
 
 import org.apache.pekko.Done
 import play.api.mvc.RequestHeader
-import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys._
+import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys.*
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.audit.AuditService
 import uk.gov.hmrc.agentclientrelationships.auth.CurrentUser
 import uk.gov.hmrc.agentclientrelationships.connectors.AgentFiRelationshipConnector
-import uk.gov.hmrc.agentclientrelationships.model._
+import uk.gov.hmrc.agentclientrelationships.model.*
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDIT
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDITSUPP
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCPIR
@@ -52,14 +52,14 @@ class InvitationAcceptService @Inject() (
   partialAuthRepository: PartialAuthRepository,
   agentFiRelationshipConnector: AgentFiRelationshipConnector,
   auditService: AuditService
-)(implicit ec: ExecutionContext)
+)(using ec: ExecutionContext)
 extends RequestAwareLogging {
 
   // scalastyle:off
   def acceptInvitation(
     invitation: Invitation,
     enrolment: EnrolmentKey
-  )(implicit
+  )(using
     request: RequestHeader,
     currentUser: CurrentUser,
     auditData: AuditData
@@ -128,7 +128,7 @@ extends RequestAwareLogging {
     enrolment: EnrolmentKey,
     isAltItsa: Boolean,
     timestamp: Instant
-  )(implicit
+  )(using
     request: RequestHeader,
     currentUser: CurrentUser,
     auditData: AuditData
@@ -202,7 +202,7 @@ extends RequestAwareLogging {
   private def deauthPartialAuth(
     nino: String,
     timestamp: Instant
-  )(implicit request: RequestHeader): Future[Boolean] = partialAuthRepository
+  )(using request: RequestHeader): Future[Boolean] = partialAuthRepository
     .findMainAgent(nino)
     .flatMap {
       case Some(mainAuth) =>
@@ -215,7 +215,7 @@ extends RequestAwareLogging {
           )
           .map { result =>
             if (result) {
-              implicit val auditData: AuditData = new AuditData()
+              given auditData: AuditData = new AuditData()
               auditData.set(howPartialAuthTerminatedKey, agentReplacement)
               auditService.sendTerminatePartialAuthAuditEvent(
                 arn = mainAuth.arn,

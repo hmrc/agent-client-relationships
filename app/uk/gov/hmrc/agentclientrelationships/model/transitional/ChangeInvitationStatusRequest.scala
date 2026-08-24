@@ -25,6 +25,5 @@ case class ChangeInvitationStatusRequest(
   endedBy: Option[String]
 )
 
-object ChangeInvitationStatusRequest {
-  implicit val jsonFormat: OFormat[ChangeInvitationStatusRequest] = Json.format[ChangeInvitationStatusRequest]
-}
+object ChangeInvitationStatusRequest:
+  given jsonFormat: OFormat[ChangeInvitationStatusRequest] = Json.format[ChangeInvitationStatusRequest]

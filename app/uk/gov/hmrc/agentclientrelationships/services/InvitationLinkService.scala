@@ -17,10 +17,10 @@
 package uk.gov.hmrc.agentclientrelationships.services
 
 import cats.data.EitherT
-import cats.implicits._
+import cats.implicits.*
 import org.apache.commons.lang3.RandomStringUtils
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
-import uk.gov.hmrc.agentclientrelationships.model.invitationLink._
+import uk.gov.hmrc.agentclientrelationships.model.invitationLink.*
 import uk.gov.hmrc.agentclientrelationships.repository.AgentReferenceRepository
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import play.api.mvc.RequestHeader
@@ -35,7 +35,7 @@ import scala.concurrent.Future
 class InvitationLinkService @Inject() (
   agentReferenceRepository: AgentReferenceRepository,
   agentRecordService: AgentRecordService
-)(implicit ec: ExecutionContext)
+)(using ec: ExecutionContext)
 extends RequestAwareLogging {
 
   private val codetable = "ABCDEFGHJKLMNOPRSTUWXYZ123456789"
@@ -43,7 +43,7 @@ extends RequestAwareLogging {
   def validateLink(
     uid: String,
     normalizedAgentName: String
-  )(implicit request: RequestHeader): Future[Either[InvitationLinkFailureResponse, ValidateLinkResponse]] = {
+  )(using request: RequestHeader): Future[Either[InvitationLinkFailureResponse, ValidateLinkResponse]] = {
 
     val agencyNameT =
       for {
@@ -59,7 +59,7 @@ extends RequestAwareLogging {
 
   }
 
-  def createLink(arn: Arn)(implicit request: RequestHeader): Future[CreateLinkResponse] =
+  def createLink(arn: Arn)(using request: RequestHeader): Future[CreateLinkResponse] =
     for {
       agentDetailsResponse <- agentRecordService.getAgentRecordWithChecks(arn)
       newNormaliseAgentName = normaliseAgentName(agentDetailsResponse.agencyDetails.agencyName)
@@ -76,7 +76,7 @@ extends RequestAwareLogging {
 
   def validateInvitationRequest(
     uid: String
-  )(implicit request: RequestHeader): Future[Either[InvitationLinkFailureResponse, ValidateLinkResponse]] = {
+  )(using request: RequestHeader): Future[Either[InvitationLinkFailureResponse, ValidateLinkResponse]] = {
     val responseT =
       for {
         agentReferenceRecord <- EitherT(getAgentReferenceRecord(uid))
@@ -136,7 +136,7 @@ extends RequestAwareLogging {
 
   private def getNonSuspendedAgentRecord(
     arn: Arn
-  )(implicit
+  )(using
     request: RequestHeader
   ): EitherT[
     Future,

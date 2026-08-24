@@ -17,14 +17,14 @@
 package uk.gov.hmrc.agentclientrelationships.connectors
 
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
-import play.api.libs.json._
+import play.api.libs.json.*
 import play.api.mvc.RequestHeader
 import play.api.http.Status
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.util.RequestSupport.hc
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.domain.SaAgentReference
-import uk.gov.hmrc.http.HttpReads.Implicits._
+import uk.gov.hmrc.http.HttpReads.Implicits.*
 import uk.gov.hmrc.http.HttpResponse
 import uk.gov.hmrc.http.StringContextOps
 import uk.gov.hmrc.http.client.HttpClientV2
@@ -42,8 +42,8 @@ case class SaMapping(
 
 object SaMappings {
 
-  implicit val mappingReads: Reads[SaMapping] = Json.reads[SaMapping]
-  implicit val reads: Reads[SaMappings] = Json.reads[SaMappings]
+  given mappingReads: Reads[SaMapping] = Json.reads[SaMapping]
+  given reads: Reads[SaMappings] = Json.reads[SaMappings]
 
 }
 
@@ -51,12 +51,12 @@ object SaMappings {
 class MappingConnector @Inject() (
   httpClient: HttpClientV2,
   appConfig: AppConfig
-)(implicit
+)(using
   val ec: ExecutionContext
 )
 extends RequestAwareLogging {
 
-  def getSaAgentReferencesFor(arn: Arn)(implicit rh: RequestHeader): Future[Seq[SaAgentReference]] = httpClient
+  def getSaAgentReferencesFor(arn: Arn)(using rh: RequestHeader): Future[Seq[SaAgentReference]] = httpClient
     .get(url"${appConfig.agentMappingUrl}/agent-mapping/mappings/sa/${arn.value}")
     .execute[HttpResponse]
     .map { response =>

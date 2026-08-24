@@ -27,7 +27,7 @@ object PlrId {
 
   def isValid(id: String): Boolean = id.matches("^X[A-Z]{1}PLR[0-9]{10}$")
 
-  implicit val reads: SimpleObjectReads[PlrId] = new SimpleObjectReads[PlrId]("value", PlrId.apply)
-  implicit val writes: SimpleObjectWrites[PlrId] = new SimpleObjectWrites[PlrId](_.value)
+  given reads: SimpleObjectReads[PlrId] = new SimpleObjectReads[PlrId]("value", PlrId.apply)
+  given writes: SimpleObjectWrites[PlrId] = new SimpleObjectWrites[PlrId](_.value)
 
 }

@@ -52,55 +52,57 @@ class CustomerStatusController @Inject() (
   appConfig: AppConfig,
   cc: ControllerComponents,
   agentCacheProvider: AgentCacheProvider
-)(implicit val executionContext: ExecutionContext)
+)(using val executionContext: ExecutionContext)
 extends BackendController(cc)
 with AuthActions {
 
   val supportedServices: Seq[Service] = appConfig.supportedServices
   private val customerStatusExistingRelationshipsCache = agentCacheProvider.customerStatusExistingRelationshipsCache
 
-  def customerStatus: Action[AnyContent] = Action.async { implicit request =>
-    withAuthorisedAsClientWithNino { authResponse: EnrolmentsWithNino =>
-      val services: Seq[String] = authResponse.getIdentifierMap(supportedServices).keys.toSeq.map(_.id)
-      val identifiers: Seq[String] = authResponse.getIdentifierMap(supportedServices).values.toSeq.map(_.value)
-      for {
-        invitations <- invitationsService.findNonSuspendedClientInvitations(services, identifiers)
-        partialAuthRecords <-
-          authResponse.getNino match {
-            case Some(ni) => partialAuthRepository.findAllForClient(NinoWithoutSuffix(ni))
-            case None => Future.successful(None)
-          }
-        irvRelationshipExists <-
-          authResponse.getNino match {
-            case Some(nino) =>
-              agentFiRelationshipConnector.findIrvActiveRelationshipForClient(nino)
-                .map(_.fold(_ => false, rel => rel.nonEmpty))
-            case None => Future.successful(false)
-          }
-        existingRelationships <- {
-          val partialAuthOrAcceptedInvExists = invitations.exists(inv =>
-            Seq(PartialAuth, uk.gov.hmrc.agentclientrelationships.model.Accepted).contains(inv.status)
-          )
-          if (partialAuthRecords.iterator.exists(_.active) || irvRelationshipExists || partialAuthOrAcceptedInvExists) {
-            Future.successful(true)
-          }
-          else {
-            customerStatusExistingRelationshipsCache(toCacheKey(authResponse.getIdentifierMap(supportedServices))) {
-              findRelationshipsService
-                .getActiveRelationshipsForClient(authResponse.getIdentifierMap(supportedServices))
-                .map(_.nonEmpty)
+  def customerStatus: Action[AnyContent] = Action.async { request =>
+    given play.api.mvc.RequestHeader = request
+    withAuthorisedAsClientWithNino {
+      (authResponse: EnrolmentsWithNino) =>
+        val services: Seq[String] = authResponse.getIdentifierMap(supportedServices).keys.toSeq.map(_.id)
+        val identifiers: Seq[String] = authResponse.getIdentifierMap(supportedServices).values.toSeq.map(_.value)
+        for {
+          invitations <- invitationsService.findNonSuspendedClientInvitations(services, identifiers)
+          partialAuthRecords <-
+            authResponse.getNino match {
+              case Some(ni) => partialAuthRepository.findAllForClient(NinoWithoutSuffix(ni))
+              case None => Future.successful(None)
+            }
+          irvRelationshipExists <-
+            authResponse.getNino match {
+              case Some(nino) =>
+                agentFiRelationshipConnector.findIrvActiveRelationshipForClient(nino)
+                  .map(_.fold(_ => false, rel => rel.nonEmpty))
+              case None => Future.successful(false)
+            }
+          existingRelationships <- {
+            val partialAuthOrAcceptedInvExists = invitations.exists(inv =>
+              Seq(PartialAuth, uk.gov.hmrc.agentclientrelationships.model.Accepted).contains(inv.status)
+            )
+            if (partialAuthRecords.iterator.exists(_.active) || irvRelationshipExists || partialAuthOrAcceptedInvExists) {
+              Future.successful(true)
+            }
+            else {
+              customerStatusExistingRelationshipsCache(toCacheKey(authResponse.getIdentifierMap(supportedServices))) {
+                findRelationshipsService
+                  .getActiveRelationshipsForClient(authResponse.getIdentifierMap(supportedServices))
+                  .map(_.nonEmpty)
+              }
             }
           }
-        }
-      } yield Ok(
-        Json.toJson(
-          CustomerStatus(
-            hasPendingInvitations = invitations.exists(_.status == Pending),
-            hasInvitationsHistory = invitations.nonEmpty || partialAuthRecords.iterator.nonEmpty,
-            hasExistingRelationships = existingRelationships
+        } yield Ok(
+          Json.toJson(
+            CustomerStatus(
+              hasPendingInvitations = invitations.exists(_.status == Pending),
+              hasInvitationsHistory = invitations.nonEmpty || partialAuthRecords.iterator.nonEmpty,
+              hasExistingRelationships = existingRelationships
+            )
           )
         )
-      )
     }
   }
 

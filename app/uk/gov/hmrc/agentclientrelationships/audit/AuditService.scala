@@ -20,7 +20,7 @@ import com.google.inject.Singleton
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent.AgentClientRelationshipEvent
-import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys._
+import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys.*
 import uk.gov.hmrc.agentclientrelationships.auth.CurrentUser
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.Invitation
@@ -65,7 +65,7 @@ class AuditData {
 }
 
 @Singleton
-class AuditService @Inject() (auditConnector: AuditConnector)(implicit ec: ExecutionContext)
+class AuditService @Inject() (auditConnector: AuditConnector)(using ec: ExecutionContext)
 extends RequestAwareLogging {
 
   private def collectDetails(
@@ -145,7 +145,7 @@ extends RequestAwareLogging {
     "abandonmentReason"
   )
 
-  def sendCreateInvitationAuditEvent(invitation: Invitation)(implicit request: RequestHeader): Future[Unit] = auditEvent(
+  def sendCreateInvitationAuditEvent(invitation: Invitation)(using request: RequestHeader): Future[Unit] = auditEvent(
     AgentClientRelationshipEvent.CreateInvitation,
     "create-invitation",
     Seq(
@@ -162,7 +162,7 @@ extends RequestAwareLogging {
     accepted: Boolean,
     isStride: Boolean,
     enrolmentKey: Option[EnrolmentKey]
-  )(implicit request: RequestHeader): Future[Unit] = auditEvent(
+  )(using request: RequestHeader): Future[Unit] = auditEvent(
     AgentClientRelationshipEvent.RespondToInvitation,
     "respond-to-invitation",
     Seq(
@@ -185,7 +185,7 @@ extends RequestAwareLogging {
     )
   )
 
-  def sendCreateRelationshipAuditEvent()(implicit
+  def sendCreateRelationshipAuditEvent()(using
     request: RequestHeader,
     auditData: AuditData
   ): Future[Unit] = auditEvent(
@@ -194,7 +194,7 @@ extends RequestAwareLogging {
     collectDetails(auditData.getDetails, createRelationshipDetailsFields)
   )
 
-  def sendCreatePartialAuthAuditEvent()(implicit
+  def sendCreatePartialAuthAuditEvent()(using
     request: RequestHeader,
     auditData: AuditData
   ): Future[Unit] = auditEvent(
@@ -203,7 +203,7 @@ extends RequestAwareLogging {
     collectDetails(auditData.getDetails, createPartialAuthDetailsFields)
   )
 
-  def sendCheckCesaAndPartialAuthAuditEvent()(implicit
+  def sendCheckCesaAndPartialAuthAuditEvent()(using
     request: RequestHeader,
     auditData: AuditData
   ): Future[Unit] = auditEvent(
@@ -212,7 +212,7 @@ extends RequestAwareLogging {
     collectDetails(auditData.getDetails, checkCesaDetailsAndPartialAuthFields)
   )
 
-  def sendTerminateRelationshipAuditEvent()(implicit
+  def sendTerminateRelationshipAuditEvent()(using
     request: RequestHeader,
     auditData: AuditData
   ): Future[Unit] = auditEvent(
@@ -224,7 +224,7 @@ extends RequestAwareLogging {
   def setAuditDataForTermination(
     arn: Arn,
     enrolmentKey: EnrolmentKey
-  )(implicit
+  )(using
     auditData: AuditData,
     currentUser: CurrentUser
   ): AuditData = {
@@ -256,11 +256,11 @@ extends RequestAwareLogging {
   def auditForPirTermination(
     arn: Arn,
     enrolmentKey: EnrolmentKey
-  )(implicit
+  )(using
     currentUser: CurrentUser,
     request: RequestHeader
   ): Future[Unit] = {
-    implicit val auditData: AuditData = new AuditData()
+    given auditData: AuditData = new AuditData()
 
     setAuditDataForTermination(arn, enrolmentKey)
 
@@ -270,9 +270,9 @@ extends RequestAwareLogging {
   def auditForAgentReplacement(
     arn: Arn,
     enrolmentKey: EnrolmentKey
-  )(implicit request: RequestHeader): Future[Unit] = {
-    implicit val auditData: AuditData = new AuditData()
-    implicit val currentUser: CurrentUser = CurrentUser(None, None)
+  )(using request: RequestHeader): Future[Unit] = {
+    given auditData: AuditData = new AuditData()
+    given currentUser: CurrentUser = CurrentUser(None, None)
 
     auditData.set(howRelationshipTerminatedKey, agentReplacement)
     setAuditDataForTermination(arn, enrolmentKey)
@@ -286,7 +286,7 @@ extends RequestAwareLogging {
     arn: String,
     service: String,
     nino: String
-  )(implicit
+  )(using
     // defaulted as it only needs to be predefined for special cases (agent replacement/role change)
     currentUser: CurrentUser = CurrentUser(None, None),
     request: RequestHeader,
@@ -316,7 +316,7 @@ extends RequestAwareLogging {
     )
   }
 
-  def sendRecoveryOfDeleteRelationshipHasBeenAbandonedAuditEvent()(implicit
+  def sendRecoveryOfDeleteRelationshipHasBeenAbandonedAuditEvent()(using
     request: RequestHeader,
     auditData: AuditData
   ): Future[Unit] = auditEvent(
@@ -329,11 +329,11 @@ extends RequestAwareLogging {
     event: AgentClientRelationshipEvent,
     transactionName: String,
     details: Seq[(String, Any)] = Seq.empty
-  )(implicit request: RequestHeader): Future[Unit] = send(
+  )(using request: RequestHeader): Future[Unit] = send(
     createEvent(
       event,
       transactionName,
-      details: _*
+      details*
     )
   )
 
@@ -341,7 +341,7 @@ extends RequestAwareLogging {
     event: AgentClientRelationshipEvent,
     transactionName: String,
     details: (String, Any)*
-  )(implicit request: RequestHeader): DataEvent = {
+  )(using request: RequestHeader): DataEvent = {
 
     def toString(x: Any): String =
       x match {
@@ -349,7 +349,7 @@ extends RequestAwareLogging {
         case _ => x.toString
       }
     val hc = RequestSupport.hc
-    val detail = hc.toAuditDetails(details.map(pair => pair._1 -> toString(pair._2)): _*)
+    val detail = hc.toAuditDetails(details.map(pair => pair._1 -> toString(pair._2))*)
     val tags = hc.toAuditTags(transactionName, request.path)
     DataEvent(
       auditSource = "agent-client-relationships",

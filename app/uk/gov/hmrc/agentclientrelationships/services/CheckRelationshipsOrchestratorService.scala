@@ -20,14 +20,14 @@ import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys.arnKey
 import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys.credIdKey
-import uk.gov.hmrc.agentclientrelationships.connectors._
+import uk.gov.hmrc.agentclientrelationships.connectors.*
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.UserId
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
-import uk.gov.hmrc.agentclientrelationships.services.CheckRelationshipResult._
+import uk.gov.hmrc.agentclientrelationships.services.CheckRelationshipResult.*
 import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.http.UpstreamErrorResponse
@@ -47,7 +47,7 @@ class CheckRelationshipsOrchestratorService @Inject() (
   hipConnector: HipConnector,
   agentFiRelationshipConnector: AgentFiRelationshipConnector,
   agentRecordService: AgentRecordService
-)(implicit executionContext: ExecutionContext)
+)(using executionContext: ExecutionContext)
 extends RequestAwareLogging {
 
   def checkForRelationship(
@@ -56,8 +56,8 @@ extends RequestAwareLogging {
     clientIdType: String,
     clientId: String,
     userId: Option[String]
-  )(implicit request: RequestHeader): Future[CheckRelationshipResult] = {
-    val tUserId = userId.map(UserId)
+  )(using request: RequestHeader): Future[CheckRelationshipResult] = {
+    val tUserId = userId.map(UserId.apply)
 
     (service, clientIdType, clientId) match {
       // Used by BTA to handle non MTD ITSA users
@@ -82,7 +82,7 @@ extends RequestAwareLogging {
           clientId
         )
       // "normal" cases
-      case (svc, idType, id) =>
+      case (_, _, _) =>
         withValidEnrolment(
           service,
           clientId,
@@ -103,7 +103,7 @@ extends RequestAwareLogging {
     clientIdType: String
   )(
     proceed: EnrolmentKey => Future[CheckRelationshipResult]
-  )(implicit request: RequestHeader): Future[CheckRelationshipResult] = validationService
+  )(using request: RequestHeader): Future[CheckRelationshipResult] = validationService
     .validateForEnrolmentKeyEither(
       service,
       clientId,
@@ -120,8 +120,8 @@ extends RequestAwareLogging {
     arn: Arn,
     maybeUserId: Option[UserId],
     enrolmentKey: EnrolmentKey
-  )(implicit request: RequestHeader): Future[CheckRelationshipResult] = {
-    implicit val auditData: AuditData = new AuditData()
+  )(using request: RequestHeader): Future[CheckRelationshipResult] = {
+    given auditData: AuditData = new AuditData()
     auditData.set(arnKey, arn)
     maybeUserId.foreach(auditData.set(credIdKey, _))
 
@@ -155,7 +155,7 @@ extends RequestAwareLogging {
     arn: Arn,
     enrolmentKey: EnrolmentKey,
     errorCode: String
-  )(implicit
+  )(using
     request: RequestHeader,
     auditData: AuditData
   ): Future[CheckRelationshipResult] = checkOldAndCopyService
@@ -183,7 +183,7 @@ extends RequestAwareLogging {
     arn: Arn,
     service: String,
     clientId: String
-  )(implicit request: RequestHeader) = agentFiRelationshipConnector
+  )(using request: RequestHeader) = agentFiRelationshipConnector
     .getRelationship(
       arn,
       service,
@@ -195,7 +195,7 @@ extends RequestAwareLogging {
     }
   private def withMtdItId(clientId: String)(
     proceed: MtdItId => Future[CheckRelationshipResult]
-  )(implicit request: RequestHeader): Future[CheckRelationshipResult] = hipConnector
+  )(using request: RequestHeader): Future[CheckRelationshipResult] = hipConnector
     .getMtdIdFor(NinoWithoutSuffix(clientId))
     .flatMap {
       case Some(mtdItId) => proceed(mtdItId)
@@ -204,7 +204,7 @@ extends RequestAwareLogging {
 
   private def withIrSaSuspensionCheck(arn: Arn)(
     proceed: => Future[CheckRelationshipResult]
-  )(implicit request: RequestHeader): Future[CheckRelationshipResult] = agentRecordService
+  )(using request: RequestHeader): Future[CheckRelationshipResult] = agentRecordService
     .getNonSuspendedAgentRecord(arn)
     .flatMap {
       case None =>
@@ -216,8 +216,8 @@ extends RequestAwareLogging {
   private def checkLegacyWithNinoOrPartialAuth(
     arn: Arn,
     nino: NinoWithoutSuffix
-  )(implicit request: RequestHeader): Future[CheckRelationshipResult] = {
-    implicit val auditData: AuditData = new AuditData()
+  )(using request: RequestHeader): Future[CheckRelationshipResult] = {
+    given auditData: AuditData = new AuditData()
     auditData.set(arnKey, arn)
 
     checkOldAndCopyService

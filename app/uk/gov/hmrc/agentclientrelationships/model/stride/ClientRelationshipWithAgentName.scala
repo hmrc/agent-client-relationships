@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.model.stride
 
-import play.api.libs.json._
+import play.api.libs.json.*
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 
 import java.time.Instant
@@ -37,6 +37,5 @@ case class ClientRelationshipWithAgentName(
     }
 }
 
-object ClientRelationshipWithAgentName {
-  implicit val format: OFormat[ClientRelationshipWithAgentName] = Json.format[ClientRelationshipWithAgentName]
-}
+object ClientRelationshipWithAgentName:
+  given format: OFormat[ClientRelationshipWithAgentName] = Json.format[ClientRelationshipWithAgentName]

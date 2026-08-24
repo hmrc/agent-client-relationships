@@ -17,7 +17,7 @@
 package uk.gov.hmrc.agentclientrelationships.repository
 
 import org.mongodb.scala.MongoException
-import play.api.test.Helpers._
+import play.api.test.Helpers.*
 import uk.gov.hmrc.agentclientrelationships.controllers.BaseISpec
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus.Failed

@@ -18,32 +18,33 @@ package uk.gov.hmrc.agentclientrelationships.connectors
 
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import play.api.libs.json.Json
+import play.api.libs.ws.JsonBodyWritables.writeableOf_JsValue
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.EmailInformation
 import uk.gov.hmrc.http.HttpErrorFunctions
 import uk.gov.hmrc.http.HttpResponse
 import uk.gov.hmrc.http.StringContextOps
-import uk.gov.hmrc.http.HttpReads.Implicits._
+import uk.gov.hmrc.http.HttpReads.Implicits.*
 import uk.gov.hmrc.http.client.HttpClientV2
 
 import javax.inject.Inject
 import javax.inject.Singleton
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import uk.gov.hmrc.agentclientrelationships.util.RequestSupport._
+import uk.gov.hmrc.agentclientrelationships.util.RequestSupport.given
 
 @Singleton
 class EmailConnector @Inject() (
   appConfig: AppConfig,
   httpClient: HttpClientV2
-)(implicit val ec: ExecutionContext)
+)(using ec: ExecutionContext)
 extends HttpErrorFunctions
 with RequestAwareLogging {
 
   private val baseUrl: String = appConfig.emailBaseUrl
 
-  def sendEmail(emailInformation: EmailInformation)(implicit request: RequestHeader): Future[Boolean] = httpClient
+  def sendEmail(emailInformation: EmailInformation)(using request: RequestHeader): Future[Boolean] = httpClient
     .post(url"$baseUrl/hmrc/email")
     .withBody(Json.toJson(emailInformation))
     .execute[HttpResponse]

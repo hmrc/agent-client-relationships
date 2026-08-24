@@ -17,7 +17,7 @@
 package uk.gov.hmrc.agentclientrelationships.controllers
 
 import play.api.libs.json.Json.toJson
-import play.api.libs.json._
+import play.api.libs.json.*
 import play.api.mvc.Result
 import play.api.mvc.Results.Forbidden
 
@@ -28,7 +28,7 @@ object ErrorResults {
     message: String
   )
 
-  implicit val errorBodyWrites: Writes[ErrorBody] =
+  given errorBodyWrites: Writes[ErrorBody] =
     new Writes[ErrorBody] {
       override def writes(body: ErrorBody): JsValue = Json.obj("code" -> body.code, "message" -> body.message)
     }

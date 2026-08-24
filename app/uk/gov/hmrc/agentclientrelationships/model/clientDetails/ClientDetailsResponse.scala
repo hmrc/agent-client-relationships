@@ -38,6 +38,5 @@ case class ClientDetailsResponse(
     .contains(knownFact.replaceAll("\\s", "").toUpperCase)
 }
 
-object ClientDetailsResponse {
-  implicit val format: OFormat[ClientDetailsResponse] = Json.format[ClientDetailsResponse]
-}
+object ClientDetailsResponse:
+  given format: OFormat[ClientDetailsResponse] = Json.format[ClientDetailsResponse]

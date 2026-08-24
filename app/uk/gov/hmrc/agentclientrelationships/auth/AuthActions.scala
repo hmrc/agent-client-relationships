@@ -17,8 +17,8 @@
 package uk.gov.hmrc.agentclientrelationships.auth
 
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
-import play.api.mvc._
-import uk.gov.hmrc.agentclientrelationships.controllers.ErrorResults._
+import play.api.mvc.*
+import uk.gov.hmrc.agentclientrelationships.controllers.ErrorResults.*
 import uk.gov.hmrc.agentclientrelationships.model.BasicAuthentication
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentsWithNino
 import uk.gov.hmrc.agentclientrelationships.model.{EnrolmentKey => LocalEnrolmentKey}
@@ -29,7 +29,7 @@ import uk.gov.hmrc.auth.core.AffinityGroup.Individual
 import uk.gov.hmrc.auth.core.AffinityGroup.Organisation
 import uk.gov.hmrc.auth.core.AuthProvider.GovernmentGateway
 import uk.gov.hmrc.auth.core.AuthProvider.PrivilegedApplication
-import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals._
+import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.*
 import uk.gov.hmrc.auth.core.retrieve.Credentials
 import uk.gov.hmrc.auth.core.retrieve.~
 import uk.gov.hmrc.domain.TaxIdentifier
@@ -40,7 +40,8 @@ import java.util.Base64
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.util.matching.Regex
-import uk.gov.hmrc.agentclientrelationships.util.RequestSupport._
+import uk.gov.hmrc.agentclientrelationships.util.RequestSupport
+import uk.gov.hmrc.agentclientrelationships.util.RequestSupport.given
 import uk.gov.hmrc.auth.core.AffinityGroup
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.auth.core.AuthProviders
@@ -62,7 +63,7 @@ extends AuthorisedFunctions
 with RequestAwareLogging {
   me: Results =>
 
-  implicit val executionContext: ExecutionContext
+  given executionContext: ExecutionContext
 
   override def authConnector: AuthConnector
 
@@ -72,7 +73,7 @@ with RequestAwareLogging {
     arn: Option[Arn],
     clientId: TaxIdentifier,
     strideRoles: Seq[String]
-  )(body: CurrentUser => Future[Result])(implicit request: RequestHeader): Future[Result] =
+  )(body: CurrentUser => Future[Result])(using request: RequestHeader): Future[Result] =
     authorised().retrieve(allEnrolments and affinityGroup and credentials) { case enrolments ~ affinity ~ optCreds =>
       optCreds
         .collect {
@@ -132,7 +133,7 @@ with RequestAwareLogging {
   // Authorisation request response is a special case where we need to check for multiple services
   def withAuthorisedClientForServiceKeys(
     serviceKeys: Seq[String]
-  )(body: Seq[LocalEnrolmentKey] => Future[Result])(implicit request: RequestHeader): Future[Result] =
+  )(body: Seq[LocalEnrolmentKey] => Future[Result])(using request: RequestHeader): Future[Result] =
     authorised(AuthProviders(GovernmentGateway) and (Individual or Organisation)).retrieve(allEnrolments) {
       enrolments =>
         val requiredEnrolments =
@@ -149,7 +150,7 @@ with RequestAwareLogging {
 
   def withAuthorisedAsClientWithNino(
     body: EnrolmentsWithNino => Future[Result]
-  )(implicit request: RequestHeader): Future[Result] =
+  )(using request: RequestHeader): Future[Result] =
     authorised(AuthProviders(GovernmentGateway) and (Individual or Organisation)).retrieve(allEnrolments and nino) {
       case enrolments ~ nino => body(new EnrolmentsWithNino(enrolments, nino))
     }
@@ -157,7 +158,7 @@ with RequestAwareLogging {
   protected def authorisedWithStride(
     oldStrideRole: String,
     newStrideRole: String
-  )(body: String => Future[Result])(implicit request: RequestHeader): Future[Result] =
+  )(body: String => Future[Result])(using request: RequestHeader): Future[Result] =
     authorised((Enrolment(oldStrideRole) or Enrolment(newStrideRole)) and AuthProviders(PrivilegedApplication))
       .retrieve(credentials) {
         case Some(Credentials(strideId, _)) => body(strideId)
@@ -166,7 +167,7 @@ with RequestAwareLogging {
 
   protected def authorisedWithStride(
     strideRole: String
-  )(body: String => Future[Result])(implicit request: RequestHeader): Future[Result] =
+  )(body: String => Future[Result])(using request: RequestHeader): Future[Result] =
     authorised((Enrolment(strideRole)) and AuthProviders(PrivilegedApplication))
       .retrieve(credentials) {
         case Some(Credentials(strideId, _)) => body(strideId)
@@ -184,7 +185,7 @@ with RequestAwareLogging {
 
   def withBasicAuth(
     expectedAuth: BasicAuthentication
-  )(body: => Future[Result])(implicit request: Request[_]): Future[Result] =
+  )(body: => Future[Result])(using request: Request[?]): Future[Result] =
     request.headers.get(HeaderNames.authorisation) match {
       case Some(basicAuthHeader(encodedAuthHeader)) =>
         decodeFromBase64(encodedAuthHeader) match {
@@ -205,7 +206,7 @@ with RequestAwareLogging {
         Future successful Unauthorized
     }
 
-  protected def withAuthorisedAsAgent[A](body: Arn => Future[Result])(implicit request: RequestHeader): Future[Result] =
+  protected def withAuthorisedAsAgent[A](body: Arn => Future[Result])(using request: RequestHeader): Future[Result] =
     withEnrolledAsAgent {
       case Some(arn) => body(Arn(arn))
       case None => Future.failed(InsufficientEnrolments("AgentReferenceNumber identifier not found"))
@@ -213,7 +214,7 @@ with RequestAwareLogging {
 
   private def withEnrolledAsAgent[A](
     body: Option[String] => Future[Result]
-  )(implicit request: RequestHeader): Future[Result] =
+  )(using request: RequestHeader): Future[Result] =
     authorised(Enrolment("HMRC-AS-AGENT") and AuthProviders(GovernmentGateway)).retrieve(authorisedEnrolments) {
       enrolments =>
         val id = getEnrolmentValue(

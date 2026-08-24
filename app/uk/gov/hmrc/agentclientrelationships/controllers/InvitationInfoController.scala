@@ -20,6 +20,7 @@ import play.api.libs.json.Json
 import play.api.mvc.Action
 import play.api.mvc.AnyContent
 import play.api.mvc.ControllerComponents
+import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.auth.AuthActions
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.invitation.AuthorisationRequestInfo
@@ -46,7 +47,7 @@ class InvitationInfoController @Inject() (
   val authConnector: AuthConnector,
   val appConfig: AppConfig,
   cc: ControllerComponents
-)(implicit val executionContext: ExecutionContext)
+)(using val executionContext: ExecutionContext)
 extends BackendController(cc)
 with AuthActions {
 
@@ -55,7 +56,8 @@ with AuthActions {
   def get(
     arn: Arn,
     invitationId: String
-  ): Action[AnyContent] = Action.async { implicit request =>
+  ): Action[AnyContent] = Action.async { request =>
+    given RequestHeader = request
     withAuthorisedAsAgent { _ =>
       invitationService
         .findInvitationForAgent(arn.value, invitationId)
@@ -75,7 +77,8 @@ with AuthActions {
     clientName: Option[String],
     pageNumber: Int,
     pageSize: Int
-  ): Action[AnyContent] = Action.async { implicit request =>
+  ): Action[AnyContent] = Action.async { request =>
+    given RequestHeader = request
     withAuthorisedAsAgent {
       case agentArn: Arn if agentArn == arn =>
         invitationService
@@ -93,7 +96,8 @@ with AuthActions {
     }
   }
 
-  def getForClient(invitationId: String): Action[AnyContent] = Action.async { implicit request =>
+  def getForClient(invitationId: String): Action[AnyContent] = Action.async { request =>
+    given RequestHeader = request
     invitationService
       .findInvitationForClient(invitationId)
       .flatMap {

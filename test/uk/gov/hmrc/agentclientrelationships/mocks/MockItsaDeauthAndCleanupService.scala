@@ -45,7 +45,7 @@ trait MockItsaDeauthAndCleanupService {
       eqs(mtdItId),
       eqs(nino),
       any[Instant]
-    )(any[RequestHeader], any[CurrentUser])
+    )(using any[RequestHeader], any[CurrentUser])
   ).thenReturn(response)
 
 }

@@ -58,12 +58,12 @@ object MongoLocalDateTimeFormat {
     .at[String](__ \ "$date" \ "$numberLong")
     .contramap(_.toInstant(ZoneOffset.UTC).toEpochMilli.toString)
 
-  implicit final val localDateTimeFormat: Format[LocalDateTime] = Format(
+  given localDateTimeFormat: Format[LocalDateTime] = Format(
     localDateTimeReads.orElse(legacyDateTimeReads),
     localDateTimeWrites
   )
 
-  implicit final val localDateFormat: Format[LocalDate] = Format(
+  given localDateFormat: Format[LocalDate] = Format(
     localDateReads.orElse(legacyDateReads),
     localDateWrites
   )

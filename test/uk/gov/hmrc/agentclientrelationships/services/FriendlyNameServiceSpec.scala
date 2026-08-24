@@ -17,7 +17,7 @@
 package uk.gov.hmrc.agentclientrelationships.services
 
 import org.mockito.ArgumentMatchers.{eq => eqs, _}
-import org.mockito.Mockito._
+import org.mockito.Mockito.*
 import org.scalatest.BeforeAndAfterEach
 import org.scalatestplus.mockito.MockitoSugar
 import play.api.mvc.RequestHeader
@@ -30,7 +30,7 @@ import uk.gov.hmrc.agentclientrelationships.model.Invitation
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdIt
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.MtdItSupp
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.PersonalIncomeRecord
-import uk.gov.hmrc.agentclientrelationships.model.identifiers._
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.*
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 import uk.gov.hmrc.http.UpstreamErrorResponse
 
@@ -48,8 +48,8 @@ with BeforeAndAfterEach {
   object testService
   extends FriendlyNameService(mockEsp)
 
-  implicit val request: RequestHeader = FakeRequest()
-  implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
+  given request: RequestHeader = FakeRequest()
+  given ec: ExecutionContext = ExecutionContext.Implicits.global
 
   override protected def beforeEach(): Unit = {
     super.beforeEach()
@@ -74,13 +74,13 @@ with BeforeAndAfterEach {
 
   "updateFriendlyName" should {
     "succeed when there group id is found and ES19 call succeeds" in {
-      when(mockEsp.getPrincipalGroupIdFor(any[Arn])(any[RequestHeader])).thenReturn(Future.successful(testGroupId))
+      when(mockEsp.getPrincipalGroupIdFor(any[Arn])(using any[RequestHeader])).thenReturn(Future.successful(testGroupId))
       when(
         mockEsp.updateEnrolmentFriendlyName(
           any[String],
           any[String],
           any[String]
-        )(any[RequestHeader])
+        )(using any[RequestHeader])
       ).thenReturn(Future.successful(()))
 
       await(testService.updateFriendlyName(testInvitation, testEnrolment)) shouldBe ()
@@ -89,16 +89,16 @@ with BeforeAndAfterEach {
         eqs(testGroupId),
         eqs(testEnrolment.toString),
         eqs(encodedName)
-      )(any[RequestHeader])
+      )(using any[RequestHeader])
     }
     "not fail in case of an ES19 error" in {
-      when(mockEsp.getPrincipalGroupIdFor(any[Arn])(any[RequestHeader])).thenReturn(Future.successful(testGroupId))
+      when(mockEsp.getPrincipalGroupIdFor(any[Arn])(using any[RequestHeader])).thenReturn(Future.successful(testGroupId))
       when(
         mockEsp.updateEnrolmentFriendlyName(
           any[String],
           any[String],
           any[String]
-        )(any[RequestHeader])
+        )(using any[RequestHeader])
       ).thenReturn(Future.failed(UpstreamErrorResponse("error", 503)))
 
       await(testService.updateFriendlyName(testInvitation, testEnrolment)) shouldBe ()
@@ -107,10 +107,10 @@ with BeforeAndAfterEach {
         eqs(testGroupId),
         eqs(testEnrolment.toString),
         eqs(encodedName)
-      )(any[RequestHeader])
+      )(using any[RequestHeader])
     }
     "not fail if the agent's group id cannot be retrieved" in {
-      when(mockEsp.getPrincipalGroupIdFor(any[Arn])(any[RequestHeader])).thenReturn(
+      when(mockEsp.getPrincipalGroupIdFor(any[Arn])(using any[RequestHeader])).thenReturn(
         Future.failed(UpstreamErrorResponse("error", 503))
       )
 
@@ -120,7 +120,7 @@ with BeforeAndAfterEach {
         eqs(testGroupId),
         eqs(testEnrolment.toString),
         eqs(encodedName)
-      )(any[RequestHeader])
+      )(using any[RequestHeader])
     }
     "ignore PIR clients" in {
       await(
@@ -130,7 +130,7 @@ with BeforeAndAfterEach {
         eqs(testGroupId),
         eqs(testEnrolment.toString),
         eqs(encodedName)
-      )(any[RequestHeader])
+      )(using any[RequestHeader])
     }
     "ignore Alt ITSA clients" in {
       await(
@@ -143,7 +143,7 @@ with BeforeAndAfterEach {
         eqs(testGroupId),
         eqs(testAltItsaEnrolment.toString),
         eqs(encodedName)
-      )(any[RequestHeader])
+      )(using any[RequestHeader])
     }
     "ignore Alt ITSA SUPP clients" in {
       await(
@@ -156,7 +156,7 @@ with BeforeAndAfterEach {
         eqs(testGroupId),
         eqs(testAltItsaSuppEnrolment.toString),
         eqs(encodedName)
-      )(any[RequestHeader])
+      )(using any[RequestHeader])
     }
   }
 

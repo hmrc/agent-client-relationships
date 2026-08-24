@@ -26,7 +26,7 @@ import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.Invitation
 import uk.gov.hmrc.agentclientrelationships.model.Pending
-import uk.gov.hmrc.agentclientrelationships.model.invitationLink.InvitationLinkFailureResponse._
+import uk.gov.hmrc.agentclientrelationships.model.invitationLink.InvitationLinkFailureResponse.*
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.ValidateInvitationRequest
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.ValidateInvitationResponse
 import uk.gov.hmrc.agentclientrelationships.services.CheckRelationshipsService
@@ -52,7 +52,7 @@ class InvitationLinkController @Inject() (
   val authConnector: AuthConnector,
   val appConfig: AppConfig,
   cc: ControllerComponents
-)(implicit val executionContext: ExecutionContext)
+)(using val executionContext: ExecutionContext)
 extends BackendController(cc)
 with AuthActions {
 
@@ -61,7 +61,8 @@ with AuthActions {
   def validateLink(
     uid: String,
     normalizedAgentName: String
-  ): Action[AnyContent] = Action.async { implicit request =>
+  ): Action[AnyContent] = Action.async { request =>
+    given play.api.mvc.RequestHeader = request
     agentReferenceService
       .validateLink(uid, normalizedAgentName)
       .map { response =>
@@ -79,7 +80,8 @@ with AuthActions {
       }
   }
 
-  def createLink: Action[AnyContent] = Action.async { implicit request =>
+  def createLink: Action[AnyContent] = Action.async { request =>
+    given play.api.mvc.RequestHeader = request
     withAuthorisedAsAgent { arn =>
       agentReferenceService.createLink(arn).map(createLinkResponse => Ok(Json.toJson(createLinkResponse)))
     }
@@ -101,7 +103,8 @@ with AuthActions {
 
   // scalastyle:off method.length
   def validateInvitationForClient: Action[ValidateInvitationRequest] =
-    Action.async(parse.json[ValidateInvitationRequest]) { implicit request =>
+    Action.async(parse.json[ValidateInvitationRequest]) { request =>
+      given play.api.mvc.RequestHeader = request
       withAuthorisedClientForServiceKeys(request.body.serviceKeys) { enrolments =>
         agentReferenceService
           .validateInvitationRequest(request.body.uid)
@@ -126,7 +129,7 @@ with AuthActions {
                       .find(i => i.status.eq(Pending))
                       .getOrElse(
                         invitations
-                          .sorted(Ordering[Invitation](Ordering.by[Invitation, Instant](_.created).reverse))
+                          .sorted(using Ordering[Invitation](using Ordering.by[Invitation, Instant](_.created).reverse))
                           .head
                       )
                     for {

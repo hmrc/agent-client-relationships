@@ -16,15 +16,16 @@
 
 package uk.gov.hmrc.agentclientrelationships.controllers
 
+import org.mongodb.scala.ObservableFuture
+
 import com.github.tomakehurst.wiremock.client.WireMock.aResponse
 import com.github.tomakehurst.wiremock.client.WireMock.containing
 import com.github.tomakehurst.wiremock.client.WireMock.post
 import com.github.tomakehurst.wiremock.client.WireMock.stubFor
 import com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo
 import com.github.tomakehurst.wiremock.stubbing.Scenario
-import play.api.test.Helpers._
+import play.api.test.Helpers.*
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
-import uk.gov.hmrc.agentclientrelationships.model.Accepted
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.Invitation
 import uk.gov.hmrc.agentclientrelationships.model.PartialAuth
@@ -33,11 +34,8 @@ import uk.gov.hmrc.agentclientrelationships.model.identifiers.Identifier
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDIT
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDITSUPP
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipReference.SaRef
-import uk.gov.hmrc.agentclientrelationships.repository._
-import uk.gov.hmrc.agentclientrelationships.stubs.AucdStubs
+import uk.gov.hmrc.agentclientrelationships.repository.*
 import uk.gov.hmrc.agentclientrelationships.stubs.AuthStub
-import uk.gov.hmrc.agentclientrelationships.stubs.DataStreamStub
-import uk.gov.hmrc.agentclientrelationships.stubs.EmailStubs
 import uk.gov.hmrc.agentclientrelationships.stubs.EnrolmentStoreProxyStubs
 import uk.gov.hmrc.agentclientrelationships.stubs.HipStub
 import uk.gov.hmrc.agentclientrelationships.stubs.RelationshipStubs
@@ -55,7 +53,7 @@ import java.time.LocalDate
 
 trait RelationshipsControllerITSABehaviours {
   this: RelationshipsBaseControllerISpec
-    with HipStub =>
+    & HipStub =>
 
   // noinspection ScalaStyle
   def relationshipControllerITSASpecificBehaviours(): Unit = {
@@ -718,7 +716,7 @@ trait RelationshipsControllerITSABehaviours {
       "return 200 when relationship exists in es" in {
         givenPrincipalAgentUser(arn, "foo")
         givenGroupInfo("foo", "bar")
-        givenAgentIsAllocatedAndAssignedToClient(mtdItEnrolmentKey, "bar")
+        givenAgentIsAllocatedAndAssignedToClient(mtdItEnrolmentKey)
         givenMtdItIdIsKnownFor(nino, mtdItId)
         givenAdminUser("foo", "any")
         givenUserIsSubscribedAgent(

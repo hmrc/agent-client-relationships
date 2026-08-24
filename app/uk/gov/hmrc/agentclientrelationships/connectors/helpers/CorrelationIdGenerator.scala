@@ -18,7 +18,7 @@ package uk.gov.hmrc.agentclientrelationships.connectors.helpers
 
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
-import scala.util.chaining._
+import scala.util.chaining.*
 
 import java.util.UUID
 import javax.inject.Singleton
@@ -27,7 +27,7 @@ import javax.inject.Singleton
 class CorrelationIdGenerator
 extends RequestAwareLogging {
 
-  def makeCorrelationId()(implicit requestHeader: RequestHeader): String = UUID
+  def makeCorrelationId()(using requestHeader: RequestHeader): String = UUID
     .randomUUID()
     .toString
     .tap(correlationId => logger.info(s"Generated correlationId: $correlationId"))

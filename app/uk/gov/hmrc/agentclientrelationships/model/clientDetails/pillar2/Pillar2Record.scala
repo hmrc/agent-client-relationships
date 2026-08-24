@@ -27,7 +27,7 @@ case class Pillar2Record(
 )
 
 object Pillar2Record {
-  implicit val reads: Reads[Pillar2Record] =
+  given reads: Reads[Pillar2Record] =
     for {
       orgName <- (__ \ "success" \ "upeDetails" \ "organisationName").read[String]
       regDate <- (__ \ "success" \ "upeDetails" \ "registrationDate").read[String]

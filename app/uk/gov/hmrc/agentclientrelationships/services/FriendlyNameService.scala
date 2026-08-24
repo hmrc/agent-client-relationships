@@ -23,7 +23,7 @@ import uk.gov.hmrc.agentclientrelationships.model.Invitation
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDIT
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDITSUPP
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCPIR
-import uk.gov.hmrc.agentclientrelationships.model.identifiers._
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.*
 import play.api.mvc.RequestHeader
 
 import java.net.URLEncoder
@@ -31,7 +31,7 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
-class FriendlyNameService @Inject() (enrolmentStoreProxyConnector: EnrolmentStoreProxyConnector)(implicit
+class FriendlyNameService @Inject() (enrolmentStoreProxyConnector: EnrolmentStoreProxyConnector)(using
   executionContext: ExecutionContext
 )
 extends RequestAwareLogging {
@@ -39,7 +39,7 @@ extends RequestAwareLogging {
   def updateFriendlyName(
     invitation: Invitation,
     enrolment: EnrolmentKey
-  )(implicit request: RequestHeader): Future[Unit] = {
+  )(using request: RequestHeader): Future[Unit] = {
     invitation.service match {
       case `HMRCPIR` => Future.unit
       case `HMRCMTDITSUPP` | `HMRCMTDIT` if enrolment.oneTaxIdentifier().isInstanceOf[NinoWithoutSuffix] => Future.unit
@@ -50,7 +50,7 @@ extends RequestAwareLogging {
   private def doUpdateFriendlyName(
     invitation: Invitation,
     enrolment: EnrolmentKey
-  )(implicit request: RequestHeader): Future[Unit] = {
+  )(using request: RequestHeader): Future[Unit] = {
     val clientName: String = URLEncoder.encode(invitation.clientName, "UTF-8")
 
     (

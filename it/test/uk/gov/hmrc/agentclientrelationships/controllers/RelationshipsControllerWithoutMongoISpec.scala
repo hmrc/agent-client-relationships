@@ -16,19 +16,21 @@
 
 package uk.gov.hmrc.agentclientrelationships.controllers
 
+import org.mongodb.scala.ObservableFuture
+
 import com.google.inject.AbstractModule
 import org.apache.pekko.Done
-import play.api.test.Helpers._
+import play.api.test.Helpers.*
 import uk.gov.hmrc.agentclientrelationships.audit.AgentClientRelationshipEvent
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.PartialAuthRelationship
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDIT
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDITSUPP
-import uk.gov.hmrc.agentclientrelationships.model.identifiers._
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.*
 import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipCopyRecord
 import uk.gov.hmrc.agentclientrelationships.repository.RelationshipCopyRecordRepository
-import uk.gov.hmrc.agentclientrelationships.stubs._
+import uk.gov.hmrc.agentclientrelationships.stubs.*
 import uk.gov.hmrc.agentclientrelationships.support.Resource
 import uk.gov.hmrc.domain.SaAgentReference
 import uk.gov.hmrc.mongo.MongoComponent

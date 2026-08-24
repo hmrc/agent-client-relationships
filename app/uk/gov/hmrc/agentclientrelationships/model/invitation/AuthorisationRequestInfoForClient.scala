@@ -26,6 +26,5 @@ case class AuthorisationRequestInfoForClient(
   status: InvitationStatus
 )
 
-object AuthorisationRequestInfoForClient {
-  implicit val format: Format[AuthorisationRequestInfoForClient] = Json.format[AuthorisationRequestInfoForClient]
-}
+object AuthorisationRequestInfoForClient:
+  given format: Format[AuthorisationRequestInfoForClient] = Json.format[AuthorisationRequestInfoForClient]

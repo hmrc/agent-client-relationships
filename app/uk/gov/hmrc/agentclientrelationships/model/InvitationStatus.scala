@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.model
 
-import play.api.libs.json._
+import play.api.libs.json.*
 
 // scalafmt: { binPack.parentConstructors = Always }
 
@@ -55,7 +55,7 @@ object InvitationStatus {
       case PartialAuth => "Partialauth"
     }
 
-  implicit val format: Format[InvitationStatus] =
+  given format: Format[InvitationStatus] =
     new Format[InvitationStatus] {
       override def reads(json: JsValue): JsResult[InvitationStatus] = JsSuccess(apply(json.as[String]))
       override def writes(status: InvitationStatus): JsValue = JsString(unapply(status))

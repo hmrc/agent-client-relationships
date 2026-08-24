@@ -45,7 +45,7 @@ trait MockCreateRelationshipsService {
       eqs(Set()),
       any[Boolean],
       any[Boolean]
-    )(any[RequestHeader], any[AuditData])
+    )(using any[RequestHeader], any[AuditData])
   ).thenReturn(response)
 
 }

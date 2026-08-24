@@ -16,10 +16,12 @@
 
 package uk.gov.hmrc.agentclientrelationships.controllers
 
+import org.mongodb.scala.ObservableFuture
+
 import play.api.libs.json.Json
-import play.api.test.Helpers._
+import play.api.test.Helpers.*
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.model._
+import uk.gov.hmrc.agentclientrelationships.model.*
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.CapitalGains
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Cbc
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.CbcNonUk
@@ -31,7 +33,7 @@ import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Ppt
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Trust
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.TrustNT
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Vat
-import uk.gov.hmrc.agentclientrelationships.model.identifiers._
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.*
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
 import uk.gov.hmrc.agentclientrelationships.stubs.HipStub
 import uk.gov.hmrc.agentclientrelationships.support.TestData
@@ -45,8 +47,8 @@ extends BaseISpec
 with HipStub
 with TestData {
 
-  implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
-  implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
+  given ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
+  given appConfig: AppConfig = app.injector.instanceOf[AppConfig]
 
   val invitationRepo: InvitationsRepository = app.injector.instanceOf[InvitationsRepository]
 

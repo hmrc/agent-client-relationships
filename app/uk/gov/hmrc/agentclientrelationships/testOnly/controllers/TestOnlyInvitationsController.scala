@@ -33,13 +33,14 @@ class TestOnlyInvitationsController @Inject() (
   controllerComponents: ControllerComponents,
   invitationService: InvitationService,
   val authConnector: AuthConnector
-)(implicit ec: ExecutionContext)
+)(using ec: ExecutionContext)
 extends BackendController(controllerComponents)
 with AuthorisedFunctions {
 
   private val invitationIdRegex = "^[A-Z0-9]{13}$".r
 
-  def getInvitation(invitationId: String): Action[AnyContent] = Action.async { implicit request =>
+  def getInvitation(invitationId: String): Action[AnyContent] = Action.async { request =>
+    given play.api.mvc.RequestHeader = request
     authorised() {
       if (invitationIdRegex.matches(invitationId)) {
         invitationService.findInvitation(invitationId).map {

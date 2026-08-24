@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.model.invitationLink
 
-import play.api.libs.json._
+import play.api.libs.json.*
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.SuspensionDetails
 
 case class AgentDetailsDesResponse(
@@ -24,6 +24,5 @@ case class AgentDetailsDesResponse(
   suspensionDetails: Option[SuspensionDetails]
 )
 
-object AgentDetailsDesResponse {
-  implicit val format: OFormat[AgentDetailsDesResponse] = Json.format[AgentDetailsDesResponse]
-}
+object AgentDetailsDesResponse:
+  given format: OFormat[AgentDetailsDesResponse] = Json.format[AgentDetailsDesResponse]

@@ -20,18 +20,18 @@ import play.api.mvc.RequestHeader
 import play.api.test.FakeRequest
 import play.api.test.Helpers.await
 import play.api.test.Helpers.defaultAwaitTimeout
-import uk.gov.hmrc.agentclientrelationships.mocks._
+import uk.gov.hmrc.agentclientrelationships.mocks.*
 import uk.gov.hmrc.agentclientrelationships.model.RelationshipFailureResponse.ErrorRetrievingAgentDetails
 import uk.gov.hmrc.agentclientrelationships.model.RelationshipFailureResponse.ErrorRetrievingRelationship
 import uk.gov.hmrc.agentclientrelationships.model.RelationshipFailureResponse.RelationshipNotFound
 import uk.gov.hmrc.agentclientrelationships.model.RelationshipFailureResponse.TaxIdentifierError
-import uk.gov.hmrc.agentclientrelationships.model._
+import uk.gov.hmrc.agentclientrelationships.model.*
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ActiveMainAgent
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsNotFound
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsResponse
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsStrideResponse
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.KnownFactType.PostalCode
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service._
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.*
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.CbcId
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.CgtRef
@@ -146,8 +146,8 @@ with MockValidationService {
     Instant.now
   )
 
-  implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
-  implicit val request: RequestHeader = FakeRequest()
+  given ec: ExecutionContext = ExecutionContext.Implicits.global
+  given request: RequestHeader = FakeRequest()
 
   "getClientDetailsWithCheck" when {
     "pending invitations exist for HMRC-MTD-IT" should {

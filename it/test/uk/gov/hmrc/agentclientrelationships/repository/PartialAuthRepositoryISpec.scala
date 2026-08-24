@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.agentclientrelationships.repository
 
+import org.mongodb.scala.ObservableFuture
+
 import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.Indexes
 import play.api.test.Helpers.await
@@ -82,7 +84,7 @@ extends RepositoryISpec[PartialAuthRelationship] {
             NinoWithoutSuffix("SX579189")
           )
       )
-      await(repository.collection.countDocuments().toFuture()) shouldBe 1
+      await(repository.collection.countDocuments().toFuture()).head shouldBe 1
     }
 
     "throw an exception if invalid service passed in" in {
@@ -210,7 +212,7 @@ extends RepositoryISpec[PartialAuthRelationship] {
             NinoWithoutSuffix("SX579189")
           )
       )
-      await(repository.collection.countDocuments().toFuture()) shouldBe 1
+      await(repository.collection.countDocuments().toFuture()).head shouldBe 1
       await(
         repository
           .deauthorise(
@@ -228,11 +230,11 @@ extends RepositoryISpec[PartialAuthRelationship] {
         )
       )
       result.isEmpty shouldBe true
-      await(repository.collection.countDocuments().toFuture()) shouldBe 1
+      await(repository.collection.countDocuments().toFuture()).head shouldBe 1
     }
 
     "deauthorise PartialAuth invitation return success even when invitation does not exist" in {
-      await(repository.collection.countDocuments().toFuture()) shouldBe 0
+      await(repository.collection.countDocuments().toFuture()).head shouldBe 0
       await(
         repository
           .deauthorise(
@@ -242,7 +244,7 @@ extends RepositoryISpec[PartialAuthRelationship] {
             Instant.parse("2020-01-01T00:00:00.000Z")
           )
       )
-      await(repository.collection.countDocuments().toFuture()) shouldBe 0
+      await(repository.collection.countDocuments().toFuture()).head shouldBe 0
     }
   }
 

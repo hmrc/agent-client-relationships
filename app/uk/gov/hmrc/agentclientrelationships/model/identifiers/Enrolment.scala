@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.model.identifiers
 
-import play.api.libs.json._
+import play.api.libs.json.*
 
 case class Enrolment(
   service: String,
@@ -27,9 +27,8 @@ case class Enrolment(
   enrolmentDate: Option[String] = None
 )
 
-object Enrolment {
-  implicit val format: Format[Enrolment] = Json.format[Enrolment]
-}
+object Enrolment:
+  given format: Format[Enrolment] = Json.format[Enrolment]
 
 case class Identifier(
   key: String,
@@ -40,7 +39,7 @@ case class Identifier(
 
 object Identifier {
 
-  implicit val format: Format[Identifier] = Json.format[Identifier]
-  implicit val ordering: Ordering[Identifier] = Ordering.by(_.key)
+  given format: Format[Identifier] = Json.format[Identifier]
+  given ordering: Ordering[Identifier] = Ordering.by(_.key)
 
 }

@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentclientrelationships.model
 
-import play.api.libs.json._
+import play.api.libs.json.*
 
 import java.time.LocalDate
 
@@ -29,6 +29,5 @@ case class Authorisation(
   agentName: String
 )
 
-object Authorisation {
-  implicit val format: OFormat[Authorisation] = Json.format[Authorisation]
-}
+object Authorisation:
+  given format: OFormat[Authorisation] = Json.format[Authorisation]

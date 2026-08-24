@@ -20,14 +20,14 @@ import cats.data.EitherT
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.connectors._
+import uk.gov.hmrc.agentclientrelationships.connectors.*
 import uk.gov.hmrc.agentclientrelationships.model.stride.RelationshipSource
 import uk.gov.hmrc.agentclientrelationships.model.stride.RelationshipSource.AfrRelationshipRepo
 import uk.gov.hmrc.agentclientrelationships.model.stride.RelationshipSource.HipOrIfApi
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.RelationshipFailureResponse
 import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _}
-import uk.gov.hmrc.agentclientrelationships.model.identifiers._
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.*
 import uk.gov.hmrc.domain.TaxIdentifier
 
 import javax.inject.Inject
@@ -39,14 +39,14 @@ import scala.concurrent.Future
 class ValidationService @Inject() (
   esConnector: EnrolmentStoreProxyConnector,
   appConfig: AppConfig
-)(implicit ec: ExecutionContext)
+)(using ec: ExecutionContext)
 extends RequestAwareLogging {
 
   def validateForEnrolmentKey(
     serviceKey: String,
     clientId: String,
     clientType: Option[String] = None
-  )(implicit rh: RequestHeader): Future[EnrolmentKey] = validateForEnrolmentKeyEither(
+  )(using rh: RequestHeader): Future[EnrolmentKey] = validateForEnrolmentKeyEither(
     serviceKey,
     clientId,
     clientType
@@ -60,7 +60,7 @@ extends RequestAwareLogging {
     serviceKey: String,
     clientId: String,
     clientType: Option[String] = None
-  )(implicit rh: RequestHeader): Future[Either[String, EnrolmentKey]] =
+  )(using rh: RequestHeader): Future[Either[String, EnrolmentKey]] =
     (serviceKey, clientType) match {
       // "special" cases
       case ("IR-SA" | Service.MtdIt.id | Service.MtdItSupp.id | Service.PersonalIncomeRecord.id, None | Some("ni" | "NI" | "NINO"))
@@ -83,7 +83,7 @@ extends RequestAwareLogging {
     * of knowing). We check and correct the enrolment key as needed. Also, if it is HMRC-CBC-ORG, we must add a UTR to the enrolment key (alongside the cbcId)
     * as required by specs. First, query EACD assuming enrolment to be HMRC-CBC-ORG (UK version). If that fails, try as HMRC-CBC-NONUK-ORG.
     */
-  def makeSanitisedCbcEnrolmentKey(cbcId: CbcId)(implicit rh: RequestHeader): Future[Either[String, EnrolmentKey]] =
+  def makeSanitisedCbcEnrolmentKey(cbcId: CbcId)(using rh: RequestHeader): Future[Either[String, EnrolmentKey]] =
     // Try as HMRC-CBC-ORG (UK version)
     esConnector
       .queryKnownFacts(Service.Cbc, Seq(Identifier("cbcId", cbcId.value)))
@@ -115,7 +115,7 @@ extends RequestAwareLogging {
     authProfile: Option[String],
     relationshipSource: RelationshipSource,
     service: Option[Service]
-  )(implicit rh: RequestHeader): Future[Either[RelationshipFailureResponse, Service]] =
+  )(using rh: RequestHeader): Future[Either[RelationshipFailureResponse, Service]] =
     service.fold {
       (taxIdentifier, authProfile, relationshipSource) match {
         case (NinoWithoutSuffix(_), Some("ALL00001"), HipOrIfApi) => Future.successful(Right(Service.MtdIt))

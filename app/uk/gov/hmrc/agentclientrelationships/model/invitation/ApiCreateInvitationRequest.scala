@@ -68,7 +68,5 @@ case class ApiCreateInvitationRequest(
 
 }
 
-object ApiCreateInvitationRequest {
-  implicit val format: OFormat[ApiCreateInvitationRequest] = Json.format[ApiCreateInvitationRequest]
-
-}
+object ApiCreateInvitationRequest:
+  given format: OFormat[ApiCreateInvitationRequest] = Json.format[ApiCreateInvitationRequest]

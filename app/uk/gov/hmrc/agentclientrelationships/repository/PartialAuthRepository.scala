@@ -21,7 +21,7 @@ import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.Filters.and
 import org.mongodb.scala.model.Filters.equal
 import org.mongodb.scala.model.Filters.in
-import org.mongodb.scala.model.Updates._
+import org.mongodb.scala.model.Updates.*
 import org.mongodb.scala.model.IndexModel
 import org.mongodb.scala.model.IndexOptions
 import org.mongodb.scala.model.Indexes
@@ -46,11 +46,11 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 @Singleton
-class PartialAuthRepository @Inject() (mongoComponent: MongoComponent)(implicit
+class PartialAuthRepository @Inject() (mongoComponent: MongoComponent)(using
   ec: ExecutionContext,
   @Named("aes")
   crypto: Encrypter
-    with Decrypter
+    & Decrypter
 )
 extends PlayMongoRepository[PartialAuthRelationship](
   mongoComponent = mongoComponent,

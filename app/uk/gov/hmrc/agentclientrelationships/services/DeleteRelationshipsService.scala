@@ -18,19 +18,19 @@ package uk.gov.hmrc.agentclientrelationships.services
 
 import org.apache.pekko.Done
 import play.api.mvc.RequestHeader
-import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys._
+import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys.*
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.audit.AuditService
 import uk.gov.hmrc.agentclientrelationships.auth.CurrentUser
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.connectors._
+import uk.gov.hmrc.agentclientrelationships.connectors.*
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
-import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus._
+import uk.gov.hmrc.agentclientrelationships.repository.SyncStatus.*
 import uk.gov.hmrc.agentclientrelationships.repository.{SyncStatus => _, _}
 import uk.gov.hmrc.agentclientrelationships.support.NoRequest
 import uk.gov.hmrc.agentclientrelationships.support.RelationshipNotFound
-import uk.gov.hmrc.agentclientrelationships.util.RequestSupport._
-import uk.gov.hmrc.agentclientrelationships.model.identifiers._
+import uk.gov.hmrc.agentclientrelationships.util.RequestSupport.given
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.*
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository.endedByAgent
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository.endedByClient
 import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository.endedByHMRC
@@ -59,7 +59,7 @@ class DeleteRelationshipsService @Inject() (
   auditService: AuditService,
   invitationService: InvitationService,
   appConfig: AppConfig
-)(implicit ec: ExecutionContext)
+)(using ec: ExecutionContext)
 extends RequestAwareLogging {
 
   private val recoveryTimeout: Int = appConfig.recoveryTimeout
@@ -71,7 +71,7 @@ extends RequestAwareLogging {
     suppliedClientId: TaxIdentifier, // Required for invitation cleanup code as the ID provided by users is not always the ID on the enrolment (e.g. ITSA)
     affinityGroup: Option[AffinityGroup],
     backfillCopyRecord: Boolean = true
-  )(implicit
+  )(using
     request: RequestHeader,
     currentUser: CurrentUser,
     auditData: AuditData = new AuditData
@@ -133,7 +133,7 @@ extends RequestAwareLogging {
   private def removeEtmpRelationship(
     arn: Arn,
     enrolmentKey: EnrolmentKey
-  )(implicit
+  )(using
     rh: RequestHeader,
     auditData: AuditData
   ): Future[Boolean] = {
@@ -169,7 +169,7 @@ extends RequestAwareLogging {
   private def deallocateEsEnrolment(
     arn: Arn,
     enrolmentKey: EnrolmentKey
-  )(implicit
+  )(using
     request: RequestHeader,
     auditData: AuditData
   ): Future[Boolean] = {
@@ -216,14 +216,14 @@ extends RequestAwareLogging {
     }
   }
 
-  private def getPrincipalGroupIdForDeallocation(arn: Arn)(implicit request: RequestHeader): Future[Option[String]] = es
+  private def getPrincipalGroupIdForDeallocation(arn: Arn)(using request: RequestHeader): Future[Option[String]] = es
     .getPrincipalGroupIdFor(arn)
     .map(Some(_))
     .recover { case RelationshipNotFound("UNKNOWN_ARN") => None }
 
   def createDeleteRecord(record: DeleteRecord): Future[Done] = deleteRecordRepository
     .create(record)
-    .recoverWith { case ex => Future.failed(new Exception("RELATIONSHIP_DELETE_FAILED_DB")) }
+    .recoverWith { case _ => Future.failed(new Exception("RELATIONSHIP_DELETE_FAILED_DB")) }
 
   def removeDeleteRecord(
     arn: Arn,
@@ -232,25 +232,25 @@ extends RequestAwareLogging {
     .remove(arn, enrolmentKey)
     .map(_ > 0)
     .recoverWith { case NonFatal(ex) =>
-      logger.warn(s"[DeleteRelationshipsService] Removing delete record from mongo failed for ${arn.value}, $enrolmentKey : ${ex.getMessage}")(NoRequest)
+      logger.warn(s"[DeleteRelationshipsService] Removing delete record from mongo failed for ${arn.value}, $enrolmentKey : ${ex.getMessage}")(using NoRequest)
       Future.successful(false)
     }
 
-  def tryToResume(implicit
+  def tryToResume(using
     auditData: AuditData
   ): Future[Boolean] = deleteRecordRepository
     .selectNextToRecover()
     .flatMap {
       case Some(record) =>
         val enrolmentKey = record.enrolmentKey
-        checkDeleteRecordAndEventuallyResume(Arn(record.arn), enrolmentKey)(NoRequest, auditData)
+        checkDeleteRecordAndEventuallyResume(Arn(record.arn), enrolmentKey)(using NoRequest, auditData)
       case None => Future.successful(true)
     }
 
   def checkDeleteRecordAndEventuallyResume(
     arn: Arn,
     enrolmentKey: EnrolmentKey
-  )(implicit
+  )(using
     request: RequestHeader,
     auditData: AuditData
   ): Future[Boolean] =
@@ -290,7 +290,7 @@ extends RequestAwareLogging {
     }
 
   // noinspection ScalaStyle
-  def resumeRelationshipRemoval(deleteRecord: DeleteRecord)(implicit
+  def resumeRelationshipRemoval(deleteRecord: DeleteRecord)(using
     request: RequestHeader,
     auditData: AuditData
   ): Future[Option[Boolean]] = {

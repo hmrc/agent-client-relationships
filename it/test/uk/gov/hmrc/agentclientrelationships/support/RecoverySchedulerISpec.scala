@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.agentclientrelationships.support
 
+import org.mongodb.scala.ObservableFuture
+
 import org.apache.pekko.actor.testkit.typed.scaladsl.ActorTestKit
 import org.apache.pekko.actor.ActorRef
 import org.apache.pekko.actor.ActorSystem
@@ -29,16 +31,16 @@ import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.mvc.AnyContentAsEmpty
 import play.api.test.FakeRequest
-import play.api.test.Helpers._
+import play.api.test.Helpers.*
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
-import uk.gov.hmrc.agentclientrelationships.repository._
+import uk.gov.hmrc.agentclientrelationships.repository.*
 import uk.gov.hmrc.agentclientrelationships.services.DeleteRelationshipsService
-import uk.gov.hmrc.agentclientrelationships.stubs._
+import uk.gov.hmrc.agentclientrelationships.stubs.*
 import uk.gov.hmrc.mongo.test.MongoSupport
 
 import java.time.Instant
@@ -58,7 +60,7 @@ with HipStub
 with AucdStubs
 with BeforeAndAfterEach {
 
-  implicit val request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
+  given request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
 
   protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder().configure(
     "microservice.services.enrolment-store-proxy.port" -> wireMockPort,
@@ -75,17 +77,17 @@ with BeforeAndAfterEach {
     "mongodb.uri" -> mongoUri
   )
 
-  override implicit lazy val app: Application = appBuilder.build()
+  override given app: Application = appBuilder.build()
 
   private lazy val recoveryRepo = app.injector.instanceOf[RecoveryScheduleRepository]
   private lazy val deleteRepo = app.injector.instanceOf[DeleteRecordRepository]
   private lazy val deleteRelationshipService = app.injector.instanceOf[DeleteRelationshipsService]
 
-  override implicit val patienceConfig: PatienceConfig = PatienceConfig(
+  override given patienceConfig: PatienceConfig = PatienceConfig(
     scaled(Span(30, Seconds)),
     scaled(Span(2, Seconds))
   )
-  implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
+  given ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
 
   private val arn: Arn = Arn("AARN0000002")
   private val mtdItId: MtdItId = MtdItId("ABCDEF123456789")
@@ -108,8 +110,8 @@ with BeforeAndAfterEach {
       new TaskActor(
         recoveryRepo,
         2,
-        deleteRelationshipService.tryToResume(new AuditData()).map(_ => ())(ec)
-      )(ec)
+        deleteRelationshipService.tryToResume(using new AuditData()).map(_ => ())(using ec)
+      )
     )
   )
 
@@ -119,7 +121,7 @@ with BeforeAndAfterEach {
       new Runnable {
         def run = actorRef ! "uid"
       }
-    )(ec)
+    )
 
   "Recovery Scheduler" should {
 

@@ -21,9 +21,8 @@ import play.api.libs.json.Reads
 
 case class RegistrationRelationshipResponse(processingDate: String)
 
-object RegistrationRelationshipResponse {
-  implicit val regReads: Reads[RegistrationRelationshipResponse] = (JsPath \ "success" \ "processingDate")
+object RegistrationRelationshipResponse:
+  given regReads: Reads[RegistrationRelationshipResponse] = (JsPath \ "success" \ "processingDate")
     .read[String]
     .orElse((JsPath \ "processingDate").read[String])
     .map(r => RegistrationRelationshipResponse(r))
-}

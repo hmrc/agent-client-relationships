@@ -114,8 +114,7 @@ with UsersGroupsSearchStubs {
   )
 
   def givenAgentIsAllocatedAndAssignedToClient(
-    enrolmentKey: EnrolmentKey,
-    agentCode: String
+    enrolmentKey: EnrolmentKey
   ) = givenDelegatedGroupIdsExistFor(enrolmentKey, Set("foo"))
 
 }

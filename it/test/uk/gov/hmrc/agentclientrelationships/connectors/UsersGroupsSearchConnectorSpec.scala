@@ -21,7 +21,7 @@ import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.mvc.RequestHeader
 import play.api.test.FakeRequest
-import play.api.test.Helpers._
+import play.api.test.Helpers.*
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.stubs.DataStreamStub
 import uk.gov.hmrc.agentclientrelationships.stubs.UsersGroupsSearchStubs
@@ -39,10 +39,10 @@ with WireMockSupport
 with DataStreamStub
 with UsersGroupsSearchStubs {
 
-  override implicit lazy val app: Application = appBuilder.build()
+  override given app: Application = appBuilder.build()
 
   val httpClient: HttpClientV2 = app.injector.instanceOf[HttpClientV2]
-  implicit val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
+  given appConfig: AppConfig = app.injector.instanceOf[AppConfig]
 
   protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder().configure(
     "microservice.services.enrolment-store-proxy.port" -> wireMockPort,
@@ -59,11 +59,11 @@ with UsersGroupsSearchStubs {
     "agent.cache.enabled" -> true
   )
 
-  implicit val request: RequestHeader = FakeRequest()
+  given request: RequestHeader = FakeRequest()
 
-  implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
+  given ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
 
-  val connector = new UsersGroupsSearchConnector(httpClient, app.injector.instanceOf[AppConfig])(ec)
+  val connector = new UsersGroupsSearchConnector(httpClient, app.injector.instanceOf[AppConfig])
 
   "UsersGroupsSearchConnector" should {
 
