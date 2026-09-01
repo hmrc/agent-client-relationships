@@ -94,6 +94,35 @@ extends CheckAndCopyResult {
   override val grantAccess = false
 }
 
+case class LegacySaRelationshipDecision(
+  saRelationshipExists: Boolean,
+  ninoSuffix: Option[String],
+  saAgentCode: Option[SaAgentReference],
+  saAgentCodeMappedToArn: Option[Boolean],
+  ninoNotFound: Boolean
+)
+
+case class IrSaRelationshipDecision(
+  legacySaRelationship: LegacySaRelationshipDecision,
+  partialAuthExists: Option[Boolean]
+) {
+
+  val accessGranted: Boolean = legacySaRelationship.saAgentCodeMappedToArn.contains(true) || partialAuthExists.contains(true)
+
+  val reason: String =
+    if (legacySaRelationship.saAgentCodeMappedToArn.contains(true))
+      "legacySaRelationshipMapped"
+    else if (partialAuthExists.contains(true))
+      "partialAuthExists"
+    else if (legacySaRelationship.ninoNotFound)
+      "ninoNotFoundInCesa"
+    else if (legacySaRelationship.saRelationshipExists)
+      "legacySaRelationshipNotMapped"
+    else
+      "NoRelationshipFound"
+
+}
+
 @Singleton
 class CheckAndCopyRelationshipsService @Inject() (
   hipConnector: HipConnector,
@@ -401,6 +430,56 @@ extends RequestAwareLogging {
     else
       Future successful true
   }
+
+  def getIrSaRelationshipDecision(
+    arn: Arn,
+    nino: NinoWithoutSuffix
+  )(using
+    request: RequestHeader,
+    auditData: AuditData
+  ): Future[IrSaRelationshipDecision] =
+    for {
+      cesaReferences <- des.getClientSaAgentSaReferencesWithNino(nino)
+      matching <-
+        intersection(cesaReferences.agentReferences) {
+          mapping.getSaAgentReferencesFor(arn)
+        }
+      _ = auditData.set(ninoKey, nino)
+      _ = auditData.set(saAgentRefKey, matching.mkString(","))
+      _ = auditData.set(cesaRelationshipKey, matching.nonEmpty)
+      partialAuthExists <-
+        if (matching.isEmpty)
+          partialAuthRepo.findActiveForAgent(nino, arn).map { partialAuth =>
+            auditData.set("partialAuth", partialAuth.nonEmpty)
+            partialAuth.nonEmpty
+          }
+        else
+          Future.successful(false)
+      _ <- auditService.sendCheckCesaAndPartialAuthAuditEvent()
+    } yield {
+      val legacySaRelationship = LegacySaRelationshipDecision(
+        saRelationshipExists = cesaReferences.agentReferences.nonEmpty,
+        ninoSuffix =
+          if (cesaReferences.agentReferences.nonEmpty)
+            cesaReferences.nino.map(_.rawValue.drop(nino.value.length))
+          else
+            None,
+        saAgentCode = cesaReferences.agentReferences.find(matching.contains).orElse(cesaReferences.agentReferences.headOption),
+        saAgentCodeMappedToArn =
+          if (cesaReferences.agentReferences.nonEmpty)
+            Some(matching.nonEmpty)
+          else
+            None,
+        ninoNotFound = cesaReferences.nino.isEmpty
+      )
+      IrSaRelationshipDecision(
+        legacySaRelationship,
+        if (matching.isEmpty)
+          Some(partialAuthExists)
+        else
+          None
+      )
+    }
 
   def intersection[A](referenceIds: Seq[A])(mappingServiceCall: => Future[Seq[A]])(using request: RequestHeader): Future[Set[A]] = {
     val referenceIdSet = referenceIds.toSet

@@ -142,6 +142,44 @@ with Eventually {
         sentEvent.tags("X-Request-ID") shouldBe "dummy request id"
       }
     }
+
+    "send an MTDSignupAuthDecision event with the correct fields" in {
+      val mockConnector = mock[AuditConnector]
+      val service = new AuditService(mockConnector)
+
+      val auditData = new AuditData()
+      auditData.set("nino", "KS969148")
+      auditData.set("ninoSuffixSupplied", "A")
+      auditData.set("agentReferenceNumber", Arn("1234").value)
+      auditData.set("legacySaRelationship.saRelationshipExists", true)
+      auditData.set("legacySaRelationship.ninoSuffix", "B")
+      auditData.set("legacySaRelationship.saAgentCode", "ES1234567890")
+      auditData.set("legacySaRelationship.saAgentCodeMappedToArn", true)
+      auditData.set("decisionForAccess.accessGranted", true)
+      auditData.set("decisionForAccess.reason", "legacySaRelationshipMapped")
+
+      await(service.sendMtdSignupAuthDecisionAuditEvent()(using request, auditData))
+
+      eventually {
+        val captor = ArgumentCaptor.forClass(classOf[DataEvent])
+        verify(mockConnector).sendEvent(captor.capture())(using any[HeaderCarrier], any[ExecutionContext])
+        val sentEvent = captor.getValue.asInstanceOf[DataEvent]
+
+        sentEvent.auditType shouldBe "MTDSignupAuthDecision"
+        sentEvent.detail shouldBe Map(
+          "nino" -> "KS969148",
+          "ninoSuffixSupplied" -> "A",
+          "agentReferenceNumber" -> "1234",
+          "legacySaRelationship.saRelationshipExists" -> "true",
+          "legacySaRelationship.ninoSuffix" -> "B",
+          "legacySaRelationship.saAgentCode" -> "ES1234567890",
+          "legacySaRelationship.saAgentCodeMappedToArn" -> "true",
+          "decisionForAccess.accessGranted" -> "true",
+          "decisionForAccess.reason" -> "legacySaRelationshipMapped"
+        )
+        sentEvent.tags("transactionName") shouldBe "mtd-signup-auth-decision"
+      }
+    }
   }
 
 }

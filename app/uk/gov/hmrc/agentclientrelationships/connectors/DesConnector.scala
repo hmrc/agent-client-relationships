@@ -44,6 +44,11 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.util.Success
 
+case class CesaSaAgentReferences(
+  nino: Option[NinoWithoutSuffix],
+  agentReferences: Seq[SaAgentReference]
+)
+
 @Singleton
 class DesConnector @Inject() (
   httpClient: HttpClientV2,
@@ -67,23 +72,32 @@ with Retries {
     case e: UpstreamErrorResponse if e.statusCode >= 500 || e.statusCode == 429 => true // Retry on server errors and rate limiting
   }
 
-  def getClientSaAgentSaReferences(nino: NinoWithoutSuffix)(using request: RequestHeader): Future[Seq[SaAgentReference]] = {
+  def getClientSaAgentSaReferences(
+    nino: NinoWithoutSuffix
+  )(using request: RequestHeader): Future[Seq[SaAgentReference]] = getClientSaAgentSaReferencesWithNino(nino).map(_.agentReferences)
+
+  def getClientSaAgentSaReferencesWithNino(nino: NinoWithoutSuffix)(using request: RequestHeader): Future[CesaSaAgentReferences] = {
     val otherSuffixVariants = Nino.validSuffixes :+ ""
     val otherNinoVariants = otherSuffixVariants.map(suffix => NinoWithoutSuffix(nino.value + suffix)).filterNot(_.rawEquals(nino))
     val ninoVariants = nino +: otherNinoVariants
 
-    def execute(nino: NinoWithoutSuffix) = {
+    def execute(nino: NinoWithoutSuffix): Future[Option[CesaSaAgentReferences]] = {
       val url = url"${appConfig.desUrl}/registration/relationship/nino/${nino.rawValue}"
 
       retryFor(s"CESA agent lookup for NINO: ${nino.rawValue}")(retryCondition) {
         getWithDesHeaders(url).map { response =>
           response.status match {
             case Status.OK =>
-              Some(response.json
-                .as[Agents]
-                .agents
-                .filter(agent => agent.hasAgent && agent.agentCeasedDate.isEmpty) // API returns agent history, so filter to only active agents
-                .flatMap(_.agentId))
+              Some(
+                CesaSaAgentReferences(
+                  Some(nino),
+                  response.json
+                    .as[Agents]
+                    .agents
+                    .filter(agent => agent.hasAgent && agent.agentCeasedDate.isEmpty) // API returns agent history, so filter to only active agents
+                    .flatMap(_.agentId)
+                )
+              )
             case Status.NOT_FOUND if (response.json \ "code").asOpt[String].contains("NOT_FOUND_NINO") => None
             case other => throw UpstreamErrorResponse(response.body, other)
           }
@@ -91,7 +105,7 @@ with Retries {
       }
     }
 
-    ninoVariants.foldLeft(Future.successful(Option.empty[Seq[SaAgentReference]])) {
+    ninoVariants.foldLeft(Future.successful(Option.empty[CesaSaAgentReferences])) {
       case (result, nextNino) =>
         result.flatMap {
           case None =>
@@ -104,7 +118,7 @@ with Retries {
           case Some(value) => Future.successful(Some(value))
         }
     }.andThen { case Success(None) => logger.warn(s"[getClientSaAgentSaReferences] No CESA details found for any NINO variant of '${nino.rawValue}'") }
-      .map(_.getOrElse(Seq.empty))
+      .map(_.getOrElse(CesaSaAgentReferences(None, Seq.empty)))
   }
 
   def desHeaders(

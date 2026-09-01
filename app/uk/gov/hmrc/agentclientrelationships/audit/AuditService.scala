@@ -42,7 +42,7 @@ import scala.util.Try
 object AgentClientRelationshipEvent
 extends Enumeration {
 
-  val CreateInvitation, RespondToInvitation, CreateRelationship, CreatePartialAuthorisation, CheckCESA,
+  val CreateInvitation, RespondToInvitation, CreateRelationship, CreatePartialAuthorisation, CheckCESA, MTDSignupAuthDecision,
     TerminateRelationship, TerminatePartialAuthorisation, RecoveryOfDeleteRelationshipHasBeenAbandoned = Value
   type AgentClientRelationshipEvent = Value
 
@@ -110,6 +110,19 @@ extends RequestAwareLogging {
     cesaRelationshipKey,
     ninoKey,
     "partialAuth"
+  )
+
+  private val mtdSignupAuthDecisionFields: Seq[String] = Seq(
+    ninoKey,
+    ninoSuffixSuppliedKey,
+    arnKey,
+    legacySaRelationshipExistsKey,
+    legacySaRelationshipNinoSuffixKey,
+    legacySaRelationshipSaAgentCodeKey,
+    legacySaRelationshipSaAgentCodeMappedToArnKey,
+    partialAuthExistsKey,
+    decisionForAccessGrantedKey,
+    decisionForAccessReasonKey
   )
 
   private val terminateRelationshipFields: Seq[String] = Seq(
@@ -210,6 +223,15 @@ extends RequestAwareLogging {
     AgentClientRelationshipEvent.CheckCESA,
     "check-cesa",
     collectDetails(auditData.getDetails, checkCesaDetailsAndPartialAuthFields)
+  )
+
+  def sendMtdSignupAuthDecisionAuditEvent()(using
+    request: RequestHeader,
+    auditData: AuditData
+  ): Future[Unit] = auditEvent(
+    AgentClientRelationshipEvent.MTDSignupAuthDecision,
+    "mtd-signup-auth-decision",
+    collectDetails(auditData.getDetails, mtdSignupAuthDecisionFields)
   )
 
   def sendTerminateRelationshipAuditEvent()(using
@@ -385,6 +407,14 @@ object AuditKeys {
   val enrolmentDelegatedKey: String = "enrolmentDelegated"
   val enrolmentDeallocatedKey: String = "enrolmentDeallocated"
   val ninoKey: String = "nino"
+  val ninoSuffixSuppliedKey: String = "ninoSuffixSupplied"
+  val legacySaRelationshipExistsKey: String = "legacySaRelationship.saRelationshipExists"
+  val legacySaRelationshipNinoSuffixKey: String = "legacySaRelationship.ninoSuffix"
+  val legacySaRelationshipSaAgentCodeKey: String = "legacySaRelationship.saAgentCode"
+  val legacySaRelationshipSaAgentCodeMappedToArnKey: String = "legacySaRelationship.saAgentCodeMappedToArn"
+  val partialAuthExistsKey: String = "partialAuthExists"
+  val decisionForAccessGrantedKey: String = "decisionForAccess.accessGranted"
+  val decisionForAccessReasonKey: String = "decisionForAccess.reason"
   val howRelationshipCreatedKey: String = "howRelationshipCreated"
   val howRelationshipTerminatedKey: String = "howRelationshipTerminated"
   val howPartialAuthTerminatedKey: String = "howPartialAuthorisationTerminated"
