@@ -18,8 +18,7 @@ package uk.gov.hmrc.agentclientrelationships.services
 
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.audit.AuditData
-import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys.arnKey
-import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys.credIdKey
+import uk.gov.hmrc.agentclientrelationships.audit.AuditKeys.*
 import uk.gov.hmrc.agentclientrelationships.connectors.*
 import uk.gov.hmrc.agentclientrelationships.model.EnrolmentKey
 import uk.gov.hmrc.agentclientrelationships.model.UserId
@@ -221,10 +220,28 @@ extends RequestAwareLogging {
     auditData.set(arnKey, arn)
 
     checkOldAndCopyService
-      .hasPartialAuthOrLegacyRelationshipInCesa(arn, nino)
-      .map {
-        case true => CheckRelationshipFound
-        case false => CheckRelationshipNotFound()
+      .getIrSaRelationshipDecision(arn, nino)
+      .flatMap { decision =>
+        auditData.set(ninoKey, nino.value)
+        auditData.set(ninoSuffixSuppliedKey, nino.rawValue.drop(nino.value.length))
+        auditData.set(legacySaRelationshipExistsKey, decision.legacySaRelationship.saRelationshipExists)
+        decision.legacySaRelationship.ninoSuffix.foreach(auditData.set(legacySaRelationshipNinoSuffixKey, _))
+        if (decision.legacySaRelationship.ninoNotFound)
+          auditData.set(legacySaRelationshipNinoSuffixKey, "ninoNotFound")
+        decision.legacySaRelationship.saAgentCode.foreach(auditData.set(legacySaRelationshipSaAgentCodeKey, _))
+        decision.legacySaRelationship.saAgentCodeMappedToArn.foreach(
+          auditData.set(legacySaRelationshipSaAgentCodeMappedToArnKey, _)
+        )
+        decision.partialAuthExists.foreach(auditData.set(partialAuthExistsKey, _))
+        auditData.set(decisionForAccessGrantedKey, decision.accessGranted)
+        auditData.set(decisionForAccessReasonKey, decision.reason)
+
+        checkOldAndCopyService.auditService.sendMtdSignupAuthDecisionAuditEvent().map { _ =>
+          if (decision.accessGranted)
+            CheckRelationshipFound
+          else
+            CheckRelationshipNotFound()
+        }
       }
       .recover {
         case error: UpstreamErrorResponse => throw error
