@@ -265,6 +265,17 @@ with CitizenDetailsStub {
 
   ".getCbcSubscriptionDetails" should {
 
+    "send request and session identifiers to IF" in {
+      given RequestHeader = FakeRequest().withHeaders(
+        "X-Request-ID" -> "request-id",
+        "X-Session-ID" -> "session-id"
+      )
+      givenAuditConnector()
+      givenCbcDetailsExist(requestId = Some("request-id"), sessionId = Some("session-id"))
+
+      await(connector.getCbcSubscriptionDetails("XACBC1234567890")).isRight shouldBe true
+    }
+
     "return CBC subscription details when receiving a 200 status" in {
       givenAuditConnector()
       givenCbcDetailsExist()

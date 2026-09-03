@@ -17,6 +17,7 @@
 package uk.gov.hmrc.agentclientrelationships.stubs
 
 import com.github.tomakehurst.wiremock.client.WireMock.aResponse
+import com.github.tomakehurst.wiremock.client.WireMock.equalTo
 import com.github.tomakehurst.wiremock.client.WireMock.get
 import com.github.tomakehurst.wiremock.client.WireMock.post
 import com.github.tomakehurst.wiremock.client.WireMock.stubFor
@@ -86,45 +87,55 @@ trait IfStubs {
       .willReturn(aResponse().withStatus(status))
   )
 
-  def givenCbcDetailsExist(isGBUser: Boolean = true): StubMapping = stubFor(
-    post(urlEqualTo("/dac6/dct50d/v1"))
-      .willReturn(
-        aResponse()
-          .withBody(s"""{
-                       |  "displaySubscriptionForCBCResponse": {
-                       |    "responseDetail": {
-                       |      "isGBUser": $isGBUser,
-                       |      "tradingName": "CFG Solutions",
-                       |      "primaryContact": [
-                       |        {
-                       |          "email": "test@email.com",
-                       |          "individual": {
-                       |            "firstName": "Erling",
-                       |            "lastName": "Haal"
-                       |          },
-                       |          "organisation": {
-                       |            "organisationName": "CFG"
-                       |          }
-                       |        }
-                       |      ],
-                       |      "secondaryContact": [
-                       |        {
-                       |          "email": "test2@email.com",
-                       |          "individual": {
-                       |            "firstName": "Kevin",
-                       |            "lastName": "De Burner"
-                       |          },
-                       |          "organisation": {
-                       |            "organisationName": "CFG"
-                       |          }
-                       |        }
-                       |      ]
-                       |    }
-                       |  }
-                       |}
+  def givenCbcDetailsExist(
+    isGBUser: Boolean = true,
+    requestId: Option[String] = None,
+    sessionId: Option[String] = None
+  ): StubMapping = {
+    val request = post(urlEqualTo("/dac6/dct50d/v1"))
+    requestId.foreach(id => request.withHeader("X-Request-ID", equalTo(id)))
+    sessionId.foreach(id => request.withHeader("X-Session-ID", equalTo(id)))
+
+    stubFor(
+      request
+        .willReturn(
+          aResponse()
+            .withBody(s"""{
+                         |  "displaySubscriptionForCBCResponse": {
+                         |    "responseDetail": {
+                         |      "isGBUser": $isGBUser,
+                         |      "tradingName": "CFG Solutions",
+                         |      "primaryContact": [
+                         |        {
+                         |          "email": "test@email.com",
+                         |          "individual": {
+                         |            "firstName": "Erling",
+                         |            "lastName": "Haal"
+                         |          },
+                         |          "organisation": {
+                         |            "organisationName": "CFG"
+                         |          }
+                         |        }
+                         |      ],
+                         |      "secondaryContact": [
+                         |        {
+                         |          "email": "test2@email.com",
+                         |          "individual": {
+                         |            "firstName": "Kevin",
+                         |            "lastName": "De Burner"
+                         |          },
+                         |          "organisation": {
+                         |            "organisationName": "CFG"
+                         |          }
+                         |        }
+                         |      ]
+                         |    }
+                         |  }
+                         |}
             """.stripMargin)
-      )
-  )
+        )
+    )
+  }
 
   def givenCbcDetailsError(status: Int): StubMapping = stubFor(
     post(urlEqualTo("/dac6/dct50d/v1"))

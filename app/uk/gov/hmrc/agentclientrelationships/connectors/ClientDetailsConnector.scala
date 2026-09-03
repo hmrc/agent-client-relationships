@@ -201,16 +201,17 @@ extends RequestAwareLogging {
       )
     )
 
-    val httpHeaders = Seq(
-      HeaderNames.authorisation -> s"Bearer ${appConfig.ifAuthToken}",
-      "x-forwarded-host" -> "mdtp",
-      "x-correlation-id" -> UUID.randomUUID().toString,
-      "x-conversation-id" -> conversationId,
-      "date" -> ZonedDateTime.now().format(DateTimeFormatter.ofPattern("EEE, dd MMM yyyy HH:mm:ss O")),
-      "content-type" -> "application/json",
-      "accept" -> "application/json",
-      "Environment" -> appConfig.ifEnvironment
-    )
+    val httpHeaders =
+      CommonHeaders() ++ Seq(
+        HeaderNames.authorisation -> s"Bearer ${appConfig.ifAuthToken}",
+        "x-forwarded-host" -> "mdtp",
+        "x-correlation-id" -> UUID.randomUUID().toString,
+        "x-conversation-id" -> conversationId,
+        "date" -> ZonedDateTime.now().format(DateTimeFormatter.ofPattern("EEE, dd MMM yyyy HH:mm:ss O")),
+        "content-type" -> "application/json",
+        "accept" -> "application/json",
+        "Environment" -> appConfig.ifEnvironment
+      )
 
     httpClient
       .post(url"${appConfig.ifBaseUrl}/dac6/dct50d/v1")
