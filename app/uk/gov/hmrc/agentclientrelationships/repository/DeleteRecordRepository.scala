@@ -174,39 +174,35 @@ with RequestAwareLogging {
   def markRecoveryAttempt(
     arn: Arn,
     enrolmentKey: EnrolmentKey
-  ): Future[Done] = 
-    collection
-      .findOneAndUpdate(
-        filter(arn, enrolmentKey),
-        combine(
-          set("lastRecoveryAttempt", Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime),
-          inc("numberOfAttempts", 1)
-        )
+  ): Future[Done] = collection
+    .findOneAndUpdate(
+      filter(arn, enrolmentKey),
+      combine(
+        set("lastRecoveryAttempt", Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime),
+        inc("numberOfAttempts", 1)
       )
-      .toFuture()
-      .map(_ => Done)
+    )
+    .toFuture()
+    .map(_ => Done)
 
   def remove(
     arn: Arn,
     enrolmentKey: EnrolmentKey
-  ): Future[Int] = 
-    collection
-      .deleteOne(filter(arn, enrolmentKey))
-      .toFuture()
-      .map(deleteResult => deleteResult.getDeletedCount.toInt)
+  ): Future[Int] = collection
+    .deleteOne(filter(arn, enrolmentKey))
+    .toFuture()
+    .map(deleteResult => deleteResult.getDeletedCount.toInt)
 
-  def selectNextToRecover(): Future[Option[DeleteRecord]] = 
-    collection
-      .find(lte("dateTime", Instant.now().minusSeconds(30).atZone(ZoneOffset.UTC).toLocalDateTime))
-      .sort(Sorts.ascending("lastRecoveryAttempt"))
-      .first().toFutureOption()
+  def selectNextToRecover(): Future[Option[DeleteRecord]] = collection
+    .find(lte("dateTime", Instant.now().minusSeconds(30).atZone(ZoneOffset.UTC).toLocalDateTime))
+    .sort(Sorts.ascending("lastRecoveryAttempt"))
+    .first().toFutureOption()
 
-  def terminateAgent(arn: Arn): Future[Either[String, Int]] = 
-    collection
-      .deleteMany(equal("arn", arn.value))
-      .toFuture()
-      .map(deleteResult => Right(deleteResult.getDeletedCount.toInt))
-      .recover { case e: MongoWriteException => Left(e.getMessage) }
+  def terminateAgent(arn: Arn): Future[Either[String, Int]] = collection
+    .deleteMany(equal("arn", arn.value))
+    .toFuture()
+    .map(deleteResult => Right(deleteResult.getDeletedCount.toInt))
+    .recover { case e: MongoWriteException => Left(e.getMessage) }
 
   private def filter(
     arn: Arn,
