@@ -19,6 +19,7 @@ package uk.gov.hmrc.agentclientrelationships.util
 import play.api.Logger
 import play.api.http.HeaderNames
 import play.api.mvc.RequestHeader
+import RequestSupport.given
 
 trait RequestAwareLogging {
   val logger: RequestAwareLogger =
@@ -80,17 +81,18 @@ class RequestAwareLogger(
     Error
   )
 
-  private def context(request: RequestHeader) = s"[Context: ${request.method} ${request.path}] $sessionId $requestId $userAgent $referer $deviceId"
+  private def context(using request: RequestHeader): String =
+    s"[Context: ${request.method} ${request.path}] $sessionId $requestId $userAgent $referer $deviceId"
 
-  private def sessionId(request: RequestHeader) = s"[SessionId: ${RequestSupport.hc(using request).sessionId.getOrElse("")}]"
+  private def sessionId(using request: RequestHeader): String = s"[SessionId: ${hc.sessionId.map(_.toString).fold("")(identity)}]"
 
-  private def requestId(request: RequestHeader) = s"[RequestId: ${RequestSupport.hc(using request).requestId.getOrElse("")}]"
+  private def requestId(using request: RequestHeader): String = s"[RequestId: ${hc.requestId.map(_.toString).fold("")(identity)}]"
 
-  private def referer(r: RequestHeader) = s"[Referer: ${r.headers.get(HeaderNames.REFERER).getOrElse("")}]"
+  private def referer(using r: RequestHeader): String = s"[Referer: ${r.headers.get(HeaderNames.REFERER).fold("")(identity)}]"
 
-  private def userAgent(r: RequestHeader) = s"[UserAgent: ${r.headers.get(HeaderNames.USER_AGENT).getOrElse("")}]"
+  private def userAgent(using r: RequestHeader): String = s"[UserAgent: ${r.headers.get(HeaderNames.USER_AGENT).fold("")(identity)}]"
 
-  private def deviceId(r: RequestHeader) = s"[DeviceId: ${RequestSupport.hc(using r).deviceID}]"
+  private def deviceId(using r: RequestHeader): String = s"[DeviceId: ${hc.deviceID.fold("")(identity)}]"
 
   private def makeRichMessage(message: String)(using request: RequestHeader): String = {
     request match {
@@ -115,7 +117,7 @@ class RequestAwareLogger(
   private def logMessage(
     message: => String,
     level: LogLevel
-  )(using request: RequestHeader): Unit = {
+  )(using request: RequestHeader): Unit =
     lazy val richMessage = makeRichMessage(message)
     level match {
       case Debug => delegateLogger.debug(richMessage)
@@ -123,13 +125,12 @@ class RequestAwareLogger(
       case Warn => delegateLogger.warn(richMessage)
       case Error => delegateLogger.error(richMessage)
     }
-  }
 
   private def logMessage(
     message: => String,
     ex: Throwable,
     level: LogLevel
-  )(using request: RequestHeader): Unit = {
+  )(using request: RequestHeader): Unit =
     lazy val richMessage = makeRichMessage(message)
     level match {
       case Debug => delegateLogger.debug(richMessage, ex)
@@ -137,6 +138,5 @@ class RequestAwareLogger(
       case Warn => delegateLogger.warn(richMessage, ex)
       case Error => delegateLogger.error(richMessage, ex)
     }
-  }
 
 }
