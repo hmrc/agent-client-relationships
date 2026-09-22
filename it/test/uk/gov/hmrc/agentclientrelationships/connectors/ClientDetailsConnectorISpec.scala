@@ -30,6 +30,7 @@ import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ClientDetailsNot
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ErrorRetrievingClientDetails
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.cbc.SimpleCbcSubscription
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.cgt.CgtSubscriptionDetails
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.cgt.CgtTypeOfPerson
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa.ItsaDesignatoryDetails
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.pillar2.Pillar2Record
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ppt.PptSubscriptionDetails
@@ -215,7 +216,8 @@ with CitizenDetailsStub {
           CgtSubscriptionDetails(
             "CFG Solutions",
             Some("AA1 1AA"),
-            "GB"
+            "GB",
+            CgtTypeOfPerson.Trustee
           )
         )
     }

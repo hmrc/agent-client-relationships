@@ -31,7 +31,8 @@ case class ClientDetailsResponse(
   hasExistingRelationshipFor: Option[String] = None,
   isMapped: Option[Boolean] = None,
   clientsLegacyRelationships: Option[Seq[String]] = None,
-  isMissingEacdKnownFacts: Option[Boolean] = None
+  isMissingEacdKnownFacts: Option[Boolean] = None,
+  clientType: Option[String] = None
 ) {
   def containsKnownFact(knownFact: String): Boolean = knownFacts
     .map(_.replaceAll("\\s", "").toUpperCase)

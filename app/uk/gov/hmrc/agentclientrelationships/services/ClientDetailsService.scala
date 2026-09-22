@@ -333,7 +333,8 @@ extends RequestAwareLogging {
             CgtSubscriptionDetails(
               name,
               Some(postcode),
-              countryCode
+              countryCode,
+              typeOfPerson
             )
           ) if countryCode.toUpperCase == "GB" =>
         Right(
@@ -342,14 +343,16 @@ extends RequestAwareLogging {
             None,
             Some(false),
             Seq(postcode.replaceAll("\\s", "")),
-            Some(PostalCode)
+            Some(PostalCode),
+            clientType = Some(typeOfPerson.clientType)
           )
         )
       case Right(
             CgtSubscriptionDetails(
               name,
               _,
-              countryCode
+              countryCode,
+              typeOfPerson
             )
           ) =>
         Right(
@@ -358,7 +361,8 @@ extends RequestAwareLogging {
             None,
             Some(true),
             Seq(countryCode),
-            Some(CountryCode)
+            Some(CountryCode),
+            clientType = Some(typeOfPerson.clientType)
           )
         )
       case Left(err) => Left(err)
