@@ -41,15 +41,18 @@ class HipHeaders @Inject() (
   private val mdtp = "MDTP"
   private val hip = "HIP"
   private val itsa = "ITSA"
+  private val trs = "TRS"
 
-  def makeSubscriptionHeaders()(using requestHeader: RequestHeader): Seq[(String, String)] =
+  def makeSubscriptionHeaders(xOriginatingSystem: String = mdtp)(using requestHeader: RequestHeader): Seq[(String, String)] =
     CommonHeaders() ++ Seq(
       (HeaderNames.AUTHORIZATION, s"Basic ${appConfig.hipAuthToken}"),
       (correlationIdHeader, correlationIdGenerator.makeCorrelationId()),
-      (xOriginatingSystemHeader, mdtp),
+      (xOriginatingSystemHeader, xOriginatingSystem),
       (xReceiptDateHeader, DateTimeHelper.formatISOInstantSeconds(Instant.now(clock))),
       (xTransmittingSystemHeader, hip)
     )
+
+  def makeSubscriptionTrustsAndEstatesHeaders()(using requestHeader: RequestHeader): Seq[(String, String)] = makeSubscriptionHeaders(trs)
 
   def makeSubscriptionBusinessDetailsHeaders()(using requestHeader: RequestHeader): Seq[(String, String)] =
     CommonHeaders() ++ Seq(
