@@ -291,7 +291,7 @@ extends RequestAwareLogging {
 
     getWithHipHeaders(
       new URL(s"$baseUrl/etmp/RESTAdapter/trustsandestates/agent-known-fact-check/$idType/$idValue"),
-      () => headers.makeSubscriptionHeaders()
+      () => headers.makeSubscriptionTrustsAndEstatesHeaders()
     ).map {
       case Right(response) => Right((response.json \ "success" \ "trustDetails" \ "trustName").as[String])
       case Left(errorResponse) =>
