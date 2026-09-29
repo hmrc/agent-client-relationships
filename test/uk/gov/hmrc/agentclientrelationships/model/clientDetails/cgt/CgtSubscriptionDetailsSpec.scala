@@ -44,7 +44,8 @@ extends UnitSpec {
           CgtSubscriptionDetails(
             "Erling Haal",
             Some("AA1 1AA"),
-            "GB"
+            "GB",
+            CgtTypeOfPerson.Individual
           )
       }
 
@@ -61,7 +62,8 @@ extends UnitSpec {
           CgtSubscriptionDetails(
             "CFG Solutions",
             Some("AA1 1AA"),
-            "GB"
+            "GB",
+            CgtTypeOfPerson.Trustee
           )
       }
 
@@ -78,7 +80,8 @@ extends UnitSpec {
           CgtSubscriptionDetails(
             "CFG Solutions",
             None,
-            "GB"
+            "GB",
+            CgtTypeOfPerson.Trustee
           )
       }
     }

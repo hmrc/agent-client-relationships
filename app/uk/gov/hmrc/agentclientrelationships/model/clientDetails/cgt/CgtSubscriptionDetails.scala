@@ -20,10 +20,18 @@ import play.api.libs.json.JsError
 import play.api.libs.json.JsSuccess
 import play.api.libs.json.Reads
 
+enum CgtTypeOfPerson(val clientType: String):
+
+  case Individual
+  extends CgtTypeOfPerson("personal")
+  case Trustee
+  extends CgtTypeOfPerson("trust")
+
 case class CgtSubscriptionDetails(
   name: String,
   postcode: Option[String],
-  countryCode: String
+  countryCode: String,
+  typeOfPerson: CgtTypeOfPerson
 )
 
 object CgtSubscriptionDetails {
@@ -42,7 +50,8 @@ object CgtSubscriptionDetails {
           CgtSubscriptionDetails(
             firstName + " " + lastName,
             postcode,
-            countryCode
+            countryCode,
+            CgtTypeOfPerson.Individual
           )
         )
 
@@ -52,7 +61,8 @@ object CgtSubscriptionDetails {
           CgtSubscriptionDetails(
             orgName,
             postcode,
-            countryCode
+            countryCode,
+            CgtTypeOfPerson.Trustee
           )
         )
 

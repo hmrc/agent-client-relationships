@@ -37,6 +37,7 @@ import uk.gov.hmrc.agentclientrelationships.model.clientDetails.KnownFactType.*
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.*
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.cbc.SimpleCbcSubscription
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.cgt.CgtSubscriptionDetails
+import uk.gov.hmrc.agentclientrelationships.model.clientDetails.cgt.CgtTypeOfPerson
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.itsa.ItsaDesignatoryDetails
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.pillar2.Pillar2Record
 import uk.gov.hmrc.agentclientrelationships.model.clientDetails.ppt.PptSubscriptionDetails
@@ -626,6 +627,39 @@ extends UnitSpec {
       }
     }
 
+    "the service is HMRC-TERSNT-ORG" when {
+
+      "the trust details API returns a successful response" should {
+
+        "return a ClientDetailsResponse if expected data is returned" in {
+          when(mockClientDetailsConnector.getTrustName(eqTo[String]("XXTRUST12345678"))(using any[RequestHeader])).thenReturn(
+            Future.successful(Right("The Safety Trust"))
+          )
+
+          val resultModel = ClientDetailsResponse(
+            "The Safety Trust",
+            None,
+            isOverseas = None,
+            Seq(),
+            None
+          )
+
+          await(service.findClientDetails("HMRC-TERSNT-ORG", "XXTRUST12345678")) shouldBe Right(resultModel)
+        }
+      }
+
+      "the trust details API returns an unsuccessful response" should {
+
+        "return the same error given by the connector" in {
+          when(mockClientDetailsConnector.getTrustName(eqTo[String]("XXTRUST12345678"))(using any[RequestHeader])).thenReturn(
+            Future.successful(Left(ClientDetailsNotFound))
+          )
+
+          await(service.findClientDetails("HMRC-TERSNT-ORG", "XXTRUST12345678")) shouldBe Left(ClientDetailsNotFound)
+        }
+      }
+    }
+
     "the service is IR-SA" when {
 
       "the Citizen Details API returns a successful response" should {
@@ -713,7 +747,8 @@ extends UnitSpec {
                 CgtSubscriptionDetails(
                   "Erling Haal",
                   Some("AA11AA"),
-                  "GB"
+                  "GB",
+                  CgtTypeOfPerson.Individual
                 )
               )
             )
@@ -724,7 +759,8 @@ extends UnitSpec {
             None,
             isOverseas = Some(false),
             Seq("AA11AA"),
-            Some(PostalCode)
+            Some(PostalCode),
+            clientType = Some("personal")
           )
 
           await(service.findClientDetails("HMRC-CGT-PD", "XACGTP123456789")) shouldBe Right(resultModel)
@@ -737,7 +773,8 @@ extends UnitSpec {
                 CgtSubscriptionDetails(
                   "Erling Haal",
                   None,
-                  "NO"
+                  "NO",
+                  CgtTypeOfPerson.Trustee
                 )
               )
             )
@@ -748,7 +785,8 @@ extends UnitSpec {
             None,
             isOverseas = Some(true),
             Seq("NO"),
-            Some(CountryCode)
+            Some(CountryCode),
+            clientType = Some("trust")
           )
 
           await(service.findClientDetails("HMRC-CGT-PD", "XACGTP123456789")) shouldBe Right(resultModel)
