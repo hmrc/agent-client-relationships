@@ -349,6 +349,16 @@ extends RequestAwareLogging {
         )
       case Right(
             CgtSubscriptionDetails(
+              _,
+              None,
+              countryCode,
+              _
+            )
+          ) if countryCode.toUpperCase == "GB" =>
+        logger.warn("[getCgtClientDetails] - No postcode was found on the clients record when the country code was GB")
+        Left(ClientDetailsNotFound)
+      case Right(
+            CgtSubscriptionDetails(
               name,
               _,
               countryCode,
