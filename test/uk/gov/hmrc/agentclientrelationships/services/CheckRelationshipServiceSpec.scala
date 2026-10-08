@@ -176,6 +176,52 @@ with ResettingMockitoSugar {
           )
           .futureValue shouldBe true
       }
+      "should return 200 for an assigned UK CBC client with multiple identifiers" in {
+        val cbcEnrolmentKey = EnrolmentKey("HMRC-CBC-ORG~cbcId~XACBC1234567890~UTR~1234567890")
+        val cbcEnrolment = Enrolment(
+          "HMRC-CBC-ORG",
+          "activated",
+          "CBC client",
+          Seq(
+            Identifier("UTR", "1234567890"),
+            Identifier("cbcId", "XACBC1234567890")
+          )
+        )
+        val es = mock[EnrolmentStoreProxyConnector]
+        when(es.getDelegatedGroupIdsFor(equ(cbcEnrolmentKey))(using any[RequestHeader])).thenReturn(
+          Future.successful(Set(groupId))
+        )
+        when(es.getEnrolmentsAssignedToUser(any[String], any[Option[String]])(using any[RequestHeader])).thenReturn(
+          Future.successful(Seq(cbcEnrolment))
+        )
+        when(es.getPrincipalGroupIdFor(equ(arn))(using any[RequestHeader])).thenReturn(Future.successful(groupId))
+        val ap = resettingMock[AgentPermissionsConnector]
+        when(ap.isClientUnassigned(equ(arn), equ(cbcEnrolmentKey))(using any[RequestHeader])).thenReturn(
+          Future.successful(false)
+        )
+        val gs = mock[UsersGroupsSearchConnector]
+        when(gs.getGroupUsers(any[String])(using any[RequestHeader])).thenReturn(
+          Future.successful(Seq(UserDetails(userId = Some(userId.value))))
+        )
+
+        val crs =
+          new CheckRelationshipsService(
+            es,
+            ap,
+            mockAgentRecordService,
+            mockHipConnector,
+            gs,
+            mockPartialAuthRepo,
+            mockAgentFiConnector
+          )
+        crs
+          .checkForRelationship(
+            arn,
+            Some(userId),
+            cbcEnrolmentKey
+          )
+          .futureValue shouldBe true
+      }
     }
     "when relationship does not exist between client and agent" - {
       "should return 404" in {

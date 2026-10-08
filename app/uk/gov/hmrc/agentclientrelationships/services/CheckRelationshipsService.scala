@@ -104,17 +104,17 @@ extends RequestAwareLogging {
                 isEnrolmentAssignedToUser <- es
                   .getEnrolmentsAssignedToUser(userId.value, Some(serviceId))
                   .map { usersAssignedEnrolments =>
-                    usersAssignedEnrolments.exists(enrolment =>
-                      enrolmentKeys(enrolment).contains(enrolmentKey.tag)
-                    )
+                    usersAssignedEnrolments.exists(matchesEnrolmentKey(_, enrolmentKey))
                   }
               } yield isClientUnassigned || isEnrolmentAssignedToUser
             }
           }
     }
 
-  private def enrolmentKeys(enrolment: Enrolment): Seq[String] = enrolment.identifiers
-    .map(identifier => enrolmentKey(enrolment.service, identifier.value))
+  private def matchesEnrolmentKey(
+    enrolment: Enrolment,
+    enrolmentKey: LocalEnrolmentKey
+  ): Boolean = enrolment.service == enrolmentKey.service && enrolment.identifiers.toSet == enrolmentKey.identifiers.toSet
 
   private def getArnForDelegatedEnrolmentKey(
     enrolKey: LocalEnrolmentKey
