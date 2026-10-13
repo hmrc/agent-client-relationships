@@ -23,11 +23,18 @@ import play.api.test.Helpers.*
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentReferenceRecord
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.support.RepositoryISpec
+import uk.gov.hmrc.mongo.MongoComponent
+import support.KeyRotationSupport
+
+import scala.concurrent.duration.DurationInt
+import scala.util.Random
 
 class AgentReferenceRepositoryISpec
-extends RepositoryISpec[AgentReferenceRecord] {
+extends RepositoryISpec[AgentReferenceRecord]
+with KeyRotationSupport {
 
-  val repository: AgentReferenceRepository = app.injector.instanceOf[AgentReferenceRepository]
+  val repository: AgentReferenceRepository =
+    new AgentReferenceRepository(app.injector.instanceOf[MongoComponent])(using ec, KeyRotationCrypto)
 
   "AgentReferenceRepository" when {
     def agentReferenceRecord(
@@ -96,6 +103,28 @@ extends RepositoryISpec[AgentReferenceRecord] {
         a[RuntimeException] shouldBe thrownBy {
           await(repository.updateAgentName("SCX39TGT", "New Name"))
         }
+      }
+    }
+
+    "encryption key migration" should {
+      "rotate the encryption key for records by reading them out and writing them back again" in {
+        def generateRecord: AgentReferenceRecord =
+          agentReferenceRecord(
+            uid = Random.alphanumeric.take(8).mkString,
+            arn = Random.alphanumeric.take(10).mkString
+          ).copy(normalisedAgentNames = Seq(Random.alphanumeric.take(12).mkString.toLowerCase))
+
+        val testData: Seq[AgentReferenceRecord] = Seq.fill(20)(generateRecord)
+        testData.foreach(record => await(repository.create(record)))
+
+        KeyRotationCrypto.rotateSecretKey(to = "eu2IgkfpOI9MYvoG1Q3eoFsWzyHO8fw/bwaSdS+21zg=", keepPreviousKey = true)
+
+        await(repository.migrate(batchSize = 5, deadline = 10.seconds.fromNow)) shouldBe 20
+
+        await(repository.collection.find().toFuture()) should contain theSameElementsAs testData
+
+        KeyRotationCrypto.rotateSecretKey(to = DefaultSecretKey)
+        repository.collection.find().toFuture().failed.futureValue shouldBe a[SecurityException]
       }
     }
 

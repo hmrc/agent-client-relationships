@@ -24,6 +24,7 @@ import org.mongodb.scala.model.Updates.addToSet
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.model.invitationLink.AgentReferenceRecord
 import uk.gov.hmrc.agentclientrelationships.util.CryptoUtil.encryptedString
+import uk.gov.hmrc.agentclientrelationships.util.PlayMongoMigrations
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.crypto.Decrypter
@@ -36,14 +37,14 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 @Singleton
-class AgentReferenceRepository @Inject() (mongo: MongoComponent)(using
+class AgentReferenceRepository @Inject() (val mongoComponent: MongoComponent)(using
   ec: ExecutionContext,
-  @Named("aes")
+  @Named("aesGcm")
   crypto: Encrypter
     & Decrypter
 )
 extends PlayMongoRepository[AgentReferenceRecord](
-  mongoComponent = mongo,
+  mongoComponent = mongoComponent,
   collectionName = "agent-reference",
   domainFormat = AgentReferenceRecord.mongoFormat,
   indexes = List(
@@ -51,7 +52,8 @@ extends PlayMongoRepository[AgentReferenceRecord](
     IndexModel(ascending("arn"), IndexOptions().unique(true))
   )
 )
-with RequestAwareLogging {
+with RequestAwareLogging
+with PlayMongoMigrations {
 
   // to support static link for agents there is no TTL
   override lazy val requiresTtlIndex: Boolean = false

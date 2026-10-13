@@ -17,6 +17,7 @@
 package uk.gov.hmrc.agentclientrelationships.config
 
 import com.google.inject.AbstractModule
+import uk.gov.hmrc.agentclientrelationships.services.KeyRotationService
 import uk.gov.hmrc.agentclientrelationships.support.EmailScheduler
 
 import java.time.Clock
@@ -30,5 +31,6 @@ extends AbstractModule {
     bind(classOf[Clock]).toInstance(Clock.system(ZoneId.systemDefault()))
     bind(classOf[EmailScheduler]).asEagerSingleton()
     bind(classOf[InternalAuthTokenInitialiser]).asEagerSingleton()
+    bind(classOf[KeyRotationService]).asEagerSingleton()
   }
 }

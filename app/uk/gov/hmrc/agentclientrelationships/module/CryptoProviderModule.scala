@@ -16,17 +16,9 @@
 
 package uk.gov.hmrc.agentclientrelationships.module
 
-import play.api.inject.Binding
-import play.api.inject.Module
-import play.api.Configuration
-import play.api.Environment
-import uk.gov.hmrc.crypto.Crypted
-import uk.gov.hmrc.crypto.Decrypter
-import uk.gov.hmrc.crypto.Encrypter
-import uk.gov.hmrc.crypto.PlainBytes
-import uk.gov.hmrc.crypto.PlainContent
-import uk.gov.hmrc.crypto.PlainText
-import uk.gov.hmrc.crypto.SymmetricCryptoFactory
+import play.api.{Configuration, Environment}
+import play.api.inject.{Binding, Module}
+import uk.gov.hmrc.crypto.{Crypted, Decrypter, Encrypter, PlainBytes, PlainContent, PlainText, SymmetricCryptoFactory}
 
 import java.nio.charset.StandardCharsets
 import java.util.Base64
@@ -34,10 +26,20 @@ import java.util.Base64
 class CryptoProviderModule
 extends Module {
 
-  def aesCryptoInstance(configuration: Configuration): Encrypter
+  def aesEcbCryptoInstance(configuration: Configuration): Encrypter
     & Decrypter =
     if (configuration.underlying.getBoolean("fieldLevelEncryption.enable"))
       SymmetricCryptoFactory.aesCryptoFromConfig("fieldLevelEncryption", configuration.underlying)
+    else
+      NoCrypto
+
+  def aesGcmCryptoInstanceWithFallback(configuration: Configuration): Encrypter
+    & Decrypter =
+    if (configuration.underlying.getBoolean("fieldLevelEncryption.enable"))
+      SymmetricCryptoFactory.composeCrypto(
+        SymmetricCryptoFactory.aesGcmCryptoFromConfig("fieldLevelEncryption", configuration.underlying),
+        Seq(aesEcbCryptoInstance(configuration))
+      )
     else
       NoCrypto
 
@@ -45,10 +47,8 @@ extends Module {
     environment: Environment,
     configuration: Configuration
   ): Seq[Binding[?]] = Seq(
-    bind[
-      Encrypter
-        & Decrypter
-    ].qualifiedWith("aes").toInstance(aesCryptoInstance(configuration))
+    bind[Encrypter & Decrypter].qualifiedWith("aes").toInstance(aesEcbCryptoInstance(configuration)),
+    bind[Encrypter & Decrypter].qualifiedWith("aesGcm").toInstance(aesGcmCryptoInstanceWithFallback(configuration))
   )
 
 }
