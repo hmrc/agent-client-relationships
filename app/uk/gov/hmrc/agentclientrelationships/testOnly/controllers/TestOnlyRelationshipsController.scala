@@ -74,7 +74,7 @@ extends BackendController(controllerComponents) {
         given currentUser: CurrentUser = new CurrentUser(None, None) // Only needed for audits, pointless for test endpoint
         authorisationAcceptService.createRelationship(
           arn = arn,
-          suppliedClientId = "", // This only gets used to deauth existing partial auth for a normal ITSA user, not very relevant for a test endpoint
+          suppliedClientId = "AB123456A", // This only gets used to deauth existing partial auth for a normal ITSA user, not very relevant for a test endpoint
           enrolment = enrolmentKey,
           isAltItsa = Seq(MtdIt.id, MtdItSupp.id).contains(enrolmentKey.service) && enrolmentKey.oneIdentifier().key == NinoType.enrolmentId,
           timestamp = Instant.now()
