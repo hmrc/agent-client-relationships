@@ -18,7 +18,8 @@ package uk.gov.hmrc.agentclientrelationships.module
 
 import play.api.Configuration
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
-import uk.gov.hmrc.crypto.{Crypted, PlainText}
+import uk.gov.hmrc.crypto.Crypted
+import uk.gov.hmrc.crypto.PlainText
 
 class CryptoProviderModuleSpec
 extends UnitSpec:
@@ -58,7 +59,6 @@ extends UnitSpec:
       encrypted shouldBe Crypted(sampleText.value)
       ecbCrypto.decrypt(encrypted) shouldBe sampleText
 
-
   "CryptoProviderModule.aesGcmCryptoInstanceWithFallback" should:
     "encrypt non-deterministically and decrypt each value back to the original plaintext when encryption is enabled" in:
       val gcmCrypto = module.aesGcmCryptoInstanceWithFallback(encryptionEnabledConfig)
@@ -86,10 +86,7 @@ extends UnitSpec:
       encrypted shouldBe Crypted(sampleText.value)
       gcmCrypto.decrypt(encrypted) shouldBe sampleText
 
-
   "NoCrypto" should:
     "round-trip raw bytes without altering their content" in:
       val encrypted = NoCrypto.encrypt(PlainText("client secret"))
       NoCrypto.decrypt(encrypted) shouldBe PlainText("client secret")
-
-

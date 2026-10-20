@@ -73,6 +73,7 @@ with ResettingMockitoSugar {
 
   val testDataGenerator = new Generator()
   val arn: Arn = Arn("AARN0000002")
+  val arn2: Arn = Arn("AARN0000003")
   val saAgentRef: SaAgentReference = SaAgentReference("T1113T")
   val mtdItId: MtdItId = MtdItId("ABCDEF123456789")
   val mtdItEnrolmentKey: EnrolmentKey = EnrolmentKey("HMRC-MTD-IT~MTDITID~ABCDEF123456789")
@@ -233,6 +234,28 @@ with ResettingMockitoSugar {
 
           verifyEtmpRecordNotCreated()
         }
+    }
+
+    "not create ETMP or ES relationship if RelationshipCopyRecord already contains the matching CESA references" in {
+      val auditData = new AuditData()
+
+      val record = defaultRecord.copy(
+        arn = arn2.value,
+        syncToETMPStatus = Some(Success),
+        syncToESStatus = Some(Success)
+      )
+      await(relationshipCopyRepository.create(record))
+
+      ninoExists()
+      partialAuthDoesNotExist()
+      cesaRelationshipExists()
+
+      val check = relationshipsService.checkForOldRelationshipAndCopy(arn, mtdItEnrolmentKey)(using request, auditData)
+
+      await(check) shouldBe AlreadyCopiedDidNotCheck
+
+      verifyEsRecordNotCreated()
+      verifyEtmpRecordNotCreated()
     }
 
     needsRetryStatuses.filterNot(s => s.contains(InProgress) || s.contains(InProgress)) foreach { status =>

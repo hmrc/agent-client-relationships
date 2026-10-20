@@ -196,8 +196,15 @@ extends RequestAwareLogging {
               nino.fold[Future[(Set[SaAgentReference], Seq[SaAgentReference])]](Future.successful((Set(), Seq())))(
                 lookupCesaForOldRelationship(arn, _)
               )
+            alreadyMappedByReference <- // Additional guard against copy across being repeated for legacy relationships that are incorrectly mapped to multiple ARNs.
+              if (references.nonEmpty && maybeRelationshipCopyRecord.isEmpty)
+                relationshipCopyRepository.findByReferences(references.map(SaRef.apply), EnrolmentKey(Service.MtdIt, mtdItId))
+              else
+                Future.successful(Nil)
             result <-
-              if (references.nonEmpty)
+              if (alreadyMappedByReference.exists(!_.actionRequired))
+                Future.successful(AlreadyCopiedDidNotCheck)
+              else if (references.nonEmpty)
                 findOrCreateRelationshipCopyRecordAndCopy(
                   references.map(SaRef.apply),
                   maybeRelationshipCopyRecord,

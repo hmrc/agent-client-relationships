@@ -86,6 +86,7 @@ extends RequestAwareLogging {
         _ <- createEtmpRecord(
           arn,
           enrolmentKey,
+          oldReferences,
           isCopyAcross
         )
         _ <- createEsRecord(
@@ -105,6 +106,7 @@ extends RequestAwareLogging {
   private def createEtmpRecord(
     arn: Arn,
     enrolmentKey: EnrolmentKey,
+    oldReferences: Set[RelationshipReference] = Set.empty,
     isCopyAcross: Boolean
   )(using
     ec: ExecutionContext,
@@ -134,6 +136,7 @@ extends RequestAwareLogging {
             tryToRecoverFromExistingRelationship(
               arn,
               enrolmentKey,
+              oldReferences,
               isCopyAcross
             )
         }
@@ -151,6 +154,7 @@ extends RequestAwareLogging {
   private def tryToRecoverFromExistingRelationship(
     arn: Arn,
     enrolmentKey: EnrolmentKey,
+    oldReferences: Set[RelationshipReference],
     isCopyAcross: Boolean
   )(using
     ec: ExecutionContext,
@@ -160,7 +164,11 @@ extends RequestAwareLogging {
       case Service.MtdIt.enrolmentKey if isCopyAcross =>
         hipConnector.getAllRelationships(enrolmentKey.oneTaxIdentifier(), activeOnly = true).flatMap {
           case Right(rels) if rels.exists(rel => rel.arn.value == arn.value && rel.authProfile.contains("ITSAS001")) =>
-            relationshipCopyRepository.backfillItsaCopyRecord(enrolmentKey, arn)
+            relationshipCopyRepository.backfillItsaCopyRecord(
+              enrolmentKey,
+              arn,
+              Some(oldReferences)
+            )
             // This is a copy across scenario where the SUPP relationship already exists,
             // so we backfill the copy record and throw an exception to indicate that the copy across cannot proceed.
             throw new RuntimeException(

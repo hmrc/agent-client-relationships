@@ -17,7 +17,8 @@
 package uk.gov.hmrc.agentclientrelationships.config
 
 import com.typesafe.config.Config
-import play.api.{ConfigLoader, Configuration}
+import play.api.ConfigLoader
+import play.api.Configuration
 
 import scala.concurrent.duration.FiniteDuration
 
@@ -29,11 +30,13 @@ case class KeyRotationConfig(
 
 object KeyRotationConfig:
   given ConfigLoader[KeyRotationConfig] with
-    override def load(config: Config, path: String): KeyRotationConfig =
+    override def load(
+      config: Config,
+      path: String
+    ): KeyRotationConfig =
       val obj = Configuration(config.getConfig(path))
       KeyRotationConfig(
         obj.get[Boolean]("enabled"),
         obj.get[FiniteDuration]("maxTotalDuration").toCoarsest,
         obj.get[Int]("batchSize")
       )
-

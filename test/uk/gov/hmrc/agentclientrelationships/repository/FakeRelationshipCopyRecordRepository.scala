@@ -60,6 +60,13 @@ extends RelationshipCopyRecordRepository(FakeMongoComponent.make) {
     )
   }
 
+  override def findByReferences(
+    references: Set[RelationshipReference],
+    enrolmentKey: EnrolmentKey
+  ): Future[Seq[RelationshipCopyRecord]] = Future.successful(
+    data.values.filter(record => record.references.exists(_.intersect(references).nonEmpty) && record.enrolmentKey == enrolmentKey).toSeq
+  )
+
   override def updateEtmpSyncStatus(
     arn: Arn,
     enrolmentKey: EnrolmentKey,

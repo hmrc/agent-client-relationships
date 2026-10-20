@@ -79,7 +79,8 @@ extends PlayMongoRepository[RelationshipCopyRecord](
       IndexOptions()
         .name("arnAndEnrolmentKeyPartial")
         .unique(true)
-    )
+    ),
+    IndexModel(ascending("references"))
   ),
   replaceIndexes = true
 )
@@ -101,6 +102,16 @@ with RequestAwareLogging {
     arn: Arn,
     enrolmentKey: EnrolmentKey
   ): Future[Option[RelationshipCopyRecord]] = collection.find(filter(arn, enrolmentKey)).first().toFutureOption()
+
+  def findByReferences(
+    references: Set[RelationshipReference],
+    enrolmentKey: EnrolmentKey
+  ): Future[Seq[RelationshipCopyRecord]] = collection
+    .find(Filters.and(
+      Filters.in("references", references.map(Json.toJson(_).toString).toSeq*),
+      enrolmentFilter(enrolmentKey)
+    ))
+    .toFuture()
 
   def updateEtmpSyncStatus(
     arn: Arn,
@@ -143,6 +154,10 @@ with RequestAwareLogging {
     enrolmentKey: EnrolmentKey
   ) = Filters.and(
     Filters.equal("arn", arn.value),
+    enrolmentFilter(enrolmentKey)
+  )
+
+  private def enrolmentFilter(enrolmentKey: EnrolmentKey) =
     enrolmentKey.service match {
       case MtdIt.enrolmentKey | MtdItSupp.enrolmentKey =>
         Filters.or(
@@ -151,11 +166,11 @@ with RequestAwareLogging {
         )
       case _ => Filters.equal("enrolmentKey", enrolmentKey.tag)
     }
-  )
 
   def backfillItsaCopyRecord(
     enrolmentKey: EnrolmentKey,
-    arn: Arn
+    arn: Arn,
+    oldReferences: Option[Set[RelationshipReference]] = None
   )(using requestHeader: RequestHeader): Future[Done] =
     if (Seq(MtdIt.enrolmentKey, MtdItSupp.enrolmentKey).contains(enrolmentKey.service))
       findBy(arn, enrolmentKey).flatMap {
@@ -165,7 +180,7 @@ with RequestAwareLogging {
           create(RelationshipCopyRecord(
             arn = arn.value,
             enrolmentKey = enrolmentKey,
-            references = None,
+            references = oldReferences,
             dateTime = LocalDateTime.now().truncatedTo(MILLIS),
             syncToETMPStatus = Some(Success),
             syncToESStatus = Some(Success)

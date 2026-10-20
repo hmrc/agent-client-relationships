@@ -16,16 +16,20 @@
 
 package uk.gov.hmrc.agentclientrelationships.services
 
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.Inject
+import com.google.inject.Singleton
 import play.api.mvc.Request
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.repository.AgentReferenceRepository
 import uk.gov.hmrc.agentclientrelationships.support.NoRequest
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
-import uk.gov.hmrc.mongo.lock.{LockService, MongoLockRepository}
+import uk.gov.hmrc.mongo.lock.LockService
+import uk.gov.hmrc.mongo.lock.MongoLockRepository
 
-import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
+import scala.util.Failure
+import scala.util.Success
 
 @Singleton
 class KeyRotationService @Inject() (
@@ -33,7 +37,7 @@ class KeyRotationService @Inject() (
   appConfig: AppConfig,
   agentReferenceRepository: AgentReferenceRepository
 )(using ExecutionContext)
-    extends RequestAwareLogging:
+extends RequestAwareLogging:
 
   private given Request[?] = NoRequest
 
@@ -57,7 +61,6 @@ class KeyRotationService @Inject() (
         yield ()
 
   migration.onComplete:
-    case Failure(error)   => logger.error("Key rotation migration failed", error)
+    case Failure(error) => logger.error("Key rotation migration failed", error)
     case Success(Some(_)) => logger.info("Key rotation migration completed successfully")
-    case Success(None)    => logger.warn("Key rotation migration disabled or did not acquire lock, skipping")
-
+    case Success(None) => logger.warn("Key rotation migration disabled or did not acquire lock, skipping")

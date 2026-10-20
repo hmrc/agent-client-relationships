@@ -21,14 +21,18 @@ import org.mockito.Mockito.*
 import org.scalatest.BeforeAndAfterEach
 import org.scalatestplus.mockito.MockitoSugar
 import play.api.mvc.RequestHeader
-import uk.gov.hmrc.agentclientrelationships.config.{AppConfig, KeyRotationConfig}
+import uk.gov.hmrc.agentclientrelationships.config.AppConfig
+import uk.gov.hmrc.agentclientrelationships.config.KeyRotationConfig
 import uk.gov.hmrc.agentclientrelationships.repository.AgentReferenceRepository
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
-import uk.gov.hmrc.mongo.lock.{Lock, MongoLockRepository}
+import uk.gov.hmrc.mongo.lock.Lock
+import uk.gov.hmrc.mongo.lock.MongoLockRepository
 
 import java.time.Instant
-import scala.concurrent.duration.{Deadline, DurationInt}
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.duration.Deadline
+import scala.concurrent.duration.DurationInt
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 class KeyRotationServiceSpec
 extends UnitSpec
@@ -47,15 +51,20 @@ with BeforeAndAfterEach:
     batchSize = 1
   )
 
-  private def createService() = new KeyRotationService(
-    mockLockRepository,
-    mockAppConfig,
-    mockAgentReferenceRepository
-  )
+  private def createService() =
+    new KeyRotationService(
+      mockLockRepository,
+      mockAppConfig,
+      mockAgentReferenceRepository
+    )
 
   override protected def beforeEach(): Unit =
     super.beforeEach()
-    reset(mockLockRepository, mockAppConfig, mockAgentReferenceRepository)
+    reset(
+      mockLockRepository,
+      mockAppConfig,
+      mockAgentReferenceRepository
+    )
 
   "KeyRotationService" when:
 
@@ -65,16 +74,28 @@ with BeforeAndAfterEach:
 
         createService().migration.futureValue shouldBe None
 
-        verify(mockLockRepository, never()).takeLock(any[String], any[String], any())
+        verify(mockLockRepository, never()).takeLock(
+          any[String],
+          any[String],
+          any()
+        )
         verify(mockLockRepository, never()).releaseLock(any[String], any[String])
         verify(mockAgentReferenceRepository, never()).migrate(any[Int], any[Deadline])(using any[RequestHeader])
-
 
     "key rotation is enabled" should:
       "run the agent reference migration when the lock is acquired" in:
         when(mockAppConfig.keyRotation).thenReturn(keyRotationConfig)
-        when(mockLockRepository.takeLock(any[String], any[String], any()))
-          .thenReturn(Future.successful(Some(Lock("", "", Instant.now(), Instant.MAX))))
+        when(mockLockRepository.takeLock(
+          any[String],
+          any[String],
+          any()
+        ))
+          .thenReturn(Future.successful(Some(Lock(
+            "",
+            "",
+            Instant.now(),
+            Instant.MAX
+          ))))
         when(mockLockRepository.releaseLock(any[String], any[String]))
           .thenReturn(Future.unit)
         when(mockAgentReferenceRepository.migrate(any[Int], any[Deadline])(using any[RequestHeader]))
@@ -86,7 +107,11 @@ with BeforeAndAfterEach:
 
       "skip migration when the lock is not acquired" in:
         when(mockAppConfig.keyRotation).thenReturn(keyRotationConfig)
-        when(mockLockRepository.takeLock(any[String], any[String], any()))
+        when(mockLockRepository.takeLock(
+          any[String],
+          any[String],
+          any()
+        ))
           .thenReturn(Future.successful(None))
 
         createService().migration.futureValue shouldBe None
@@ -96,8 +121,17 @@ with BeforeAndAfterEach:
 
       "fail when the agent reference migration fails" in:
         when(mockAppConfig.keyRotation).thenReturn(keyRotationConfig)
-        when(mockLockRepository.takeLock(any[String], any[String], any()))
-          .thenReturn(Future.successful(Some(Lock("", "", Instant.now(), Instant.MAX))))
+        when(mockLockRepository.takeLock(
+          any[String],
+          any[String],
+          any()
+        ))
+          .thenReturn(Future.successful(Some(Lock(
+            "",
+            "",
+            Instant.now(),
+            Instant.MAX
+          ))))
         when(mockLockRepository.releaseLock(any[String], any[String]))
           .thenReturn(Future.unit)
         when(mockAgentReferenceRepository.migrate(any[Int], any[Deadline])(using any[RequestHeader]))
@@ -106,5 +140,3 @@ with BeforeAndAfterEach:
         createService().migration.failed.futureValue
 
         verify(mockAgentReferenceRepository).migrate(any[Int], any[Deadline])(using any[RequestHeader])
-    
-
