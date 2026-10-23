@@ -16,25 +16,38 @@
 
 package support
 
-import org.scalatest.{BeforeAndAfterEach, Suite}
-import uk.gov.hmrc.crypto.{Crypted, Decrypter, Encrypter, PlainBytes, PlainContent, PlainText, SymmetricCryptoFactory}
+import org.scalatest.BeforeAndAfterEach
+import org.scalatest.Suite
+import uk.gov.hmrc.crypto.Crypted
+import uk.gov.hmrc.crypto.Decrypter
+import uk.gov.hmrc.crypto.Encrypter
+import uk.gov.hmrc.crypto.PlainBytes
+import uk.gov.hmrc.crypto.PlainContent
+import uk.gov.hmrc.crypto.PlainText
+import uk.gov.hmrc.crypto.SymmetricCryptoFactory
 
 /** Provides the ability to change the current encryption key for a given repository.
   *
-  * Creating multiple repositories in order to change the key can cause race conditions and other issues around the
-  * Mongo collection initialisation. It's much more lightweight to have a single repository and change the key on
-  * demand. This trait provides a simple way to achieve that in tests. You can also change the key multiple times
-  * without having to instantiate a new repository each time.
+  * Creating multiple repositories in order to change the key can cause race conditions and other issues around the Mongo collection initialisation. It's much
+  * more lightweight to have a single repository and change the key on demand. This trait provides a simple way to achieve that in tests. You can also change
+  * the key multiple times without having to instantiate a new repository each time.
   */
-trait KeyRotationSupport extends BeforeAndAfterEach:
+trait KeyRotationSupport
+extends BeforeAndAfterEach:
   this: Suite =>
 
   val DefaultSecretKey = "HV6NcLoiRka1OjZmYRtleBa9gxxZeyadSjoHDN1fi+4="
 
-  object KeyRotationCrypto extends Encrypter with Decrypter:
+  object KeyRotationCrypto
+  extends Encrypter
+  with Decrypter:
+
     @volatile private var ref: Encrypter & Decrypter = SymmetricCryptoFactory.aesGcmCrypto(DefaultSecretKey)
 
-    def rotateSecretKey(to: String, keepPreviousKey: Boolean = false): Unit =
+    def rotateSecretKey(
+      to: String,
+      keepPreviousKey: Boolean = false
+    ): Unit =
       val aes = SymmetricCryptoFactory.aesGcmCrypto(to)
       val prev = ref
       ref = if !keepPreviousKey then aes else SymmetricCryptoFactory.composeCrypto(aes, Seq(prev))
@@ -46,4 +59,3 @@ trait KeyRotationSupport extends BeforeAndAfterEach:
   override def beforeEach(): Unit =
     super.beforeEach()
     KeyRotationCrypto.rotateSecretKey(to = DefaultSecretKey)
-

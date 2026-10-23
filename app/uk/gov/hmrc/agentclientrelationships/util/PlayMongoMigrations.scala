@@ -24,25 +24,33 @@ import org.mongodb.scala.model.Sorts.ascending
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.mongo.play.json.Codecs.DocumentOps
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
-import uk.gov.hmrc.mongo.transaction.{TransactionConfiguration, Transactions}
+import uk.gov.hmrc.mongo.transaction.TransactionConfiguration
+import uk.gov.hmrc.mongo.transaction.Transactions
 
-import scala.concurrent.duration.{Deadline, Duration}
-import scala.concurrent.{ExecutionContext, Future, TimeoutException}
+import scala.concurrent.duration.Deadline
+import scala.concurrent.duration.Duration
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
+import scala.concurrent.TimeoutException
 
 trait Migrations:
-  def migrate(batchSize: Int, deadline: Deadline)(using RequestHeader): Future[Int]
+  def migrate(
+    batchSize: Int,
+    deadline: Deadline
+  )(using RequestHeader): Future[Int]
 
-trait PlayMongoMigrations(using ExecutionContext) extends Migrations with Transactions:
+trait PlayMongoMigrations(using ExecutionContext)
+extends Migrations
+with Transactions:
   self: PlayMongoRepository[?] & RequestAwareLogging =>
 
   /** Runs a server-side migration in batches until all records are processed or the deadline is reached.
     *
-    * The migration mechanism is the repository's current domain format: each stored record is read, decoded with the
-    * local model format, then written back. This allows schema evolution to be applied by the latest application codecs
-    * without a separate one-off mapping layer.
+    * The migration mechanism is the repository's current domain format: each stored record is read, decoded with the local model format, then written back.
+    * This allows schema evolution to be applied by the latest application codecs without a separate one-off mapping layer.
     *
-    * Each batch runs in a transaction because records may be updated concurrently while migration is in progress.
-    * Transactional execution ensures each read/replace step is applied safely.
+    * Each batch runs in a transaction because records may be updated concurrently while migration is in progress. Transactional execution ensures each
+    * read/replace step is applied safely.
     *
     * If the deadline is exceeded, the migration fails with a timeout.
     *
@@ -53,7 +61,10 @@ trait PlayMongoMigrations(using ExecutionContext) extends Migrations with Transa
     * @return
     *   a future containing the total number of modified documents
     */
-  def migrate(batchSize: Int, deadline: Deadline)(using RequestHeader): Future[Int] =
+  def migrate(
+    batchSize: Int,
+    deadline: Deadline
+  )(using RequestHeader): Future[Int] =
     given TransactionConfiguration = TransactionConfiguration.strict
 
     def asUpdate(document: Document) =
@@ -66,28 +77,29 @@ trait PlayMongoMigrations(using ExecutionContext) extends Migrations with Transa
           logger.error(s"Failed to decode document (_id=${_id})", e)
           None
 
-    def replaceBatch(cursor: Bson) =
-      withSessionAndTransaction: session =>
-        for
-          documents <- collection
-                         .find[Document](session, cursor)
-                         .sort(ascending("_id"))
-                         .limit(batchSize)
-                         .maxTime(deadline.timeLeft.max(Duration.Zero))
-                         .toFuture()
+    def replaceBatch(cursor: Bson) = withSessionAndTransaction: session =>
+      for
+        documents <- collection
+          .find[Document](session, cursor)
+          .sort(ascending("_id"))
+          .limit(batchSize)
+          .maxTime(deadline.timeLeft.max(Duration.Zero))
+          .toFuture()
 
-          updates = documents.flatMap(asUpdate)
+        updates = documents.flatMap(asUpdate)
 
-          resultsOrNone <-
-            if updates.nonEmpty then collection.bulkWrite(session, updates).toFutureOption()
-            else Future.successful(None)
-
-        yield resultsOrNone.map: results =>
-          documents.last("_id") -> results.getModifiedCount
+        resultsOrNone <-
+          if updates.nonEmpty then collection.bulkWrite(session, updates).toFutureOption()
+          else Future.successful(None)
+      yield resultsOrNone.map: results =>
+        documents.last("_id") -> results.getModifiedCount
 
     // Repeatedly execute the batch replacement, advancing the cursor to the last processed `_id`
     // until there are no more matching documents to migrate.
-    def loop(cursor: Bson, totalModified: Int): Future[Int] =
+    def loop(
+      cursor: Bson,
+      totalModified: Int
+    ): Future[Int] =
       if deadline.isOverdue then
         Future.failed(new TimeoutException(s"[$collectionName] Key rotation migration exceeded maximum duration"))
       else
@@ -99,4 +111,3 @@ trait PlayMongoMigrations(using ExecutionContext) extends Migrations with Transa
             case None => Future.successful(totalModified)
 
     loop(cursor = Document.empty, totalModified = 0)
-

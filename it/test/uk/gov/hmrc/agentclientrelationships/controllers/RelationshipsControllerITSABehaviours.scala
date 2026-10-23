@@ -928,7 +928,7 @@ trait RelationshipsControllerITSABehaviours {
         await(relationshipCopyRecordRepository.findBy(arn, mtdItEnrolmentKey)).get should have(
           Symbol("arn")(arn.value),
           Symbol("enrolmentKey")(mtdItEnrolmentKey),
-          Symbol("references")(None),
+          Symbol("references")(Some(Set(SaRef(SaAgentReference("foo"))))),
           Symbol("syncToETMPStatus")(Some(SyncStatus.Success)),
           Symbol("syncToESStatus")(Some(SyncStatus.Success))
         )

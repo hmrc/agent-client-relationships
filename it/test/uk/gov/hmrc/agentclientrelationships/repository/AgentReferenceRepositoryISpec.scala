@@ -33,8 +33,7 @@ class AgentReferenceRepositoryISpec
 extends RepositoryISpec[AgentReferenceRecord]
 with KeyRotationSupport {
 
-  val repository: AgentReferenceRepository =
-    new AgentReferenceRepository(app.injector.instanceOf[MongoComponent])(using ec, KeyRotationCrypto)
+  val repository: AgentReferenceRepository = new AgentReferenceRepository(app.injector.instanceOf[MongoComponent])(using ec, KeyRotationCrypto)
 
   "AgentReferenceRepository" when {
     def agentReferenceRecord(
@@ -108,11 +107,10 @@ with KeyRotationSupport {
 
     "encryption key migration" should {
       "rotate the encryption key for records by reading them out and writing them back again" in {
-        def generateRecord: AgentReferenceRecord =
-          agentReferenceRecord(
-            uid = Random.alphanumeric.take(8).mkString,
-            arn = Random.alphanumeric.take(10).mkString
-          ).copy(normalisedAgentNames = Seq(Random.alphanumeric.take(12).mkString.toLowerCase))
+        def generateRecord: AgentReferenceRecord = agentReferenceRecord(
+          uid = Random.alphanumeric.take(8).mkString,
+          arn = Random.alphanumeric.take(10).mkString
+        ).copy(normalisedAgentNames = Seq(Random.alphanumeric.take(12).mkString.toLowerCase))
 
         val testData: Seq[AgentReferenceRecord] = Seq.fill(20)(generateRecord)
         testData.foreach(record => await(repository.create(record)))

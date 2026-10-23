@@ -16,9 +16,17 @@
 
 package uk.gov.hmrc.agentclientrelationships.module
 
-import play.api.{Configuration, Environment}
-import play.api.inject.{Binding, Module}
-import uk.gov.hmrc.crypto.{Crypted, Decrypter, Encrypter, PlainBytes, PlainContent, PlainText, SymmetricCryptoFactory}
+import play.api.Configuration
+import play.api.Environment
+import play.api.inject.Binding
+import play.api.inject.Module
+import uk.gov.hmrc.crypto.Crypted
+import uk.gov.hmrc.crypto.Decrypter
+import uk.gov.hmrc.crypto.Encrypter
+import uk.gov.hmrc.crypto.PlainBytes
+import uk.gov.hmrc.crypto.PlainContent
+import uk.gov.hmrc.crypto.PlainText
+import uk.gov.hmrc.crypto.SymmetricCryptoFactory
 
 import java.nio.charset.StandardCharsets
 import java.util.Base64
