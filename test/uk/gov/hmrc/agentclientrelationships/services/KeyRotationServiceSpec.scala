@@ -23,16 +23,16 @@ import org.scalatestplus.mockito.MockitoSugar
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.config.KeyRotationConfig
-import uk.gov.hmrc.agentclientrelationships.repository.AgentReferenceRepository
+import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 import uk.gov.hmrc.mongo.lock.Lock
 import uk.gov.hmrc.mongo.lock.MongoLockRepository
 
 import java.time.Instant
-import scala.concurrent.duration.Deadline
-import scala.concurrent.duration.DurationInt
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.concurrent.duration.Deadline
+import scala.concurrent.duration.DurationInt
 
 class KeyRotationServiceSpec
 extends UnitSpec
@@ -43,7 +43,7 @@ with BeforeAndAfterEach:
 
   private val mockLockRepository = mock[MongoLockRepository]
   private val mockAppConfig = mock[AppConfig]
-  private val mockAgentReferenceRepository = mock[AgentReferenceRepository]
+  private val mockPartialAuthRepository = mock[PartialAuthRepository]
 
   private val keyRotationConfig = KeyRotationConfig(
     enabled = true,
@@ -55,7 +55,7 @@ with BeforeAndAfterEach:
     new KeyRotationService(
       mockLockRepository,
       mockAppConfig,
-      mockAgentReferenceRepository
+      mockPartialAuthRepository
     )
 
   override protected def beforeEach(): Unit =
@@ -63,7 +63,7 @@ with BeforeAndAfterEach:
     reset(
       mockLockRepository,
       mockAppConfig,
-      mockAgentReferenceRepository
+      mockPartialAuthRepository
     )
 
   "KeyRotationService" when:
@@ -80,10 +80,10 @@ with BeforeAndAfterEach:
           any()
         )
         verify(mockLockRepository, never()).releaseLock(any[String], any[String])
-        verify(mockAgentReferenceRepository, never()).migrate(any[Int], any[Deadline])(using any[RequestHeader])
+        verify(mockPartialAuthRepository, never()).migrate(any[Int], any[Deadline])(using any[RequestHeader])
 
     "key rotation is enabled" should:
-      "run the agent reference migration when the lock is acquired" in:
+      "run the partial auth migration when the lock is acquired" in:
         when(mockAppConfig.keyRotation).thenReturn(keyRotationConfig)
         when(mockLockRepository.takeLock(
           any[String],
@@ -98,12 +98,12 @@ with BeforeAndAfterEach:
           ))))
         when(mockLockRepository.releaseLock(any[String], any[String]))
           .thenReturn(Future.unit)
-        when(mockAgentReferenceRepository.migrate(any[Int], any[Deadline])(using any[RequestHeader]))
+        when(mockPartialAuthRepository.migrate(any[Int], any[Deadline])(using any[RequestHeader]))
           .thenReturn(Future.successful(20))
 
         createService().migration.futureValue shouldBe Some(())
 
-        verify(mockAgentReferenceRepository).migrate(any[Int], any[Deadline])(using any[RequestHeader])
+        verify(mockPartialAuthRepository).migrate(any[Int], any[Deadline])(using any[RequestHeader])
 
       "skip migration when the lock is not acquired" in:
         when(mockAppConfig.keyRotation).thenReturn(keyRotationConfig)
@@ -117,9 +117,9 @@ with BeforeAndAfterEach:
         createService().migration.futureValue shouldBe None
 
         verify(mockLockRepository, never()).releaseLock(any[String], any[String])
-        verify(mockAgentReferenceRepository, never()).migrate(any[Int], any[Deadline])(using any[RequestHeader])
+        verify(mockPartialAuthRepository, never()).migrate(any[Int], any[Deadline])(using any[RequestHeader])
 
-      "fail when the agent reference migration fails" in:
+      "fail when the partial auth migration fails" in:
         when(mockAppConfig.keyRotation).thenReturn(keyRotationConfig)
         when(mockLockRepository.takeLock(
           any[String],
@@ -134,9 +134,9 @@ with BeforeAndAfterEach:
           ))))
         when(mockLockRepository.releaseLock(any[String], any[String]))
           .thenReturn(Future.unit)
-        when(mockAgentReferenceRepository.migrate(any[Int], any[Deadline])(using any[RequestHeader]))
-          .thenReturn(Future.failed(RuntimeException("agent reference migration failed")))
+        when(mockPartialAuthRepository.migrate(any[Int], any[Deadline])(using any[RequestHeader]))
+          .thenReturn(Future.failed(RuntimeException("partial auth migration failed")))
 
         createService().migration.failed.futureValue
 
-        verify(mockAgentReferenceRepository).migrate(any[Int], any[Deadline])(using any[RequestHeader])
+        verify(mockPartialAuthRepository).migrate(any[Int], any[Deadline])(using any[RequestHeader])

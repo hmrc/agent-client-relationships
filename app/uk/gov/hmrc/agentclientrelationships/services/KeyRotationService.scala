@@ -20,7 +20,7 @@ import com.google.inject.Inject
 import com.google.inject.Singleton
 import play.api.mvc.Request
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
-import uk.gov.hmrc.agentclientrelationships.repository.AgentReferenceRepository
+import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
 import uk.gov.hmrc.agentclientrelationships.support.NoRequest
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.mongo.lock.LockService
@@ -35,7 +35,7 @@ import scala.util.Success
 class KeyRotationService @Inject() (
   lockRepository: MongoLockRepository,
   appConfig: AppConfig,
-  agentReferenceRepository: AgentReferenceRepository
+  partialAuthRepository: PartialAuthRepository
 )(using ExecutionContext)
 extends RequestAwareLogging:
 
@@ -57,7 +57,7 @@ extends RequestAwareLogging:
         logger.info("Starting key rotation migration.")
 
         for
-          _ <- agentReferenceRepository.migrate(batchSize, deadline)
+          _ <- partialAuthRepository.migrate(batchSize, deadline)
         yield ()
 
   migration.onComplete:
