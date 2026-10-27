@@ -17,20 +17,25 @@
 package uk.gov.hmrc.agentclientrelationships.model
 
 import play.api.libs.json.Format
+import play.api.libs.json.JsError
 import play.api.libs.json.JsObject
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
-import uk.gov.hmrc.agentclientrelationships.util.CryptoUtil.encryptedString
 import uk.gov.hmrc.crypto.Decrypter
 import uk.gov.hmrc.crypto.Encrypter
+import uk.gov.hmrc.crypto.Hasher
+import uk.gov.hmrc.crypto.OnewayCryptoFactory
+import uk.gov.hmrc.crypto.PlainText
 import uk.gov.hmrc.crypto.SymmetricCryptoFactory
+import uk.gov.hmrc.crypto.Verifier
 
 import java.time.Instant
 
 class PartialAuthRelationshipSpec
-extends UnitSpec {
+extends UnitSpec:
 
-  given crypto: (Encrypter & Decrypter) = SymmetricCryptoFactory.aesCrypto("edkOOwt7uvzw1TXnFIN6aRVHkfWcgiOrbBvkEQvO65g=")
+  given crypto: (Encrypter & Decrypter) = SymmetricCryptoFactory.aesGcmCrypto("k6g1M7QnNpknAtFuTIpFtQ==")
+  given hmac: (Hasher & Verifier) = OnewayCryptoFactory.sha("oqrDUsOsuJ7hKctdLpQ5vQ==")
 
   val activeTestModel: PartialAuthRelationship = PartialAuthRelationship(
     Instant.parse("2020-02-02T00:00:00.000Z"),
@@ -41,30 +46,42 @@ extends UnitSpec {
     Instant.parse("2020-02-02T00:00:00.000Z")
   )
 
-  val testJsonResponse: JsObject = Json.obj(
-    "created" -> Json.obj("$date" -> Json.obj("$numberLong" -> "1580601600000")),
-    "arn" -> "XARN1234567",
-    "service" -> "HMRC-MTD-VAT",
-    "nino" -> encryptedString("123456789"),
-    "active" -> true,
-    "lastUpdated" -> Json.obj("$date" -> Json.obj("$numberLong" -> "1580601600000"))
-  )
+  "PartialAuthModel" when:
+    "using the API format" should:
+      given Format[PartialAuthRelationship] = Json.format[PartialAuthRelationship]
 
-  "PartialAuthModel" should {
-    given Format[PartialAuthRelationship] = PartialAuthRelationship.mongoFormat
-    "read from JSON" when {
+      "support JSON round-trip" in:
+        val json = Json.toJson(activeTestModel)
+        val result = json.as[PartialAuthRelationship]
 
-      "all fields are present" in {
-        testJsonResponse.as[PartialAuthRelationship] shouldBe activeTestModel
-      }
-    }
+        result shouldBe activeTestModel
 
-    "write to JSON" when {
+      "not use encryption for sensitive fields" in:
+        val json = Json.toJson(activeTestModel)
 
-      "all fields are present" in {
-        Json.toJson(activeTestModel) shouldBe testJsonResponse
-      }
-    }
-  }
+        (json \ "nino").as[String] shouldBe "123456789"
+        (json \ "arn").as[String] shouldBe "XARN1234567"
 
-}
+    "using the database format" should:
+      given Format[PartialAuthRelationship] = PartialAuthRelationship.mongoFormat
+
+      "support JSON round-trip" in:
+        val json = Json.toJson(activeTestModel)
+        val result = json.as[PartialAuthRelationship]
+
+        result shouldBe activeTestModel
+
+      "encrypt sensitive fields" in:
+        val json = Json.toJson(activeTestModel)
+
+        (json \ "nino").as[String] should not be "123456789"
+        (json \ "arn").as[String] should not be "XARN1234567"
+
+      "verify hashes" in:
+        val json = Json.toJson(activeTestModel)
+        val tampered =
+          json.as[JsObject]
+            + ("nino" -> Json.toJson(crypto.encrypt(PlainText("987654321")).value))
+            + ("arn" -> Json.toJson(crypto.encrypt(PlainText("XARN7654321")).value))
+
+        Json.fromJson[PartialAuthRelationship](tampered) shouldBe JsError("could not verify hash integrity")
