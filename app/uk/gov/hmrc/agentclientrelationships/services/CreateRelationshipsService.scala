@@ -168,12 +168,13 @@ extends RequestAwareLogging {
               enrolmentKey,
               arn,
               Some(oldReferences)
-            )
-            // This is a copy across scenario where the SUPP relationship already exists,
-            // so we backfill the copy record and throw an exception to indicate that the copy across cannot proceed.
-            throw new RuntimeException(
-              s"[CreateRelationshipsService] Attempted to copy across when SUPP relationship already exists for ${arn.value}. " +
-                s"Copy record backfilled to prevent further errors."
+            ).map(_ =>
+              // This is a copy across scenario where the SUPP relationship already exists,
+              // so we backfill the copy record and throw an exception to indicate that the copy across cannot proceed.
+              throw new RuntimeException(
+                s"[CreateRelationshipsService] Attempted to copy across when SUPP relationship already exists for ${arn.value}. " +
+                  s"Copy record backfilled to prevent further errors."
+              )
             )
           case Right(rels) if rels.exists(rel => rel.arn.value == arn.value) =>
             logger.warn(
