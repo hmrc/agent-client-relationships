@@ -21,19 +21,22 @@ import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.Filters.and
 import org.mongodb.scala.model.Filters.equal
 import org.mongodb.scala.model.Filters.in
-import org.mongodb.scala.model.Updates.*
 import org.mongodb.scala.model.IndexModel
 import org.mongodb.scala.model.IndexOptions
 import org.mongodb.scala.model.Indexes
+import org.mongodb.scala.model.Updates.*
+import uk.gov.hmrc.agentclientrelationships.model.PartialAuthRelationship
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDIT
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDITSUPP
-import uk.gov.hmrc.agentclientrelationships.model.PartialAuthRelationship
 import uk.gov.hmrc.agentclientrelationships.util.CryptoUtil.encryptedString
+import uk.gov.hmrc.agentclientrelationships.util.PlayMongoMigrations
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.crypto.Decrypter
 import uk.gov.hmrc.crypto.Encrypter
+import uk.gov.hmrc.crypto.Hasher
+import uk.gov.hmrc.crypto.Verifier
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 
@@ -45,11 +48,11 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 @Singleton
-class PartialAuthRepository @Inject() (mongoComponent: MongoComponent)(using
+class PartialAuthRepository @Inject() (val mongoComponent: MongoComponent)(using
   ec: ExecutionContext,
   @Named("aes")
-  crypto: Encrypter
-    & Decrypter
+  crypto: Encrypter & Decrypter,
+  hmac: Hasher & Verifier
 )
 extends PlayMongoRepository[PartialAuthRelationship](
   mongoComponent = mongoComponent,
@@ -80,7 +83,8 @@ extends PlayMongoRepository[PartialAuthRelationship](
   ),
   replaceIndexes = true
 )
-with RequestAwareLogging {
+with RequestAwareLogging
+with PlayMongoMigrations {
 
   // Permanent store of alt itsa authorisations
   override lazy val requiresTtlIndex: Boolean = false
@@ -124,7 +128,7 @@ with RequestAwareLogging {
           HMRCMTDITSUPP
         ),
         equal("nino", encryptedString(nino.value)),
-        equal("arn", arn.value),
+        equal("arn", encryptedString(arn.value)),
         equal("active", true)
       )
     )
@@ -143,7 +147,7 @@ with RequestAwareLogging {
       and(
         equal("service", serviceId),
         equal("nino", encryptedString(nino.value)),
-        equal("arn", arn.value),
+        equal("arn", encryptedString(arn.value)),
         equal("active", true)
       )
     )
@@ -174,7 +178,7 @@ with RequestAwareLogging {
       and(
         equal("service", serviceId),
         equal("nino", encryptedString(nino.value)),
-        equal("arn", arn.value),
+        equal("arn", encryptedString(arn.value)),
         equal("active", true)
       ),
       combine(set("active", false), set("lastUpdated", updated))
@@ -192,7 +196,7 @@ with RequestAwareLogging {
       and(
         equal("service", serviceId),
         equal("nino", encryptedString(nino.value)),
-        equal("arn", arn.value),
+        equal("arn", encryptedString(arn.value)),
         equal("active", true)
       )
     )

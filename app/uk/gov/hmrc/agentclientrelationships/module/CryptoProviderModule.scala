@@ -23,13 +23,18 @@ import play.api.inject.Module
 import uk.gov.hmrc.crypto.Crypted
 import uk.gov.hmrc.crypto.Decrypter
 import uk.gov.hmrc.crypto.Encrypter
+import uk.gov.hmrc.crypto.Hasher
+import uk.gov.hmrc.crypto.OnewayCryptoFactory
 import uk.gov.hmrc.crypto.PlainBytes
 import uk.gov.hmrc.crypto.PlainContent
 import uk.gov.hmrc.crypto.PlainText
+import uk.gov.hmrc.crypto.Scrambled
 import uk.gov.hmrc.crypto.SymmetricCryptoFactory
+import uk.gov.hmrc.crypto.Verifier
 
 import java.nio.charset.StandardCharsets
 import java.util.Base64
+import scala.util.hashing.MurmurHash3
 
 class CryptoProviderModule
 extends Module {
@@ -51,12 +56,18 @@ extends Module {
     else
       NoCrypto
 
+  def sha512HmacInstance(configuration: Configuration): Hasher & Verifier =
+    if (configuration.underlying.getBoolean("fieldLevelEncryption.enable"))
+      OnewayCryptoFactory.shaCryptoFromConfig("fieldLevelEncryption", configuration.underlying)
+    else
+      NonCryptographicHash
   override def bindings(
     environment: Environment,
     configuration: Configuration
   ): Seq[Binding[?]] = Seq(
     bind[Encrypter & Decrypter].qualifiedWith("aes").toInstance(aesEcbCryptoInstance(configuration)),
-    bind[Encrypter & Decrypter].qualifiedWith("aesGcm").toInstance(aesGcmCryptoInstanceWithFallback(configuration))
+    bind[Encrypter & Decrypter].qualifiedWith("aesGcm").toInstance(aesGcmCryptoInstanceWithFallback(configuration)),
+    bind[Hasher & Verifier].toInstance(sha512HmacInstance(configuration))
   )
 
 }
@@ -79,3 +90,16 @@ with Decrypter {
 
 object NoCrypto
 extends NoCrypto
+
+object NonCryptographicHash
+extends Hasher,
+  Verifier {
+
+  override def hash(plain: PlainText): Scrambled = Scrambled(MurmurHash3.stringHash(plain.value).toString)
+
+  override def verify(
+    plain: PlainText,
+    scrambled: Scrambled
+  ): Boolean = hash(plain) == scrambled
+
+}
