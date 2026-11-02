@@ -25,19 +25,22 @@ import org.mongodb.scala.model.IndexModel
 import org.mongodb.scala.model.IndexOptions
 import org.mongodb.scala.model.Indexes
 import org.mongodb.scala.model.Updates.*
+import play.api.libs.json.Format
 import uk.gov.hmrc.agentclientrelationships.model.PartialAuthRelationship
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDIT
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDITSUPP
-import uk.gov.hmrc.agentclientrelationships.util.CryptoUtil.encryptedString
 import uk.gov.hmrc.agentclientrelationships.util.PlayMongoMigrations
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.crypto.Decrypter
 import uk.gov.hmrc.crypto.Encrypter
 import uk.gov.hmrc.crypto.Hasher
+import uk.gov.hmrc.crypto.PlainText
+import uk.gov.hmrc.crypto.Scrambled
 import uk.gov.hmrc.crypto.Verifier
 import uk.gov.hmrc.mongo.MongoComponent
+import uk.gov.hmrc.mongo.play.json.Codecs
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 
 import java.time.Instant
@@ -47,10 +50,24 @@ import javax.inject.Singleton
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
+/** Stores partial-authorisation relationships for ITSA. These are relationships that have been created by the agent but not yet fully authorised by the client.
+  * The repository is used to store and retrieve these relationships, and to manage their lifecycle (e.g. de-authorising them when they are no longer needed).
+  *
+  * The repository encrypts both the NINO and the ARN. An ARN by itself is not usually considered sensitive enough to encrypt, but in this case it is because it
+  * is used in combination with the NINO to identify a specific agent/client relationship. The NINO is considered sensitive and must be encrypted.
+  *
+  * AES-GCM encryption produces (effectively) random values for those fields. To support searches on those fields, the repository also stores HMAC hashes of the
+  * NINO and ARN. The HMAC hashes are used for searching, while the encrypted values are used for storage and retrieval.
+  *
+  * * `ninoHash`: identifies the relationships for a single client
+  *
+  * * `ninoArnHash`: creates a unique identifier for a specific agent/client relationship. This is more secure than hashing each field separately because it
+  * prevents an attacker from correlating multiple relationships together, and using that information to make inferences about
+  */
 @Singleton
 class PartialAuthRepository @Inject() (val mongoComponent: MongoComponent)(using
   ec: ExecutionContext,
-  @Named("aes")
+  @Named("aesGcm")
   crypto: Encrypter & Decrypter,
   hmac: Hasher & Verifier
 )
@@ -62,8 +79,7 @@ extends PlayMongoRepository[PartialAuthRelationship](
     IndexModel(
       Indexes.ascending(
         "service",
-        "nino",
-        "arn",
+        "ninoArnHash",
         "active"
       ),
       IndexOptions().name("allRelationshipsIndex")
@@ -71,17 +87,17 @@ extends PlayMongoRepository[PartialAuthRelationship](
     IndexModel(
       Indexes.ascending(
         "service",
-        "nino",
-        "arn"
+        "ninoArnHash"
       ),
       IndexOptions()
         .partialFilterExpression(BsonDocument("active" -> true))
         .unique(true)
         .name("activeRelationshipsIndex")
     ),
-    IndexModel(Indexes.ascending("nino"), IndexOptions().name("ninoIndex"))
+    IndexModel(Indexes.ascending("ninoHash"), IndexOptions().name("ninoIndex"))
   ),
-  replaceIndexes = true
+  replaceIndexes = true,
+  extraCodecs = Seq(Codecs.playFormatCodec(Format.of[String].bimap(Scrambled.apply, _.value)))
 )
 with RequestAwareLogging
 with PlayMongoMigrations {
@@ -127,19 +143,14 @@ with PlayMongoMigrations {
           HMRCMTDIT,
           HMRCMTDITSUPP
         ),
-        equal("nino", encryptedString(nino.value)),
-        in(
-          "arn",
-          arn.value,
-          encryptedString(arn.value)
-        ),
+        equal("ninoArnHash", hmac.hash(PlainText(s"${nino.value}:${arn.value}"))),
         equal("active", true)
       )
     )
     .first().toFutureOption()
 
   def findActiveForClient(nino: NinoWithoutSuffix): Future[Seq[PartialAuthRelationship]] = collection
-    .find(and(equal("nino", encryptedString(nino.value)), equal("active", true)))
+    .find(and(equal("ninoHash", hmac.hash(PlainText(nino.value))), equal("active", true)))
     .toFuture()
 
   def findActive(
@@ -150,19 +161,14 @@ with PlayMongoMigrations {
     .find(
       and(
         equal("service", serviceId),
-        equal("nino", encryptedString(nino.value)),
-        in(
-          "arn",
-          arn.value,
-          encryptedString(arn.value)
-        ),
+        equal("ninoArnHash", hmac.hash(PlainText(s"${nino.value}:${arn.value}"))),
         equal("active", true)
       )
     )
     .first().toFutureOption()
 
   def findAllForClient(nino: NinoWithoutSuffix): Future[Seq[PartialAuthRelationship]] = collection
-    .find(equal("nino", encryptedString(nino.value)))
+    .find(equal("ninoHash", hmac.hash(PlainText(nino.value))))
     .toFuture()
 
   /* this will only find partially authorised ITSA main agents for a given nino string */
@@ -170,7 +176,7 @@ with PlayMongoMigrations {
     .find(
       and(
         equal("service", HMRCMTDIT),
-        equal("nino", encryptedString(NinoWithoutSuffix(nino).value)),
+        equal("ninoHash", hmac.hash(PlainText(nino))),
         equal("active", true)
       )
     )
@@ -185,12 +191,7 @@ with PlayMongoMigrations {
     .updateOne(
       and(
         equal("service", serviceId),
-        equal("nino", encryptedString(nino.value)),
-        in(
-          "arn",
-          arn.value,
-          encryptedString(arn.value)
-        ),
+        equal("ninoArnHash", hmac.hash(PlainText(s"${nino.value}:${arn.value}"))),
         equal("active", true)
       ),
       combine(set("active", false), set("lastUpdated", updated))
@@ -207,12 +208,7 @@ with PlayMongoMigrations {
     .deleteOne(
       and(
         equal("service", serviceId),
-        equal("nino", encryptedString(nino.value)),
-        in(
-          "arn",
-          arn.value,
-          encryptedString(arn.value)
-        ),
+        equal("ninoArnHash", hmac.hash(PlainText(s"${nino.value}:${arn.value}"))),
         equal("active", true)
       )
     )

@@ -23,8 +23,6 @@ import uk.gov.hmrc.crypto.Decrypter
 import uk.gov.hmrc.crypto.Encrypter
 import uk.gov.hmrc.crypto.Hasher
 import uk.gov.hmrc.crypto.Verifier
-import uk.gov.hmrc.crypto.json.JsonEncryption.stringDecrypter
-import uk.gov.hmrc.crypto.json.JsonEncryption.stringEncrypter
 import uk.gov.hmrc.crypto.json.JsonEncryption.stringEncrypterDecrypter
 import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 
@@ -49,11 +47,12 @@ object PartialAuthRelationship:
   ): Format[PartialAuthRelationship] =
     given mongoInstantFormat: Format[Instant] = MongoJavatimeFormats.instantFormat
 
-    val plainTextOrEncrypted = Format(stringDecrypter orElse Format.of[String], stringEncrypter)
-
-    (__ \ "created").format[Instant].and((__ \ "arn").format[String](using plainTextOrEncrypted)).and(
-      (__ \ "service").format[String]
-    ).and((__ \ "nino").format[String](using stringEncrypterDecrypter)).and((__ \ "active").format[Boolean]).and((__ \ "lastUpdated").format[Instant])
+    (__ \ "created").format[Instant]
+      .and((__ \ "arn").format[String](using stringEncrypterDecrypter))
+      .and((__ \ "service").format[String])
+      .and((__ \ "nino").format[String](using stringEncrypterDecrypter))
+      .and((__ \ "active").format[Boolean])
+      .and((__ \ "lastUpdated").format[Instant])
       .apply(PartialAuthRelationship.apply, Tuple.fromProductTyped)
       .withVerifiedHash((__ \ "ninoHash").format[String], _.nino)
       .withVerifiedHash((__ \ "ninoArnHash").format[String], r => s"${r.nino}:${r.arn}")
