@@ -17,13 +17,15 @@
 package uk.gov.hmrc.agentclientrelationships.model
 
 import play.api.libs.functional.syntax.toFunctionalBuilderOps
-import play.api.libs.functional.syntax.unlift
-import play.api.libs.json.Format
-import play.api.libs.json.Json
-import play.api.libs.json.__
-import uk.gov.hmrc.crypto.json.JsonEncryption.stringEncrypterDecrypter
+import play.api.libs.json.*
+import uk.gov.hmrc.agentclientrelationships.support.hmac.*
 import uk.gov.hmrc.crypto.Decrypter
 import uk.gov.hmrc.crypto.Encrypter
+import uk.gov.hmrc.crypto.Hasher
+import uk.gov.hmrc.crypto.Verifier
+import uk.gov.hmrc.crypto.json.JsonEncryption.stringDecrypter
+import uk.gov.hmrc.crypto.json.JsonEncryption.stringEncrypter
+import uk.gov.hmrc.crypto.json.JsonEncryption.stringEncrypterDecrypter
 import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 
 import java.time.Instant
@@ -39,32 +41,19 @@ case class PartialAuthRelationship(
 
 object PartialAuthRelationship:
 
-  given format: Format[PartialAuthRelationship] = Json.format[PartialAuthRelationship]
+  given OFormat[PartialAuthRelationship] = Json.format[PartialAuthRelationship]
 
   def mongoFormat(using
-    crypto: Encrypter
-      & Decrypter
+    crypto: Encrypter & Decrypter,
+    hmac: Hasher & Verifier
   ): Format[PartialAuthRelationship] =
     given mongoInstantFormat: Format[Instant] = MongoJavatimeFormats.instantFormat
-    (
-      (__ \ "created").format[Instant] and
-        (__ \ "arn").format[String] and
-        (__ \ "service").format[String] and
-        (__ \ "nino").format[String](using stringEncrypterDecrypter) and
-        (__ \ "active").format[Boolean] and
-        (__ \ "lastUpdated").format[Instant]
-    )(
-      PartialAuthRelationship.apply,
-      unlift((relationship: PartialAuthRelationship) =>
-        Some(
-          (
-            relationship.created,
-            relationship.arn,
-            relationship.service,
-            relationship.nino,
-            relationship.active,
-            relationship.lastUpdated
-          )
-        )
-      )
-    )
+
+    val plainTextOrEncrypted = Format(stringDecrypter orElse Format.of[String], stringEncrypter)
+
+    (__ \ "created").format[Instant].and((__ \ "arn").format[String](using plainTextOrEncrypted)).and(
+      (__ \ "service").format[String]
+    ).and((__ \ "nino").format[String](using stringEncrypterDecrypter)).and((__ \ "active").format[Boolean]).and((__ \ "lastUpdated").format[Instant])
+      .apply(PartialAuthRelationship.apply, Tuple.fromProductTyped)
+      .withVerifiedHash((__ \ "ninoHash").format[String], _.nino)
+      .withVerifiedHash((__ \ "ninoArnHash").format[String], r => s"${r.nino}:${r.arn}")
