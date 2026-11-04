@@ -557,6 +557,23 @@ extends UnitSpec {
           await(service.findClientDetails("HMRC-MTD-VAT", "123456789")) shouldBe Right(resultModel)
         }
 
+        // APB-12466 Agreed to ignore the date the client enters if we do not have a date to compare it with
+        "return a ClientDetailsResponse when ETMP does not return an effectiveRegistrationDate" in {
+          when(mockClientDetailsConnector.getVatCustomerInfo(eqTo[String]("123456789"))(using any[RequestHeader])).thenReturn(
+            Future.successful(Right(responseModel.copy(effectiveRegistrationDate = None)))
+          )
+
+          val resultModel = ClientDetailsResponse(
+            "CFG Solutions",
+            Some(Insolvent),
+            isOverseas = None,
+            Seq.empty,
+            None
+          )
+
+          await(service.findClientDetails("HMRC-MTD-VAT", "123456789")) shouldBe Right(resultModel)
+        }
+
         "return a ClientDetailsNotFound error if no names are returned" in {
           val noNameModel = responseModel.copy(
             organisationName = None,
@@ -571,15 +588,6 @@ extends UnitSpec {
           await(service.findClientDetails("HMRC-MTD-VAT", "123456789")) shouldBe Left(ClientDetailsNotFound)
         }
 
-        "return a ClientDetailsNotFound error if no registration date is returned" in {
-          val noRegDateModel = responseModel.copy(effectiveRegistrationDate = None)
-
-          when(mockClientDetailsConnector.getVatCustomerInfo(eqTo[String]("123456789"))(using any[RequestHeader])).thenReturn(
-            Future.successful(Right(noRegDateModel))
-          )
-
-          await(service.findClientDetails("HMRC-MTD-VAT", "123456789")) shouldBe Left(ClientDetailsNotFound)
-        }
       }
 
       "the VAT customer info API returns an unsuccessful response" should {
