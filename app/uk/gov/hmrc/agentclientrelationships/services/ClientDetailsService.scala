@@ -240,7 +240,7 @@ extends RequestAwareLogging {
               _,
               _,
               _,
-              Some(regDate),
+              optEffectiveRegDate,
               _
             )
           ) =>
@@ -250,18 +250,16 @@ extends RequestAwareLogging {
             Some(Insolvent)
           else
             None
+        // APB-12466 Agreed to ignore the date the client enters if we do not have a date to compare it with
         Right(
           ClientDetailsResponse(
             clientName,
             clientStatus,
             None,
-            Seq(regDate.toString),
-            Some(Date)
+            optEffectiveRegDate.map(date => Seq(date.toString)).getOrElse(Seq.empty),
+            optEffectiveRegDate.map(_ => Date)
           )
         )
-      case Right(_) =>
-        logger.warn("[getVatClientDetails] - No registration date was returned by the API")
-        Left(ClientDetailsNotFound)
       case Left(err) => Left(err)
     }
 
