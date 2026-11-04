@@ -85,3 +85,15 @@ extends UnitSpec:
             + ("arn" -> Json.toJson(crypto.encrypt(PlainText("XARN7654321")).value))
 
         Json.fromJson[PartialAuthRelationship](tampered) shouldBe JsError("could not verify hash integrity")
+
+      "read legacy records without hashes" in:
+        val json = Json.toJson(activeTestModel).as[JsObject] - "ninoHash" - "ninoArnHash"
+
+        json.as[PartialAuthRelationship] shouldBe activeTestModel
+
+      "read an encrypted ARN" in:
+        val json =
+          Json.toJson(activeTestModel).as[JsObject] +
+            ("arn" -> Json.toJson(crypto.encrypt(PlainText(activeTestModel.arn)).value))
+            
+        json.as[PartialAuthRelationship] shouldBe activeTestModel

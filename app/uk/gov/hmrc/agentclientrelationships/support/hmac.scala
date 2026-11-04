@@ -27,15 +27,16 @@ import uk.gov.hmrc.crypto.Scrambled
 object hmac:
   extension [A](modelFormat: OFormat[A])
     def withVerifiedHash(
-      hashField: OFormat[String],
+      hashField: OFormat[Option[String]],
       accessor: A => String
     )(using hmac: Hasher & Verifier): OFormat[A] =
       val read =
         (modelFormat and hashField).tupled
           .collect(JsonValidationError("could not verify hash integrity")):
-            case (model, hashValue) if hmac.verify(PlainText(accessor(model)), Scrambled(hashValue)) => model
+            case (model, Some(hashValue)) if hmac.verify(PlainText(accessor(model)), Scrambled(hashValue)) => model
+            case (model, None) => model
 
       val write = (modelFormat and hashField).tupled.contramap[A]: model =>
-        (model, hmac.hash(PlainText(accessor(model))).value)
+        (model, Some(hmac.hash(PlainText(accessor(model))).value))
 
       OFormat(read, write)
