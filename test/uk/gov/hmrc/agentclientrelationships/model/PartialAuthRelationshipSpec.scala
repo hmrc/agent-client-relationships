@@ -39,7 +39,7 @@ extends UnitSpec:
 
   val activeTestModel: PartialAuthRelationship = PartialAuthRelationship(
     Instant.parse("2020-02-02T00:00:00.000Z"),
-    "XARN1234567",
+    "TARN0000001",
     "HMRC-MTD-VAT",
     "123456789",
     active = true,
@@ -60,7 +60,7 @@ extends UnitSpec:
         val json = Json.toJson(activeTestModel)
 
         (json \ "nino").as[String] shouldBe "123456789"
-        (json \ "arn").as[String] shouldBe "XARN1234567"
+        (json \ "arn").as[String] shouldBe "TARN0000001"
 
     "using the database format" should:
       given Format[PartialAuthRelationship] = PartialAuthRelationship.mongoFormat
@@ -75,7 +75,7 @@ extends UnitSpec:
         val json = Json.toJson(activeTestModel)
 
         (json \ "nino").as[String] should not be "123456789"
-        (json \ "arn").as[String] should not be "XARN1234567"
+        (json \ "arn").as[String] should not be "TARN0000001"
 
       "verify hashes" in:
         val json = Json.toJson(activeTestModel)
@@ -85,3 +85,21 @@ extends UnitSpec:
             + ("arn" -> Json.toJson(crypto.encrypt(PlainText("XARN7654321")).value))
 
         Json.fromJson[PartialAuthRelationship](tampered) shouldBe JsError("could not verify hash integrity")
+
+      "read legacy records without hashes" in:
+        val json = Json.toJson(activeTestModel).as[JsObject] - "ninoHash" - "ninoArnHash"
+
+        json.as[PartialAuthRelationship] shouldBe activeTestModel
+
+      "read a plaintext ARN" in :
+        val json = Json.toJson(activeTestModel).as[JsObject] +
+          ("arn" -> Json.toJson(activeTestModel.arn))
+
+        json.as[PartialAuthRelationship] shouldBe activeTestModel
+
+      "read an encrypted ARN" in:
+        val json =
+          Json.toJson(activeTestModel).as[JsObject] +
+            ("arn" -> Json.toJson(crypto.encrypt(PlainText(activeTestModel.arn)).value))
+            
+        json.as[PartialAuthRelationship] shouldBe activeTestModel
