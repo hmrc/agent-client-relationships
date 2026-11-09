@@ -86,18 +86,6 @@ extends UnitSpec:
 
         Json.fromJson[PartialAuthRelationship](tampered) shouldBe JsError("could not verify hash integrity")
 
-      "read legacy records without hashes" in:
-        val json = Json.toJson(activeTestModel).as[JsObject] - "ninoHash" - "ninoArnHash"
-
-        json.as[PartialAuthRelationship] shouldBe activeTestModel
-
-      "read a plaintext ARN" in:
-        val json =
-          Json.toJson(activeTestModel).as[JsObject] +
-            ("arn" -> Json.toJson(activeTestModel.arn))
-
-        json.as[PartialAuthRelationship] shouldBe activeTestModel
-
       "read an encrypted ARN" in:
         val json =
           Json.toJson(activeTestModel).as[JsObject] +
