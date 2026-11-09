@@ -91,9 +91,10 @@ extends UnitSpec:
 
         json.as[PartialAuthRelationship] shouldBe activeTestModel
 
-      "read a plaintext ARN" in :
-        val json = Json.toJson(activeTestModel).as[JsObject] +
-          ("arn" -> Json.toJson(activeTestModel.arn))
+      "read a plaintext ARN" in:
+        val json =
+          Json.toJson(activeTestModel).as[JsObject] +
+            ("arn" -> Json.toJson(activeTestModel.arn))
 
         json.as[PartialAuthRelationship] shouldBe activeTestModel
 
@@ -101,5 +102,5 @@ extends UnitSpec:
         val json =
           Json.toJson(activeTestModel).as[JsObject] +
             ("arn" -> Json.toJson(crypto.encrypt(PlainText(activeTestModel.arn)).value))
-            
+
         json.as[PartialAuthRelationship] shouldBe activeTestModel
