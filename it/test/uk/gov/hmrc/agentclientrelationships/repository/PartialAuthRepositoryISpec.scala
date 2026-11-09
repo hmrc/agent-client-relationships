@@ -55,21 +55,19 @@ extends RepositoryISpec[PartialAuthRelationship] {
 
       allRecordsIndex.getKeys shouldBe Indexes.ascending(
         "service",
-        "nino",
-        "arn",
+        "ninoArnHash",
         "active"
       )
       allRecordsIndex.getOptions.isUnique shouldBe false
       allRecordsIndex.getOptions.getName shouldBe "allRelationshipsIndex"
       activeRecordsIndex.getKeys shouldBe Indexes.ascending(
         "service",
-        "nino",
-        "arn"
+        "ninoArnHash"
       )
       activeRecordsIndex.getOptions.getName shouldBe "activeRelationshipsIndex"
       activeRecordsIndex.getOptions.getPartialFilterExpression.toBsonDocument shouldBe BsonDocument("active" -> true)
       activeRecordsIndex.getOptions.isUnique shouldBe true
-      ninoIndex.getKeys shouldBe Indexes.ascending("nino")
+      ninoIndex.getKeys shouldBe Indexes.ascending("ninoHash")
       ninoIndex.getOptions.getName shouldBe "ninoIndex"
 
     }
@@ -198,6 +196,30 @@ extends RepositoryISpec[PartialAuthRelationship] {
 
     "fail to retrieve records when none are found for the given nino" in {
       await(repository.findAllForClient(NinoWithoutSuffix("AA111111A"))) shouldBe Seq.empty
+    }
+  }
+
+  ".findByMainAgent" should {
+
+    "retrieves records for a given nino" in {
+      await(repository.collection.insertOne(partialAuth).toFuture())
+      await(repository.findMainAgent("SX579189")) shouldBe Some(partialAuth)
+    }
+
+    "fail to retrieve records when none are found for the given nino" in {
+      await(repository.findMainAgent("AA111111A")) shouldBe None
+    }
+  }
+
+  ".findActiveForClient" should {
+
+    "retrieves active records for a given nino" in {
+      await(repository.collection.insertOne(partialAuth).toFuture())
+      await(repository.findActiveForClient(NinoWithoutSuffix("SX579189"))) shouldBe Seq(partialAuth)
+    }
+
+    "fail to retrieve records when none are found for the given nino" in {
+      await(repository.findActiveForClient(NinoWithoutSuffix("AA111111A"))) shouldBe Seq.empty
     }
   }
 

@@ -23,11 +23,8 @@ import uk.gov.hmrc.crypto.Decrypter
 import uk.gov.hmrc.crypto.Encrypter
 import uk.gov.hmrc.crypto.Hasher
 import uk.gov.hmrc.crypto.Verifier
-import uk.gov.hmrc.crypto.json.JsonEncryption.stringDecrypter
-import uk.gov.hmrc.crypto.json.JsonEncryption.stringEncrypter
 import uk.gov.hmrc.crypto.json.JsonEncryption.stringEncrypterDecrypter
 import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 
 import java.time.Instant
 
@@ -50,18 +47,12 @@ object PartialAuthRelationship:
   ): Format[PartialAuthRelationship] =
     given mongoInstantFormat: Format[Instant] = MongoJavatimeFormats.instantFormat
 
-    val arnReads = Reads[String] { json =>
-      json.validate[String].flatMap { arn =>
-        if Arn.isValid(arn) then JsSuccess(arn)
-        else stringDecrypter.reads(json)
-      }
-    }
-
-    val plainTextOrEncrypted = Format(arnReads, stringEncrypter)
-
-    (__ \ "created").format[Instant].and((__ \ "arn").format[String](using plainTextOrEncrypted)).and(
-      (__ \ "service").format[String]
-    ).and((__ \ "nino").format[String](using stringEncrypterDecrypter)).and((__ \ "active").format[Boolean]).and((__ \ "lastUpdated").format[Instant])
+    (__ \ "created").format[Instant]
+      .and((__ \ "arn").format[String](using stringEncrypterDecrypter))
+      .and((__ \ "service").format[String])
+      .and((__ \ "nino").format[String](using stringEncrypterDecrypter))
+      .and((__ \ "active").format[Boolean])
+      .and((__ \ "lastUpdated").format[Instant])
       .apply(PartialAuthRelationship.apply, Tuple.fromProductTyped)
-      .withVerifiedHash((__ \ "ninoHash").formatNullable[String], _.nino)
-      .withVerifiedHash((__ \ "ninoArnHash").formatNullable[String], r => s"${r.nino}:${r.arn}")
+      .withVerifiedHash((__ \ "ninoHash").format[String], _.nino)
+      .withVerifiedHash((__ \ "ninoArnHash").format[String], r => s"${r.nino}:${r.arn}")
