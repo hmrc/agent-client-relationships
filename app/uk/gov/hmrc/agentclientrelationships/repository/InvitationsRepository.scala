@@ -35,9 +35,13 @@ import uk.gov.hmrc.agentclientrelationships.model.invitation.CancelInvitationRes
 import uk.gov.hmrc.agentclientrelationships.model.invitation.CancelInvitationResponse.*
 import uk.gov.hmrc.agentclientrelationships.repository.FieldKeys.*
 import uk.gov.hmrc.agentclientrelationships.util.CryptoUtil.encryptedString
+import uk.gov.hmrc.agentclientrelationships.util.PlayMongoMigrations
 import uk.gov.hmrc.agentclientrelationships.util.RequestAwareLogging
 import uk.gov.hmrc.crypto.Decrypter
 import uk.gov.hmrc.crypto.Encrypter
+import uk.gov.hmrc.crypto.Hasher
+import uk.gov.hmrc.crypto.PlainText
+import uk.gov.hmrc.crypto.Verifier
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.Codecs
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
@@ -71,13 +75,13 @@ object FieldKeys {
 
 @Singleton
 class InvitationsRepository @Inject() (
-  mongoComponent: MongoComponent,
+  val mongoComponent: MongoComponent,
   appConfig: AppConfig
 )(using
   ec: ExecutionContext,
   @Named("aes")
-  crypto: Encrypter
-    & Decrypter
+  crypto: Encrypter & Decrypter,
+  hmac: Hasher & Verifier
 )
 extends PlayMongoRepository[Invitation](
   mongoComponent = mongoComponent,
@@ -118,6 +122,7 @@ extends PlayMongoRepository[Invitation](
   replaceIndexes = true,
   extraCodecs = Seq(Codecs.playFormatCodec(MongoTrackRequestsResult.format))
 )
+with PlayMongoMigrations
 with RequestAwareLogging {
 
   // scalastyle:off parameter.number
@@ -148,7 +153,14 @@ with RequestAwareLogging {
     arn: String,
     invitationId: String
   ): Future[Option[Invitation]] = collection
-    .find(combine(equal(arnKey, arn), equal(invitationIdKey, invitationId)))
+    .find(combine(
+      in(
+        arnKey,
+        arn,
+        encryptedString(arn)
+      ),
+      equal(invitationIdKey, invitationId)
+    ))
     .first().toFutureOption()
 
   def cancelByIdForAgent(
@@ -166,7 +178,11 @@ with RequestAwareLogging {
         collection
           .updateOne(
             and(
-              equal(arnKey, arn),
+              in(
+                arnKey,
+                arn,
+                encryptedString(arn)
+              ),
               equal(invitationIdKey, invitationId),
               equal("status", Codecs.toBson[InvitationStatus](Pending))
             ),
@@ -196,7 +212,13 @@ with RequestAwareLogging {
         .find(
           and(
             Seq(
-              arn.map(equal(arnKey, _)),
+              arn.map(a =>
+                in(
+                  arnKey,
+                  a,
+                  encryptedString(a)
+                )
+              ),
               if (services.nonEmpty)
                 Some(in(serviceKey, services*))
               else
@@ -212,7 +234,11 @@ with RequestAwareLogging {
         )
         .toFuture()
 
-  def findAllForAgent(arn: String): Future[Seq[Invitation]] = collection.find(equal(arnKey, arn)).toFuture()
+  def findAllForAgent(arn: String): Future[Seq[Invitation]] = collection.find(in(
+    arnKey,
+    arn,
+    encryptedString(arn)
+  )).toFuture()
 
   def findAllForAgentService(
     arn: String,
@@ -220,7 +246,11 @@ with RequestAwareLogging {
   ): Future[Seq[Invitation]] = collection
     .find(
       and(
-        equal(arnKey, arn),
+        in(
+          arnKey,
+          arn,
+          encryptedString(arn)
+        ),
         in(serviceKey, services*)
       )
     )
@@ -233,7 +263,11 @@ with RequestAwareLogging {
   ): Future[Seq[Invitation]] = collection
     .find(
       and(
-        equal(arnKey, arn),
+        in(
+          arnKey,
+          arn,
+          encryptedString(arn)
+        ),
         in(serviceKey, services*),
         in(
           suppliedClientIdKey,
@@ -274,7 +308,13 @@ with RequestAwareLogging {
           )),
           Some(equal(serviceKey, service)),
           Some(equal(suppliedClientIdKey, encryptedString(getValidNinoWithoutSuffixOrClientId(clientId)))),
-          optArn.map(a => equal(arnKey, a)),
+          optArn.map(a =>
+            in(
+              arnKey,
+              a,
+              encryptedString(a)
+            )
+          ),
           invitationIdToIgnore
             .map(id => notEqual(invitationIdKey, id))
         ).flatten*
@@ -296,7 +336,11 @@ with RequestAwareLogging {
   ): Future[Boolean] = collection
     .updateOne(
       and(
-        equal(arnKey, arn.value),
+        in(
+          arnKey,
+          arn.value,
+          encryptedString(arn.value)
+        ),
         equal(suppliedClientIdKey, encryptedString(nino.value)),
         equal(serviceKey, service),
         equal(statusKey, Codecs.toBson[InvitationStatus](PartialAuth))
@@ -326,6 +370,7 @@ with RequestAwareLogging {
       combine(
         set(serviceKey, newService),
         set(suppliedClientIdKey, encryptedString(newClientId)),
+        set("suppliedClientIdHash", hmac.hash(PlainText(newClientId)).value),
         set("suppliedClientIdType", newClientIdType),
         set("lastUpdated", Instant.now)
       )
@@ -361,7 +406,11 @@ with RequestAwareLogging {
   ): Future[TrackRequestsResult] =
     val filters = makeTrackRequestsFilters(statusFilter, clientName)
     val fullAggregatePipeline = Seq(
-      Aggregates.filter(equal(arnKey, arn)),
+      Aggregates.filter(in(
+        arnKey,
+        arn,
+        encryptedString(arn)
+      )),
       Aggregates.sort(Sorts.descending("created")),
       facet(
         Facet("clientNamesFacet", Aggregates.group(null, addToSet("clientNames", "$clientName"))),

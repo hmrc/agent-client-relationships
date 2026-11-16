@@ -20,6 +20,8 @@ import play.api.libs.json.*
 import uk.gov.hmrc.crypto.json.JsonEncryption.stringEncrypterDecrypter
 import uk.gov.hmrc.crypto.Decrypter
 import uk.gov.hmrc.crypto.Encrypter
+import uk.gov.hmrc.crypto.Hasher
+import uk.gov.hmrc.crypto.Verifier
 
 case class TrackRequestsResult(
   pageNumber: Int,
@@ -62,8 +64,8 @@ case class MongoTrackRequestsResult(
 )
 object MongoTrackRequestsResult {
   def format(using
-    crypto: Encrypter
-      & Decrypter
+    crypto: Encrypter & Decrypter,
+    hmac: Hasher & Verifier
   ): Format[MongoTrackRequestsResult] = {
     given invitationFormat: Format[Invitation] = Invitation.mongoFormat
     given mongoClientNamesFormat: Format[MongoClientNames] = MongoClientNames.mongoFormat

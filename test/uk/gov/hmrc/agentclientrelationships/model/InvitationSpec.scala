@@ -17,6 +17,7 @@
 package uk.gov.hmrc.agentclientrelationships.model
 
 import play.api.libs.json.Format
+import play.api.libs.json.JsError
 import play.api.libs.json.JsObject
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
@@ -25,7 +26,11 @@ import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.Vat
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Vrn
 import uk.gov.hmrc.crypto.Decrypter
 import uk.gov.hmrc.crypto.Encrypter
+import uk.gov.hmrc.crypto.Hasher
+import uk.gov.hmrc.crypto.OnewayCryptoFactory
+import uk.gov.hmrc.crypto.PlainText
 import uk.gov.hmrc.crypto.SymmetricCryptoFactory
+import uk.gov.hmrc.crypto.Verifier
 
 import java.time.Instant
 import java.time.LocalDate
@@ -34,10 +39,11 @@ class InvitationSpec
 extends UnitSpec {
 
   given crypto: (Encrypter & Decrypter) = SymmetricCryptoFactory.aesCrypto("edkOOwt7uvzw1TXnFIN6aRVHkfWcgiOrbBvkEQvO65g=")
+  given hmac: (Hasher & Verifier) = OnewayCryptoFactory.sha("oqrDUsOsuJ7hKctdLpQ5vQ==")
 
   val fullModel: Invitation = Invitation(
     "123",
-    "XARN1234567",
+    "TARN0000001",
     "HMRC-MTD-VAT",
     "234567890",
     "vrn",
@@ -56,7 +62,7 @@ extends UnitSpec {
 
   val fullJson: JsObject = Json.obj(
     "invitationId" -> "123",
-    "arn" -> "XARN1234567",
+    "arn" -> encryptedString("TARN0000001"),
     "service" -> "HMRC-MTD-VAT",
     "suppliedClientId" -> encryptedString("234567890"),
     "suppliedClientIdType" -> "vrn",
@@ -78,30 +84,68 @@ extends UnitSpec {
   given Format[Invitation] = Invitation.mongoFormat
 
   "Invitation" should {
-    "read from JSON" when {
+    "support JSON round trip" when {
       "all optional fields are present" in {
-        fullJson.as[Invitation] shouldBe fullModel
+        val json = Json.toJson(fullModel)
+        val result = json.as[Invitation]
+
+        result shouldBe fullModel
       }
       "all optional fields are missing" in {
-        optionalJson.as[Invitation] shouldBe optionalModel
+        val json = Json.toJson(optionalModel)
+        val result = json.as[Invitation]
+
+        result shouldBe optionalModel
       }
     }
 
-    "write to JSON" when {
-      "all optional fields are present" in {
-        Json.toJson(fullModel) shouldBe fullJson
-      }
-      "all optional fields are missing" in {
-        Json.toJson(optionalModel) shouldBe optionalJson
-      }
+    "encrypt sensitive fields" in {
+      val json = Json.toJson(fullModel)
+
+      (json \ "arn").as[String] should not be "TARN0000001"
+      (json \ "suppliedClientId").as[String] should not be "234567890"
+      (json \ "clientName").as[String] should not be "Macrosoft"
+      (json \ "agencyName").as[String] should not be "testAgentName"
+      (json \ "agencyEmail").as[String] should not be "agent@email.com"
     }
+
+    "verify hashes" in {
+      val json = Json.toJson(fullModel)
+      val tampered =
+        json.as[JsObject]
+          + ("arn" -> Json.toJson(crypto.encrypt(PlainText("TARN0000002")).value))
+          + ("suppliedClientId" -> Json.toJson(crypto.encrypt(PlainText("445577880")).value))
+          + ("clientName" -> Json.toJson(crypto.encrypt(PlainText("Apple")).value))
+
+      Json.fromJson[Invitation](tampered) shouldBe JsError("could not verify hash integrity")
+    }
+
+    "read an encrypted ARN" in {
+      val json =
+        Json.toJson(fullModel).as[JsObject] +
+          ("arn" -> Json.toJson(crypto.encrypt(PlainText(fullModel.arn)).value))
+
+      json.as[Invitation] shouldBe fullModel
+    }
+
+    "read legacy records without hashes" in:
+      val json = Json.toJson(fullModel).as[JsObject] - "arnHash" - "suppliedClientIdHash" - "clientNameHash"
+
+      json.as[Invitation] shouldBe fullModel
+
+    "read a plaintext ARN" in:
+      val json =
+        Json.toJson(fullModel).as[JsObject] +
+          ("arn" -> Json.toJson(fullModel.arn))
+
+      json.as[Invitation] shouldBe fullModel
   }
 
   "Invitation.createNew" should {
 
     "instantiate a new Invitation using the given values, along with some default and generated values" in {
       val newModel = Invitation.createNew(
-        "XARN1234567",
+        "TARN0000001",
         Vat,
         Vrn("234567890"),
         "Macrosoft",
