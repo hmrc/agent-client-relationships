@@ -23,7 +23,7 @@ import org.scalatestplus.mockito.MockitoSugar
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.config.KeyRotationConfig
-import uk.gov.hmrc.agentclientrelationships.repository.PartialAuthRepository
+import uk.gov.hmrc.agentclientrelationships.repository.InvitationsRepository
 import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 import uk.gov.hmrc.mongo.lock.Lock
 import uk.gov.hmrc.mongo.lock.MongoLockRepository
@@ -43,7 +43,7 @@ with BeforeAndAfterEach:
 
   private val mockLockRepository = mock[MongoLockRepository]
   private val mockAppConfig = mock[AppConfig]
-  private val mockPartialAuthRepository = mock[PartialAuthRepository]
+  private val mockInvitationsRepository = mock[InvitationsRepository]
 
   private val keyRotationConfig = KeyRotationConfig(
     enabled = true,
@@ -55,7 +55,7 @@ with BeforeAndAfterEach:
     new KeyRotationService(
       mockLockRepository,
       mockAppConfig,
-      mockPartialAuthRepository
+      mockInvitationsRepository
     )
 
   override protected def beforeEach(): Unit =
@@ -63,7 +63,7 @@ with BeforeAndAfterEach:
     reset(
       mockLockRepository,
       mockAppConfig,
-      mockPartialAuthRepository
+      mockInvitationsRepository
     )
 
   "KeyRotationService" when:
@@ -80,10 +80,10 @@ with BeforeAndAfterEach:
           any()
         )
         verify(mockLockRepository, never()).releaseLock(any[String], any[String])
-        verify(mockPartialAuthRepository, never()).migrate(any[Int], any[Deadline])(using any[RequestHeader])
+        verify(mockInvitationsRepository, never()).migrate(any[Int], any[Deadline])(using any[RequestHeader])
 
     "key rotation is enabled" should:
-      "run the partial auth migration when the lock is acquired" in:
+      "run the invitations migration when the lock is acquired" in:
         when(mockAppConfig.keyRotation).thenReturn(keyRotationConfig)
         when(mockLockRepository.takeLock(
           any[String],
@@ -98,12 +98,12 @@ with BeforeAndAfterEach:
           ))))
         when(mockLockRepository.releaseLock(any[String], any[String]))
           .thenReturn(Future.unit)
-        when(mockPartialAuthRepository.migrate(any[Int], any[Deadline])(using any[RequestHeader]))
+        when(mockInvitationsRepository.migrate(any[Int], any[Deadline])(using any[RequestHeader]))
           .thenReturn(Future.successful(20))
 
         createService().migration.futureValue shouldBe Some(())
 
-        verify(mockPartialAuthRepository).migrate(any[Int], any[Deadline])(using any[RequestHeader])
+        verify(mockInvitationsRepository).migrate(any[Int], any[Deadline])(using any[RequestHeader])
 
       "skip migration when the lock is not acquired" in:
         when(mockAppConfig.keyRotation).thenReturn(keyRotationConfig)
@@ -117,9 +117,9 @@ with BeforeAndAfterEach:
         createService().migration.futureValue shouldBe None
 
         verify(mockLockRepository, never()).releaseLock(any[String], any[String])
-        verify(mockPartialAuthRepository, never()).migrate(any[Int], any[Deadline])(using any[RequestHeader])
+        verify(mockInvitationsRepository, never()).migrate(any[Int], any[Deadline])(using any[RequestHeader])
 
-      "fail when the partial auth migration fails" in:
+      "fail when the invitations migration fails" in:
         when(mockAppConfig.keyRotation).thenReturn(keyRotationConfig)
         when(mockLockRepository.takeLock(
           any[String],
@@ -134,9 +134,9 @@ with BeforeAndAfterEach:
           ))))
         when(mockLockRepository.releaseLock(any[String], any[String]))
           .thenReturn(Future.unit)
-        when(mockPartialAuthRepository.migrate(any[Int], any[Deadline])(using any[RequestHeader]))
-          .thenReturn(Future.failed(RuntimeException("partial auth migration failed")))
+        when(mockInvitationsRepository.migrate(any[Int], any[Deadline])(using any[RequestHeader]))
+          .thenReturn(Future.failed(RuntimeException("invitations migration failed")))
 
         createService().migration.failed.futureValue
 
-        verify(mockPartialAuthRepository).migrate(any[Int], any[Deadline])(using any[RequestHeader])
+        verify(mockInvitationsRepository).migrate(any[Int], any[Deadline])(using any[RequestHeader])

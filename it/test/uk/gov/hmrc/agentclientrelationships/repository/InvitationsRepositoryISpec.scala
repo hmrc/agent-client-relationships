@@ -20,10 +20,13 @@ import org.mongodb.scala.ObservableFuture
 
 import com.mongodb.MongoWriteException
 import org.mongodb.scala.bson.BsonDocument
+import org.mongodb.scala.model.Filters
 import org.mongodb.scala.model.Indexes
+import org.mongodb.scala.model.Updates.set
 import play.api.test.Helpers.await
 import play.api.test.Helpers.defaultAwaitTimeout
 import uk.gov.hmrc.agentclientrelationships.model.*
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDIT
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDITSUPP
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service.HMRCMTDVAT
@@ -34,6 +37,7 @@ import uk.gov.hmrc.agentclientrelationships.model.identifiers.MtdItId
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.NinoWithoutSuffix
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Vrn
+import uk.gov.hmrc.agentclientrelationships.model.invitation.CancelInvitationResponse
 import uk.gov.hmrc.agentclientrelationships.support.RepositoryISpec
 import uk.gov.hmrc.domain.TaxIdentifier
 
@@ -73,6 +77,14 @@ extends RepositoryISpec[Invitation] {
       created = Instant.now().truncatedTo(ChronoUnit.SECONDS),
       lastUpdated = Instant.now().truncatedTo(ChronoUnit.SECONDS)
     )
+
+  // simulates a record that has not yet been migrated to the encrypted ARN format (arn stored as plain text)
+  def migrateArnToPlainText(invitation: Invitation): Unit = await(
+    repository.collection.updateOne(
+      Filters.equal("invitationId", invitation.invitationId),
+      set("arn", invitation.arn)
+    ).toFuture()
+  )
 
   "InvitationsRepository" should {
 
@@ -746,6 +758,111 @@ extends RepositoryISpec[Invitation] {
         invitation4,
         invitation5
       )
+    }
+
+    "pre and post migration of ARN encryption" should {
+
+      "findOneByIdForAgent retrieves an invitation for a given ARN" in {
+        val invitation = pendingInvitation(arn = "TARN0000001")
+        await(repository.collection.insertOne(invitation).toFuture())
+        migrateArnToPlainText(invitation)
+
+        await(repository.findOneByIdForAgent("TARN0000001", invitation.invitationId)) shouldBe Some(invitation)
+      }
+
+      "cancelByIdForAgent cancels an invitation for a given ARN" in {
+        val invitation = pendingInvitation(arn = "TARN0000001")
+        await(repository.collection.insertOne(invitation).toFuture())
+        migrateArnToPlainText(invitation)
+
+        await(
+          repository.cancelByIdForAgent("TARN0000001", invitation.invitationId)
+        ) shouldBe CancelInvitationResponse.Success
+        await(repository.findOneById(invitation.invitationId)).get.status shouldBe Cancelled
+      }
+
+      "findAllForAgentService retrieves all existing invitations for a given ARN, filtered on the target services" in {
+        val invitation = pendingInvitation(arn = "TARN0000001")
+        await(repository.collection.insertOne(invitation).toFuture())
+        migrateArnToPlainText(invitation)
+
+        await(repository.findAllForAgentService("TARN0000001", Seq(Vat.id))) shouldBe Seq(invitation)
+      }
+
+      "findAllForAgent retrieves all existing invitations for a given ARN, filtered on the target services and clientIds" in {
+        val invitation = pendingInvitation(arn = "TARN0000001", clientId = Vrn("123456789"))
+        await(repository.collection.insertOne(invitation).toFuture())
+        migrateArnToPlainText(invitation)
+
+        await(
+          repository.findAllForAgent(
+            "TARN0000001",
+            Seq(Vat.id),
+            Seq("123456789")
+          )
+        ) shouldBe Seq(invitation)
+      }
+
+      "findAllBy retrieves invitations matching a given ARN" in {
+        val invitation = pendingInvitation(arn = "TARN0000001")
+        await(repository.collection.insertOne(invitation).toFuture())
+        migrateArnToPlainText(invitation)
+
+        await(repository.findAllBy(arn = Some("TARN0000001"))) shouldBe Seq(invitation)
+      }
+
+      "deauthAcceptedInvitations de-authorises invitations matching a given ARN" in {
+        val invitation = pendingInvitation(arn = "TARN0000001").copy(status = Accepted)
+        await(repository.collection.insertOne(invitation).toFuture())
+        migrateArnToPlainText(invitation)
+
+        await(
+          repository.deauthAcceptedInvitations(
+            invitation.service,
+            Some("TARN0000001"),
+            invitation.suppliedClientId,
+            None,
+            "TEST",
+            Instant.now()
+          )
+        ) shouldBe true
+        await(repository.findOneById(invitation.invitationId)).get.status shouldBe DeAuthorised
+      }
+
+      "updatePartialAuthToAcceptedStatus updates an invitation matching a given ARN" in {
+        val invitation = pendingInvitation(
+          arn = "TARN0000001",
+          service = MtdIt,
+          clientId = NinoWithoutSuffix("AB213308A")
+        ).copy(status = PartialAuth)
+        await(repository.collection.insertOne(invitation).toFuture())
+        migrateArnToPlainText(invitation)
+
+        await(
+          repository.updatePartialAuthToAcceptedStatus(
+            Arn("TARN0000001"),
+            invitation.service,
+            NinoWithoutSuffix("AB213308A")
+          )
+        ) shouldBe true
+        await(repository.findOneById(invitation.invitationId)).get.status shouldBe Accepted
+      }
+
+      "trackRequests retrieves a TrackRequestsResult for a given ARN" in {
+        val invitation = pendingInvitation(arn = "TARN0000001")
+        await(repository.collection.insertOne(invitation).toFuture())
+        migrateArnToPlainText(invitation)
+
+        val result = await(repository.trackRequests(
+          "TARN0000001",
+          None,
+          None,
+          1,
+          10
+        ))
+        result.totalResults shouldBe 1
+        result.requests shouldBe Seq(invitation)
+      }
     }
   }
 

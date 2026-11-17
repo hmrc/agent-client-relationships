@@ -22,6 +22,9 @@ import uk.gov.hmrc.agentclientrelationships.support.UnitSpec
 import uk.gov.hmrc.agentclientrelationships.util.CryptoUtil.encryptedString
 import uk.gov.hmrc.crypto.Decrypter
 import uk.gov.hmrc.crypto.Encrypter
+import uk.gov.hmrc.crypto.Hasher
+import uk.gov.hmrc.crypto.OnewayCryptoFactory
+import uk.gov.hmrc.crypto.Verifier
 import uk.gov.hmrc.crypto.SymmetricCryptoFactory
 
 import java.time.Instant
@@ -31,10 +34,11 @@ class WarningEmailAggregationResultSpec
 extends UnitSpec {
 
   given crypto: (Encrypter & Decrypter) = SymmetricCryptoFactory.aesCrypto("edkOOwt7uvzw1TXnFIN6aRVHkfWcgiOrbBvkEQvO65g=")
+  given hmac: (Hasher & Verifier) = OnewayCryptoFactory.sha("oqrDUsOsuJ7hKctdLpQ5vQ==")
 
   val invitation: Invitation = Invitation(
     "123",
-    "XARN1234567",
+    "TARN0000001",
     "HMRC-MTD-VAT",
     "234567890",
     "vrn",
@@ -57,12 +61,12 @@ extends UnitSpec {
   )
 
   val json: JsObject = Json.obj(
-    "_id" -> "XARN1234567",
+    "_id" -> "TARN0000001",
     "invitations" ->
       Json.arr(
         Json.obj(
           "invitationId" -> "123",
-          "arn" -> "XARN1234567",
+          "arn" -> encryptedString("TARN0000001"),
           "service" -> "HMRC-MTD-VAT",
           "suppliedClientId" -> encryptedString("234567890"),
           "suppliedClientIdType" -> "vrn",
@@ -80,7 +84,7 @@ extends UnitSpec {
         ),
         Json.obj(
           "invitationId" -> "456",
-          "arn" -> "XARN1234567",
+          "arn" -> encryptedString("TARN0000001"),
           "service" -> "HMRC-MTD-VAT",
           "suppliedClientId" -> encryptedString("888888888"),
           "suppliedClientIdType" -> "vrn",
@@ -99,7 +103,7 @@ extends UnitSpec {
       )
   )
 
-  val model: WarningEmailAggregationResult = WarningEmailAggregationResult("XARN1234567", Seq(invitation, invitation2))
+  val model: WarningEmailAggregationResult = WarningEmailAggregationResult("TARN0000001", Seq(invitation, invitation2))
 
   "WarningEmailAggregationResult" should {
 
