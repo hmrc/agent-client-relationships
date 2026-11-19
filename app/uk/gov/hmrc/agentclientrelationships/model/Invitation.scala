@@ -23,15 +23,12 @@ import play.api.libs.json.Json
 import play.api.libs.json.Reads
 import play.api.libs.json.__
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.ClientIdentifier.ClientId
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.InvitationId
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.Service
 import uk.gov.hmrc.crypto.Decrypter
 import uk.gov.hmrc.crypto.Encrypter
 import uk.gov.hmrc.crypto.Hasher
 import uk.gov.hmrc.crypto.Verifier
-import uk.gov.hmrc.crypto.json.JsonEncryption.stringDecrypter
-import uk.gov.hmrc.crypto.json.JsonEncryption.stringEncrypter
 import uk.gov.hmrc.crypto.json.JsonEncryption.stringEncrypterDecrypter
 import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 import uk.gov.hmrc.agentclientrelationships.support.hmac.*
@@ -71,18 +68,9 @@ object Invitation {
     given mongoInstantFormat: Format[Instant] = MongoJavatimeFormats.instantFormat
     given mongoLocalDateFormat: Format[LocalDate] = MongoJavatimeFormats.localDateFormat
 
-    val arnReads = Reads[String] { json =>
-      json.validate[String].flatMap { arn =>
-        if Arn.isValid(arn) then JsSuccess(arn)
-        else stringDecrypter.reads(json)
-      }
-    }
-
-    val plainTextOrEncrypted = Format(arnReads, stringEncrypter)
-
     (
       (__ \ "invitationId").format[String] and
-        (__ \ "arn").format[String](using plainTextOrEncrypted) and
+        (__ \ "arn").format[String](using stringEncrypterDecrypter) and
         (__ \ "service").format[String] and
         (__ \ "suppliedClientId").format[String](using stringEncrypterDecrypter) and
         (__ \ "suppliedClientIdType").format[String] and
@@ -122,9 +110,9 @@ object Invitation {
         )
       )
     )
-      .withVerifiedHash((__ \ "arnHash").formatNullable[String], _.arn)
-      .withVerifiedHash((__ \ "suppliedClientIdHash").formatNullable[String], _.suppliedClientId)
-      .withVerifiedHash((__ \ "clientNameHash").formatNullable[String], _.clientName)
+      .withVerifiedHash((__ \ "arnHash").format[String], _.arn)
+      .withVerifiedHash((__ \ "suppliedClientIdHash").format[String], _.suppliedClientId)
+      .withVerifiedHash((__ \ "clientNameHash").format[String], _.clientName)
   }
 
   // scalastyle:off parameter.number

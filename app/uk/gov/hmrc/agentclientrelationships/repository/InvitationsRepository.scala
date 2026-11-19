@@ -25,6 +25,7 @@ import org.mongodb.scala.model.Filters.*
 import org.mongodb.scala.model.Updates.combine
 import org.mongodb.scala.model.Updates.set
 import org.mongodb.scala.model.*
+import play.api.libs.json.Format
 import uk.gov.hmrc.agentclientrelationships.config.AppConfig
 import uk.gov.hmrc.agentclientrelationships.model.*
 import uk.gov.hmrc.agentclientrelationships.model.identifiers.ClientIdentifier.ClientId
@@ -41,6 +42,7 @@ import uk.gov.hmrc.crypto.Decrypter
 import uk.gov.hmrc.crypto.Encrypter
 import uk.gov.hmrc.crypto.Hasher
 import uk.gov.hmrc.crypto.PlainText
+import uk.gov.hmrc.crypto.Scrambled
 import uk.gov.hmrc.crypto.Verifier
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.Codecs
@@ -58,13 +60,15 @@ import scala.concurrent.Future
 
 object FieldKeys {
 
-  val arnKey: String = "arn"
+  val arnHashKey: String = "arnHash"
   val invitationIdKey: String = "invitationId"
   val suppliedClientIdKey: String = "suppliedClientId"
+  val suppliedClientIdHashKey: String = "suppliedClientIdHash"
   val suppliedClientIdTypeKey: String = "suppliedClientIdType"
   val serviceKey: String = "service"
   val statusKey: String = "status"
   val clientNameKey: String = "clientName"
+  val clientNameHashKey: String = "clientNameHash"
   val expiryDateKey: String = "expiryDate"
   val warningEmaiSentKey: String = "warningEmailSent"
   val expiredEmailSentKey: String = "expiredEmailSent"
@@ -79,7 +83,7 @@ class InvitationsRepository @Inject() (
   appConfig: AppConfig
 )(using
   ec: ExecutionContext,
-  @Named("aes")
+  @Named("aesGcm")
   crypto: Encrypter & Decrypter,
   hmac: Hasher & Verifier
 )
@@ -88,13 +92,13 @@ extends PlayMongoRepository[Invitation](
   collectionName = "invitations",
   domainFormat = Invitation.mongoFormat,
   indexes = Seq(
-    IndexModel(Indexes.ascending(arnKey), IndexOptions().name("arnIndex")),
+    IndexModel(Indexes.ascending(arnHashKey), IndexOptions().name("arnHashIndex")),
     IndexModel(Indexes.ascending(invitationIdKey), IndexOptions().name("invitationIdIndex").unique(true)),
     IndexModel(
       Indexes.ascending(
-        arnKey,
+        arnHashKey,
         serviceKey,
-        suppliedClientIdKey
+        suppliedClientIdHashKey
       ),
       IndexOptions()
         .partialFilterExpression(equal(statusKey, Codecs.toBson[InvitationStatus](Pending)))
@@ -107,20 +111,20 @@ extends PlayMongoRepository[Invitation](
     ),
     IndexModel(
       Indexes.compoundIndex(
-        Indexes.ascending(arnKey),
+        Indexes.ascending(arnHashKey),
         Indexes.descending("created")
       ),
       IndexOptions().name("arnCreatedIdx")
     ),
-    IndexModel(Indexes.ascending(suppliedClientIdKey)),
+    IndexModel(Indexes.ascending(suppliedClientIdHashKey)),
     IndexModel(Indexes.ascending(statusKey)),
     IndexModel(Indexes.ascending(serviceKey)),
-    IndexModel(Indexes.ascending(clientNameKey)),
+    IndexModel(Indexes.ascending(clientNameHashKey)),
     IndexModel(Indexes.ascending(statusKey, warningEmaiSentKey)),
     IndexModel(Indexes.ascending(statusKey, expiredEmailSentKey))
   ),
   replaceIndexes = true,
-  extraCodecs = Seq(Codecs.playFormatCodec(MongoTrackRequestsResult.format))
+  extraCodecs = Seq(Codecs.playFormatCodec(MongoTrackRequestsResult.format), Codecs.playFormatCodec(Format.of[String].bimap(Scrambled.apply, _.value)))
 )
 with PlayMongoMigrations
 with RequestAwareLogging {
@@ -154,11 +158,7 @@ with RequestAwareLogging {
     invitationId: String
   ): Future[Option[Invitation]] = collection
     .find(combine(
-      in(
-        arnKey,
-        arn,
-        encryptedString(arn)
-      ),
+      equal(arnHashKey, hmac.hash(PlainText(arn))),
       equal(invitationIdKey, invitationId)
     ))
     .first().toFutureOption()
@@ -178,11 +178,7 @@ with RequestAwareLogging {
         collection
           .updateOne(
             and(
-              in(
-                arnKey,
-                arn,
-                encryptedString(arn)
-              ),
+              equal(arnHashKey, hmac.hash(PlainText(arn))),
               equal(invitationIdKey, invitationId),
               equal("status", Codecs.toBson[InvitationStatus](Pending))
             ),
@@ -213,18 +209,14 @@ with RequestAwareLogging {
           and(
             Seq(
               arn.map(a =>
-                in(
-                  arnKey,
-                  a,
-                  encryptedString(a)
-                )
+                equal(arnHashKey, hmac.hash(PlainText(a)))
               ),
               if (services.nonEmpty)
                 Some(in(serviceKey, services*))
               else
                 None,
               if (clientIds.nonEmpty) {
-                Some(in(suppliedClientIdKey, clientIds.map(getValidNinoWithoutSuffixOrClientId).map(encryptedString)*))
+                Some(in(suppliedClientIdHashKey, clientIds.map(getValidNinoWithoutSuffixOrClientId).map(c => hmac.hash(PlainText(c)))*))
               }
               else
                 None,
@@ -234,11 +226,7 @@ with RequestAwareLogging {
         )
         .toFuture()
 
-  def findAllForAgent(arn: String): Future[Seq[Invitation]] = collection.find(in(
-    arnKey,
-    arn,
-    encryptedString(arn)
-  )).toFuture()
+  def findAllForAgent(arn: String): Future[Seq[Invitation]] = collection.find(equal(arnHashKey, hmac.hash(PlainText(arn)))).toFuture()
 
   def findAllForAgentService(
     arn: String,
@@ -246,11 +234,7 @@ with RequestAwareLogging {
   ): Future[Seq[Invitation]] = collection
     .find(
       and(
-        in(
-          arnKey,
-          arn,
-          encryptedString(arn)
-        ),
+        equal(arnHashKey, hmac.hash(PlainText(arn))),
         in(serviceKey, services*)
       )
     )
@@ -263,15 +247,11 @@ with RequestAwareLogging {
   ): Future[Seq[Invitation]] = collection
     .find(
       and(
-        in(
-          arnKey,
-          arn,
-          encryptedString(arn)
-        ),
+        equal(arnHashKey, hmac.hash(PlainText(arn))),
         in(serviceKey, services*),
         in(
-          suppliedClientIdKey,
-          clientIds.map(_.replaceAll(" ", "")).map(getValidNinoWithoutSuffixOrClientId).map(encryptedString)*
+          suppliedClientIdHashKey,
+          clientIds.map(_.replaceAll(" ", "")).map(getValidNinoWithoutSuffixOrClientId).map(c => hmac.hash(PlainText(c)))*
         )
       )
     )
@@ -307,13 +287,9 @@ with RequestAwareLogging {
             Codecs.toBson[InvitationStatus](PartialAuth)
           )),
           Some(equal(serviceKey, service)),
-          Some(equal(suppliedClientIdKey, encryptedString(getValidNinoWithoutSuffixOrClientId(clientId)))),
+          Some(equal(suppliedClientIdHashKey, hmac.hash(PlainText(getValidNinoWithoutSuffixOrClientId(clientId))))),
           optArn.map(a =>
-            in(
-              arnKey,
-              a,
-              encryptedString(a)
-            )
+            equal(arnHashKey, hmac.hash(PlainText(a)))
           ),
           invitationIdToIgnore
             .map(id => notEqual(invitationIdKey, id))
@@ -336,12 +312,8 @@ with RequestAwareLogging {
   ): Future[Boolean] = collection
     .updateOne(
       and(
-        in(
-          arnKey,
-          arn.value,
-          encryptedString(arn.value)
-        ),
-        equal(suppliedClientIdKey, encryptedString(nino.value)),
+        equal(arnHashKey, hmac.hash(PlainText(arn.value))),
+        equal(suppliedClientIdHashKey, hmac.hash(PlainText(nino.value))),
         equal(serviceKey, service),
         equal(statusKey, Codecs.toBson[InvitationStatus](PartialAuth))
       ),
@@ -364,13 +336,13 @@ with RequestAwareLogging {
     .updateOne(
       and(
         equal(serviceKey, service),
-        equal(suppliedClientIdKey, encryptedString(clientId)),
+        equal(suppliedClientIdHashKey, hmac.hash(PlainText(clientId))),
         equal("suppliedClientIdType", clientIdType)
       ),
       combine(
         set(serviceKey, newService),
         set(suppliedClientIdKey, encryptedString(newClientId)),
-        set("suppliedClientIdHash", hmac.hash(PlainText(newClientId)).value),
+        set(suppliedClientIdHashKey, hmac.hash(PlainText(newClientId))),
         set("suppliedClientIdType", newClientIdType),
         set("lastUpdated", Instant.now)
       )
@@ -392,7 +364,7 @@ with RequestAwareLogging {
         )
         .getOrElse(Filters.exists(statusKey)),
       clientName
-        .map(name => equal(clientNameKey, encryptedString(URLDecoder.decode(name, "UTF-8"))))
+        .map(name => equal(clientNameHashKey, hmac.hash(PlainText(URLDecoder.decode(name, "UTF-8")))))
         .getOrElse(Filters.exists(clientNameKey))
     )
   )
@@ -406,14 +378,14 @@ with RequestAwareLogging {
   ): Future[TrackRequestsResult] =
     val filters = makeTrackRequestsFilters(statusFilter, clientName)
     val fullAggregatePipeline = Seq(
-      Aggregates.filter(in(
-        arnKey,
-        arn,
-        encryptedString(arn)
-      )),
+      Aggregates.filter(equal(arnHashKey, hmac.hash(PlainText(arn)))),
       Aggregates.sort(Sorts.descending("created")),
       facet(
-        Facet("clientNamesFacet", Aggregates.group(null, addToSet("clientNames", "$clientName"))),
+        Facet(
+          "clientNamesFacet",
+          Aggregates.group("$clientNameHash", Accumulators.first("clientName", "$clientName")),
+          Aggregates.group(null, addToSet("clientNames", "$clientName"))
+        ),
         Facet("availableFiltersFacet", Aggregates.group(null, addToSet("availableFilters", "$status"))),
         Facet(
           "totalResultsFacet",
@@ -459,7 +431,7 @@ with RequestAwareLogging {
           gte(expiryDateKey, LocalDate.now())
         )
       ),
-      Aggregates.group("$arn", addToSet("invitations", "$$ROOT"))
+      Aggregates.group("$arnHash", addToSet("invitations", "$$ROOT"))
     )
 
     collection.aggregate[BsonValue](aggregatePipeline).map(Codecs.fromBson[WarningEmailAggregationResult])

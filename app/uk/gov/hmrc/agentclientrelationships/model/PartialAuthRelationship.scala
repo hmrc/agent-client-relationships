@@ -54,5 +54,5 @@ object PartialAuthRelationship:
       .and((__ \ "active").format[Boolean])
       .and((__ \ "lastUpdated").format[Instant])
       .apply(PartialAuthRelationship.apply, Tuple.fromProductTyped)
-      .withVerifiedHash((__ \ "ninoHash").formatNullable[String], _.nino)
-      .withVerifiedHash((__ \ "ninoArnHash").formatNullable[String], r => s"${r.nino}:${r.arn}")
+      .withVerifiedHash((__ \ "ninoHash").format[String], _.nino)
+      .withVerifiedHash((__ \ "ninoArnHash").format[String], r => s"${r.nino}:${r.arn}")
