@@ -18,6 +18,7 @@ package uk.gov.hmrc.agentclientrelationships.model
 
 import play.api.libs.json.Reads
 import play.api.libs.json.__
+import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.crypto.Decrypter
 import uk.gov.hmrc.crypto.Encrypter
 import uk.gov.hmrc.crypto.Hasher

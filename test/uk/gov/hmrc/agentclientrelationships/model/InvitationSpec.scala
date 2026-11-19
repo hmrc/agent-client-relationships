@@ -127,6 +127,37 @@ extends UnitSpec {
 
       json.as[Invitation] shouldBe fullModel
     }
+
+    "verify hashes" in {
+      val json = Json.toJson(fullModel)
+      val tampered =
+        json.as[JsObject]
+          + ("arn" -> Json.toJson(crypto.encrypt(PlainText("TARN0000002")).value))
+          + ("suppliedClientId" -> Json.toJson(crypto.encrypt(PlainText("445577880")).value))
+          + ("clientName" -> Json.toJson(crypto.encrypt(PlainText("Apple")).value))
+
+      Json.fromJson[Invitation](tampered) shouldBe JsError("could not verify hash integrity")
+    }
+
+    "read an encrypted ARN" in {
+      val json =
+        Json.toJson(fullModel).as[JsObject] +
+          ("arn" -> Json.toJson(crypto.encrypt(PlainText(fullModel.arn)).value))
+
+      json.as[Invitation] shouldBe fullModel
+    }
+
+    "read legacy records without hashes" in:
+      val json = Json.toJson(fullModel).as[JsObject] - "arnHash" - "suppliedClientIdHash" - "clientNameHash"
+
+      json.as[Invitation] shouldBe fullModel
+
+    "read a plaintext ARN" in:
+      val json =
+        Json.toJson(fullModel).as[JsObject] +
+          ("arn" -> Json.toJson(fullModel.arn))
+
+      json.as[Invitation] shouldBe fullModel
   }
 
   "Invitation.createNew" should {
