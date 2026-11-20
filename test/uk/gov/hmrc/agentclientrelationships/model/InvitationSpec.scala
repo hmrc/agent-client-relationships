@@ -38,7 +38,7 @@ import java.time.LocalDate
 class InvitationSpec
 extends UnitSpec {
 
-  given crypto: (Encrypter & Decrypter) = SymmetricCryptoFactory.aesCrypto("edkOOwt7uvzw1TXnFIN6aRVHkfWcgiOrbBvkEQvO65g=")
+  given crypto: (Encrypter & Decrypter) = SymmetricCryptoFactory.aesGcmCrypto("edkOOwt7uvzw1TXnFIN6aRVHkfWcgiOrbBvkEQvO65g=")
   given hmac: (Hasher & Verifier) = OnewayCryptoFactory.sha("oqrDUsOsuJ7hKctdLpQ5vQ==")
 
   val fullModel: Invitation = Invitation(
@@ -127,18 +127,6 @@ extends UnitSpec {
 
       json.as[Invitation] shouldBe fullModel
     }
-
-    "read legacy records without hashes" in:
-      val json = Json.toJson(fullModel).as[JsObject] - "arnHash" - "suppliedClientIdHash" - "clientNameHash"
-
-      json.as[Invitation] shouldBe fullModel
-
-    "read a plaintext ARN" in:
-      val json =
-        Json.toJson(fullModel).as[JsObject] +
-          ("arn" -> Json.toJson(fullModel.arn))
-
-      json.as[Invitation] shouldBe fullModel
   }
 
   "Invitation.createNew" should {

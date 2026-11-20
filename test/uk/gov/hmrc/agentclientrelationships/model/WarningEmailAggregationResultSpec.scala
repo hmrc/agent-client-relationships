@@ -24,8 +24,9 @@ import uk.gov.hmrc.crypto.Decrypter
 import uk.gov.hmrc.crypto.Encrypter
 import uk.gov.hmrc.crypto.Hasher
 import uk.gov.hmrc.crypto.OnewayCryptoFactory
-import uk.gov.hmrc.crypto.Verifier
+import uk.gov.hmrc.crypto.PlainText
 import uk.gov.hmrc.crypto.SymmetricCryptoFactory
+import uk.gov.hmrc.crypto.Verifier
 
 import java.time.Instant
 import java.time.LocalDate
@@ -33,7 +34,7 @@ import java.time.LocalDate
 class WarningEmailAggregationResultSpec
 extends UnitSpec {
 
-  given crypto: (Encrypter & Decrypter) = SymmetricCryptoFactory.aesCrypto("edkOOwt7uvzw1TXnFIN6aRVHkfWcgiOrbBvkEQvO65g=")
+  given crypto: (Encrypter & Decrypter) = SymmetricCryptoFactory.aesGcmCrypto("edkOOwt7uvzw1TXnFIN6aRVHkfWcgiOrbBvkEQvO65g=")
   given hmac: (Hasher & Verifier) = OnewayCryptoFactory.sha("oqrDUsOsuJ7hKctdLpQ5vQ==")
 
   val invitation: Invitation = Invitation(
@@ -80,7 +81,10 @@ extends UnitSpec {
           "clientType" -> "personal",
           "expiryDate" -> Json.obj("$date" -> Json.obj("$numberLong" -> "1577836800000")),
           "created" -> Json.obj("$date" -> Json.obj("$numberLong" -> "1580601600000")),
-          "lastUpdated" -> Json.obj("$date" -> Json.obj("$numberLong" -> "1583193600000"))
+          "lastUpdated" -> Json.obj("$date" -> Json.obj("$numberLong" -> "1583193600000")),
+          "arnHash" -> hmac.hash(PlainText("TARN0000001")).value,
+          "suppliedClientIdHash" -> hmac.hash(PlainText("234567890")).value,
+          "clientNameHash" -> hmac.hash(PlainText("Macrosoft")).value
         ),
         Json.obj(
           "invitationId" -> "456",
@@ -98,7 +102,10 @@ extends UnitSpec {
           "clientType" -> "personal",
           "expiryDate" -> Json.obj("$date" -> Json.obj("$numberLong" -> "1577836800000")),
           "created" -> Json.obj("$date" -> Json.obj("$numberLong" -> "1580601600000")),
-          "lastUpdated" -> Json.obj("$date" -> Json.obj("$numberLong" -> "1583193600000"))
+          "lastUpdated" -> Json.obj("$date" -> Json.obj("$numberLong" -> "1583193600000")),
+          "arnHash" -> hmac.hash(PlainText("TARN0000001")).value,
+          "suppliedClientIdHash" -> hmac.hash(PlainText("888888888")).value,
+          "clientNameHash" -> hmac.hash(PlainText("Macrosoft")).value
         )
       )
   )
@@ -108,7 +115,8 @@ extends UnitSpec {
   "WarningEmailAggregationResult" should {
 
     "read from JSON" in {
-      json.as[WarningEmailAggregationResult] shouldBe model
+      val js = json.as[WarningEmailAggregationResult]
+      js shouldBe model
     }
   }
 

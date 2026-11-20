@@ -16,18 +16,12 @@
 
 package uk.gov.hmrc.agentclientrelationships.model
 
-import play.api.libs.functional.syntax.*
-import play.api.libs.json.Format
-import play.api.libs.json.JsSuccess
 import play.api.libs.json.Reads
 import play.api.libs.json.__
-import uk.gov.hmrc.agentclientrelationships.model.identifiers.Arn
 import uk.gov.hmrc.crypto.Decrypter
 import uk.gov.hmrc.crypto.Encrypter
 import uk.gov.hmrc.crypto.Hasher
 import uk.gov.hmrc.crypto.Verifier
-import uk.gov.hmrc.crypto.json.JsonEncryption.stringDecrypter
-import uk.gov.hmrc.crypto.json.JsonEncryption.stringEncrypter
 
 case class WarningEmailAggregationResult(
   arn: String,
@@ -40,15 +34,6 @@ object WarningEmailAggregationResult:
     hmac: Hasher & Verifier
   ): Reads[WarningEmailAggregationResult] =
 
-    val arnReads = Reads[String] { json =>
-      json.validate[String].flatMap { arn =>
-        if Arn.isValid(arn) then JsSuccess(arn)
-        else stringDecrypter.reads(json)
-      }
-    }
-
-    val plainTextOrEncrypted = Format(arnReads, stringEncrypter)
-
-    ((__ \ "_id").read[String](using plainTextOrEncrypted) and (__ \ "invitations").read[Seq[Invitation]](using Reads.seq(using Invitation.mongoFormat))).apply(
-      WarningEmailAggregationResult.apply
-    )
+    (__ \ "invitations")
+      .read[Seq[Invitation]](using Reads.seq(using Invitation.mongoFormat))
+      .map(invitations => WarningEmailAggregationResult(invitations.head.arn, invitations))
